@@ -449,6 +449,59 @@
 
   .home-title, .home-sub, .home-eyebrow { will-change: transform, opacity; }
 
+  /* ================= Mascot — floats below the eyebrow, eyes track the cursor ================= */
+  .mascot-wrap {
+    --mascot-tilt: 0deg;
+    display: flex; justify-content: center;
+    margin: 2px 0 6px;
+    animation: fadeDown .5s .1s ease both, mascotFloat 4.6s ease-in-out .6s infinite;
+    filter: drop-shadow(0 14px 26px rgba(232,187,80,.28));
+    cursor: default;
+  }
+  @keyframes mascotFloat {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-9px); }
+  }
+  .mascot-svg .mascot-body {
+    transform: rotate(var(--mascot-tilt));
+    transform-origin: 110px 195px;
+    transition: transform .18s cubic-bezier(.16,.84,.24,1);
+  }
+  .mascot-ground-shadow {
+    fill: rgba(0,0,0,.4);
+    transform-origin: 110px 204px;
+    transform: scale(calc(1 - var(--mascot-bob, 0) * .002));
+  }
+  .mascot-antenna-tip {
+    animation: blink 2.6s ease-in-out infinite;
+    filter: drop-shadow(0 0 5px rgba(245,210,120,.8));
+  }
+  .mascot-pupil {
+    transform: translate(var(--eye-x, 0px), var(--eye-y, 0px));
+  }
+  .mascot-eye { --eye-x: 0px; --eye-y: 0px; }
+  .mascot-eyelid {
+    fill: #0e1526;
+    transform: scaleY(.02);
+    opacity: 0;
+    animation: mascotBlink 5.4s ease-in-out infinite;
+  }
+  @keyframes mascotBlink {
+    0%, 92%, 100% { transform: scaleY(.02); opacity: 0; }
+    94%, 97%      { transform: scaleY(1);   opacity: 1; }
+  }
+  .mascot-mouth { transition: d .25s ease; }
+  .mascot-wrap:hover .mascot-mouth { d: path("M94 138 Q110 154 126 138"); }
+  .mascot-wrap:hover .mascot-body { animation: mascotNod .5s ease; }
+  @keyframes mascotNod {
+    0%, 100% { translate: 0 0; }
+    35%      { translate: 0 -6px; }
+    65%      { translate: 0 2px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mascot-wrap, .mascot-antenna-tip, .mascot-eyelid { animation: none !important; }
+  }
+
   
   .cards {
     display: grid;
@@ -747,33 +800,7 @@
   }
   #liveClock .lc-time { color: var(--text2); font-weight: 500; font-variant-numeric: tabular-nums; }
 
-  /* ================= Command palette trigger (⌘K) ================= */
-  .cmdk-trigger {
-    display: flex; align-items: center; gap: 8px;
-    height: 32px; padding: 0 10px 0 12px; margin: 0 4px;
-    border-radius: 100px; cursor: pointer;
-    background: var(--surface); border: 1px solid var(--border);
-    color: var(--text3); font-family: var(--font);
-    transition: all .2s var(--ease); flex-shrink: 0;
-    box-shadow: var(--shadow-sm);
-  }
-  .cmdk-trigger:hover {
-    background: var(--surface-h); color: var(--text2);
-    border-color: rgba(232,187,80,.3);
-    box-shadow: 0 0 0 4px rgba(232,187,80,.08), var(--shadow-sm);
-  }
-  .cmdk-trigger svg { width: 13px; height: 13px; flex-shrink: 0; opacity: .8; }
-  .cmdk-trigger-label { font-size: 12px; font-weight: 500; white-space: nowrap; }
-  .cmdk-trigger-kbd {
-    display: flex; align-items: center; gap: 2px;
-    font-family: var(--mono); font-size: 9px; font-weight: 600;
-    color: var(--text3); background: rgba(255,255,255,.06);
-    border: 1px solid var(--border); border-radius: 5px;
-    padding: 1px 5px; letter-spacing: .02em;
-  }
-  @media (max-width: 640px) { .cmdk-trigger-label, .cmdk-trigger-kbd { display: none; } .cmdk-trigger { padding: 0 8px; } }
-
-  /* ================= Command palette overlay ================= */
+  /* ================= Command palette overlay (open with Ctrl/Cmd K) ================= */
   #cmdk-backdrop {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(5,10,20,.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -1298,15 +1325,6 @@
 
   <div id="tabs" style="display:none"></div>
 
-  <button class="cmdk-trigger" id="cmdkTrigger" onclick="openCmdk()" title="Tìm nhanh ứng dụng">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="11" cy="11" r="7"/>
-      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
-    <span class="cmdk-trigger-label">Tìm ứng dụng…</span>
-    <span class="cmdk-trigger-kbd">Ctrl K</span>
-  </button>
-
   <div class="topbar-right">
     <div id="liveClock"><span class="lc-dot"></span><span class="lc-time" id="lc-time">--:--:--</span></div>
     <div class="admin-indicator" id="adminIndicator">
@@ -1366,6 +1384,51 @@
   <div id="home" class="pane active">
     <div class="home-inner">
       <div class="home-eyebrow">Solar Operations</div>
+
+      <div class="mascot-wrap" id="mascotWrap" aria-hidden="true">
+        <svg class="mascot-svg" viewBox="0 0 220 220" width="132" height="132">
+          <defs>
+            <radialGradient id="mascotBodyGrad" cx="42%" cy="32%" r="75%">
+              <stop offset="0%" stop-color="#fff8e1"/>
+              <stop offset="42%" stop-color="#f5d278"/>
+              <stop offset="100%" stop-color="#c49830"/>
+            </radialGradient>
+            <linearGradient id="mascotShade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(255,255,255,.4)"/>
+              <stop offset="55%" stop-color="rgba(255,255,255,0)"/>
+              <stop offset="100%" stop-color="rgba(0,0,0,.18)"/>
+            </linearGradient>
+          </defs>
+
+          <ellipse class="mascot-ground-shadow" cx="110" cy="204" rx="52" ry="9"/>
+
+          <g class="mascot-body">
+            <line x1="110" y1="24" x2="110" y2="2" stroke="#e8bb50" stroke-width="4" stroke-linecap="round"/>
+            <circle class="mascot-antenna-tip" cx="110" cy="2" r="6" fill="#fff8e1"/>
+
+            <circle cx="110" cy="108" r="80" fill="url(#mascotBodyGrad)" stroke="rgba(255,255,255,.55)" stroke-width="2"/>
+            <circle cx="110" cy="108" r="80" fill="url(#mascotShade)"/>
+
+            <ellipse cx="110" cy="114" rx="58" ry="44" fill="rgba(9,13,23,.62)"/>
+
+            <g class="mascot-eye" id="mascotEyeL" style="transform-origin:88px 112px">
+              <circle cx="88" cy="112" r="15" fill="#fff8e1"/>
+              <circle class="mascot-pupil" cx="88" cy="112" r="6.5" fill="#0c1220"/>
+              <ellipse class="mascot-eyelid" cx="88" cy="112" rx="16" ry="16" style="transform-origin:88px 112px"/>
+            </g>
+            <g class="mascot-eye" id="mascotEyeR" style="transform-origin:132px 112px">
+              <circle cx="132" cy="112" r="15" fill="#fff8e1"/>
+              <circle class="mascot-pupil" cx="132" cy="112" r="6.5" fill="#0c1220"/>
+              <ellipse class="mascot-eyelid" cx="132" cy="112" rx="16" ry="16" style="transform-origin:132px 112px;animation-delay:.12s"/>
+            </g>
+
+            <path class="mascot-mouth" d="M96 140 Q110 149 124 140" fill="none" stroke="#0c1220" stroke-width="3.4" stroke-linecap="round"/>
+
+            <path d="M35 108a75 75 0 0022 55" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="3" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </div>
+
       <h1 class="home-title"><span class="grad">Solar Tools Hub</span></h1>
       <p class="home-sub">Trung tâm ứng dụng nội bộ — chọn công cụ bên dưới để bắt đầu.</p>
       <div class="home-divider"></div>
@@ -2906,6 +2969,52 @@ function moveCmdkSelection(delta) {
   }
   tick();
   setInterval(tick, 1000);
+})();
+
+/* ================= Mascot eye-tracking — purely additive ================= */
+(function initMascot() {
+  const wrap = document.getElementById('mascotWrap');
+  const eyeL = document.getElementById('mascotEyeL');
+  const eyeR = document.getElementById('mascotEyeR');
+  if (!wrap || !eyeL || !eyeR) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const MAX_PUPIL_OFFSET = 5.5;
+  let raf = null;
+  let lastX = window.innerWidth / 2;
+  let lastY = window.innerHeight / 2;
+
+  function moveEye(eyeGroup, mx, my) {
+    const socket = eyeGroup.querySelector('circle');
+    const rect = socket.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = mx - cx, dy = my - cy;
+    const dist = Math.hypot(dx, dy);
+    const clamped = Math.min(MAX_PUPIL_OFFSET, dist / 16);
+    const angle = Math.atan2(dy, dx);
+    eyeGroup.style.setProperty('--eye-x', (Math.cos(angle) * clamped).toFixed(2) + 'px');
+    eyeGroup.style.setProperty('--eye-y', (Math.sin(angle) * clamped).toFixed(2) + 'px');
+  }
+
+  function update() {
+    raf = null;
+    moveEye(eyeL, lastX, lastY);
+    moveEye(eyeR, lastX, lastY);
+
+    const wrapRect = wrap.getBoundingClientRect();
+    const wcx = wrapRect.left + wrapRect.width / 2;
+    const tilt = Math.max(-7, Math.min(7, (lastX - wcx) / 34));
+    wrap.style.setProperty('--mascot-tilt', tilt.toFixed(2) + 'deg');
+  }
+
+  document.addEventListener('mousemove', e => {
+    lastX = e.clientX; lastY = e.clientY;
+    if (!raf) raf = requestAnimationFrame(update);
+  });
+
+  
+  update();
 })();
 </script>
 
