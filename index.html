@@ -733,6 +733,145 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .load-text { font-size: 12px; color: var(--text2); font-family: var(--mono); letter-spacing: .08em; }
 
+  /* ================= Live status clock (topbar) ================= */
+  #liveClock {
+    display: flex; align-items: baseline; gap: 6px;
+    font-family: var(--mono); font-size: 11px; color: var(--text3);
+    letter-spacing: .04em; padding: 0 4px; flex-shrink: 0;
+    user-select: none;
+  }
+  #liveClock .lc-dot {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--green);
+    box-shadow: 0 0 6px var(--green); flex-shrink: 0;
+    animation: blink 2.4s ease-in-out infinite;
+  }
+  #liveClock .lc-time { color: var(--text2); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* ================= Command palette trigger (⌘K) ================= */
+  .cmdk-trigger {
+    display: flex; align-items: center; gap: 8px;
+    height: 32px; padding: 0 10px 0 12px; margin: 0 4px;
+    border-radius: 100px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text3); font-family: var(--font);
+    transition: all .2s var(--ease); flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+  }
+  .cmdk-trigger:hover {
+    background: var(--surface-h); color: var(--text2);
+    border-color: rgba(232,187,80,.3);
+    box-shadow: 0 0 0 4px rgba(232,187,80,.08), var(--shadow-sm);
+  }
+  .cmdk-trigger svg { width: 13px; height: 13px; flex-shrink: 0; opacity: .8; }
+  .cmdk-trigger-label { font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .cmdk-trigger-kbd {
+    display: flex; align-items: center; gap: 2px;
+    font-family: var(--mono); font-size: 9px; font-weight: 600;
+    color: var(--text3); background: rgba(255,255,255,.06);
+    border: 1px solid var(--border); border-radius: 5px;
+    padding: 1px 5px; letter-spacing: .02em;
+  }
+  @media (max-width: 640px) { .cmdk-trigger-label, .cmdk-trigger-kbd { display: none; } .cmdk-trigger { padding: 0 8px; } }
+
+  /* ================= Command palette overlay ================= */
+  #cmdk-backdrop {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(5,10,20,.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    display: flex; justify-content: center;
+    padding-top: min(14vh, 130px);
+    opacity: 0; pointer-events: none; transition: opacity .2s var(--ease);
+  }
+  #cmdk-backdrop.open { opacity: 1; pointer-events: auto; }
+
+  .cmdk-panel {
+    width: min(560px, 92vw); max-height: min(60vh, 460px);
+    background: rgba(14,19,35,.94);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,.06) inset;
+    backdrop-filter: blur(28px) saturate(160%);
+    display: flex; flex-direction: column; overflow: hidden;
+    position: relative;
+    transform: translateY(-14px) scale(.97); opacity: 0;
+    transition: transform .32s var(--ease-spring), opacity .22s var(--ease);
+  }
+  #cmdk-backdrop.open .cmdk-panel { transform: none; opacity: 1; }
+  .cmdk-panel::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent3), var(--accent2), #fff8c0, var(--accent2));
+    box-shadow: 0 0 16px rgba(232,187,80,.4);
+  }
+
+  .cmdk-input-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,.08); flex-shrink: 0;
+  }
+  .cmdk-input-row svg { width: 17px; height: 17px; color: var(--accent2); flex-shrink: 0; }
+  #cmdk-input {
+    flex: 1; background: none; border: none; outline: none;
+    font-family: var(--font); font-size: 15px; font-weight: 500;
+    color: var(--text); letter-spacing: -.01em;
+  }
+  #cmdk-input::placeholder { color: var(--text3); font-weight: 400; }
+  .cmdk-input-esc {
+    font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text3);
+    background: rgba(255,255,255,.06); border: 1px solid var(--border);
+    border-radius: 5px; padding: 2px 6px; flex-shrink: 0;
+  }
+
+  .cmdk-list { overflow-y: auto; padding: 8px; flex: 1; }
+  .cmdk-empty {
+    padding: 32px 16px; text-align: center; color: var(--text3);
+    font-size: 13px; font-family: var(--mono);
+  }
+  .cmdk-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 10px; border-radius: var(--r-md); cursor: pointer;
+    border: 1px solid transparent; transition: background .12s, border-color .12s;
+  }
+  .cmdk-item.active {
+    background: rgba(232,187,80,.09); border-color: rgba(232,187,80,.22);
+  }
+  .cmdk-item-icon {
+    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.35); overflow: hidden; position: relative;
+  }
+  .cmdk-item-icon svg { width: 15px; height: 15px; }
+  .cmdk-item-info { flex: 1; min-width: 0; }
+  .cmdk-item-name {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.01em;
+  }
+  .cmdk-item.active .cmdk-item-name { color: var(--accent2); }
+  .cmdk-item-tags {
+    font-size: 11px; color: var(--text3); margin-top: 1px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cmdk-item-badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 500;
+    padding: 2px 6px; border-radius: 5px; flex-shrink: 0;
+    background: rgba(232,187,80,.1); color: var(--accent2);
+    border: 1px solid rgba(232,187,80,.2);
+  }
+  .cmdk-item-enter {
+    font-family: var(--mono); font-size: 10px; color: var(--text3);
+    opacity: 0; transition: opacity .12s; flex-shrink: 0;
+  }
+  .cmdk-item.active .cmdk-item-enter { opacity: 1; }
+
+  .cmdk-footer {
+    display: flex; align-items: center; gap: 16px;
+    padding: 9px 16px; border-top: 1px solid rgba(255,255,255,.07);
+    flex-shrink: 0;
+  }
+  .cmdk-footer span { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); }
+  .cmdk-footer kbd {
+    font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text2);
+    background: rgba(255,255,255,.07); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; min-width: 16px; text-align: center;
+  }
+
   
   .modal-backdrop {
     position: fixed; inset: 0;
@@ -1159,7 +1298,17 @@
 
   <div id="tabs" style="display:none"></div>
 
+  <button class="cmdk-trigger" id="cmdkTrigger" onclick="openCmdk()" title="Tìm nhanh ứng dụng">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="7"/>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <span class="cmdk-trigger-label">Tìm ứng dụng…</span>
+    <span class="cmdk-trigger-kbd">Ctrl K</span>
+  </button>
+
   <div class="topbar-right">
+    <div id="liveClock"><span class="lc-dot"></span><span class="lc-time" id="lc-time">--:--:--</span></div>
     <div class="admin-indicator" id="adminIndicator">
       <div class="admin-indicator-dot"></div>
       ADMIN
@@ -1190,6 +1339,25 @@
     <div class="dropdown-footer">
       <span class="df-count" id="df-count">0 APPS</span>
       <button class="df-add-btn" onclick="openAdd();closeDropdown()">＋ Thêm app</button>
+    </div>
+  </div>
+</div>
+
+<div id="cmdk-backdrop" onclick="if(event.target===this) closeCmdk()">
+  <div class="cmdk-panel">
+    <div class="cmdk-input-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input id="cmdk-input" placeholder="Gõ tên ứng dụng, badge hoặc tag…" autocomplete="off" spellcheck="false"/>
+      <span class="cmdk-input-esc">ESC</span>
+    </div>
+    <div class="cmdk-list" id="cmdk-list"></div>
+    <div class="cmdk-footer">
+      <span><kbd>↑</kbd><kbd>↓</kbd> di chuyển</span>
+      <span><kbd>↵</kbd> mở</span>
+      <span><kbd>esc</kbd> đóng</span>
     </div>
   </div>
 </div>
@@ -2615,6 +2783,129 @@ document.addEventListener('keydown', e => {
   } catch(e) {
     console.warn('apple-touch-icon generation failed:', e);
   }
+})();
+</script>
+
+<script>
+/* ================= Command palette (⌘K / Ctrl K) — quick app launcher, purely additive ================= */
+let cmdkResults = [];
+let cmdkActiveIndex = 0;
+
+function openCmdk() {
+  const backdrop = document.getElementById('cmdk-backdrop');
+  const input = document.getElementById('cmdk-input');
+  if (!backdrop || !input) return;
+  backdrop.classList.add('open');
+  input.value = '';
+  filterCmdk('');
+  setTimeout(() => input.focus(), 20);
+}
+
+function closeCmdk() {
+  const backdrop = document.getElementById('cmdk-backdrop');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+function toggleCmdk() {
+  const backdrop = document.getElementById('cmdk-backdrop');
+  if (backdrop && backdrop.classList.contains('open')) closeCmdk(); else openCmdk();
+}
+
+function filterCmdk(query) {
+  const q = (query || '').trim().toLowerCase();
+  cmdkResults = (typeof apps !== 'undefined' ? apps : [])
+    .map((app, i) => ({ app, i }))
+    .filter(({ app }) => {
+      if (!q) return true;
+      const haystack = [app.name, app.badge, app.tags, app.desc].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(q);
+    });
+  cmdkActiveIndex = 0;
+  renderCmdkList();
+}
+
+function renderCmdkList() {
+  const list = document.getElementById('cmdk-list');
+  if (!list) return;
+  if (!cmdkResults.length) {
+    list.innerHTML = '<div class="cmdk-empty">Không tìm thấy ứng dụng phù hợp</div>';
+    return;
+  }
+  list.innerHTML = cmdkResults.map(({ app, i }, pos) => {
+    const color = getColor(app.color);
+    const enabled = app.enabled !== false;
+    return `
+      <div class="cmdk-item ${pos === cmdkActiveIndex ? 'active' : ''}" data-pos="${pos}"
+           onmouseenter="cmdkActiveIndex=${pos};renderCmdkList()" onclick="cmdkOpen(${i})">
+        <div class="cmdk-item-icon" style="background:${color.iconBg};box-shadow:0 2px 8px ${color.iconShadow}">
+          ${getAppIcon(app.emoji || '📁', color.hex)}
+        </div>
+        <div class="cmdk-item-info">
+          <div class="cmdk-item-name">${esc(app.name)}</div>
+          <div class="cmdk-item-tags">${esc(app.tags || (enabled ? '' : 'Đang bảo trì'))}</div>
+        </div>
+        ${app.badge ? `<span class="cmdk-item-badge">${esc(app.badge)}</span>` : ''}
+        <span class="cmdk-item-enter">↵</span>
+      </div>
+    `;
+  }).join('');
+  const activeEl = list.querySelector('.cmdk-item.active');
+  if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+}
+
+function cmdkOpen(i) {
+  const app = apps[i];
+  if (!app) return;
+  if (app.enabled === false && !isAdmin) return;
+  closeCmdk();
+  openApp(i);
+}
+
+function moveCmdkSelection(delta) {
+  if (!cmdkResults.length) return;
+  cmdkActiveIndex = (cmdkActiveIndex + delta + cmdkResults.length) % cmdkResults.length;
+  renderCmdkList();
+}
+
+(function attachCmdkListeners() {
+  const input = document.getElementById('cmdk-input');
+  if (input) {
+    input.addEventListener('input', e => filterCmdk(e.target.value));
+    input.addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveCmdkSelection(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveCmdkSelection(-1); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const pick = cmdkResults[cmdkActiveIndex];
+        if (pick) cmdkOpen(pick.i);
+      } else if (e.key === 'Escape') { e.preventDefault(); closeCmdk(); }
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    const isK = e.key === 'k' || e.key === 'K';
+    if ((e.metaKey || e.ctrlKey) && isK) {
+      e.preventDefault();
+      toggleCmdk();
+    } else if (e.key === 'Escape') {
+      const backdrop = document.getElementById('cmdk-backdrop');
+      if (backdrop && backdrop.classList.contains('open')) closeCmdk();
+    }
+  });
+})();
+
+/* ================= Live status clock (topbar) — purely additive ================= */
+(function startLiveClock() {
+  const el = document.getElementById('lc-time');
+  if (!el) return;
+  function tick() {
+    el.textContent = new Intl.DateTimeFormat('vi-VN', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+      timeZone: 'Asia/Ho_Chi_Minh'
+    }).format(new Date());
+  }
+  tick();
+  setInterval(tick, 1000);
 })();
 </script>
 
