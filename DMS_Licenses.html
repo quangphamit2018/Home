@@ -828,6 +828,19 @@
     #tl-export:disabled { opacity: .5; cursor: not-allowed; }
     @media (max-width: 900px) { .tl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 600px) { .tl-grid { grid-template-columns: 1fr; } }
+
+    /* ---------- Cập Nhật Thông Tin: đánh dấu trường / ô dữ liệu đã thay đổi ---------- */
+    .field.changed input, .field.changed textarea { border-color: var(--gold); background: #fffbea; box-shadow: 0 0 0 3px rgba(255, 200, 87, .22); }
+    .field.changed label { color: var(--brand); display: inline-flex; align-items: center; gap: 6px; }
+    .chg-dot { width: 7px; height: 7px; border-radius: 99px; background: var(--gold); box-shadow: 0 0 0 2px rgba(255, 200, 87, .35); display: inline-block; }
+    .tl-prev tr.r-old td.chg { background: #ffdb8a; color: #6b4b00; font-weight: 700; }
+    .tl-prev tr.r-new td.chg { background: #ffdb8a; color: #6b4b00; font-weight: 700; box-shadow: inset 0 0 0 1px #f2c94c; }
+    .upd-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--muted); margin-bottom: 12px; }
+    .upd-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .upd-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+    .upd-legend .lg-old { background: #e6e6e6; }
+    .upd-legend .lg-new { background: #d8f0cf; }
+    .upd-legend .lg-chg { background: #ffdb8a; }
   </style>
 </head>
 <body class="auth">
@@ -899,7 +912,7 @@
     function savePageSize(v) { try { localStorage.setItem(PAGE_SIZE_KEY, String(v)); } catch (_) {} }
     // Nhớ tab đang mở (và chế độ trong Công Cụ Hỗ Trợ) để F5 / tải lại trang vẫn giữ nguyên
     const TAB_KEY = "masterdata_tab", TOOL_MODE_KEY = "masterdata_tool_mode";
-    const TABS_OK = ["dashboard", "dms", "central", "tools", "admin"], TOOL_MODES_OK = ["replace", "create", "remove"];
+    const TABS_OK = ["dashboard", "dms", "central", "tools", "update", "admin"], TOOL_MODES_OK = ["replace", "create", "remove"];
     function loadKey(key, allowed, fallback) { try { const v = localStorage.getItem(key); return allowed.includes(v) ? v : fallback; } catch (_) { return fallback; } }
     function saveKey(key, v) { try { localStorage.setItem(key, v); } catch (_) {} }
     const FETCH_CHUNK = 1000;   // số dòng mỗi lần gọi Supabase khi tải toàn bộ bảng
@@ -1077,6 +1090,7 @@
         ["dms", "DMS Userlist", ICONS.users],
         ["central", "Central User list", ICONS.users],
         ["tools", "Công Cụ Hỗ Trợ", ICONS.tools],
+        ...(canEdit() ? [["update", "Cập Nhật Thông Tin", ICONS.edit]] : []),
         ...(isAdmin() ? [["admin", "Quản lý dữ liệu", ICONS.database]] : [])
       ];
       if (!tabs.some(x => x[0] === state.tab)) state.tab = "dashboard";
@@ -1108,6 +1122,7 @@
       if (state.tab === "dashboard") return renderDashboard();
       if (state.tab === "dms" || state.tab === "central") return renderDataset();
       if (state.tab === "tools") return renderTools();
+      if (state.tab === "update" && canEdit()) return renderUpdate();
       if (state.tab === "admin" && isAdmin()) return renderAdmin();
       return renderDashboard();
     }
@@ -1348,6 +1363,7 @@
       $("#new-row")?.addEventListener("click", () => openRowModal());
       bindDatasetBody();
       bindToolEvents();
+      bindUpdateEvents();
       $("#file-input")?.addEventListener("change", e => e.target.files[0] && importWorkbook(e.target.files[0]));
       const dropzone = $("#dropzone");
       if (dropzone) {
@@ -1586,6 +1602,248 @@
         t.dispatchEvent(new Event("input", { bubbles: true }));
       });
       pg.addEventListener("change", e => { if (e.target.id === "tl-status") { tool.status = e.target.value; $("#tl-list").innerHTML = renderToolList(); } });
+    }
+
+    /* =====================================================================
+       Cập Nhật Thông Tin — chỉnh sửa các trường có sẵn của Central User list,
+       đối chiếu rõ ràng dữ liệu cũ/mới (tô nổi bật ô thay đổi), lưu thẳng vào
+       central_users rồi xuất phiếu Excel làm hồ sơ đối chiếu.
+       ===================================================================== */
+    const UPD_EDITABLE_KEYS = new Set(["password_expiry_date", "description", "employee_code", "employee_name", "date_of_birth", "date_of_joining", "email", "role_name", "territory_hierarchy", "is_active"]);
+    const UPD_FIELDS = CENTRAL_FIELDS.filter(([key]) => UPD_EDITABLE_KEYS.has(key));
+    const UPD_LIST_LIMIT = 100;
+    const upd = { picked: [], q: "", status: "", edits: {} };
+    let updIdx = { src: null };
+
+    function updIndex() {
+      if (updIdx.src !== state.central) {
+        const u = new Map();
+        state.central.forEach(r => u.set(String(r.username).trim().toLowerCase(), r));
+        updIdx = { src: state.central, u };
+      }
+      return updIdx;
+    }
+    // Bản nháp chỉnh sửa của 1 account; giữ nguyên object qua các lần render để không mất dữ liệu đang gõ
+    function updEditFor(key, old) {
+      return upd.edits[key] ||= UPD_FIELDS.reduce((o, [f]) => (o[f] = old?.[f] ?? "", o), {});
+    }
+    function updPersons() {
+      const idx = updIndex();
+      return upd.picked.map(k => {
+        const old = idx.u.get(k.toLowerCase());
+        if (!old) return null;
+        return { key: old.username, old, edit: updEditFor(old.username, old) };
+      }).filter(Boolean);
+    }
+    const updChangedFields = (old, edit) => UPD_FIELDS.filter(([f]) => String(old?.[f] ?? "").trim() !== String(edit?.[f] ?? "").trim()).map(([f]) => f);
+    const updChangedItems = () => updPersons().map(item => ({ ...item, changed: updChangedFields(item.old, item.edit) })).filter(item => item.changed.length);
+    const updStatus = () => upd.status || "all";
+    let updMulti = null;
+    // Danh sách account để chọn — cùng cơ chế tìm kiếm/dán nhiều mã như Công Cụ Hỗ Trợ để đồng bộ trải nghiệm
+    function updListRows() {
+      const q = upd.q.trim().toLowerCase(), st = updStatus(), okStatus = r => st === "all" || (st === "inactive") === isInactive(r);
+      const tokens = [...new Map(upd.q.split(/[\s,;]+/).filter(Boolean).map(x => [x.toLowerCase(), x])).values()];
+      updMulti = null;
+      if (tokens.length >= 2) {
+        const want = new Set(tokens.map(x => x.toLowerCase())), found = new Set(), out = [];
+        let hidden = 0;
+        state.central.forEach(r => {
+          const hit = [r.username, r.employee_code, r.email].map(x => String(x ?? "").trim().toLowerCase()).filter(k => want.has(k));
+          if (!hit.length) return;
+          hit.forEach(k => found.add(k));
+          if (okStatus(r)) out.push(r); else hidden++;
+        });
+        if (found.size) { updMulti = { total: tokens.length, missing: tokens.filter(x => !found.has(x.toLowerCase())), hidden }; return out; }
+      }
+      return state.central.filter(r => okStatus(r) && (!q || rowSearchText(r, CENTRAL_FIELDS).includes(q)));
+    }
+    function renderUpdList() {
+      const rows = updListRows(), picked = new Set(upd.picked), lim = updMulti ? 500 : UPD_LIST_LIMIT;
+      const banner = updMulti ? multiBanner(updMulti) : "";
+      if (!rows.length) return banner + `<div class="empty"><strong>${state.loading ? "Đang tải dữ liệu…" : "Không có account phù hợp"}</strong>Không có account nào khớp. Thử đổi bộ lọc Trạng thái hoặc từ khóa tìm kiếm.</div>`;
+      const body = rows.slice(0, lim).map(r => { const on = picked.has(r.username); return `<tr data-pk="${escapeHtml(r.username)}" class="${on ? "sel" : ""}"><td><input type="checkbox" ${on ? "checked" : ""} aria-label="Chọn ${escapeHtml(r.username)}"></td><td><strong>${escapeHtml(r.username)}</strong></td><td>${cellHtml(r.employee_name)}</td><td>${cellHtml(r.description)}</td><td>${cellHtml(r.email)}</td><td>${cellHtml(r.territory_hierarchy)}</td><td><span class="badge ${isInactive(r) ? "badge-danger" : "badge-success"}">${isInactive(r) ? "Deactive" : "Active"}</span></td></tr>`; }).join("");
+      return banner + `<div class="table-wrap tl-scroll"><table class="tl-table"><thead><tr><th></th><th>UserName</th><th>EmployeeName</th><th>Description</th><th>Email</th><th>Territory</th><th>Trạng thái</th></tr></thead><tbody>${body}</tbody></table></div><div class="tl-foot">Hiển thị ${nf(Math.min(rows.length, lim))} / ${nf(rows.length)} account${rows.length > lim ? " — dùng ô tìm kiếm để thu hẹp" : ""}</div>`;
+    }
+    function updFieldInput(key, item) {
+      const [, label] = UPD_FIELDS.find(([f]) => f === key);
+      const changed = String(item.old?.[key] ?? "").trim() !== String(item.edit[key] ?? "").trim();
+      const isArea = ["description", "territory_hierarchy"].includes(key);
+      const val = escapeHtml(item.edit[key]);
+      return `<div class="field ${isArea ? "full" : ""} ${changed ? "changed" : ""}">
+        <label>${escapeHtml(label)}${changed ? ' <span class="chg-dot" title="Khác dữ liệu gốc"></span>' : ""}</label>
+        ${isArea ? `<textarea data-key="${escapeHtml(item.key)}" data-f="${key}">${val}</textarea>` : `<input data-key="${escapeHtml(item.key)}" data-f="${key}" value="${val}" autocomplete="off" />`}
+      </div>`;
+    }
+    function renderUpdCards() {
+      const items = updPersons();
+      if (!items.length) return `<div class="empty"><strong>Chưa chọn account nào</strong>Tick chọn account cần cập nhật ở bước ① để chỉnh sửa thông tin.</div>`;
+      return items.map((item, i) => {
+        const changed = updChangedFields(item.old, item.edit);
+        return `<div class="tl-card"><div class="tl-card-head"><div class="tl-idx">${i + 1}</div>
+          <div class="tl-old"><b>${escapeHtml(item.old.username)}</b> · ${escapeHtml(item.old.employee_name || "")} <span class="nil">${escapeHtml(item.old.description || "")}</span></div>
+          <span class="tl-msg ${changed.length ? "ok" : ""}" data-upd-msg="${escapeHtml(item.key)}">${changed.length ? `${changed.length} trường đã đổi` : "Chưa chỉnh sửa"}</span>
+          <button type="button" class="btn btn-plain" data-upd="reset" data-key="${escapeHtml(item.key)}" title="Khôi phục dữ liệu gốc">${ICONS.refresh}</button>
+          <button type="button" class="btn btn-plain" data-upd="remove" data-key="${escapeHtml(item.key)}" title="Bỏ khỏi danh sách">${ICONS.close}</button></div>
+          <div class="tl-grid">${UPD_FIELDS.map(([key]) => updFieldInput(key, item)).join("")}</div></div>`;
+      }).join("");
+    }
+    // Dựng 2 dòng Excel/preview cho 1 account: dữ liệu cũ và dữ liệu mới, kèm chỉ số cột đã thay đổi để tô nổi bật
+    function updRowPair({ old, edit, changed }) {
+      const changedLabels = changed.map(f => UPD_FIELDS.find(([k]) => k === f)[1]).join(", ");
+      const oldVals = ["Dữ liệu cũ", ...CENTRAL_FIELDS.map(([f]) => old[f] ?? ""), ""];
+      const newVals = ["Dữ liệu mới", ...CENTRAL_FIELDS.map(([f]) => (changed.includes(f) ? edit[f] : old[f]) ?? ""), changedLabels];
+      const changedIdx = new Set(CENTRAL_FIELDS.map(([f], i) => changed.includes(f) ? i + 1 : -1).filter(i => i >= 0));
+      return { oldVals, newVals, changedIdx };
+    }
+    function renderUpdPreview() {
+      const items = updChangedItems();
+      const cols = ["Trạng thái", ...CENTRAL_FIELDS.map(([, label]) => label), "Trường đã đổi"];
+      if (!items.length) return `<div class="empty"><strong>Chưa có thay đổi để xem trước</strong>Chỉnh sửa thông tin ở bước ② — account nào có trường khác dữ liệu gốc sẽ hiện ở đây.</div>`;
+      const row = (vals, cls, changedIdx) => `<tr class="${cls}">${vals.map((v, i) => `<td class="${changedIdx.has(i) ? "chg" : ""}">${cellHtml(v)}</td>`).join("")}</tr>`;
+      const rows = items.map(item => { const { oldVals, newVals, changedIdx } = updRowPair(item); return row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx); }).join("");
+      return `<div class="tl-sum"><span class="badge badge-blue">${items.length} account có thay đổi</span><span class="badge badge-success">${items.reduce((n, x) => n + x.changed.length, 0)} trường được cập nhật</span></div>
+        <div class="upd-legend"><span><i class="lg-old"></i>Dữ liệu cũ</span><span><i class="lg-new"></i>Dữ liệu mới</span><span><i class="lg-chg"></i>Ô đã thay đổi</span></div>
+        <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+    function renderUpdBody() {
+      const nAll = state.central.length, nOff = state.central.filter(isInactive).length, changedCount = updChangedItems().length;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Chọn account cần cập nhật</h2><p>Tìm theo UserName, EmployeeCode hoặc Email; có thể dán nhiều mã cùng lúc. Lựa chọn được giữ nguyên khi bạn tìm kiếm.</p></div><span class="badge badge-blue" id="upd-count">${upd.picked.length} đã chọn</span></div>
+        <div class="toolbar"><div class="search"><span class="search-icon">${ICONS.search}</span><input id="upd-search" value="${escapeHtml(upd.q)}" placeholder="Tìm hoặc dán nhiều UserName…" autocomplete="off" /></div>
+        <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="upd-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${updStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-upd="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-upd="clear">Bỏ chọn hết</button></div></div>
+        <div id="upd-list">${renderUpdList()}</div></section>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p>Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p></div></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!canEdit() || !changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" id="upd-export" data-upd="export" ${!changedCount ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
+    }
+    function renderUpdate() {
+      return `<div id="update-page"><div class="header-row"><div><div class="eyebrow">Cập nhật dữ liệu</div><h2 class="page-title">Cập Nhật Thông Tin</h2><p class="page-subtitle">Chỉnh sửa thông tin có sẵn trong Central User list, đối chiếu rõ dữ liệu cũ/mới rồi lưu và xuất Excel.</p></div></div><div id="upd-root">${renderUpdBody()}</div></div>`;
+    }
+    function updRefresh() {
+      const cv = $("#upd-preview"); if (cv) cv.innerHTML = renderUpdPreview();
+      const changedCount = updChangedItems().length;
+      const sv = $("#upd-save"); if (sv) sv.disabled = !canEdit() || !changedCount;
+      const ex = $("#upd-export"); if (ex) ex.disabled = !changedCount;
+      const c = $("#upd-count"); if (c) c.textContent = `${upd.picked.length} đã chọn`;
+    }
+    function updDrawCards() {
+      const el = $("#upd-cards"); if (el) el.innerHTML = renderUpdCards();
+      updRefresh();
+    }
+    async function updSave() {
+      if (!canEdit()) return toast("Bạn không có quyền lưu cập nhật.", "error");
+      const items = updChangedItems();
+      if (!items.length) return;
+      const ok = await confirmDialog({ title: "Lưu cập nhật?", message: `Lưu thay đổi cho ${items.length} account vào Central User list?`, confirmText: "Lưu cập nhật", danger: false });
+      if (!ok) return;
+      const btn = $("#upd-save"), restore = btn ? btn.innerHTML : null;
+      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang lưu…`; }
+      try {
+        const payload = items.map(({ old, edit, changed }) => {
+          const row = { username: old.username, updated_at: new Date().toISOString() };
+          changed.forEach(f => row[f] = edit[f] || null);
+          return row;
+        });
+        await upsertBatches("central_users", payload);
+        toast(`Đã lưu cập nhật cho ${nf(items.length)} account.`, "success");
+        items.forEach(({ key }) => delete upd.edits[key]);
+        await loadData();
+        const root = $("#upd-root"); if (root) { root.innerHTML = renderUpdBody(); bindUpdateEvents(); }
+      } catch (err) {
+        toast(`Lưu cập nhật thất bại: ${err.message}`, "error");
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = restore; }
+      }
+    }
+    async function updExport() {
+      const items = updChangedItems();
+      if (!items.length) return;
+      const cols = ["Trạng thái", ...CENTRAL_FIELDS.map(([, label]) => label), "Trường đã đổi"];
+      const pairs = items.map(updRowPair);
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+      const fileName = `Phieu_Cap_Nhat_Thong_Tin_${stamp}.xlsx`;
+      try {
+        if (window.ExcelJS) {   // ExcelJS: tô header hồng, dòng cũ xám, dòng mới xanh, ô đổi tô vàng nổi bật
+          const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("Cap Nhat");
+          const fill = argb => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+          const side = { style: "thin", color: { argb: "FFBFBFBF" } };
+          const put = (vals, baseArgb, changedIdx, headBold) => {
+            ws.addRow(vals).eachCell({ includeEmpty: true }, (c, colNumber) => {
+              const isChg = changedIdx.has(colNumber - 1);
+              c.numFmt = "@";
+              c.fill = fill(isChg ? "FFFFDB8A" : baseArgb);
+              c.font = { name: "Times New Roman", size: 11, bold: !!headBold || isChg, color: isChg ? { argb: "FF6B4B00" } : undefined };
+              c.border = { top: side, left: side, bottom: side, right: side };
+            });
+          };
+          put(cols, "FFF3DCF2", new Set(), true);
+          pairs.forEach(({ oldVals, newVals, changedIdx }) => { put(oldVals, "FFD9D9D9", changedIdx); put(newVals, "FFB9E4A8", changedIdx); });
+          ws.getColumn(1).width = 13;
+          CENTRAL_FIELDS.forEach((_, i) => { ws.getColumn(i + 2).width = 22; });
+          ws.getColumn(cols.length).width = 30;
+          ws.views = [{ state: "frozen", ySplit: 1, xSplit: 1 }];
+          const buf = await wb.xlsx.writeBuffer();
+          const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })), download: fileName });
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        } else {                // dự phòng: SheetJS bản thường (không tô màu)
+          const aoa = [cols]; pairs.forEach(({ oldVals, newVals }) => aoa.push(oldVals, newVals));
+          const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Cap Nhat"); XLSX.writeFile(wb, fileName);
+        }
+        toast(`Đã xuất phiếu "${fileName}".`, "success");
+      } catch (err) { toast(`Xuất phiếu thất bại: ${err.message}`, "error"); }
+    }
+    function bindUpdateEvents() {
+      const pg = $("#update-page"); if (!pg) return;
+      let timer;
+      pg.addEventListener("click", e => {
+        const t = e.target;
+        const tr = t.closest("tr[data-pk]");
+        if (tr) {
+          const cb = tr.querySelector("input"); if (t !== cb) cb.checked = !cb.checked;
+          tr.classList.toggle("sel", cb.checked);
+          upd.picked = upd.picked.filter(k => k !== tr.dataset.pk); if (cb.checked) upd.picked.push(tr.dataset.pk);
+          updDrawCards(); return;
+        }
+        const a = t.closest("[data-upd]"); if (!a) return;
+        const act = a.dataset.upd, key = a.dataset.key;
+        if (act === "save") updSave();
+        else if (act === "export") updExport();
+        else if (act === "pickall") {
+          const rows = updListRows();
+          if (!rows.length) return toast("Không có kết quả để chọn.", "error");
+          if (rows.length > 200) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa 200 account rồi chọn.`, "error");
+          const have = new Set(upd.picked); rows.forEach(r => have.has(r.username) || upd.picked.push(r.username));
+          $("#upd-list").innerHTML = renderUpdList(); updDrawCards(); toast(`Đã chọn ${nf(rows.length)} account.`, "success");
+        }
+        else if (act === "clear") { upd.picked = []; upd.edits = {}; $("#upd-list").innerHTML = renderUpdList(); updDrawCards(); }
+        else if (act === "remove") {
+          upd.picked = upd.picked.filter(k => k !== key); delete upd.edits[key];
+          const row = [...pg.querySelectorAll("tr[data-pk]")].find(x => x.dataset.pk === key); if (row) { row.classList.remove("sel"); row.querySelector("input").checked = false; }
+          updDrawCards();
+        } else if (act === "reset") { delete upd.edits[key]; updDrawCards(); }
+      });
+      pg.addEventListener("input", e => {
+        const t = e.target;
+        if (t.id === "upd-search") { upd.q = t.value; clearTimeout(timer); timer = setTimeout(() => { $("#upd-list").innerHTML = renderUpdList(); }, 150); return; }
+        if (!t.dataset.f) return;
+        const edit = upd.edits[t.dataset.key]; if (!edit) return;
+        edit[t.dataset.f] = t.value;
+        updRefresh();
+        const field = t.closest(".field");
+        if (field) {
+          const old = updIndex().u.get(t.dataset.key.toLowerCase());
+          field.classList.toggle("changed", String(old?.[t.dataset.f] ?? "").trim() !== String(t.value).trim());
+        }
+        const msg = pg.querySelector(`[data-upd-msg="${CSS.escape(t.dataset.key)}"]`);
+        const item = updPersons().find(x => x.key === t.dataset.key);
+        if (msg && item) { const n = updChangedFields(item.old, item.edit).length; msg.className = `tl-msg ${n ? "ok" : ""}`; msg.textContent = n ? `${n} trường đã đổi` : "Chưa chỉnh sửa"; }
+      });
+      pg.addEventListener("paste", e => {
+        const t = e.target; if (t.id !== "upd-search") return;
+        e.preventDefault();
+        t.setRangeText((e.clipboardData || window.clipboardData).getData("text").replace(/[\r\n\t;,]+/g, " ").trim() + " ", t.selectionStart, t.selectionEnd, "end");
+        t.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      pg.addEventListener("change", e => { if (e.target.id === "upd-status") { upd.status = e.target.value; $("#upd-list").innerHTML = renderUpdList(); } });
     }
 
     async function boot() {
