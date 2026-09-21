@@ -1693,19 +1693,19 @@
     // Dựng 2 dòng Excel/preview cho 1 account: dữ liệu cũ và dữ liệu mới, kèm chỉ số cột đã thay đổi để tô nổi bật
     function updRowPair({ old, edit, changed }) {
       const changedLabels = changed.map(f => UPD_FIELDS.find(([k]) => k === f)[1]).join(", ");
-      const oldVals = ["Dữ liệu cũ", ...CENTRAL_FIELDS.map(([f]) => old[f] ?? ""), ""];
-      const newVals = ["Dữ liệu mới", ...CENTRAL_FIELDS.map(([f]) => (changed.includes(f) ? edit[f] : old[f]) ?? ""), changedLabels];
+      const oldVals = ["Old data", ...CENTRAL_FIELDS.map(([f]) => old[f] ?? ""), ""];
+      const newVals = ["New data", ...CENTRAL_FIELDS.map(([f]) => (changed.includes(f) ? edit[f] : old[f]) ?? ""), changedLabels];
       const changedIdx = new Set(CENTRAL_FIELDS.map(([f], i) => changed.includes(f) ? i + 1 : -1).filter(i => i >= 0));
       return { oldVals, newVals, changedIdx };
     }
     function renderUpdPreview() {
       const items = updChangedItems();
-      const cols = ["Trạng thái", ...CENTRAL_FIELDS.map(([, label]) => label), "Trường đã đổi"];
+      const cols = ["Status", ...CENTRAL_FIELDS.map(([, label]) => label), "Changed Fields"];
       if (!items.length) return `<div class="empty"><strong>Chưa có thay đổi để xem trước</strong>Chỉnh sửa thông tin ở bước ② — account nào có trường khác dữ liệu gốc sẽ hiện ở đây.</div>`;
       const row = (vals, cls, changedIdx) => `<tr class="${cls}">${vals.map((v, i) => `<td class="${changedIdx.has(i) ? "chg" : ""}">${cellHtml(v)}</td>`).join("")}</tr>`;
       const rows = items.map(item => { const { oldVals, newVals, changedIdx } = updRowPair(item); return row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx); }).join("");
       return `<div class="tl-sum"><span class="badge badge-blue">${items.length} account có thay đổi</span><span class="badge badge-success">${items.reduce((n, x) => n + x.changed.length, 0)} trường được cập nhật</span></div>
-        <div class="upd-legend"><span><i class="lg-old"></i>Dữ liệu cũ</span><span><i class="lg-new"></i>Dữ liệu mới</span><span><i class="lg-chg"></i>Ô đã thay đổi</span></div>
+        <div class="upd-legend"><span><i class="lg-old"></i>Old data</span><span><i class="lg-new"></i>New data</span><span><i class="lg-chg"></i>Changed cell</span></div>
         <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
     }
     function renderUpdBody() {
@@ -1755,7 +1755,7 @@
     async function updExport() {
       const items = updChangedItems();
       if (!items.length) return;
-      const cols = ["Trạng thái", ...CENTRAL_FIELDS.map(([, label]) => label), "Trường đã đổi"];
+      const cols = ["Status", ...CENTRAL_FIELDS.map(([, label]) => label), "Changed Fields"];
       const pairs = items.map(updRowPair);
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
       const fileName = `Phieu_Cap_Nhat_Thong_Tin_${stamp}.xlsx`;
