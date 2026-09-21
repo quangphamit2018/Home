@@ -1617,6 +1617,7 @@
     const UPD_LIST_LIMIT = 100;
     const upd = { picked: [], q: "", status: "", edits: {} };
     let updIdx = { src: null };
+    let updLastSaved = null;   // giữ lại phiếu vừa lưu thành công để vẫn xuất Excel được sau khi dữ liệu đã refresh
 
     function updIndex() {
       if (updIdx.src !== state.central) {
@@ -1701,8 +1702,17 @@
     function renderUpdPreview() {
       const items = updChangedItems();
       const cols = ["Status", ...CENTRAL_FIELDS.map(([, label]) => label), "Changed Fields"];
-      if (!items.length) return `<div class="empty"><strong>Chưa có thay đổi để xem trước</strong>Chỉnh sửa thông tin ở bước ② — account nào có trường khác dữ liệu gốc sẽ hiện ở đây.</div>`;
       const row = (vals, cls, changedIdx) => `<tr class="${cls}">${vals.map((v, i) => `<td class="${changedIdx.has(i) ? "chg" : ""}">${cellHtml(v)}</td>`).join("")}</tr>`;
+      if (!items.length) {
+        if (updLastSaved && updLastSaved.pairs.length) {
+          const rows = updLastSaved.pairs.map(({ oldVals, newVals, changedIdx }) => row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx)).join("");
+          return `<div class="tl-sum"><span class="badge badge-success">${ICONS.check} Đã lưu ${updLastSaved.count} account · ${updLastSaved.fieldCount} trường</span></div>
+            <div class="empty" style="padding:10px 0 16px"><strong>Phiếu đã lưu vào Central User list</strong>Bạn vẫn có thể xuất phiếu Excel dưới đây làm hồ sơ đối chiếu. Chỉnh sửa thêm sẽ thay bằng phiếu mới.</div>
+            <div class="upd-legend"><span><i class="lg-old"></i>Old data</span><span><i class="lg-new"></i>New data</span><span><i class="lg-chg"></i>Changed cell</span></div>
+            <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+        }
+        return `<div class="empty"><strong>Chưa có thay đổi để xem trước</strong>Chỉnh sửa thông tin ở bước ② — account nào có trường khác dữ liệu gốc sẽ hiện ở đây.</div>`;
+      }
       const rows = items.map(item => { const { oldVals, newVals, changedIdx } = updRowPair(item); return row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx); }).join("");
       return `<div class="tl-sum"><span class="badge badge-blue">${items.length} account có thay đổi</span><span class="badge badge-success">${items.reduce((n, x) => n + x.changed.length, 0)} trường được cập nhật</span></div>
         <div class="upd-legend"><span><i class="lg-old"></i>Old data</span><span><i class="lg-new"></i>New data</span><span><i class="lg-chg"></i>Changed cell</span></div>
@@ -1710,18 +1720,20 @@
     }
     function renderUpdBody() {
       const nAll = state.central.length, nOff = state.central.filter(isInactive).length, changedCount = updChangedItems().length;
+      const canExport = changedCount > 0 || !!(updLastSaved && updLastSaved.pairs.length);
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Chọn account cần cập nhật</h2><p>Tìm theo UserName, EmployeeCode hoặc Email; có thể dán nhiều mã cùng lúc. Lựa chọn được giữ nguyên khi bạn tìm kiếm.</p></div><span class="badge badge-blue" id="upd-count">${upd.picked.length} đã chọn</span></div>
         <div class="toolbar"><div class="search"><span class="search-icon">${ICONS.search}</span><input id="upd-search" value="${escapeHtml(upd.q)}" placeholder="Tìm hoặc dán nhiều UserName…" autocomplete="off" /></div>
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="upd-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${updStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-upd="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-upd="clear">Bỏ chọn hết</button></div></div>
         <div id="upd-list">${renderUpdList()}</div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p>Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p></div></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" id="upd-export" data-upd="export" ${!changedCount ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" id="upd-export" data-upd="export" ${!canExport ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
     }
     function updRefresh() {
       const cv = $("#upd-preview"); if (cv) cv.innerHTML = renderUpdPreview();
       const changedCount = updChangedItems().length;
+      const canExport = changedCount > 0 || !!(updLastSaved && updLastSaved.pairs.length);
       const sv = $("#upd-save"); if (sv) sv.disabled = !changedCount;
-      const ex = $("#upd-export"); if (ex) ex.disabled = !changedCount;
+      const ex = $("#upd-export"); if (ex) ex.disabled = !canExport;
       const c = $("#upd-count"); if (c) c.textContent = `${upd.picked.length} đã chọn`;
     }
     function updDrawCards() {
@@ -1743,6 +1755,7 @@
         });
         await upsertBatches("central_users", payload);
         toast(`Đã lưu cập nhật cho ${nf(items.length)} account.`, "success");
+        updLastSaved = { pairs: items.map(updRowPair), count: items.length, fieldCount: items.reduce((n, x) => n + x.changed.length, 0) };
         items.forEach(({ key }) => delete upd.edits[key]);
         await loadData();
         const root = $("#upd-root"); if (root) root.innerHTML = renderUpdBody();
@@ -1754,9 +1767,10 @@
     }
     async function updExport() {
       const items = updChangedItems();
-      if (!items.length) return;
+      const usingSaved = !items.length && updLastSaved && updLastSaved.pairs.length;
+      if (!items.length && !usingSaved) return;
       const cols = ["Status", ...CENTRAL_FIELDS.map(([, label]) => label), "Changed Fields"];
-      const pairs = items.map(updRowPair);
+      const pairs = usingSaved ? updLastSaved.pairs : items.map(updRowPair);
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
       const fileName = `Phieu_Cap_Nhat_Thong_Tin_${stamp}.xlsx`;
       try {
@@ -1801,6 +1815,7 @@
           const cb = tr.querySelector("input"); if (t !== cb) cb.checked = !cb.checked;
           tr.classList.toggle("sel", cb.checked);
           upd.picked = upd.picked.filter(k => k !== tr.dataset.pk); if (cb.checked) upd.picked.push(tr.dataset.pk);
+          updLastSaved = null;
           updDrawCards(); return;
         }
         const a = t.closest("[data-upd]"); if (!a) return;
@@ -1812,14 +1827,15 @@
           if (!rows.length) return toast("Không có kết quả để chọn.", "error");
           if (rows.length > 200) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa 200 account rồi chọn.`, "error");
           const have = new Set(upd.picked); rows.forEach(r => have.has(r.username) || upd.picked.push(r.username));
+          updLastSaved = null;
           $("#upd-list").innerHTML = renderUpdList(); updDrawCards(); toast(`Đã chọn ${nf(rows.length)} account.`, "success");
         }
-        else if (act === "clear") { upd.picked = []; upd.edits = {}; $("#upd-list").innerHTML = renderUpdList(); updDrawCards(); }
+        else if (act === "clear") { upd.picked = []; upd.edits = {}; updLastSaved = null; $("#upd-list").innerHTML = renderUpdList(); updDrawCards(); }
         else if (act === "remove") {
-          upd.picked = upd.picked.filter(k => k !== key); delete upd.edits[key];
+          upd.picked = upd.picked.filter(k => k !== key); delete upd.edits[key]; updLastSaved = null;
           const row = [...pg.querySelectorAll("tr[data-pk]")].find(x => x.dataset.pk === key); if (row) { row.classList.remove("sel"); row.querySelector("input").checked = false; }
           updDrawCards();
-        } else if (act === "reset") { delete upd.edits[key]; updDrawCards(); }
+        } else if (act === "reset") { delete upd.edits[key]; updLastSaved = null; updDrawCards(); }
       });
       pg.addEventListener("input", e => {
         if (tool.mode !== "update") return;
@@ -1828,6 +1844,7 @@
         if (!t.dataset.f) return;
         const edit = upd.edits[t.dataset.key]; if (!edit) return;
         edit[t.dataset.f] = t.value;
+        updLastSaved = null;
         updRefresh();
         const field = t.closest(".field");
         if (field) {
