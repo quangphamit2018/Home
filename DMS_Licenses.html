@@ -1496,9 +1496,8 @@
         <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${TOOL_COLS.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${olds.map(r => row(r, "r-old")).join("")}${news.map(r => row(r, "r-new")).join("")}</tbody></table></div>`;
     }
     function renderToolBody() {
-      if (tool.mode === "update" && !canEdit()) { tool.mode = "replace"; saveKey(TOOL_MODE_KEY, tool.mode); }
       const upd_mode = tool.mode === "update";
-      const seg = `<div class="tl-seg"><button type="button" data-tl-mode="replace" class="${tool.mode === "replace" ? "on" : ""}">${ICONS.swap} Thay thế account</button><button type="button" data-tl-mode="create" class="${tool.mode === "create" ? "on" : ""}">${ICONS.plus} Tạo mới account</button><button type="button" data-tl-mode="remove" class="${tool.mode === "remove" ? "on" : ""}">${ICONS.trash} Remove account</button>${canEdit() ? `<button type="button" data-tl-mode="update" class="${upd_mode ? "on" : ""}">${ICONS.edit} Cập Nhật Thông Tin</button>` : ""}</div>`;
+      const seg = `<div class="tl-seg"><button type="button" data-tl-mode="replace" class="${tool.mode === "replace" ? "on" : ""}">${ICONS.swap} Thay thế account</button><button type="button" data-tl-mode="create" class="${tool.mode === "create" ? "on" : ""}">${ICONS.plus} Tạo mới account</button><button type="button" data-tl-mode="remove" class="${tool.mode === "remove" ? "on" : ""}">${ICONS.trash} Remove account</button><button type="button" data-tl-mode="update" class="${upd_mode ? "on" : ""}">${ICONS.edit} Cập Nhật Thông Tin</button></div>`;
       if (upd_mode) return seg + `<div id="upd-root">${renderUpdBody()}</div>`;
       const rep = tool.mode === "replace", rem = tool.mode === "remove", items = toolPersons(), v = toolValidate(items), cnt = toolCount(items), nAll = state.central.length, nOff = state.central.filter(isInactive).length;
       return seg + `${rep || rem ? `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Chọn account cần ${rem ? "remove" : "thay thế"}</h2><p>Hiện tất cả trạng thái; dùng bộ lọc Trạng thái để thu hẹp về Active hoặc Deactive. Lựa chọn được giữ nguyên khi bạn tìm kiếm.</p></div><span class="badge badge-blue" id="tl-count">${tool.picked.length} đã chọn</span></div>
@@ -1716,12 +1715,12 @@
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="upd-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${updStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-upd="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-upd="clear">Bỏ chọn hết</button></div></div>
         <div id="upd-list">${renderUpdList()}</div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p>Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p></div></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!canEdit() || !changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" id="upd-export" data-upd="export" ${!changedCount ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" id="upd-export" data-upd="export" ${!changedCount ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
     }
     function updRefresh() {
       const cv = $("#upd-preview"); if (cv) cv.innerHTML = renderUpdPreview();
       const changedCount = updChangedItems().length;
-      const sv = $("#upd-save"); if (sv) sv.disabled = !canEdit() || !changedCount;
+      const sv = $("#upd-save"); if (sv) sv.disabled = !changedCount;
       const ex = $("#upd-export"); if (ex) ex.disabled = !changedCount;
       const c = $("#upd-count"); if (c) c.textContent = `${upd.picked.length} đã chọn`;
     }
@@ -1730,7 +1729,6 @@
       updRefresh();
     }
     async function updSave() {
-      if (!canEdit()) return toast("Bạn không có quyền lưu cập nhật.", "error");
       const items = updChangedItems();
       if (!items.length) return;
       const ok = await confirmDialog({ title: "Lưu cập nhật?", message: `Lưu thay đổi cho ${items.length} account vào Central User list?`, confirmText: "Lưu cập nhật", danger: false });
