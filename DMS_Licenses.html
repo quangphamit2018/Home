@@ -792,7 +792,7 @@
     }
 
     /* ---------- Công Cụ Hỗ Trợ ---------- */
-    .tl-seg { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 18px; background: #fff; border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: var(--shadow-card); }
+    .tl-seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin-bottom: 18px; background: #fff; border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: var(--shadow-card); }
     .tl-seg button { border: 0; background: transparent; color: var(--ink-2); font-weight: 600; font-size: 13px; padding: 9px 16px; border-radius: 10px; display: flex; align-items: center; gap: 8px; }
     .tl-seg button svg { width: 16px; height: 16px; }
     .tl-seg button.on { color: #fff; background: var(--g-brand); box-shadow: 0 6px 16px rgba(183, 28, 28, .28); }
@@ -912,7 +912,7 @@
     function savePageSize(v) { try { localStorage.setItem(PAGE_SIZE_KEY, String(v)); } catch (_) {} }
     // Nhớ tab đang mở (và chế độ trong Công Cụ Hỗ Trợ) để F5 / tải lại trang vẫn giữ nguyên
     const TAB_KEY = "masterdata_tab", TOOL_MODE_KEY = "masterdata_tool_mode";
-    const TABS_OK = ["dashboard", "dms", "central", "tools", "update", "admin"], TOOL_MODES_OK = ["replace", "create", "remove"];
+    const TABS_OK = ["dashboard", "dms", "central", "tools", "admin"], TOOL_MODES_OK = ["replace", "create", "remove", "update"];
     function loadKey(key, allowed, fallback) { try { const v = localStorage.getItem(key); return allowed.includes(v) ? v : fallback; } catch (_) { return fallback; } }
     function saveKey(key, v) { try { localStorage.setItem(key, v); } catch (_) {} }
     const FETCH_CHUNK = 1000;   // số dòng mỗi lần gọi Supabase khi tải toàn bộ bảng
@@ -1090,7 +1090,6 @@
         ["dms", "DMS Userlist", ICONS.users],
         ["central", "Central User list", ICONS.users],
         ["tools", "Công Cụ Hỗ Trợ", ICONS.tools],
-        ...(canEdit() ? [["update", "Cập Nhật Thông Tin", ICONS.edit]] : []),
         ...(isAdmin() ? [["admin", "Quản lý dữ liệu", ICONS.database]] : [])
       ];
       if (!tabs.some(x => x[0] === state.tab)) state.tab = "dashboard";
@@ -1122,7 +1121,6 @@
       if (state.tab === "dashboard") return renderDashboard();
       if (state.tab === "dms" || state.tab === "central") return renderDataset();
       if (state.tab === "tools") return renderTools();
-      if (state.tab === "update" && canEdit()) return renderUpdate();
       if (state.tab === "admin" && isAdmin()) return renderAdmin();
       return renderDashboard();
     }
@@ -1498,9 +1496,12 @@
         <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${TOOL_COLS.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${olds.map(r => row(r, "r-old")).join("")}${news.map(r => row(r, "r-new")).join("")}</tbody></table></div>`;
     }
     function renderToolBody() {
+      if (tool.mode === "update" && !canEdit()) { tool.mode = "replace"; saveKey(TOOL_MODE_KEY, tool.mode); }
+      const upd_mode = tool.mode === "update";
+      const seg = `<div class="tl-seg"><button type="button" data-tl-mode="replace" class="${tool.mode === "replace" ? "on" : ""}">${ICONS.swap} Thay thế account</button><button type="button" data-tl-mode="create" class="${tool.mode === "create" ? "on" : ""}">${ICONS.plus} Tạo mới account</button><button type="button" data-tl-mode="remove" class="${tool.mode === "remove" ? "on" : ""}">${ICONS.trash} Remove account</button>${canEdit() ? `<button type="button" data-tl-mode="update" class="${upd_mode ? "on" : ""}">${ICONS.edit} Cập Nhật Thông Tin</button>` : ""}</div>`;
+      if (upd_mode) return seg + `<div id="upd-root">${renderUpdBody()}</div>`;
       const rep = tool.mode === "replace", rem = tool.mode === "remove", items = toolPersons(), v = toolValidate(items), cnt = toolCount(items), nAll = state.central.length, nOff = state.central.filter(isInactive).length;
-      return `<div class="tl-seg"><button type="button" data-tl-mode="replace" class="${rep ? "on" : ""}">${ICONS.swap} Thay thế account</button><button type="button" data-tl-mode="create" class="${tool.mode === "create" ? "on" : ""}">${ICONS.plus} Tạo mới account</button><button type="button" data-tl-mode="remove" class="${rem ? "on" : ""}">${ICONS.trash} Remove account</button></div>
-      ${rep || rem ? `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Chọn account cần ${rem ? "remove" : "thay thế"}</h2><p>Hiện tất cả trạng thái; dùng bộ lọc Trạng thái để thu hẹp về Active hoặc Deactive. Lựa chọn được giữ nguyên khi bạn tìm kiếm.</p></div><span class="badge badge-blue" id="tl-count">${tool.picked.length} đã chọn</span></div>
+      return seg + `${rep || rem ? `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Chọn account cần ${rem ? "remove" : "thay thế"}</h2><p>Hiện tất cả trạng thái; dùng bộ lọc Trạng thái để thu hẹp về Active hoặc Deactive. Lựa chọn được giữ nguyên khi bạn tìm kiếm.</p></div><span class="badge badge-blue" id="tl-count">${tool.picked.length} đã chọn</span></div>
         <div class="toolbar"><div class="search"><span class="search-icon">${ICONS.search}</span><input id="tl-search" value="${escapeHtml(tool.q)}" placeholder="Tìm hoặc dán nhiều UserName…" autocomplete="off" /></div>
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="tl-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${toolStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-tl="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-tl="clear">Bỏ chọn hết</button></div></div>
         <div id="tl-list">${renderToolList()}</div></section>` : ""}
@@ -1557,6 +1558,7 @@
       pg.addEventListener("click", e => {
         const t = e.target, m = t.closest("[data-tl-mode]");
         if (m) { tool.mode = m.dataset.tlMode; saveKey(TOOL_MODE_KEY, tool.mode); tool.status = ""; $("#tool-root").innerHTML = renderToolBody(); return; }
+        if (tool.mode === "update") return;   // chế độ Cập Nhật Thông Tin do bindUpdateEvents xử lý
         const tr = t.closest("tr[data-pk]");
         if (tr) {
           const cb = tr.querySelector("input"); if (t !== cb) cb.checked = !cb.checked;
@@ -1586,6 +1588,7 @@
         }
       });
       pg.addEventListener("input", e => {
+        if (tool.mode === "update") return;
         const t = e.target;
         if (t.id === "tl-search") { tool.q = t.value; clearTimeout(timer); timer = setTimeout(() => { $("#tl-list").innerHTML = renderToolList(); }, 150); return; }
         if (!t.dataset.f) return;
@@ -1596,12 +1599,13 @@
         toolRefresh();
       });
       pg.addEventListener("paste", e => {   // input 1 dòng sẽ làm mất xuống dòng khi dán → đổi thành dấu cách
+        if (tool.mode === "update") return;
         const t = e.target; if (t.id !== "tl-search") return;
         e.preventDefault();
         t.setRangeText((e.clipboardData || window.clipboardData).getData("text").replace(/[\r\n\t;,]+/g, " ").trim() + " ", t.selectionStart, t.selectionEnd, "end");
         t.dispatchEvent(new Event("input", { bubbles: true }));
       });
-      pg.addEventListener("change", e => { if (e.target.id === "tl-status") { tool.status = e.target.value; $("#tl-list").innerHTML = renderToolList(); } });
+      pg.addEventListener("change", e => { if (tool.mode === "update") return; if (e.target.id === "tl-status") { tool.status = e.target.value; $("#tl-list").innerHTML = renderToolList(); } });
     }
 
     /* =====================================================================
@@ -1714,9 +1718,6 @@
       <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p>Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p></div></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!canEdit() || !changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" id="upd-export" data-upd="export" ${!changedCount ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
     }
-    function renderUpdate() {
-      return `<div id="update-page"><div class="header-row"><div><div class="eyebrow">Cập nhật dữ liệu</div><h2 class="page-title">Cập Nhật Thông Tin</h2><p class="page-subtitle">Chỉnh sửa thông tin có sẵn trong Central User list, đối chiếu rõ dữ liệu cũ/mới rồi lưu và xuất Excel.</p></div></div><div id="upd-root">${renderUpdBody()}</div></div>`;
-    }
     function updRefresh() {
       const cv = $("#upd-preview"); if (cv) cv.innerHTML = renderUpdPreview();
       const changedCount = updChangedItems().length;
@@ -1746,7 +1747,7 @@
         toast(`Đã lưu cập nhật cho ${nf(items.length)} account.`, "success");
         items.forEach(({ key }) => delete upd.edits[key]);
         await loadData();
-        const root = $("#upd-root"); if (root) { root.innerHTML = renderUpdBody(); bindUpdateEvents(); }
+        const root = $("#upd-root"); if (root) root.innerHTML = renderUpdBody();
       } catch (err) {
         toast(`Lưu cập nhật thất bại: ${err.message}`, "error");
       } finally {
@@ -1792,9 +1793,10 @@
       } catch (err) { toast(`Xuất phiếu thất bại: ${err.message}`, "error"); }
     }
     function bindUpdateEvents() {
-      const pg = $("#update-page"); if (!pg) return;
+      const pg = $("#tool-page"); if (!pg) return;
       let timer;
       pg.addEventListener("click", e => {
+        if (tool.mode !== "update") return;   // các chế độ khác của Công Cụ Hỗ Trợ do bindToolEvents xử lý
         const t = e.target;
         const tr = t.closest("tr[data-pk]");
         if (tr) {
@@ -1822,6 +1824,7 @@
         } else if (act === "reset") { delete upd.edits[key]; updDrawCards(); }
       });
       pg.addEventListener("input", e => {
+        if (tool.mode !== "update") return;
         const t = e.target;
         if (t.id === "upd-search") { upd.q = t.value; clearTimeout(timer); timer = setTimeout(() => { $("#upd-list").innerHTML = renderUpdList(); }, 150); return; }
         if (!t.dataset.f) return;
@@ -1838,12 +1841,13 @@
         if (msg && item) { const n = updChangedFields(item.old, item.edit).length; msg.className = `tl-msg ${n ? "ok" : ""}`; msg.textContent = n ? `${n} trường đã đổi` : "Chưa chỉnh sửa"; }
       });
       pg.addEventListener("paste", e => {
+        if (tool.mode !== "update") return;
         const t = e.target; if (t.id !== "upd-search") return;
         e.preventDefault();
         t.setRangeText((e.clipboardData || window.clipboardData).getData("text").replace(/[\r\n\t;,]+/g, " ").trim() + " ", t.selectionStart, t.selectionEnd, "end");
         t.dispatchEvent(new Event("input", { bubbles: true }));
       });
-      pg.addEventListener("change", e => { if (e.target.id === "upd-status") { upd.status = e.target.value; $("#upd-list").innerHTML = renderUpdList(); } });
+      pg.addEventListener("change", e => { if (tool.mode !== "update") return; if (e.target.id === "upd-status") { upd.status = e.target.value; $("#upd-list").innerHTML = renderUpdList(); } });
     }
 
     async function boot() {
