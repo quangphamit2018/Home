@@ -1463,6 +1463,22 @@ td.cell-id .id-chip{
 /* confirm dialog reuses modal-sm */
 .confirm-icon{ width:44px; height:44px; border-radius:12px; background: var(--danger-dim); color: var(--danger); display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
 .confirm-icon svg{ width:22px; height:22px; }
+.confirm-icon.accent{ background: var(--accent-dim); color: var(--accent-shade); }
+.brd-export-lang-options{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:18px; }
+.brd-export-lang-opt{
+  display:flex; flex-direction:column; align-items:center; gap:7px; padding:18px 10px 15px;
+  border:1.5px solid var(--border); border-radius:14px; background:var(--panel-solid);
+  cursor:pointer; font-family:inherit; transition:border-color .15s, background .15s, transform .12s;
+}
+.brd-export-lang-opt:hover:not(:disabled){ border-color: var(--accent); background: var(--accent-dim); transform:translateY(-2px); }
+.brd-export-lang-opt:active:not(:disabled){ transform:translateY(0); }
+.brd-export-lang-opt:disabled{ opacity:.55; cursor:default; }
+.brd-export-lang-opt.is-loading .brd-export-lang-sub{ font-weight:700; color:var(--accent-shade); }
+.brd-export-lang-opt.is-loading .brd-export-lang-sub::after{ content:" ⏳"; }
+.brd-export-lang-flag{ font-size:26px; line-height:1; }
+.brd-export-lang-name{ font-size:13.5px; font-weight:750; color:var(--text); }
+.brd-export-lang-sub{ font-size:10.5px; color:var(--text-dim); }
+.brd-export-lang-modal .modal-foot{ justify-content:flex-start; }
 
 /* ==========================================================================
    GLOBAL SEARCH — unified command-palette search across CR / UAT / Release
@@ -14176,18 +14192,28 @@ function promptBrdExportLang(rec){
   }
   const overlay = $("#confirmModalOverlay");
   overlay.innerHTML = `
-    <div class="modal modal-sm">
+    <div class="modal modal-sm brd-export-lang-modal">
       <div class="modal-body" style="padding-top:26px;">
-        <div class="confirm-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        <div class="confirm-icon accent">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8h9M9 5v3M12.5 8c-.7 3-2.4 5.3-5 7M8 8c1 3.5 3.5 6 8 8"/><path d="M13 21l4-9 4 9M14.6 18h4.8"/></svg>
         </div>
         <h3 style="font-size:16px; margin-bottom:8px;">Xuất file Word</h3>
         <p style="font-size:13.5px; color:var(--text-dim); line-height:1.6;">BRD "${esc(rec.brd_title||"")}" có cả bản Tiếng Việt và English. Chọn ngôn ngữ muốn xuất:</p>
+        <div class="brd-export-lang-options">
+          <button type="button" class="brd-export-lang-opt" id="exportLangVi">
+            <span class="brd-export-lang-flag">🇻🇳</span>
+            <span class="brd-export-lang-name">Tiếng Việt</span>
+            <span class="brd-export-lang-sub">Xuất bản tiếng Việt</span>
+          </button>
+          <button type="button" class="brd-export-lang-opt" id="exportLangEn">
+            <span class="brd-export-lang-flag">🇬🇧</span>
+            <span class="brd-export-lang-name">English</span>
+            <span class="brd-export-lang-sub">Export English version</span>
+          </button>
+        </div>
       </div>
       <div class="modal-foot">
-        <button class="btn btn-ghost" id="confirmCancel">Hủy</button>
-        <button class="btn btn-ghost" id="exportLangVi" type="button">Tiếng Việt</button>
-        <button class="btn btn-primary" id="exportLangEn" type="button">English</button>
+        <button class="btn btn-ghost btn-sm" id="confirmCancel">Hủy</button>
       </div>
     </div>`;
   overlay.classList.add("show");
@@ -14196,20 +14222,23 @@ function promptBrdExportLang(rec){
     overlay.dataset.dismissBound = "1";
     overlay.addEventListener("click", e=>{ if(e.target===overlay) overlay.classList.remove("show"); });
   }
-  const doExport = async (lang, sel)=>{
+  const doExport = async (lang, sel, other)=>{
     const btn = $(sel); if(!btn) return;
-    btn.disabled = true; const orig = btn.textContent; btn.textContent = "Đang xuất...";
+    const otherBtn = $(other);
+    btn.disabled = true; btn.classList.add("is-loading");
+    if(otherBtn) otherBtn.disabled = true;
     try{
       await generateBrdDocx(brdRecordForLang(rec, lang));
       overlay.classList.remove("show");
     }catch(e){
       toast("Tạo file Word thất bại: " + e.message, "err");
     }finally{
-      btn.disabled = false; btn.textContent = orig;
+      btn.disabled = false; btn.classList.remove("is-loading");
+      if(otherBtn) otherBtn.disabled = false;
     }
   };
-  $("#exportLangVi").addEventListener("click", ()=> doExport("vi", "#exportLangVi"));
-  $("#exportLangEn").addEventListener("click", ()=> doExport("en", "#exportLangEn"));
+  $("#exportLangVi").addEventListener("click", ()=> doExport("vi", "#exportLangVi", "#exportLangEn"));
+  $("#exportLangEn").addEventListener("click", ()=> doExport("en", "#exportLangEn", "#exportLangVi"));
 }
 
 async function generateBrdDocx(record){
