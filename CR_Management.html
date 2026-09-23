@@ -13506,7 +13506,7 @@ function brdModalTemplate(v){
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/></svg>
           <div class="brd-ai-title">AI hỗ trợ điền BRD</div>
         </div>
-        <p class="brd-ai-sub">Mô tả yêu cầu bằng lời + dán (paste)/kéo-thả ảnh liên quan (mockup, email yêu cầu, chụp màn hình...). AI sẽ tự phân tích và điền các mục bên dưới.</p>
+        <p class="brd-ai-sub">Mô tả yêu cầu bằng lời + dán (paste)/kéo-thả ảnh liên quan (mockup, email yêu cầu, chụp màn hình...). Hệ thống sẽ gửi song song tới nhiều AI (Gemini, Mistral, OpenRouter) và dùng 1 AI trọng tài đối chiếu chéo để chọn thông tin chính xác nhất trước khi điền.</p>
         <div class="brd-ai-body">
           <textarea id="brdAiDesc" placeholder="Mô tả yêu cầu nghiệp vụ ở đây... VD: Cần đổi tên cột A thành B, thêm cột C hiển thị giá sau thuế trên phiếu xuất kho DMS..."></textarea>
           <div class="brd-ai-drop" id="brdAiDrop" tabindex="0">
@@ -13698,7 +13698,7 @@ async function runBrdAiAssist(){
   }
   const btn = $("#brdAiRunBtn");
   btn.disabled = true; btn.classList.add("loading");
-  brdAiSetStatus("AI đang phân tích, vui lòng đợi...");
+  brdAiSetStatus("Đang gửi tới nhiều AI để đối chiếu chéo, vui lòng đợi...");
   try{
     const { data, error } = await STATE.sb.functions.invoke("brd-ai-fill", {
       body: {
@@ -13726,7 +13726,12 @@ async function runBrdAiAssist(){
     setVal("#b_assumptions", brdLinesFromArray(data.assumptions));
     setVal("#b_reviewer_feedback", brdLinesFromArray(data.reviewer_feedback));
 
-    brdAiSetStatus("Đã điền xong. Vui lòng rà soát lại nội dung trước khi lưu.");
+    const meta = data._meta || {};
+    const providersTxt = (meta.providers||[]).join(", ") || "AI";
+    const statusMsg = meta.arbitrated
+      ? `Đã đối chiếu chéo giữa: ${providersTxt}. Vui lòng rà soát lại trước khi lưu.`
+      : `Đã điền theo: ${providersTxt} (chỉ 1 nguồn khả dụng). Vui lòng rà soát lại trước khi lưu.`;
+    brdAiSetStatus(statusMsg);
     toast("AI đã điền thông tin BRD, hãy kiểm tra lại", "ok");
   }catch(e){
     console.error(e);
