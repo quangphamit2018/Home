@@ -16312,13 +16312,16 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     rootId: "eb2bViewRoot",
     modalId: "eb2bModalOverlay",
     activeTab: "dashboard",
+    wantActive: false,
+    bodyObserver: null,
     search: "",
     rows: {
       cr: [], uat: [], release: [], brd: [], weekly_mom: [],
       statuses: [], sub_statuses: [], evidence_steps: [], attachment_categories: []
     },
     loading: false,
-    ready: false
+    ready: false,
+    crFilters: { status:"", sub_status:"", priority:"", category:"" }
   };
 
   const EB2B_TABLES = {
@@ -16447,7 +16450,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         brd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>`,
         weekly_mom: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>`
       };
-      dmsChildren.insertAdjacentHTML("afterend", `
+      dms.insertAdjacentHTML("afterend", `
         <div class="workspace-nav" data-workspace="eb2b" id="eb2bNav">
           <div class="nav-item workspace-parent" id="navEb2bWorkspace"
                title="Mở / thu gọn Quản Lý e-B2B" role="button" tabindex="0"
@@ -16488,6 +16491,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       });
     }
     eb2bStyles();
+    eb2bWatchBody();
     return true;
   }
 
@@ -16501,6 +16505,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bShow(tab){
     if(!EB2B.ready && !eb2bBuildShell()) return;
     EB2B.activeTab = tab;
+    EB2B.wantActive = true;
     document.body.classList.add("eb2b-active");
     eb2bSetHeader(tab);
     $$("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
@@ -16512,9 +16517,25 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bHide(){
+    EB2B.wantActive = false;
     document.body.classList.remove("eb2b-active");
     $$("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
     $e("#navEb2bWorkspace")?.classList.remove("is-context");
+  }
+
+  // Tự bảo vệ: nếu người dùng đang thực sự ở trong eB2B (EB2B.wantActive)
+  // nhưng có bất kỳ đoạn code nào khác (vd một luồng khởi động/khôi phục
+  // tab chạy trễ) vô tình gỡ class "eb2b-active" khỏi <body>, quan sát này
+  // sẽ tự thêm lại ngay lập tức — không cần biết chính xác đoạn code nào
+  // gây ra, và không phải sửa code DMS.
+  function eb2bWatchBody(){
+    if(EB2B.bodyObserver) return;
+    EB2B.bodyObserver = new MutationObserver(()=>{
+      if(EB2B.wantActive && !document.body.classList.contains("eb2b-active")){
+        document.body.classList.add("eb2b-active");
+      }
+    });
+    EB2B.bodyObserver.observe(document.body, { attributes:true, attributeFilter:["class"] });
   }
 
   function eb2bOptions(values, selected, empty="— chọn —"){
@@ -16573,7 +16594,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bRender(){
     if(!$e("#eb2bContent")) return;
     const renderers = {
-      dashboard: eb2bRenderDashboard, cr: ()=>eb2bRenderDataTable("cr"),
+      dashboard: eb2bRenderDashboard, cr: eb2bRenderCrLogRich,
       uat: ()=>eb2bRenderDataTable("uat"), release: ()=>eb2bRenderDataTable("release"),
       brd: ()=>eb2bRenderDataTable("brd"), weekly_mom: ()=>eb2bRenderDataTable("weekly_mom"),
       admin: eb2bRenderAdmin, recycle: eb2bRenderRecycle
@@ -16640,6 +16661,142 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       {key:"meeting_date",label:"Ngày họp"},{key:"vendor",label:"Vendor"},{key:"meeting_title",label:"Tiêu đề"},
       {key:"participants",label:"Participants"},{key:"updated_at",label:"Cập nhật"},...common
     ];
+  }
+
+  /* -------------------------------------------------------------------------
+     CR Log (EB2B) — giao diện đầy đủ, tái dùng ĐÚNG các class CSS mà trang
+     CR Log của DMS đang dùng (kpi-card, list-panel, table-toolbar,
+     filter-chip, table-wrap, badge, icon-btn...) để trông giống hệt, nhưng
+     đọc/ghi hoàn toàn trên EB2B.rows / bảng eb2b_* — không đụng tới
+     STATE.crList hay bất kỳ hàm render nào của DMS.
+  ------------------------------------------------------------------------- */
+  function eb2bHexToRgba(hex, alpha){
+    const c = /^#[0-9a-f]{6}$/i.test(hex || "") ? hex : "#64748b";
+    const r = parseInt(c.slice(1,3),16), g = parseInt(c.slice(3,5),16), b = parseInt(c.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  const EB2B_PALETTE = {
+    category: {"Enhancement":"#5b8def","Bug Fix":"#ee6b74","New Feature":"#22b07d","Compliance":"#a855f7","Infrastructure":"#f2b84b"},
+    priority: {"Critical":"#ee6b74","High":"#f2914b","Medium":"#f2b84b","Low":"#4cae67"}
+  };
+  function eb2bColorFor(kind, value){
+    if(kind === "statuses" || kind === "sub_statuses"){
+      const list = EB2B.rows[kind] || [];
+      const item = list.find(x=>String(x.name||"").toLowerCase() === String(value||"").toLowerCase());
+      return (item && item.color) || "#64748b";
+    }
+    return (EB2B_PALETTE[kind] && EB2B_PALETTE[kind][value]) || "#64748b";
+  }
+  function eb2bBadge(kind, value){
+    if(!value) return `<span class="badge" style="background:rgba(100,116,139,.14); color:#64748b;"><span class="dot" style="background:#64748b"></span>—</span>`;
+    const color = eb2bColorFor(kind, value);
+    return `<span class="badge" style="background:${eb2bHexToRgba(color,.14)}; color:${color};"><span class="dot" style="background:${color}"></span>${eEsc(value)}</span>`;
+  }
+  function eb2bIsOverdue(row){
+    if(!row.deadline) return false;
+    if(["Released","Closed"].includes(row.status)) return false;
+    const today = (typeof window.todayISO === "function") ? window.todayISO() : eDate(eNow());
+    return row.deadline < today;
+  }
+  function eb2bCrPassesFilters(row){
+    const f = EB2B.crFilters || {};
+    if(f.status && row.status !== f.status) return false;
+    if(f.sub_status && row.sub_status !== f.sub_status) return false;
+    if(f.priority && row.priority !== f.priority) return false;
+    if(f.category && row.category !== f.category) return false;
+    return true;
+  }
+
+  function eb2bRenderCrLogRich(){
+    const c = $e("#eb2bContent");
+    const all = EB2B.rows.cr;
+    const list = eb2bSearchRows("cr").filter(eb2bCrPassesFilters);
+    const total = all.length;
+    const overdue = all.filter(eb2bIsOverdue).length;
+    const inProgress = all.filter(r=> ["In Progress","In Review","UAT"].includes(r.status)).length;
+    const critical = all.filter(r=> r.priority === "Critical").length;
+
+    const statusOptions = EB2B.rows.statuses.map(s=>s.name).filter(Boolean);
+    const subStatusOptions = EB2B.rows.sub_statuses.map(s=>s.name).filter(Boolean);
+    const priorityOptions = ["Critical","High","Medium","Low"];
+    const categoryOptions = ["Enhancement","Bug Fix","New Feature","Compliance","Infrastructure"];
+    const f = EB2B.crFilters;
+
+    c.innerHTML = `
+      <div class="kpi-grid">
+        ${kpiCard("Tổng số CR", total, "", "")}
+        ${kpiCard("Quá hạn", overdue, "Deadline đã qua, chưa Released/Closed", "danger")}
+        ${kpiCard("Đang xử lý", inProgress, "In Progress / In Review / UAT", "accent")}
+        ${kpiCard("Critical", critical, "Mức ưu tiên cao nhất", "warn")}
+      </div>
+      <div class="list-panel crlog-panel">
+        <div class="list-panel-head">
+          <div class="list-panel-count"><b>${list.length}</b> / ${total} Change Request</div>
+          <div class="table-toolbar">
+            <div class="tb-search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}">
+            </div>
+            <div class="filter-chip"><span>Status</span>
+              <select id="eb2bFilterStatus">${eb2bOptions(statusOptions, f.status, "Tất cả")}</select>
+            </div>
+            <div class="filter-chip"><span>Sub-status</span>
+              <select id="eb2bFilterSubStatus">${eb2bOptions(subStatusOptions, f.sub_status, "Tất cả")}</select>
+            </div>
+            <div class="filter-chip"><span>Priority</span>
+              <select id="eb2bFilterPriority">${eb2bOptions(priorityOptions, f.priority, "Tất cả")}</select>
+            </div>
+            <div class="filter-chip"><span>Category</span>
+              <select id="eb2bFilterCategory">${eb2bOptions(categoryOptions, f.category, "Tất cả")}</select>
+            </div>
+            <div class="chip-clear" id="eb2bClearFilters">Xóa lọc</div>
+            <button type="button" class="btn btn-primary btn-sm" data-eb2b-new="cr">+ Tạo CR</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>CR ID</th><th>Tiêu đề / App</th><th>Requester</th><th>Category</th><th>Priority</th>
+              <th>Status</th><th>Sub-status</th><th>Deadline</th><th></th>
+            </tr></thead>
+            <tbody>
+            ${list.length ? list.map(row=>{
+              const overdueRow = eb2bIsOverdue(row);
+              return `<tr>
+                <td class="cell-id">${eEsc(row.cr_id)}</td>
+                <td class="cell-title" title="${eEsc(row.rename_folder||row.old_name||'')}">${eEsc(row.rename_folder||row.old_name||row.app||"—")}</td>
+                <td class="cell-dim">${eEsc(row.requester||"—")}</td>
+                <td>${eb2bBadge("category", row.category)}</td>
+                <td>${eb2bBadge("priority", row.priority)}</td>
+                <td>${eb2bBadge("statuses", row.status)}</td>
+                <td>${eb2bBadge("sub_statuses", row.sub_status)}</td>
+                <td class="cell-dim" style="${overdueRow? 'color:var(--danger,#c0433f); font-weight:700;':''}">${row.deadline? eDate(row.deadline):"—"}${overdueRow? " ⚠":""}</td>
+                <td class="cell-actions"><div class="row-actions">
+                  <button class="icon-btn" data-eb2b-act="edit" data-eb2b-id="${row.id}" title="Sửa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                  <button class="icon-btn danger" data-eb2b-act="delete" data-eb2b-id="${row.id}" title="Xóa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>
+                </div></td>
+              </tr>`;
+            }).join("") : `<tr><td colspan="9" class="eb2b-empty">Chưa có dữ liệu. Bấm "+ Tạo CR" để bắt đầu.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+
+    $e("#eb2bCrSearch")?.addEventListener("input", ev=>{
+      EB2B.search = ev.target.value;
+      const cursor = ev.target.selectionStart;
+      eb2bRenderCrLogRich();
+      const next = $e("#eb2bCrSearch");
+      if(next){ next.focus(); next.setSelectionRange(cursor, cursor); }
+    });
+    $e("#eb2bFilterStatus")?.addEventListener("change", ev=>{ EB2B.crFilters.status = ev.target.value; eb2bRenderCrLogRich(); });
+    $e("#eb2bFilterSubStatus")?.addEventListener("change", ev=>{ EB2B.crFilters.sub_status = ev.target.value; eb2bRenderCrLogRich(); });
+    $e("#eb2bFilterPriority")?.addEventListener("change", ev=>{ EB2B.crFilters.priority = ev.target.value; eb2bRenderCrLogRich(); });
+    $e("#eb2bFilterCategory")?.addEventListener("change", ev=>{ EB2B.crFilters.category = ev.target.value; eb2bRenderCrLogRich(); });
+    $e("#eb2bClearFilters")?.addEventListener("click", ()=>{
+      EB2B.crFilters = { status:"", sub_status:"", priority:"", category:"" };
+      eb2bRenderCrLogRich();
+    });
   }
 
   function eb2bRenderDataTable(key){
