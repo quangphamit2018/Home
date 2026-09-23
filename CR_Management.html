@@ -405,7 +405,7 @@ body.sidebar-hidden .drawer{ left:0; }
    views keep their data-view values so all current routing and permissions
    continue to work unchanged. This makes it safe to add EB2B as a sibling
    workspace later without rewriting the DMS modules. */
-.workspace-nav{ margin:0 0 8px; }
+.workspace-nav{ margin:0 0 4px; }
 .workspace-nav > .workspace-parent,
 .workspace-siblings .workspace-sibling{ margin-bottom:0; }
 .workspace-children + .workspace-nav{ margin-top:4px; }
@@ -432,7 +432,7 @@ body.sidebar-hidden .drawer{ left:0; }
 .workspace-children{
   display:grid;
   gap:2px;
-  margin:0 0 6px 12px;
+  margin:0 0 0 12px;
   padding:5px 0 3px 10px;
   border-left:1px solid rgba(63,208,201,.24);
 }
@@ -16343,7 +16343,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     recycle: ["EB2B · Recycle Bin", "Dữ liệu EB2B đã soft-delete"]
   };
   const EB2B_TABS = [
-    ["dashboard", "Tổng quan"], ["cr", "CR Log"], ["uat", "UAT Test Case"],
+    ["cr", "CR Log"], ["uat", "UAT Test Case"],
     ["release", "Release / PRD"], ["brd", "Tạo BRD"], ["weekly_mom", "Weekly MoM"]
   ];
   const EB2B_CONFIG = {
