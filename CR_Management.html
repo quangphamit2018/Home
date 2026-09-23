@@ -13472,7 +13472,7 @@ function renderBrdList(){
       const rec = STATE.brdList.find(x=> String(x.id) === card.dataset.id);
       if(!rec) return;
       if(btn.dataset.act === "edit") openBrdModal(rec);
-      else if(btn.dataset.act === "word") generateBrdDocx(rec).catch(e=> toast("Tạo file Word thất bại: " + e.message, "err"));
+      else if(btn.dataset.act === "word") promptBrdExportLang(rec);
       else if(btn.dataset.act === "del") confirmDelete("Xóa BRD?", `BRD "${rec.brd_title||''}" sẽ được chuyển vào Recycle Bin.`, ()=> deleteBrd(rec));
     });
   });
@@ -14132,6 +14132,84 @@ function brdNormalizeDocxLayout(zip){
   let xml = file.asText();
   xml = xml.replace(/<w:p>(?:<w:pPr>(?:(?!<\/w:pPr>).)*<\/w:pPr>)?<\/w:p>(?=<w:p[ >])/g, "");
   zip.file("word/document.xml", xml);
+}
+
+// Từ 1 bản ghi BRD (đã lưu, có thể có bilingual_content) + ngôn ngữ mong muốn,
+// dựng ra 1 record "phẳng" đúng ngôn ngữ đó để đưa vào generateBrdDocx().
+// Field nào chưa có bản dịch ở ngôn ngữ được chọn thì fallback về nội dung gốc
+// (cột phẳng hiện có) để không bị thiếu nội dung khi xuất file.
+function brdRecordForLang(rec, lang){
+  const d = rec && rec.bilingual_content;
+  if(!d) return rec;
+  const pick = (field, fallback)=>{
+    const v = d[field] && d[field][lang];
+    return (v != null && String(v).trim() !== "") ? v : fallback;
+  };
+  const pickLines = (field, fallback)=>{
+    const v = d[field] && d[field][lang];
+    return (Array.isArray(v) && v.length) ? brdLinesFromArray(v) : fallback;
+  };
+  return {
+    ...rec,
+    brd_title: pick("brd_title", rec.brd_title),
+    system_name: pick("system_name", rec.system_name),
+    overview: pick("overview", rec.overview),
+    asis: pick("asis", rec.asis),
+    tobe_intro: pick("tobe_intro", rec.tobe_intro),
+    tobe_bullets: pickLines("tobe_bullets", rec.tobe_bullets),
+    success_intro: pick("success_intro", rec.success_intro),
+    success_bullets: pickLines("success_bullets", rec.success_bullets),
+    assumptions: pickLines("assumptions", rec.assumptions),
+    reviewer_feedback: pick("reviewer_feedback", rec.reviewer_feedback),
+  };
+}
+
+// Bấm "Xuất Word" ở danh sách BRD: nếu bản ghi có dữ liệu song ngữ thì hỏi
+// xuất bằng Tiếng Việt hay English; nếu chưa có dữ liệu song ngữ (chưa từng
+// chạy AI / chưa gõ tay bản thứ 2) thì xuất luôn theo nội dung hiện có, không hỏi.
+function promptBrdExportLang(rec){
+  const d = rec && rec.bilingual_content;
+  const hasBoth = d && Object.values(d).some(f=> (f?.vi && String(f.vi).trim()) && (f?.en && (Array.isArray(f.en)? f.en.length : String(f.en).trim())));
+  if(!hasBoth){
+    generateBrdDocx(rec).catch(e=> toast("Tạo file Word thất bại: " + e.message, "err"));
+    return;
+  }
+  const overlay = $("#confirmModalOverlay");
+  overlay.innerHTML = `
+    <div class="modal modal-sm">
+      <div class="modal-body" style="padding-top:26px;">
+        <div class="confirm-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        </div>
+        <h3 style="font-size:16px; margin-bottom:8px;">Xuất file Word</h3>
+        <p style="font-size:13.5px; color:var(--text-dim); line-height:1.6;">BRD "${esc(rec.brd_title||"")}" có cả bản Tiếng Việt và English. Chọn ngôn ngữ muốn xuất:</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="confirmCancel">Hủy</button>
+        <button class="btn btn-ghost" id="exportLangVi" type="button">Tiếng Việt</button>
+        <button class="btn btn-primary" id="exportLangEn" type="button">English</button>
+      </div>
+    </div>`;
+  overlay.classList.add("show");
+  $("#confirmCancel").addEventListener("click", ()=> overlay.classList.remove("show"));
+  if(!overlay.dataset.dismissBound){
+    overlay.dataset.dismissBound = "1";
+    overlay.addEventListener("click", e=>{ if(e.target===overlay) overlay.classList.remove("show"); });
+  }
+  const doExport = async (lang, sel)=>{
+    const btn = $(sel); if(!btn) return;
+    btn.disabled = true; const orig = btn.textContent; btn.textContent = "Đang xuất...";
+    try{
+      await generateBrdDocx(brdRecordForLang(rec, lang));
+      overlay.classList.remove("show");
+    }catch(e){
+      toast("Tạo file Word thất bại: " + e.message, "err");
+    }finally{
+      btn.disabled = false; btn.textContent = orig;
+    }
+  };
+  $("#exportLangVi").addEventListener("click", ()=> doExport("vi", "#exportLangVi"));
+  $("#exportLangEn").addEventListener("click", ()=> doExport("en", "#exportLangEn"));
 }
 
 async function generateBrdDocx(record){
