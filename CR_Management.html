@@ -609,14 +609,19 @@ body.focus-mode .view#view-release .rel-kpis{ display:none; }
 }
 .cr-dropdown-option{
   display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:8px;
-  font-size:12.5px; font-weight:650; cursor:pointer; transition:filter .12s ease, box-shadow .12s ease;
+  font-size:12.5px; font-weight:650; cursor:pointer; transition:filter .12s ease, box-shadow .12s ease, background .12s ease;
+  margin-bottom:4px;
   /* Nền LUÔN hiển thị màu admin đã cấu hình (không chỉ khi hover) — trước
      đây chỉ set màu chữ mà không set nền mặc định, nên với các Status có
      màu chữ trắng (rất phổ biến, để đọc được trên nền màu đậm) thì chữ biến
-     mất trên nền trắng của menu cho tới khi rê chuột vào. */
+     mất trên nền trắng của menu cho tới khi rê chuột vào. Ngoại lệ: Status/
+     Sub-Status không truyền --opt-bg/--opt-text nữa (xem openInlineDropdown)
+     nên các option này rơi về nền trắng + chữ mặc định, chỉ giữ lại chấm
+     tròn màu làm dấu hiệu nhận biết — tránh cả danh sách bị "tô màu" rối mắt. */
   color:var(--opt-text,#3b5968); background:var(--opt-bg,transparent);
 }
-.cr-dropdown-option:hover{ filter:brightness(.95); }
+.cr-dropdown-option:last-child{ margin-bottom:0; }
+.cr-dropdown-option:hover{ filter:brightness(.95); background:var(--opt-bg,#f2fbfb); }
 .cr-dropdown-option.is-selected{ box-shadow:inset 0 0 0 2px rgba(0,0,0,.14); font-weight:800; }
 .cr-dropdown-option-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
 /* Không cắt/ẩn bớt chữ nữa — tên Status/Sub-Status dài sẽ tự xuống dòng
@@ -9800,7 +9805,13 @@ function openInlineDropdown(trigger){
     options.map(value=>{
       const colors = inlineCrVisual(field, value);
       const selected = String(value) === String(selectedValue);
-      return `<div class="cr-dropdown-option ${selected ? "is-selected" : ""}" role="option" data-value="${esc(value)}" style="--opt-text:${colors.text};--opt-bg:${colors.background};">
+      // Status/Sub-Status: bỏ tô nền + màu chữ theo từng option (đỡ rối mắt
+      // khi cả danh sách dài đều là các mảng màu) — chỉ giữ lại chấm tròn nhỏ
+      // làm dấu hiệu nhận biết màu, danh sách còn lại dùng nền trắng + chữ
+      // mặc định như một list bình thường. Category/Priority vẫn giữ nguyên.
+      const isPlainField = field === "status" || field === "sub_status";
+      const optStyle = isPlainField ? "" : ` style="--opt-text:${colors.text};--opt-bg:${colors.background};"`;
+      return `<div class="cr-dropdown-option ${selected ? "is-selected" : ""}" role="option" data-value="${esc(value)}"${optStyle}>
         <span class="cr-dropdown-option-dot" style="background:${colors.text}"></span>
         <span>${esc(value)}</span>
         ${selected ? `<svg class="cr-dropdown-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>` : ""}
