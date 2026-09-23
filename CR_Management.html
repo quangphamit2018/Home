@@ -8204,8 +8204,13 @@ function syncCrFilterControls(){
     if(count) count.textContent = selected.length > 1 ? String(selected.length) : "";
     if(trigger) trigger.classList.toggle("is-active", selected.length > 0);
     const menu = document.getElementById(config.menuId);
-    if(menu) $all(`[data-filter-key="${config.key}"]`, menu).forEach(cb=> cb.checked = selected.includes(String(cb.dataset.filterValue)));
-    if(menu) $all(`[data-filter-all="${config.key}"]`, menu).forEach(cb=> cb.checked = selected.length === 0);
+    // Chưa lọc gì (selected rỗng) = đang xem "Tất cả" → tick luôn toàn bộ
+    // option bên dưới cho khớp nghĩa "Tất cả" thay vì để trống gây hiểu lầm
+    // là chưa chọn gì. Khi đó, nhấp vào 1 option (xem handler "change" phía
+    // dưới) sẽ hiểu là "chỉ lọc riêng mục này" chứ không cộng dồn vào "tất cả".
+    const isAllMode = selected.length === 0;
+    if(menu) $all(`[data-filter-key="${config.key}"]`, menu).forEach(cb=> cb.checked = isAllMode ? true : selected.includes(String(cb.dataset.filterValue)));
+    if(menu) $all(`[data-filter-all="${config.key}"]`, menu).forEach(cb=> cb.checked = isAllMode);
   });
 }
 function setCrMultiFilter(key, values){
@@ -8239,6 +8244,16 @@ function initCrMultiFilters(){
       }
       const option = e.target.closest(`[data-filter-key="${config.key}"]`);
       if(!option) return;
+      // Trước khi bấm, đang ở chế độ "Tất cả" (mọi option đều đang tick sẵn
+      // để thể hiện đúng nghĩa "Tất cả")? Nếu có, bấm vào 1 mục nghĩa là
+      // "chỉ muốn lọc riêng mục này" — tự bỏ chọn hết các mục còn lại thay
+      // vì cộng dồn (vì lúc này mọi checkbox khác cũng đang ở trạng thái
+      // checked nên nếu gộp theo :checked sẽ ra "tất cả trừ mục vừa bấm").
+      const wasAllMode = normalizeCrFilterValue(STATE.filters[config.key]).length === 0;
+      if(wasAllMode){
+        setCrMultiFilter(config.key, [option.dataset.filterValue]);
+        return;
+      }
       const next = $all(`[data-filter-key="${config.key}"]:checked`, group.querySelector(".cr-filter-menu")).map(cb=>cb.dataset.filterValue);
       setCrMultiFilter(config.key, next);
     });
@@ -9812,7 +9827,6 @@ function openInlineDropdown(trigger){
       const isPlainField = field === "status" || field === "sub_status";
       const optStyle = isPlainField ? "" : ` style="--opt-text:${colors.text};--opt-bg:${colors.background};"`;
       return `<div class="cr-dropdown-option ${selected ? "is-selected" : ""}" role="option" data-value="${esc(value)}"${optStyle}>
-        <span class="cr-dropdown-option-dot" style="background:${colors.text}"></span>
         <span>${esc(value)}</span>
         ${selected ? `<svg class="cr-dropdown-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>` : ""}
       </div>`;
