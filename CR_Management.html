@@ -4467,6 +4467,29 @@ body.detail-nav-visible .modal-overlay.full .modal-head{
 .brd-modal .field input,.brd-modal .field select,.brd-modal .field textarea{ border-color:#d8e5e9; background:#fcfefe; }
 .brd-modal .field input:focus,.brd-modal .field select:focus,.brd-modal .field textarea:focus{ border-color:#55afb1; background:#fff; box-shadow:0 0 0 3px rgba(23,159,160,.09); }
 .brd-hint{ font-size:11.5px; color:#8296a4; margin-top:5px; line-height:1.45; }
+.brd-ai-panel{ border:1px solid #bfe3e0; border-radius:12px; background:linear-gradient(165deg,#f0fbfa 0%,#eafcf7 100%); padding:16px; margin-bottom:14px; }
+.brd-ai-head{ display:flex; align-items:center; gap:9px; margin-bottom:4px; }
+.brd-ai-head svg{ width:18px; height:18px; color:#0c8f92; flex:0 0 auto; }
+.brd-ai-title{ font-family:var(--font-head); font-size:13.5px; font-weight:800; color:#0f4e50; }
+.brd-ai-sub{ font-size:11.5px; color:#4f7a79; margin:0 0 12px 27px; line-height:1.45; }
+.brd-ai-body{ display:flex; flex-direction:column; gap:10px; }
+.brd-ai-body textarea{ min-height:74px; border-color:#c7e6e3; background:#fff; }
+.brd-ai-drop{ position:relative; border:1.5px dashed #a9d8d4; border-radius:10px; background:rgba(255,255,255,.6); padding:12px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; cursor:text; min-height:56px; }
+.brd-ai-drop.drag{ border-color:#0c8f92; background:#e6f8f6; }
+.brd-ai-drop-hint{ font-size:11.5px; color:#5c8583; display:flex; align-items:center; gap:6px; }
+.brd-ai-thumbs{ display:flex; flex-wrap:wrap; gap:8px; }
+.brd-ai-thumb{ position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:1px solid #c7e6e3; flex:0 0 auto; }
+.brd-ai-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+.brd-ai-thumb-rm{ position:absolute; top:2px; right:2px; width:16px; height:16px; border-radius:50%; background:rgba(0,0,0,.55); color:#fff; border:none; font-size:10px; line-height:16px; text-align:center; cursor:pointer; padding:0; }
+.brd-ai-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.brd-ai-status{ font-size:11.5px; color:#5c8583; }
+.brd-ai-status.err{ color:#c0392b; }
+.btn-ai{ background:linear-gradient(135deg,#12a19b,#0d8b8f); color:#fff; border:none; }
+.btn-ai:hover{ filter:brightness(1.06); }
+.btn-ai:disabled{ opacity:.7; cursor:default; }
+.btn-ai .spin{ display:none; width:13px; height:13px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:brdSpin .7s linear infinite; margin-right:6px; }
+.btn-ai.loading .spin{ display:inline-block; }
+@keyframes brdSpin{ to{ transform:rotate(360deg); } }
 .brd-version-scroll{ width:100%; overflow-x:auto; border:1px solid #dfe8ec; border-radius:8px; }
 .brd-version-table{ width:100%; min-width:850px; border-collapse:separate; border-spacing:0; margin:0; }
 .brd-version-table th,.brd-version-table td{ border-right:1px solid #e3ebef; border-bottom:1px solid #e3ebef; padding:7px; font-size:12px; vertical-align:middle; }
@@ -13478,6 +13501,28 @@ function brdModalTemplate(v){
       <button class="modal-close" id="brdModalClose">✕</button>
     </div>
     <div class="modal-body">
+      <div class="brd-ai-panel" id="brdAiPanel">
+        <div class="brd-ai-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/></svg>
+          <div class="brd-ai-title">AI hỗ trợ điền BRD</div>
+        </div>
+        <p class="brd-ai-sub">Mô tả yêu cầu bằng lời + dán (paste)/kéo-thả ảnh liên quan (mockup, email yêu cầu, chụp màn hình...). AI sẽ tự phân tích và điền các mục bên dưới.</p>
+        <div class="brd-ai-body">
+          <textarea id="brdAiDesc" placeholder="Mô tả yêu cầu nghiệp vụ ở đây... VD: Cần đổi tên cột A thành B, thêm cột C hiển thị giá sau thuế trên phiếu xuất kho DMS..."></textarea>
+          <div class="brd-ai-drop" id="brdAiDrop" tabindex="0">
+            <div class="brd-ai-thumbs" id="brdAiThumbs"></div>
+            <div class="brd-ai-drop-hint">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l4.5-4.5a2 2 0 012.8 0L15 15"/><circle cx="16.5" cy="9.5" r="1.5"/></svg>
+              <span>Bấm để chọn ảnh, kéo-thả, hoặc <b>Ctrl+V</b> để dán ảnh</span>
+            </div>
+            <input type="file" id="brdAiFileInput" accept="image/*" multiple hidden>
+          </div>
+          <div class="brd-ai-actions">
+            <span class="brd-ai-status" id="brdAiStatus"></span>
+            <button type="button" class="btn btn-ai btn-sm" id="brdAiRunBtn"><span class="spin"></span>✨ Phân tích với AI &amp; tự động điền</button>
+          </div>
+        </div>
+      </div>
       <div class="tc-form-groups rel-form-groups">
         <section class="tc-form-group rel-form-group">
           <div class="tc-form-group-title">Thông tin chung</div>
@@ -13588,6 +13633,143 @@ function brdModalTemplate(v){
   </div>`;
 }
 
+/* ============================================================
+   AI hỗ trợ điền BRD — mô tả + ảnh (paste/kéo-thả) -> Supabase Edge
+   Function "brd-ai-fill" (proxy) -> Gemini API (free tier) -> JSON
+   ============================================================ */
+STATE.brdAiImages = []; // [{ id, mimeType, base64 (raw, no prefix), previewUrl }]
+
+function brdAiFileToEntry(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const dataUrl = reader.result; // data:<mime>;base64,xxxx
+      const comma = dataUrl.indexOf(",");
+      resolve({
+        id: Math.random().toString(36).slice(2),
+        mimeType: file.type || "image/png",
+        base64: dataUrl.slice(comma+1),
+        previewUrl: dataUrl
+      });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function brdAiAddFiles(files){
+  const imgFiles = Array.from(files||[]).filter(f=> f.type && f.type.startsWith("image/"));
+  if(!imgFiles.length) return;
+  const MAX = 6;
+  const room = MAX - STATE.brdAiImages.length;
+  if(room <= 0){ toast("Tối đa " + MAX + " ảnh cho mỗi lần phân tích", "err"); return; }
+  const entries = await Promise.all(imgFiles.slice(0, room).map(brdAiFileToEntry));
+  STATE.brdAiImages.push(...entries);
+  renderBrdAiThumbs();
+}
+
+function renderBrdAiThumbs(){
+  const box = $("#brdAiThumbs");
+  if(!box) return;
+  box.innerHTML = STATE.brdAiImages.map(img=> `
+    <div class="brd-ai-thumb" data-img="${img.id}">
+      <img src="${img.previewUrl}" alt="attached">
+      <button type="button" class="brd-ai-thumb-rm" data-rm-img="${img.id}" title="Xóa ảnh">✕</button>
+    </div>`).join("");
+}
+
+function brdAiSetStatus(msg, isErr){
+  const el = $("#brdAiStatus");
+  if(!el) return;
+  el.textContent = msg || "";
+  el.classList.toggle("err", !!isErr);
+}
+
+function brdLinesFromArray(arr){
+  if(Array.isArray(arr)) return arr.filter(Boolean).join("\n");
+  return String(arr||"").trim();
+}
+
+async function runBrdAiAssist(){
+  const desc = ($("#brdAiDesc")?.value || "").trim();
+  if(!desc && !STATE.brdAiImages.length){
+    brdAiSetStatus("Nhập mô tả hoặc đính kèm ít nhất 1 ảnh trước khi phân tích.", true);
+    return;
+  }
+  const btn = $("#brdAiRunBtn");
+  btn.disabled = true; btn.classList.add("loading");
+  brdAiSetStatus("AI đang phân tích, vui lòng đợi...");
+  try{
+    const { data, error } = await STATE.sb.functions.invoke("brd-ai-fill", {
+      body: {
+        description: desc,
+        images: STATE.brdAiImages.map(i=> ({ mimeType: i.mimeType, base64: i.base64 })),
+        current: {
+          brd_title: $("#b_title").value.trim(),
+          system_name: $("#b_system").value.trim()
+        }
+      }
+    });
+    if(error) throw new Error(error.message || "Gọi AI thất bại");
+    if(!data || data.error) throw new Error((data && data.error) || "AI không trả về dữ liệu hợp lệ");
+
+    const setVal = (id, val)=>{ const el = $(id); if(el && val!=null && String(val).trim()!==""){ el.value = val; el.dispatchEvent(new Event("input")); } };
+
+    setVal("#b_title", data.brd_title);
+    setVal("#b_system", data.system_name);
+    setVal("#b_overview", data.overview);
+    setVal("#b_asis", data.asis);
+    setVal("#b_tobe_intro", data.tobe_intro);
+    setVal("#b_tobe_bullets", brdLinesFromArray(data.tobe_bullets));
+    setVal("#b_success_intro", data.success_intro);
+    setVal("#b_success_bullets", brdLinesFromArray(data.success_bullets));
+    setVal("#b_assumptions", brdLinesFromArray(data.assumptions));
+    setVal("#b_reviewer_feedback", brdLinesFromArray(data.reviewer_feedback));
+
+    brdAiSetStatus("Đã điền xong. Vui lòng rà soát lại nội dung trước khi lưu.");
+    toast("AI đã điền thông tin BRD, hãy kiểm tra lại", "ok");
+  }catch(e){
+    console.error(e);
+    brdAiSetStatus("Lỗi: " + e.message, true);
+    toast("Phân tích AI thất bại: " + e.message, "err");
+  }finally{
+    btn.disabled = false; btn.classList.remove("loading");
+  }
+}
+
+function bindBrdAiPanel(overlay){
+  const drop = $("#brdAiDrop", overlay);
+  const input = $("#brdAiFileInput", overlay);
+  const thumbs = $("#brdAiThumbs", overlay);
+  STATE.brdAiImages = [];
+  renderBrdAiThumbs();
+
+  drop.addEventListener("click", (e)=>{ if(e.target.closest("[data-rm-img]")) return; input.click(); });
+  input.addEventListener("change", ()=> { brdAiAddFiles(input.files); input.value = ""; });
+
+  ["dragenter","dragover"].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove("drag"); }));
+  drop.addEventListener("drop", e=> brdAiAddFiles(e.dataTransfer.files));
+
+  // Paste ảnh: nghe trên cả ô drop lẫn textarea mô tả, và toàn overlay khi panel đang mở
+  const pasteHandler = (e)=>{
+    const items = (e.clipboardData || window.clipboardData)?.items || [];
+    const files = [];
+    for(const it of items){ if(it.kind === "file" && it.type.startsWith("image/")) files.push(it.getAsFile()); }
+    if(files.length){ e.preventDefault(); brdAiAddFiles(files); }
+  };
+  drop.addEventListener("paste", pasteHandler);
+  $("#brdAiDesc", overlay).addEventListener("paste", pasteHandler);
+
+  thumbs.addEventListener("click", e=>{
+    const btn = e.target.closest("[data-rm-img]"); if(!btn) return;
+    STATE.brdAiImages = STATE.brdAiImages.filter(i=> i.id !== btn.dataset.rmImg);
+    renderBrdAiThumbs();
+  });
+
+  $("#brdAiRunBtn", overlay).addEventListener("click", runBrdAiAssist);
+}
+
 function openBrdModal(v){
   STATE.editingBrdId = v ? v.id : null;
   STATE.brdVersionRows = (v && Array.isArray(v.version_rows) && v.version_rows.length)
@@ -13597,6 +13779,7 @@ function openBrdModal(v){
   overlay.innerHTML = brdModalTemplate(v);
   initAutoGrow(overlay);
   renderBrdVersionRows();
+  bindBrdAiPanel(overlay);
   overlay.classList.add("show");
   $("#brdModalClose").addEventListener("click", ()=> overlay.classList.remove("show"));
   $("#brdModalCancel").addEventListener("click", ()=> overlay.classList.remove("show"));
