@@ -400,6 +400,68 @@ body.sidebar-hidden .drawer{ left:0; }
 }
 .conn-dot{ width:7px; height:7px; border-radius:50%; background: var(--success); box-shadow:0 0 0 3px var(--success-dim); flex-shrink:0; }
 
+/* ---- Workspace navigation -------------------------------------------------
+   DMS is a workspace container, not a new data view. The existing child
+   views keep their data-view values so all current routing and permissions
+   continue to work unchanged. This makes it safe to add EB2B as a sibling
+   workspace later without rewriting the DMS modules. */
+.workspace-nav{ margin:2px 0 7px; }
+.workspace-parent{
+  position:relative;
+  background:linear-gradient(135deg, rgba(63,208,201,.12), rgba(255,255,255,.025));
+  border-color:rgba(63,208,201,.18);
+}
+.workspace-parent:hover{
+  background:linear-gradient(135deg, rgba(63,208,201,.18), rgba(255,255,255,.04));
+}
+.workspace-parent.is-context{
+  color:var(--accent);
+  border-color:rgba(63,208,201,.34);
+}
+.workspace-parent-copy{
+  display:flex;
+  min-width:0;
+  flex:1 1 auto;
+  flex-direction:column;
+  gap:1px;
+  overflow:hidden;
+}
+.workspace-parent-copy .nav-label{ display:block; }
+.workspace-parent-meta{
+  overflow:hidden;
+  color:var(--text-muted);
+  font-size:10px;
+  font-weight:500;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.workspace-chevron{
+  width:14px !important;
+  height:14px !important;
+  margin-left:auto;
+  opacity:.7 !important;
+  transition:transform var(--duration-base) var(--ease-standard);
+}
+.workspace-parent.is-open .workspace-chevron{ transform:rotate(180deg); }
+.workspace-children{
+  display:grid;
+  gap:2px;
+  margin:0 0 6px 12px;
+  padding:5px 0 3px 10px;
+  border-left:1px solid rgba(63,208,201,.24);
+}
+.workspace-children.is-collapsed{ display:none; }
+.workspace-children .nav-item{
+  margin-bottom:0;
+  padding:8px 10px;
+  font-size:12.8px;
+}
+.workspace-children .nav-item svg{ width:16px; height:16px; }
+@media(max-width:900px){
+  .workspace-children{ margin-left:8px; padding-left:8px; }
+  .workspace-children .nav-item{ padding:12px 10px; }
+}
+
 .main{ flex:1; min-width:0; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
 
 .topbar{
@@ -5535,31 +5597,53 @@ html{
       <span class="nav-label">Dashboard</span>
     </div>
 
-    <div class="nav-group-label">Quản lý</div>
-    <div class="nav-item" data-view="crlog" title="CR Log">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
-      <span class="nav-label">CR Log</span>
-      <span class="count" id="navCountCr">0</span>
-    </div>
-    <div class="nav-item" data-view="uat" title="UAT Test Case">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-      <span class="nav-label">UAT Test Case</span>
-      <span class="count" id="navCountUat">0</span>
-    </div>
-    <div class="nav-item" data-view="release" title="Release / PRD">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 016.34-11.34.99.99 0 01.11-.1c1.62-.9 4-1.1 5.5.4s1.3 3.88.4 5.5c-.03.04-.07.08-.1.11A22 22 0 0112 15z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
-      <span class="nav-label">Release / PRD</span>
-      <span class="count" id="navCountRel">0</span>
-    </div>
-    <div class="nav-item" data-view="brd" title="Tạo BRD">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
-      <span class="nav-label">Tạo BRD</span>
-      <span class="count" id="navCountBrd">0</span>
-    </div>
-    <div class="nav-item" data-view="weekly_mom" title="Weekly MoM">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>
-      <span class="nav-label">Weekly MoM</span>
-      <span class="count" id="navCountWeeklyMom">0</span>
+    <div class="nav-group-label">Workspace</div>
+    <!-- DMS workspace container. Add future workspaces beside this block;
+         the child data-view values below intentionally remain unchanged. -->
+    <div class="workspace-nav" data-workspace="dms">
+      <div class="nav-item workspace-parent is-open" id="navDmsWorkspace"
+           title="Mở / thu gọn Quản Lý DMS" role="button" tabindex="0"
+           aria-expanded="true" aria-controls="navDmsChildren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="16" rx="2"/>
+          <path d="M8 4V2M16 4V2M7 9h10M7 13h6M7 17h8"/>
+        </svg>
+        <span class="workspace-parent-copy">
+          <span class="nav-label">Quản Lý DMS</span>
+          <span class="workspace-parent-meta">CR • UAT • Release • BRD • MoM</span>
+        </span>
+        <svg class="workspace-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </div>
+
+      <div class="workspace-children" id="navDmsChildren" aria-label="Các phân hệ Quản Lý DMS">
+        <div class="nav-item" data-view="crlog" title="CR Log">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2-2z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+          <span class="nav-label">CR Log</span>
+          <span class="count" id="navCountCr">0</span>
+        </div>
+        <div class="nav-item" data-view="uat" title="UAT Test Case">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          <span class="nav-label">UAT Test Case</span>
+          <span class="count" id="navCountUat">0</span>
+        </div>
+        <div class="nav-item" data-view="release" title="Release / PRD">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 016.34-11.34.99.99 0 01.11-.1c1.62-.9 4-1.1 5.5.4s1.3 3.88.4 5.5c-.03.04-.07.08-.1.11A22 22 0 0112 15z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+          <span class="nav-label">Release / PRD</span>
+          <span class="count" id="navCountRel">0</span>
+        </div>
+        <div class="nav-item" data-view="brd" title="Tạo BRD">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+          <span class="nav-label">Tạo BRD</span>
+          <span class="count" id="navCountBrd">0</span>
+        </div>
+        <div class="nav-item" data-view="weekly_mom" title="Weekly MoM">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>
+          <span class="nav-label">Weekly MoM</span>
+          <span class="count" id="navCountWeeklyMom">0</span>
+        </div>
+      </div>
     </div>
 
     <div class="nav-item hidden" data-view="admin" id="navAdmin" title="Quản Trị Dữ Liệu">
@@ -6357,6 +6441,8 @@ window.CR_LISTS = {
 --------------------------------------------------------------------------- */
 const VIEW_STORAGE_KEY = "crControlCurrentView";
 const VALID_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom", "admin", "recycle"]);
+const DMS_NAV_STORAGE_KEY = "crControlDmsNavOpen";
+const DMS_VIEWS = new Set(["crlog", "uat", "release", "brd", "weekly_mom"]);
 const CR_FILTER_STORAGE_KEY = "crLogFilters";
 
 function normalizeCrFilterValue(value){
@@ -6437,6 +6523,10 @@ function getSavedView(){
   }catch(_){
     return "dashboard";
   }
+}
+
+function isDmsView(view){
+  return DMS_VIEWS.has(String(view || ""));
 }
 
 const STATE = {
@@ -7841,6 +7931,40 @@ function closeMobileNav(){
   if(btn) btn.setAttribute("aria-expanded", "false");
 }
 
+function setDmsWorkspaceNavOpen(open, persist=true){
+  const parent = $("#navDmsWorkspace");
+  const children = $("#navDmsChildren");
+  if(!parent || !children) return;
+  const nextOpen = Boolean(open);
+  children.classList.toggle("is-collapsed", !nextOpen);
+  parent.classList.toggle("is-open", nextOpen);
+  parent.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+  if(persist){
+    try{ localStorage.setItem(DMS_NAV_STORAGE_KEY, nextOpen ? "1" : "0"); }catch(_){}
+  }
+}
+
+function initDmsWorkspaceNav(){
+  const parent = $("#navDmsWorkspace");
+  if(!parent) return;
+  let savedOpen = true;
+  try{
+    savedOpen = localStorage.getItem(DMS_NAV_STORAGE_KEY) !== "0";
+  }catch(_){}
+  setDmsWorkspaceNavOpen(isDmsView(STATE.currentView) || savedOpen, false);
+  const toggle = ()=>{
+    const isOpen = parent.getAttribute("aria-expanded") === "true";
+    setDmsWorkspaceNavOpen(!isOpen);
+  };
+  parent.addEventListener("click", toggle);
+  parent.addEventListener("keydown", e=>{
+    if(e.key === "Enter" || e.key === " "){
+      e.preventDefault();
+      toggle();
+    }
+  });
+}
+
 /* ---------------------------------------------------------------------------
    Record selection + reveal choreography
    Each tab keeps its existing detail mechanism:
@@ -7933,6 +8057,7 @@ function initSidebarVisibility(){
 
 function initShell(){
   initSidebarVisibility();
+  initDmsWorkspaceNav();
   $all(".nav-item[data-view]").forEach(item=>{
     item.addEventListener("click", ()=> { setView(item.dataset.view); closeMobileNav(); });
   });
@@ -8557,6 +8682,12 @@ function setView(view){
     if(m.id !== "tcModalOverlay" && m.id !== "relModalOverlay") m.classList.remove("show");
   });
   $all(".nav-item[data-view]").forEach(i=> i.classList.toggle("active", i.dataset.view===view));
+  if(isDmsView(view)){
+    setDmsWorkspaceNavOpen(true);
+    $("#navDmsWorkspace")?.classList.add("is-context");
+  }else{
+    $("#navDmsWorkspace")?.classList.remove("is-context");
+  }
   $all(".view").forEach(v=> v.classList.add("hidden"));
   $("#view-"+view).classList.remove("hidden");
   $("#topbarTitle").textContent = VIEW_META[view].title;
