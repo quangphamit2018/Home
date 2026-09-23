@@ -513,6 +513,88 @@ body.focus-mode .view#view-release .rel-kpis{ display:none; }
 .chip-clear{ font-size:12px; color: var(--text-muted); cursor:pointer; padding:6px 8px; border-radius:7px; transition: var(--transition-hover); }
 .chip-clear:hover{ color: var(--danger); background: var(--danger-dim); }
 
+/* ---- CR Log multi-select filters ----------------------------------------- */
+.cr-filter-group{ position:relative; }
+.cr-filter-trigger{
+  min-width:154px; display:flex; align-items:center; gap:8px; padding:8px 10px;
+  border:1px solid #d8e7eb; border-radius:11px; color:#315267; background:#fbfeff;
+  box-shadow:0 2px 8px rgba(18,62,79,.035); cursor:pointer; transition:all .16s ease;
+  text-align:left;
+}
+.cr-filter-trigger:hover,.cr-filter-group.is-open .cr-filter-trigger{
+  border-color:#7bc6c7; background:#f3fbfb; box-shadow:0 0 0 3px rgba(23,159,160,.09);
+}
+.cr-filter-trigger.is-active{ border-color:#43b8b8; background:#effafa; }
+.cr-filter-glyph{
+  width:22px; height:22px; display:grid; place-items:center; flex:0 0 auto;
+  color:#138e91; background:#e1f5f4; border-radius:7px; font-size:11px; font-weight:900;
+}
+.cr-filter-copy{ min-width:0; display:grid; gap:1px; line-height:1.1; }
+.cr-filter-label{ color:#77919e; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.cr-filter-value{ max-width:105px; overflow:hidden; color:#183b50; font-size:12px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+.cr-filter-count{
+  display:none; min-width:18px; padding:2px 5px; border-radius:999px; color:#fff; background:#168f91;
+  font-size:10px; font-weight:900; text-align:center;
+}
+.cr-filter-count:not(:empty){ display:inline-block; }
+.cr-filter-chevron{ margin-left:auto; color:#73909d; font-size:12px; transition:transform .16s ease; }
+.cr-filter-group.is-open .cr-filter-chevron{ transform:rotate(180deg); }
+.cr-filter-menu{
+  position:absolute; z-index:80; top:calc(100% + 7px); left:0; width:250px; max-height:360px;
+  display:none; overflow:hidden; border:1px solid #d5e6ea; border-radius:14px; background:#fff;
+  box-shadow:0 16px 36px rgba(21,63,83,.16); animation:crFilterMenuIn .16s ease;
+}
+.cr-filter-group.is-open .cr-filter-menu{ display:block; }
+.cr-filter-menu-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 13px 10px;
+  border-bottom:1px solid #e5eff1; background:linear-gradient(135deg,#fbffff,#f2f9fa);
+}
+.cr-filter-menu-title{ color:#173d51; font-size:12px; font-weight:850; }
+.cr-filter-menu-hint{ display:block; margin-top:2px; color:#8aa0aa; font-size:10px; }
+.cr-filter-reset{
+  border:0; padding:4px 6px; border-radius:6px; color:#148c8e; background:transparent;
+  font-size:10.5px; font-weight:800; cursor:pointer;
+}
+.cr-filter-reset:hover{ background:#e8f7f6; }
+.cr-filter-options{ max-height:294px; overflow:auto; padding:7px; }
+.cr-filter-option{
+  display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:8px; color:#3b5968;
+  font-size:12px; font-weight:650; cursor:pointer; transition:background .13s ease;
+}
+.cr-filter-option:hover{ background:#f0f8f8; }
+.cr-filter-option input{ width:15px; height:15px; margin:0; accent-color:#16999a; }
+.cr-filter-option.is-all{ margin-bottom:4px; color:#173f52; font-weight:850; border-bottom:1px solid #e8f0f2; border-radius:8px 8px 5px 5px; }
+.cr-filter-empty{ padding:15px 10px; color:#8aa0aa; font-size:11.5px; text-align:center; }
+.cr-filter-legacy{ position:absolute!important; width:1px!important; height:1px!important; overflow:hidden!important; clip:rect(0 0 0 0)!important; white-space:nowrap!important; }
+@keyframes crFilterMenuIn{ from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)} }
+
+/* Inline editable fields keep the table scannable while making the four
+   operational fields editable without opening the full CR modal. */
+.inline-edit-cell{ overflow:visible!important; }
+.inline-cr-select{
+  width:100%; min-width:110px; max-width:100%; padding:6px 24px 6px 9px; border:1px solid transparent;
+  border-radius:8px; color:#244b60; background:transparent; font-size:12px; font-weight:750;
+  cursor:pointer; transition:all .15s ease;
+}
+.inline-cr-select:hover,.inline-cr-select:focus{
+  border-color:#8acdd0; background:#f2fbfb; outline:none; box-shadow:0 0 0 3px rgba(23,159,160,.08);
+}
+.inline-cr-select.is-saving{ opacity:.55; pointer-events:none; }
+.inline-cr-select.is-saved{ animation:inlineSaved .55s ease; }
+@keyframes inlineSaved{ 0%{background:#dff8ee} 100%{background:transparent} }
+.cr-card-inline-fields{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:10px; }
+.cr-card-inline-fields label{ display:grid; gap:4px; color:#77919e; font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+.cr-card-inline-fields .inline-cr-select{ min-width:0; padding:7px 22px 7px 8px; border-color:#dcebed; background:#fbfeff; font-size:11px; }
+.view .cr-filter-trigger{ color:#315267; }
+.view .cr-filter-value{ color:#183b50; }
+@media(max-width:980px){
+  .cr-filter-trigger{ min-width:137px; }
+}
+@media(max-width:760px){
+  .cr-filter-menu{ position:fixed; top:115px; left:12px; right:12px; width:auto; max-height:52vh; }
+  .cr-filter-trigger{ flex:1 1 140px; }
+}
+
 .table-wrap{ overflow:auto; }
 table{ width:100%; border-collapse:collapse; min-width:900px; }
 
@@ -5599,14 +5681,33 @@ html{
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                 <input id="crSearchInput" type="text" placeholder="Tìm CR ID, tiêu đề, requester...">
               </div>
-              <div class="filter-chip"><span>Trạng thái</span>
-                <select id="filterStatus"><option value="">Tất cả</option></select>
+              <div class="cr-filter-group" data-filter-key="status">
+                <button class="cr-filter-trigger" id="filterStatusTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span class="cr-filter-glyph">S</span><span class="cr-filter-copy"><span class="cr-filter-label">Status</span><strong class="cr-filter-value" id="filterStatusSummary">Tất cả</strong></span><span class="cr-filter-count" id="filterStatusCount"></span><span class="cr-filter-chevron">⌄</span>
+                </button>
+                <div class="cr-filter-menu" id="menuFilterStatus"></div>
+                <select id="filterStatus" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
               </div>
-              <div class="filter-chip"><span>Ưu tiên</span>
-                <select id="filterPriority"><option value="">Tất cả</option></select>
+              <div class="cr-filter-group" data-filter-key="priority">
+                <button class="cr-filter-trigger" id="filterPriorityTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span class="cr-filter-glyph">P</span><span class="cr-filter-copy"><span class="cr-filter-label">Priority</span><strong class="cr-filter-value" id="filterPrioritySummary">Tất cả</strong></span><span class="cr-filter-count" id="filterPriorityCount"></span><span class="cr-filter-chevron">⌄</span>
+                </button>
+                <div class="cr-filter-menu" id="menuFilterPriority"></div>
+                <select id="filterPriority" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
               </div>
-              <div class="filter-chip"><span>Loại</span>
-                <select id="filterCategory"><option value="">Tất cả</option></select>
+              <div class="cr-filter-group" data-filter-key="category">
+                <button class="cr-filter-trigger" id="filterCategoryTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span class="cr-filter-glyph">C</span><span class="cr-filter-copy"><span class="cr-filter-label">Category</span><strong class="cr-filter-value" id="filterCategorySummary">Tất cả</strong></span><span class="cr-filter-count" id="filterCategoryCount"></span><span class="cr-filter-chevron">⌄</span>
+                </button>
+                <div class="cr-filter-menu" id="menuFilterCategory"></div>
+                <select id="filterCategory" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
+              </div>
+              <div class="cr-filter-group" data-filter-key="sub_status">
+                <button class="cr-filter-trigger" id="filterSubStatusTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span class="cr-filter-glyph">SS</span><span class="cr-filter-copy"><span class="cr-filter-label">Sub-status</span><strong class="cr-filter-value" id="filterSubStatusSummary">Tất cả</strong></span><span class="cr-filter-count" id="filterSubStatusCount"></span><span class="cr-filter-chevron">⌄</span>
+                </button>
+                <div class="cr-filter-menu" id="menuFilterSubStatus"></div>
+                <select id="filterSubStatus" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
               </div>
 
               <div class="tb-dropdown" data-dd-root="moreFilters">
@@ -6212,6 +6313,37 @@ window.CR_LISTS = {
 --------------------------------------------------------------------------- */
 const VIEW_STORAGE_KEY = "crControlCurrentView";
 const VALID_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom", "admin", "recycle"]);
+const CR_FILTER_STORAGE_KEY = "crLogFilters";
+
+function normalizeCrFilterValue(value){
+  if(Array.isArray(value)) return value.filter(Boolean).map(String);
+  return value ? [String(value)] : [];
+}
+function loadCrFilterPrefs(){
+  const defaults = { status:[], priority:[], category:[], sub_status:[], requester:"", overdueOnly:false, search:"" };
+  try{
+    const saved = JSON.parse(localStorage.getItem(CR_FILTER_STORAGE_KEY) || "null");
+    if(!saved || typeof saved !== "object") return defaults;
+    return {
+      status: normalizeCrFilterValue(saved.status),
+      priority: normalizeCrFilterValue(saved.priority),
+      category: normalizeCrFilterValue(saved.category),
+      sub_status: normalizeCrFilterValue(saved.sub_status),
+      requester: String(saved.requester || ""),
+      overdueOnly: saved.overdueOnly === true,
+      search: String(saved.search || "")
+    };
+  }catch(_){
+    return defaults;
+  }
+}
+function saveCrFilterPrefs(){
+  try{ localStorage.setItem(CR_FILTER_STORAGE_KEY, JSON.stringify(STATE.filters)); }catch(_){}
+}
+function filterHasValue(filterValue, recordValue){
+  const values = normalizeCrFilterValue(filterValue);
+  return !values.length || values.includes(String(recordValue || ""));
+}
 
 /* ==========================================================================
    PHÂN QUYỀN (ROLES)
@@ -6285,7 +6417,7 @@ const STATE = {
   myAccessRequest: null,   // yêu cầu cấp quyền của chính tài khoản đang đăng nhập (dùng ở màn Pending)
   resolvingAccessRequestId: null, // id access_request đang được duyệt qua modal "Cấp quyền" (null nếu mở modal bình thường)
   currentView: getSavedView(),
-  filters: { status:"", priority:"", category:"", requester:"", overdueOnly:false, search:"" },
+  filters: loadCrFilterPrefs(),
   tcFilters: { cr:"", result:"", testor:"", owner:"", search:"" },
   relFilters: { cr:"", status:"", environment:"", owner:"", search:"" },
   userFilters: { q:"", role:"", status:"" },
@@ -7743,23 +7875,29 @@ function initShell(){
   populateSelect($("#filterStatus"), CR_LISTS.status);
   populateSelect($("#filterPriority"), CR_LISTS.priority);
   populateSelect($("#filterCategory"), CR_LISTS.category);
+  populateSelect($("#filterSubStatus"), CR_LISTS.subStatus);
   populateSelect($("#filterTcResult"), CR_LISTS.uatResult);
   populateSelect($("#filterRelStatus"), CR_LISTS.releaseStatus);
+  initCrMultiFilters();
+  $("#filterRequester").value = STATE.filters.requester || "";
+  $("#filterOverdueOnly").checked = !!STATE.filters.overdueOnly;
+  $("#crSearchInput").value = STATE.filters.search || "";
+  syncCrFilterControls();
+  updateMoreFiltersBadge();
 
-  $("#filterStatus").addEventListener("change", e=>{ STATE.filters.status = e.target.value; renderCrTable(); });
-  $("#filterPriority").addEventListener("change", e=>{ STATE.filters.priority = e.target.value; renderCrTable(); });
-  $("#filterCategory").addEventListener("change", e=>{ STATE.filters.category = e.target.value; renderCrTable(); });
-  $("#filterRequester").addEventListener("change", e=>{ STATE.filters.requester = e.target.value; updateMoreFiltersBadge(); renderCrTable(); });
-  $("#filterOverdueOnly").addEventListener("change", e=>{ STATE.filters.overdueOnly = e.target.checked; updateMoreFiltersBadge(); renderCrTable(); });
+  $("#filterRequester").addEventListener("change", e=>{ STATE.filters.requester = e.target.value; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrTable(); });
+  $("#filterOverdueOnly").addEventListener("change", e=>{ STATE.filters.overdueOnly = e.target.checked; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrTable(); });
   $("#clearFilters").addEventListener("click", ()=>{
-    STATE.filters = { status:"", priority:"", category:"", requester:"", overdueOnly:false, search: STATE.filters.search };
-    $("#filterStatus").value=""; $("#filterPriority").value=""; $("#filterCategory").value="";
+    STATE.filters = { status:[], priority:[], category:[], sub_status:[], requester:"", overdueOnly:false, search: STATE.filters.search };
+    syncCrFilterControls();
     $("#filterRequester").value=""; $("#filterOverdueOnly").checked = false;
+    saveCrFilterPrefs();
     updateMoreFiltersBadge();
     renderCrTable();
   });
   $("#crSearchInput").addEventListener("input", debounce(e=>{
     STATE.filters.search = e.target.value.trim().toLowerCase();
+    saveCrFilterPrefs();
     renderCrTable();
   }, 220));
 
@@ -7910,6 +8048,101 @@ function initShell(){
 --------------------------------------------------------------------------- */
 function closeAllTbMenus(){
   $all(".tb-menu.show").forEach(m=> m.classList.remove("show"));
+}
+const CR_MULTI_FILTERS = [
+  { key:"status", label:"Status", glyph:"S", listKey:"status", menuId:"menuFilterStatus", summaryId:"filterStatusSummary", countId:"filterStatusCount" },
+  { key:"priority", label:"Priority", glyph:"P", listKey:"priority", menuId:"menuFilterPriority", summaryId:"filterPrioritySummary", countId:"filterPriorityCount" },
+  { key:"category", label:"Category", glyph:"C", listKey:"category", menuId:"menuFilterCategory", summaryId:"filterCategorySummary", countId:"filterCategoryCount" },
+  { key:"sub_status", label:"Sub-status", glyph:"SS", listKey:"subStatus", menuId:"menuFilterSubStatus", summaryId:"filterSubStatusSummary", countId:"filterSubStatusCount" },
+];
+function closeAllCrFilterMenus(){
+  $all(".cr-filter-group.is-open").forEach(group=>{
+    group.classList.remove("is-open");
+    group.querySelector(".cr-filter-trigger")?.setAttribute("aria-expanded", "false");
+  });
+}
+function renderCrMultiFilterOptions(){
+  CR_MULTI_FILTERS.forEach(config=>{
+    const menu = document.getElementById(config.menuId);
+    if(!menu) return;
+    const values = Array.isArray(CR_LISTS[config.listKey]) ? CR_LISTS[config.listKey].filter(Boolean) : [];
+    const validValues = new Set(values.map(String));
+    const selectedValues = normalizeCrFilterValue(STATE.filters[config.key]).filter(value=>validValues.has(String(value)));
+    STATE.filters[config.key] = selectedValues;
+    const selected = new Set(selectedValues);
+    menu.innerHTML = `
+      <div class="cr-filter-menu-head">
+        <div><div class="cr-filter-menu-title">${esc(config.label)}</div><span class="cr-filter-menu-hint">Chọn một hoặc nhiều giá trị</span></div>
+        <button type="button" class="cr-filter-reset" data-filter-reset="${config.key}">Đặt lại</button>
+      </div>
+      <div class="cr-filter-options">
+        <label class="cr-filter-option is-all"><input type="checkbox" data-filter-all="${config.key}" ${selected.size === 0 ? "checked" : ""}> Tất cả</label>
+        ${values.length ? values.map(value=>`
+          <label class="cr-filter-option"><input type="checkbox" data-filter-value="${esc(value)}" data-filter-key="${config.key}" ${selected.has(String(value)) ? "checked" : ""}> ${esc(value)}</label>
+        `).join("") : `<div class="cr-filter-empty">Chưa có danh mục</div>`}
+      </div>`;
+    const legacy = document.getElementById("filter" + (config.key === "sub_status" ? "SubStatus" : config.key.charAt(0).toUpperCase()+config.key.slice(1)));
+    if(legacy){
+      legacy.innerHTML = `<option value="">Tất cả</option>` + values.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join("");
+      legacy.value = selected.values().next().value || "";
+    }
+  });
+  syncCrFilterControls();
+}
+function syncCrFilterControls(){
+  CR_MULTI_FILTERS.forEach(config=>{
+    const selected = normalizeCrFilterValue(STATE.filters[config.key]);
+    const summary = document.getElementById(config.summaryId);
+    const count = document.getElementById(config.countId);
+    const trigger = document.getElementById(config.summaryId.replace("Summary","Trigger"));
+    if(summary) summary.textContent = selected.length ? (selected.length === 1 ? selected[0] : `${selected[0]} +${selected.length-1}`) : "Tất cả";
+    if(count) count.textContent = selected.length > 1 ? String(selected.length) : "";
+    if(trigger) trigger.classList.toggle("is-active", selected.length > 0);
+    const menu = document.getElementById(config.menuId);
+    if(menu) $all(`[data-filter-key="${config.key}"]`, menu).forEach(cb=> cb.checked = selected.includes(String(cb.dataset.filterValue)));
+    if(menu) $all(`[data-filter-all="${config.key}"]`, menu).forEach(cb=> cb.checked = selected.length === 0);
+  });
+}
+function setCrMultiFilter(key, values){
+  STATE.filters[key] = normalizeCrFilterValue(values);
+  saveCrFilterPrefs();
+  syncCrFilterControls();
+  renderCrTable();
+}
+function initCrMultiFilters(){
+  renderCrMultiFilterOptions();
+  CR_MULTI_FILTERS.forEach(config=>{
+    const group = document.querySelector(`.cr-filter-group[data-filter-key="${config.key}"]`);
+    const trigger = group?.querySelector(".cr-filter-trigger");
+    if(!group || !trigger) return;
+    trigger.addEventListener("click", e=>{
+      e.stopPropagation();
+      const wasOpen = group.classList.contains("is-open");
+      closeAllTbMenus();
+      closeAllCrFilterMenus();
+      if(!wasOpen){
+        group.classList.add("is-open");
+        trigger.setAttribute("aria-expanded", "true");
+      }
+    });
+    group.querySelector(".cr-filter-menu")?.addEventListener("click", e=> e.stopPropagation());
+    group.querySelector(".cr-filter-menu")?.addEventListener("change", e=>{
+      const all = e.target.closest(`[data-filter-all="${config.key}"]`);
+      if(all){
+        setCrMultiFilter(config.key, []);
+        return;
+      }
+      const option = e.target.closest(`[data-filter-key="${config.key}"]`);
+      if(!option) return;
+      const next = $all(`[data-filter-key="${config.key}"]:checked`, group.querySelector(".cr-filter-menu")).map(cb=>cb.dataset.filterValue);
+      setCrMultiFilter(config.key, next);
+    });
+    group.querySelector(".cr-filter-menu")?.addEventListener("click", e=>{
+      const reset = e.target.closest(`[data-filter-reset="${config.key}"]`);
+      if(reset) setCrMultiFilter(config.key, []);
+    });
+  });
+  document.addEventListener("click", closeAllCrFilterMenus);
 }
 function initCrToolbarDropdowns(){
   $all("#crToolbar [data-dd]").forEach(btn=>{
@@ -8172,11 +8405,7 @@ function populateSelect(sel, arr, withEmpty){
 }
 
 function populateStatusControls(){
-  const filter = $("#filterStatus");
-  if(!filter) return;
-  const current = filter.value;
-  populateSelect(filter, CR_LISTS.status);
-  filter.value = CR_LISTS.status.includes(current) ? current : "";
+  renderCrMultiFilterOptions();
 }
 
 function autoGrowTextarea(textarea){
@@ -8494,7 +8723,7 @@ async function fetchCrList(){
 async function fetchCrDocumentStatus(){
   const { data, error } = await STATE.sb
     .from("cr_attachments")
-    .select("cr_id,category,testcase_id");
+    .select("cr_id,category,testcase_id,file_name,file_path");
   if(error){
     console.warn("Không tải được trạng thái tài liệu BRD/FSD:", error.message);
     STATE.crDocumentStatus = {};
@@ -8507,9 +8736,17 @@ async function fetchCrDocumentStatus(){
     if(file.testcase_id) return;
     const crId = String(file.cr_id || "");
     const category = String(file.category || "").trim().toUpperCase();
-    if(!crId || !["BRD","FSD"].includes(category)) return;
+    const fileText = [file.file_name, file.file_path].filter(Boolean).join(" ");
+    // Category là nguồn chính; tên/path là fallback để các file cũ hoặc file
+    // upload nhầm nhóm vẫn được nhận diện đúng trên CR Log.
+    const hasBrdMarker = /(^|[^a-z0-9])brd([^a-z0-9]|$)|brd[_\-. ]?\d/i.test(fileText);
+    const hasFsdMarker = /(^|[^a-z0-9])fsd([^a-z0-9]|$)|fsd[_\-. ]?\d/i.test(fileText);
+    const isBrd = category === "BRD" || hasBrdMarker;
+    const isFsd = category === "FSD" || hasFsdMarker;
+    if(!crId || (!isBrd && !isFsd)) return;
     if(!status[crId]) status[crId] = { BRD:false, FSD:false };
-    status[crId][category] = true;
+    if(isBrd) status[crId].BRD = true;
+    if(isFsd) status[crId].FSD = true;
   });
   STATE.crDocumentStatus = status;
 }
@@ -8569,6 +8806,7 @@ async function fetchSubStatusList(){
   STATE.subStatusLoadWarned = false;
   STATE.subStatusList = (data || []).filter(s=>s && String(s.name||"").trim());
   CR_LISTS.subStatus = STATE.subStatusList.map(s=>s.name);
+  renderCrMultiFilterOptions();
   COLOR.sub_status = Object.fromEntries(
     STATE.subStatusList.map(s=>[s.name, normalizeHexColor(s.color, defaultSubStatusColor(s.name))])
   );
@@ -9074,10 +9312,12 @@ function populateCrDropdowns(){
   });
   const reqSel = $("#filterRequester");
   if(reqSel){
-    const cur = reqSel.value;
     const requesters = [...new Set(STATE.crList.map(c=>c.requester).filter(Boolean))].sort();
     populateSelect(reqSel, requesters);
+    const cur = requesters.includes(STATE.filters.requester) ? STATE.filters.requester : "";
+    STATE.filters.requester = cur;
     reqSel.value = cur;
+    saveCrFilterPrefs();
   }
   const fillTcPeople = (selector, key)=>{
     const sel = $(selector);
@@ -9146,9 +9386,8 @@ function renderDashboard(){
 }
 
 /* Điều hướng từ Dashboard sang CR Log đã lọc theo Status hoặc Sub-Status.
-   Status dùng đúng bộ lọc filterStatus có sẵn; Sub-Status tái dùng ô tìm
-   kiếm CR Log (đã bao gồm sub_status trong chuỗi tìm kiếm) để không phải
-   thay đổi cấu trúc filter hiện có.
+   Dùng chung bộ lọc đa chọn để click từ Dashboard vẫn giữ đúng trải nghiệm
+   filter mới và không bị cộng dồn điều kiện cũ.
    QUAN TRỌNG: luôn xóa sạch mọi filter + control UI cũ trước khi áp filter
    mới, để 2 lần bấm liên tiếp từ Dashboard (vd: Sub-Status rồi tới Status)
    không bị cộng dồn điều kiện lọc với nhau. */
@@ -9156,25 +9395,23 @@ function goToCrLogFiltered(type, value){
   setView("crlog");
 
   // Reset toàn bộ state filter CR Log về mặc định
-  STATE.filters = { status:"", priority:"", category:"", requester:"", overdueOnly:false, search:"" };
+  STATE.filters = { status:[], priority:[], category:[], sub_status:[], requester:"", overdueOnly:false, search:"" };
 
   // Đồng bộ lại mọi control UI của bộ lọc CR Log về trạng thái mặc định
-  if($("#filterStatus")) $("#filterStatus").value = "";
-  if($("#filterPriority")) $("#filterPriority").value = "";
-  if($("#filterCategory")) $("#filterCategory").value = "";
+  syncCrFilterControls();
   if($("#filterRequester")) $("#filterRequester").value = "";
   if($("#filterOverdueOnly")) $("#filterOverdueOnly").checked = false;
   if($("#crSearchInput")) $("#crSearchInput").value = "";
 
   // Áp đúng 1 filter được yêu cầu từ Dashboard
   if(type === "status"){
-    STATE.filters.status = value;
-    if($("#filterStatus")) $("#filterStatus").value = value;
+    STATE.filters.status = [String(value || "")].filter(Boolean);
   } else if(type === "sub_status"){
-    STATE.filters.search = String(value||"").toLowerCase();
-    if($("#crSearchInput")) $("#crSearchInput").value = value;
+    STATE.filters.sub_status = [String(value || "")].filter(Boolean);
   }
 
+  saveCrFilterPrefs();
+  syncCrFilterControls();
   if(typeof updateMoreFiltersBadge === "function") updateMoreFiltersBadge();
   renderCrTable();
 }
@@ -9321,9 +9558,10 @@ function emptyRow(msg){
 function filteredCrList(){
   const f = STATE.filters;
   return STATE.crList.filter(c=>{
-    if(f.status && c.status !== f.status) return false;
-    if(f.priority && c.priority !== f.priority) return false;
-    if(f.category && c.category !== f.category) return false;
+    if(!filterHasValue(f.status, c.status)) return false;
+    if(!filterHasValue(f.priority, c.priority)) return false;
+    if(!filterHasValue(f.category, c.category)) return false;
+    if(!filterHasValue(f.sub_status, c.sub_status)) return false;
     if(f.requester && c.requester !== f.requester) return false;
     if(f.overdueOnly && !isOverdue(c)) return false;
     if(f.search){
@@ -9371,14 +9609,70 @@ function crDocumentStatusLabel(c, type){
   return crHasDocument(c, type) ? "Có" : "Chưa có";
 }
 
+function inlineCrSelectHtml(field, cr){
+  const listKey = field === "sub_status" ? "subStatus" : field;
+  const options = Array.from(new Set([
+    ...(Array.isArray(CR_LISTS[listKey]) ? CR_LISTS[listKey] : []),
+    cr[field] || ""
+  ].filter(value=>value !== undefined)));
+  const allowEmpty = field === "sub_status" || field === "category" || field === "priority";
+  return `<select class="inline-cr-select" data-inline-field="${field}" data-cr="${esc(cr.cr_id)}" aria-label="Cập nhật ${field}">
+    ${allowEmpty ? `<option value="">— Chọn —</option>` : ""}
+    ${options.filter(value=>value !== "").map(value=>`<option value="${esc(value)}" ${String(value) === String(cr[field] || "") ? "selected" : ""}>${esc(value)}</option>`).join("")}
+  </select>`;
+}
+
+async function updateCrInlineField(crId, field, value, select){
+  const allowed = new Set(["category","priority","status","sub_status"]);
+  if(!allowed.has(field)) return;
+  if(!canEditData()){
+    toast("Bạn không có quyền cập nhật CR.", "err");
+    renderCrTable();
+    return;
+  }
+  const cr = STATE.crList.find(item=>String(item.cr_id) === String(crId));
+  if(!cr || !cr.id) return;
+  const previous = cr[field] || "";
+  if(String(previous) === String(value || "")) return;
+  if(field === "status" && !value){
+    toast("Status không được để trống.", "err");
+    renderCrTable();
+    return;
+  }
+  if(select){
+    select.classList.add("is-saving");
+    select.disabled = true;
+  }
+  const payload = { [field]: value || null };
+  const { error } = await STATE.sb.from("cr_log").update(payload).eq("id", cr.id);
+  if(error){
+    toast(`Cập nhật ${field} thất bại: ${error.message}`, "err");
+    renderCrTable();
+    return;
+  }
+  cr[field] = payload[field];
+  if(select){
+    select.classList.remove("is-saving");
+    select.classList.add("is-saved");
+  }
+  toast(`Đã cập nhật ${field === "sub_status" ? "Sub-Status" : field}`, "ok");
+  renderCrTable();
+  if(STATE.drawerCrId === cr.cr_id && $("#crDrawer")?.classList.contains("show")){
+    renderDrawer(cr);
+    await fetchAttachments(cr.cr_id);
+    await renderDrawerFiles(cr.cr_id);
+    renderDrawerLinked(cr.cr_id);
+  }
+}
+
 function crRowCellHtml(colKey, c, overdue){
   switch(colKey){
     case "title": return `<td class="cell-title" title="${esc(c.rename_folder || c.old_name || '')}">${esc(crCellTitle(c))}</td>`;
     case "requester": return `<td class="cell-dim">${esc(c.requester || '—')}</td>`;
-    case "category": return `<td>${badge("category", c.category)}</td>`;
-    case "priority": return `<td>${badge("priority", c.priority)}</td>`;
-    case "status": return `<td>${badge("status", c.status)}</td>`;
-    case "sub_status": return `<td>${c.sub_status ? badge("sub_status", c.sub_status) : '<span class="cell-dim">—</span>'}</td>`;
+    case "category": return `<td class="inline-edit-cell">${canEditData() ? inlineCrSelectHtml("category", c) : badge("category", c.category)}</td>`;
+    case "priority": return `<td class="inline-edit-cell">${canEditData() ? inlineCrSelectHtml("priority", c) : badge("priority", c.priority)}</td>`;
+    case "status": return `<td class="inline-edit-cell">${canEditData() ? inlineCrSelectHtml("status", c) : badge("status", c.status)}</td>`;
+    case "sub_status": return `<td class="inline-edit-cell">${canEditData() ? inlineCrSelectHtml("sub_status", c) : (c.sub_status ? badge("sub_status", c.sub_status) : '<span class="cell-dim">—</span>')}</td>`;
     case "note": return `<td class="cell-note" title="${esc(c.note || '')}"><span class="note-clamp">${esc(c.note || '—')}</span></td>`;
     case "deadline": return `<td class="cell-dim">${
         c.deadline
@@ -9463,6 +9757,13 @@ function renderCrTable(){
     </tr>`;
   }).join("");
 
+  $all("#crTableBody [data-inline-field]").forEach(select=>{
+    select.addEventListener("click", e=> e.stopPropagation());
+    select.addEventListener("change", e=>{
+      e.stopPropagation();
+      updateCrInlineField(select.dataset.cr, select.dataset.inlineField, select.value, select);
+    });
+  });
   $all("#crTableBody tr[data-cr]").forEach(tr=>{
     tr.addEventListener("click", (e)=>{
       const actBtn = e.target.closest("[data-act]");
@@ -9520,12 +9821,25 @@ function renderCrMobileList(rows){
         <span class="${crHasDocument(c, "BRD") ? "doc-mobile-present" : "doc-mobile-missing"}">BRD ${crHasDocument(c, "BRD") ? "✓" : "—"}</span>
         <span class="${crHasDocument(c, "FSD") ? "doc-mobile-present" : "doc-mobile-missing"}">FSD ${crHasDocument(c, "FSD") ? "✓" : "—"}</span>
       </div>
+      ${canEditData() ? `<div class="cr-card-inline-fields">
+        <label>Category${inlineCrSelectHtml("category", c)}</label>
+        <label>Priority${inlineCrSelectHtml("priority", c)}</label>
+        <label>Status${inlineCrSelectHtml("status", c)}</label>
+        <label>Sub-status${inlineCrSelectHtml("sub_status", c)}</label>
+      </div>` : ""}
       <div class="cr-card-actions">
         <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
         <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>
       </div>
     </div>`;
   }).join("");
+  $all("#crMobileList [data-inline-field]").forEach(select=>{
+    select.addEventListener("click", e=> e.stopPropagation());
+    select.addEventListener("change", e=>{
+      e.stopPropagation();
+      updateCrInlineField(select.dataset.cr, select.dataset.inlineField, select.value, select);
+    });
+  });
   $all("#crMobileList .cr-card").forEach(card=>{
     card.addEventListener("click", (e)=>{
       const actBtn = e.target.closest("[data-act]");
@@ -15447,9 +15761,10 @@ async function deleteStatus(status){
   }
   const { error } = await STATE.sb.from("cr_statuses").delete().eq("id", status.id);
   if(error){ toast("Xóa Status thất bại: " + error.message, "err"); return; }
-  if(STATE.filters.status === status.name){
-    STATE.filters.status = "";
-    if($("#filterStatus")) $("#filterStatus").value = "";
+  if(normalizeCrFilterValue(STATE.filters.status).includes(status.name)){
+    STATE.filters.status = normalizeCrFilterValue(STATE.filters.status).filter(value=>value !== status.name);
+    saveCrFilterPrefs();
+    syncCrFilterControls();
   }
   toast(`Đã xóa Status "${status.name}"`, "ok");
   await fetchStatusList();
