@@ -343,6 +343,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .btn-primary{ background:var(--brand-gradient); color:#fff; }
   .btn-primary:hover{ background:var(--brand-hover); }
   .btn-secondary{ background:#fff; color:var(--brand); }
+  /* ---- Confirm Modal dùng chung (thay cho window.confirm() mặc định của trình duyệt) ---- */
+  #confirmModal .modal-box{ width:440px; }
+  #confirmModal .modal-body{ padding:20px; }
+  #confirmModal-message{ white-space:pre-line; line-height:1.65; font-size:13.5px; color:var(--fg); margin:0; }
   .btn-secondary:hover{ background:var(--brand-tint); }
   .conn-status{ margin-top:10px; font-size:12.5px; padding:8px 10px; border-radius:6px; display:none; }
   .conn-status.ok{ display:block; background:#EAF7EC; color:#1e7e34; border:1px solid #b6e3bd; }
@@ -1555,6 +1559,24 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   </div>
 </div>
 
+<!-- Confirm Modal dùng chung — thay thế toàn bộ window.confirm() mặc định của trình duyệt
+     để đồng nhất giao diện với hệ thống toast/modal sẵn có. Gọi qua hàm JS showConfirmModal(). -->
+<div class="modal-overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmModal-title">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="confirmModal-title">Xác nhận</span>
+      <span class="x" id="confirmModal-close" role="button" tabindex="0" aria-label="Đóng">✕</span>
+    </div>
+    <div class="modal-body">
+      <p id="confirmModal-message"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="confirmModal-cancel">Huỷ</button>
+        <button type="button" class="btn-primary" id="confirmModal-ok">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="canvas" id="viewDashboard">
 
   <div class="row header-row">
@@ -1916,9 +1938,13 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           <div class="dup-col">
             <div class="us-field">
               <label class="us-label" for="dupSourceSearch"><span class="us-step">1</span>Ticket gốc</label>
-              <input type="text" class="us-input" id="dupSourceSearch" placeholder="Gõ để tìm theo Key hoặc Summary...">
+              <div style="display:flex; gap:6px;">
+                <input type="text" class="us-input" id="dupSourceSearch" placeholder="Gõ Key hoặc Summary — tìm trên toàn bộ dữ liệu đã đồng bộ..." style="flex:1;">
+                <button type="button" class="us-btn us-btn-secondary us-btn-sm" id="dupRefreshTicketsBtn" title="Tải lại danh sách ticket mới nhất từ Supabase">🔄</button>
+              </div>
             </div>
             <select id="dupSourceSelect" class="us-listbox" size="6" aria-label="Danh sách ticket gốc"></select>
+            <div id="dupSearchHint" style="font-size:11.5px; color:var(--fg-sec); margin-top:6px; line-height:1.5;"></div>
           </div>
           <div class="dup-col dup-target">
             <div class="us-field">
@@ -2208,6 +2234,64 @@ function safeUrl(u){
 }
 
 /* ============ Toast notification dùng chung (export / đồng bộ / tải dữ liệu thành công) ============ */
+/* ============ CONFIRM MODAL DÙNG CHUNG ============
+   Thay thế window.confirm() mặc định (popup xấu, không style được) bằng
+   modal có sẵn style của hệ thống (.modal-overlay/.modal-box...), dùng
+   chung khung UI với loginModal/tokenModal cho đồng nhất toàn app.
+
+   Cách dùng (bên trong 1 hàm async):
+     const ok = await showConfirmModal('Bạn có chắc chắn?');
+     if(!ok) return;
+
+   Tuỳ chọn nâng cao:
+     await showConfirmModal('Xoá mục này?', {
+       title: 'Xoá dữ liệu',      // tiêu đề modal, mặc định 'Xác nhận'
+       okText: 'Xoá',             // nhãn nút xác nhận, mặc định 'Xác nhận'
+       cancelText: 'Huỷ',         // nhãn nút huỷ, mặc định 'Huỷ'
+       danger: true               // true => nút xác nhận màu đỏ cảnh báo (hành động phá huỷ/khó hoàn tác)
+     });
+   Trả về Promise<boolean>: true nếu người dùng bấm xác nhận, false nếu Huỷ/Đóng/Esc/click ra ngoài. */
+let __confirmModalResolve = null;
+
+function __confirmModalFinish(result){
+  const overlay = document.getElementById('confirmModal');
+  overlay.classList.remove('open');
+  if(__confirmModalResolve){
+    const resolve = __confirmModalResolve;
+    __confirmModalResolve = null;
+    resolve(result);
+  }
+}
+
+function showConfirmModal(message, options){
+  options = options || {};
+  return new Promise((resolve)=>{
+    __confirmModalResolve = resolve;
+    document.getElementById('confirmModal-title').textContent = options.title || 'Xác nhận';
+    document.getElementById('confirmModal-message').textContent = message || '';
+    const okBtn = document.getElementById('confirmModal-ok');
+    okBtn.textContent = options.okText || 'Xác nhận';
+    okBtn.className = options.danger ? 'btn-ghost-danger' : 'btn-primary';
+    document.getElementById('confirmModal-cancel').textContent = options.cancelText || 'Huỷ';
+    const overlay = document.getElementById('confirmModal');
+    overlay.classList.add('open');
+    setTimeout(()=> okBtn.focus(), 30);
+  });
+}
+
+(function initConfirmModalEvents(){
+  const overlay = document.getElementById('confirmModal');
+  document.getElementById('confirmModal-ok').addEventListener('click', ()=> __confirmModalFinish(true));
+  document.getElementById('confirmModal-cancel').addEventListener('click', ()=> __confirmModalFinish(false));
+  document.getElementById('confirmModal-close').addEventListener('click', ()=> __confirmModalFinish(false));
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) __confirmModalFinish(false); });
+  document.addEventListener('keydown', (e)=>{
+    if(!overlay.classList.contains('open')) return;
+    if(e.key === 'Escape') __confirmModalFinish(false);
+    else if(e.key === 'Enter') __confirmModalFinish(true);
+  });
+})();
+
 function showToast(message, type){
   type = type || 'success';
   const stack = document.getElementById('toastStack');
@@ -2765,7 +2849,7 @@ function addSheetLetterhead(ws, logoId, title, subtitleLine, colSpan, accentColo
 
 async function exportFilteredToXLSX(){
   if(!filtered.length){
-    alert('Không có dữ liệu để xuất theo khoảng thời gian / bộ lọc đang chọn.');
+    showToast('Không có dữ liệu để xuất theo khoảng thời gian / bộ lọc đang chọn.', 'error');
     return;
   }
   if(typeof ExcelJS === 'undefined'){
@@ -3607,7 +3691,10 @@ document.getElementById('dupAddAssigneeBtn').addEventListener('click', async ()=
 async function dupDeactivateAssignee(name){
   const sessionToken = getSessionToken();
   if(!sessionToken){ showToast('Phiên đăng nhập Admin đã hết hạn.', 'error'); return; }
-  if(!confirm(`Ẩn assignee "${name}" khỏi danh sách?`)) return;
+  const ok = await showConfirmModal(`Ẩn assignee "${name}" khỏi danh sách?`, {
+    title: 'Ẩn assignee', okText: 'Ẩn', danger: true
+  });
+  if(!ok) return;
   const r = await rpc('dup_deactivate_assignee', { session_token: sessionToken, p_display_name: name });
   if(!r.ok || r.data !== true){ dupSetStatus('dupAssigneeStatus', 'Thao tác thất bại.', 'err'); return; }
   await dupLoadAssignees();
@@ -3616,26 +3703,92 @@ async function dupDeactivateAssignee(name){
 /* ---- Danh sách ticket gốc: đọc thẳng bảng jira_tickets đang public-read
    (Dashboard hiển thị ticket không cần login nên bảng này đã cho phép SELECT
    bằng anon key). Nếu môi trường của bạn chặn, đoạn này sẽ trả mảng rỗng —
-   báo tôi để đổi sang 1 RPC public_* riêng. ---- */
+   báo tôi để đổi sang 1 RPC public_* riêng.
+
+   [FIX 2026] Trước đây ô search chỉ lọc (client-side) trong đúng 500 ticket
+   "cập nhật gần nhất" được tải sẵn — nên 1 ticket có thật trên Jira nhưng
+   không nằm trong 500 dòng đó (đã lâu không cập nhật, hoặc job đồng bộ
+   snapshot chưa quét tới) sẽ báo "Không có ticket phù hợp" dù nó tồn tại.
+   Nay: gõ >=2 ký tự sẽ tự động tìm trên TOÀN BỘ bảng jira_tickets (server-side
+   ilike qua PostgREST), không còn bị giới hạn bởi cửa sổ 500 dòng ban đầu. ---- */
+const DUP_TICKETS_DEFAULT_LIMIT = 500; // số ticket cập nhật gần nhất tải sẵn để duyệt nhanh khi chưa gõ tìm
+const DUP_TICKETS_SEARCH_LIMIT = 200;  // số kết quả tối đa trả về khi tìm kiếm trên toàn bộ dữ liệu
+let dupSearchDebounceTimer = null;
+let dupSearchSeq = 0; // chặn race-condition: chỉ nhận kết quả của lần gõ mới nhất
+
+function dupSetSearchHint(msg){
+  const el = document.getElementById('dupSearchHint');
+  if(el) el.textContent = msg || '';
+}
+
+/* Ghép giá trị an toàn cho filter or=(...) của PostgREST: bọc trong dấu " "
+   để tránh các ký tự đặc biệt (dấu phẩy, ngoặc...) trong nội dung tìm kiếm
+   làm sai cú pháp filter, rồi encodeURI toàn bộ URL để xử lý tiếng Việt có dấu. */
+function dupPgIlikePattern(text){
+  const escaped = String(text).replace(/"/g, '\\"');
+  return `"*${escaped}*"`;
+}
+
 async function dupLoadTickets(){
+  dupSetSearchHint('Đang tải danh sách ticket cập nhật gần nhất...');
   try{
-    const resp = await fetch(`${SUPABASE_URL}/rest/v1/jira_tickets?select=ticket_key,summary,assignee&order=updated.desc&limit=500`, {
+    const url = `${SUPABASE_URL}/rest/v1/jira_tickets?select=ticket_key,summary,assignee&order=updated.desc&limit=${DUP_TICKETS_DEFAULT_LIMIT}`;
+    const resp = await fetch(url, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer '+SUPABASE_ANON_KEY }
     });
-    if(!resp.ok){ dupTicketsCache = []; dupRenderTicketOptions(''); return; }
+    if(!resp.ok){
+      dupTicketsCache = [];
+      dupRenderTicketOptions([]);
+      dupSetSearchHint('Không tải được danh sách ticket (kiểm tra kết nối Supabase).');
+      return;
+    }
     dupTicketsCache = await resp.json();
   }catch(e){
     dupTicketsCache = [];
+    dupRenderTicketOptions([]);
+    dupSetSearchHint('Không tải được danh sách ticket (lỗi kết nối).');
+    return;
   }
-  dupRenderTicketOptions('');
+  dupRenderTicketOptions(dupTicketsCache);
+  dupSetSearchHint(`Đã tải ${dupTicketsCache.length.toLocaleString('vi-VN')} ticket cập nhật gần nhất. Gõ ít nhất 2 ký tự để tìm trên TOÀN BỘ dữ liệu đã đồng bộ.`);
 }
 
-function dupRenderTicketOptions(filterText){
+/* Tìm theo Key/Summary trên toàn bộ bảng jira_tickets (server-side ilike),
+   khắc phục hẳn lỗi "ticket có thật trên Jira nhưng search không ra" khi
+   ticket đó không nằm trong nhóm 500 ticket cập nhật gần nhất. */
+async function dupSearchTicketsRemote(text){
+  const mySeq = ++dupSearchSeq;
+  dupSetSearchHint(`Đang tìm "${text}" trên toàn bộ dữ liệu đã đồng bộ...`);
+  const pattern = dupPgIlikePattern(text);
+  const orFilter = `or=(ticket_key.ilike.${pattern},summary.ilike.${pattern})`;
+  const url = encodeURI(`${SUPABASE_URL}/rest/v1/jira_tickets?select=ticket_key,summary,assignee&${orFilter}&order=updated.desc&limit=${DUP_TICKETS_SEARCH_LIMIT}`);
+  try{
+    const resp = await fetch(url, {
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer '+SUPABASE_ANON_KEY }
+    });
+    if(mySeq !== dupSearchSeq) return; // đã có lần gõ mới hơn, bỏ qua kết quả cũ tới muộn
+    if(!resp.ok){
+      dupRenderTicketOptions([]);
+      dupSetSearchHint('Không tìm được trên Supabase (lỗi truy vấn). Nếu bạn chắc Key đúng, vẫn có thể bấm "🚀 Tạo ticket mới" — hệ thống sẽ lấy trực tiếp từ Jira, không phụ thuộc danh sách này.');
+      return;
+    }
+    const rows = await resp.json();
+    if(mySeq !== dupSearchSeq) return;
+    dupRenderTicketOptions(rows);
+    if(rows.length){
+      dupSetSearchHint(`Tìm thấy ${rows.length} ticket khớp "${text}" trong toàn bộ dữ liệu đã đồng bộ.`);
+    }else{
+      dupSetSearchHint(`Không có ticket nào khớp "${text}" trong dữ liệu ĐÃ ĐỒNG BỘ về Dashboard. Nếu ticket này có thật trên Jira (vừa tạo/cập nhật, có thể chưa kịp đồng bộ), bạn vẫn có thể gõ đúng Key rồi bấm "🚀 Tạo ticket mới" — hệ thống sẽ đọc trực tiếp từ Jira.`);
+    }
+  }catch(e){
+    if(mySeq !== dupSearchSeq) return;
+    dupRenderTicketOptions([]);
+    dupSetSearchHint('Lỗi kết nối khi tìm kiếm. Bạn vẫn có thể gõ đúng Key và bấm "🚀 Tạo ticket mới".');
+  }
+}
+
+function dupRenderTicketOptions(list){
   const select = document.getElementById('dupSourceSelect');
-  const f = (filterText||'').trim().toLowerCase();
-  const filtered = !f ? dupTicketsCache : dupTicketsCache.filter(t=>
-    (t.ticket_key||'').toLowerCase().includes(f) || (t.summary||'').toLowerCase().includes(f)
-  );
   select.innerHTML = '';
 
   // [FIX] Option rỗng ở đầu, luôn được set selected => select.value = ""
@@ -3644,19 +3797,42 @@ function dupRenderTicketOptions(filterText){
   // sách ngay cả khi user chưa từng click, dẫn đến duplicate nhầm ticket.
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = filtered.length ? '-- Chọn 1 ticket bên dưới --' : 'Không có ticket phù hợp / chưa tải được danh sách';
+  placeholder.textContent = list.length ? '-- Chọn 1 ticket bên dưới --' : 'Không có ticket phù hợp trong dữ liệu đã đồng bộ';
   placeholder.disabled = true;
   placeholder.selected = true;
   select.appendChild(placeholder);
 
-  filtered.slice(0, 200).forEach(t=>{
+  list.forEach(t=>{
     const opt = document.createElement('option');
     opt.value = t.ticket_key;
     opt.textContent = `${t.ticket_key} — ${t.summary||''} (${t.assignee||'chưa gán'})`;
     select.appendChild(opt);
   });
 }
-document.getElementById('dupSourceSearch').addEventListener('input', (e)=> dupRenderTicketOptions(e.target.value));
+
+document.getElementById('dupSourceSearch').addEventListener('input', (e)=>{
+  const text = e.target.value.trim();
+  clearTimeout(dupSearchDebounceTimer);
+  if(text.length < 2){
+    dupSearchSeq++; // huỷ mọi kết quả tìm kiếm từ xa đang chờ trả về
+    dupRenderTicketOptions(dupTicketsCache);
+    dupSetSearchHint(text
+      ? 'Gõ thêm ít nhất 2 ký tự để tìm trên toàn bộ dữ liệu đã đồng bộ.'
+      : `Đã tải ${dupTicketsCache.length.toLocaleString('vi-VN')} ticket cập nhật gần nhất.`);
+    return;
+  }
+  dupSearchDebounceTimer = setTimeout(()=> dupSearchTicketsRemote(text), 350);
+});
+
+document.getElementById('dupRefreshTicketsBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('dupRefreshTicketsBtn');
+  btn.disabled = true;
+  document.getElementById('dupSourceSearch').value = '';
+  dupSearchSeq++;
+  await dupLoadTickets();
+  btn.disabled = false;
+  showToast('Đã tải lại danh sách ticket từ Supabase.', 'success');
+});
 
 /* ---- Tạo ticket mới ---- */
 document.getElementById('dupCreateBtn').addEventListener('click', async ()=>{
@@ -4773,7 +4949,11 @@ document.getElementById('usBulkUpdateBtn').addEventListener('click', async ()=>{
   // những dòng đã chọn trước đó nhưng sau đó bị ẩn bởi filter.
   const rows = usGetFilteredRows().filter(r => usSelectedIds.has(r.recordId) && r.status === 'AUTO MATCH');
   if(!rows.length) return;
-  if(!confirm(`Xác nhận cập nhật Summary cho ${rows.length} ticket đã chọn? Hệ thống sẽ ghi trực tiếp lên Jira.`)) return;
+  const ok = await showConfirmModal(
+    `Xác nhận cập nhật Summary cho ${rows.length} ticket đã chọn?\nHệ thống sẽ ghi trực tiếp lên Jira.`,
+    { title: 'Cập nhật Summary lên Jira', okText: 'Cập nhật lên Jira' }
+  );
+  if(!ok) return;
 
   const btn = document.getElementById('usBulkUpdateBtn');
   btn.disabled = true; const originalLabel = btn.textContent; btn.textContent = 'Đang cập nhật...';
@@ -4995,8 +5175,12 @@ function usRenderPriorityUi(){
       usRenderPriorityUi();
       usSyncJsonFromDraft();
     });
-    item.querySelector('[data-act="del"]').addEventListener('click', ()=>{
-      if(!confirm(`Xoá Action "${rule.action || '(chưa đặt tên)'}" khỏi danh sách?`)) return;
+    item.querySelector('[data-act="del"]').addEventListener('click', async ()=>{
+      const ok = await showConfirmModal(
+        `Xoá Action "${rule.action || '(chưa đặt tên)'}" khỏi danh sách?`,
+        { title: 'Xoá Action', okText: 'Xoá', danger: true }
+      );
+      if(!ok) return;
       usRulesDraft.priorityOrder.splice(idx, 1);
       usRenderPriorityUi();
       usSyncJsonFromDraft();
@@ -5887,7 +6071,11 @@ async function aaCallEdge(mode){
   const cfg = aaSavedCfg || {};
   if(mode === 'run'){
     if(!cfg.assignee_account_id){ aaSetAlert('Chưa chọn người nhận ticket. Hãy chọn, lưu rồi chạy lại.', 'err'); return; }
-    if(!confirm('Chạy ngay: giao TẤT CẢ ticket thoả điều kiện (tối đa ' + (cfg.max_per_run || 50) + ') cho "' + (cfg.assignee_name || '') + '"?\n\nThao tác ghi trực tiếp lên Jira.\nNên bấm "Xem trước" để kiểm tra danh sách trước.')) return;
+    const ok = await showConfirmModal(
+      `Giao TẤT CẢ ticket thoả điều kiện (tối đa ${cfg.max_per_run || 50}) cho "${cfg.assignee_name || ''}"?\n\nThao tác ghi trực tiếp lên Jira.\nNên bấm "Xem trước" để kiểm tra danh sách trước.`,
+      { title: 'Chạy Auto Assign', okText: 'Chạy ngay' }
+    );
+    if(!ok) return;
   }
   aaBusyOn(true);
   aaSetAlert(mode === 'run' ? 'Đang giao ticket trên Jira...' : 'Đang tìm ticket thoả điều kiện trên Jira...', 'info');
