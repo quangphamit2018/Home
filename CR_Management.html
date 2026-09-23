@@ -16503,7 +16503,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.activeTab = tab;
     document.body.classList.add("eb2b-active");
     eb2bSetHeader(tab);
-    $$("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
+    $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
     $e("#navEb2bWorkspace")?.classList.add("is-context");
     $e("#navEb2bChildren")?.classList.remove("is-collapsed");
     $e("#navEb2bWorkspace")?.classList.add("is-open");
@@ -16513,7 +16513,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bHide(){
     document.body.classList.remove("eb2b-active");
-    $$("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
+    $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
     $e("#navEb2bWorkspace")?.classList.remove("is-context");
   }
 
