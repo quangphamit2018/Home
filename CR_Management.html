@@ -8067,7 +8067,13 @@ function renderCrMultiFilterOptions(){
     if(!menu) return;
     const values = Array.isArray(CR_LISTS[config.listKey]) ? CR_LISTS[config.listKey].filter(Boolean) : [];
     const validValues = new Set(values.map(String));
-    const selectedValues = normalizeCrFilterValue(STATE.filters[config.key]).filter(value=>validValues.has(String(value)));
+    const savedValues = normalizeCrFilterValue(STATE.filters[config.key]);
+    // Sub-Status được tải bất đồng bộ từ Supabase. Khi initShell() chạy trước
+    // lần fetch đầu tiên, danh sách có thể đang rỗng; không được xóa lựa chọn
+    // đã lưu chỉ vì options chưa về.
+    const selectedValues = values.length
+      ? savedValues.filter(value=>validValues.has(String(value)))
+      : savedValues;
     STATE.filters[config.key] = selectedValues;
     const selected = new Set(selectedValues);
     menu.innerHTML = `
@@ -9611,14 +9617,23 @@ function crDocumentStatusLabel(c, type){
 
 function inlineCrSelectHtml(field, cr){
   const listKey = field === "sub_status" ? "subStatus" : field;
+  const selectedValue = cr[field] || "";
   const options = Array.from(new Set([
     ...(Array.isArray(CR_LISTS[listKey]) ? CR_LISTS[listKey] : []),
-    cr[field] || ""
+    selectedValue
   ].filter(value=>value !== undefined)));
   const allowEmpty = field === "sub_status" || field === "category" || field === "priority";
-  return `<select class="inline-cr-select" data-inline-field="${field}" data-cr="${esc(cr.cr_id)}" aria-label="Cập nhật ${field}">
+  const selectedColors = selectedValue ? badgeColors(field, selectedValue) : null;
+  const selectedStyle = selectedColors
+    ? `background:${selectedColors.background};color:${selectedColors.text};border-color:${hexToRgba(selectedColors.text, .28)};`
+    : "";
+  return `<select class="inline-cr-select" style="${selectedStyle}" data-inline-field="${field}" data-cr="${esc(cr.cr_id)}" aria-label="Cập nhật ${field}">
     ${allowEmpty ? `<option value="">— Chọn —</option>` : ""}
-    ${options.filter(value=>value !== "").map(value=>`<option value="${esc(value)}" ${String(value) === String(cr[field] || "") ? "selected" : ""}>${esc(value)}</option>`).join("")}
+    ${options.filter(value=>value !== "").map(value=>{
+      const colors = badgeColors(field, value);
+      const optionStyle = `color:${colors.text};background:${colors.background};`;
+      return `<option value="${esc(value)}" style="${optionStyle}" ${String(value) === String(selectedValue) ? "selected" : ""}>${esc(value)}</option>`;
+    }).join("")}
   </select>`;
 }
 
