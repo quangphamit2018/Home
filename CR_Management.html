@@ -16341,8 +16341,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   };
   const EB2B_TABS = [
     ["dashboard", "Tổng quan"], ["cr", "CR Log"], ["uat", "UAT Test Case"],
-    ["release", "Release / PRD"], ["brd", "Tạo BRD"], ["weekly_mom", "Weekly MoM"],
-    ["admin", "Quản trị"], ["recycle", "Recycle Bin"]
+    ["release", "Release / PRD"], ["brd", "Tạo BRD"], ["weekly_mom", "Weekly MoM"]
   ];
   const EB2B_CONFIG = {
     statuses: { label:"Status", table:"eb2b_statuses", defaultColor:"#64748b" },
@@ -16378,17 +16377,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       body.eb2b-active .view{display:none!important}
       body.eb2b-active #eb2bViewRoot{display:block}
       body.eb2b-active .view-action{display:none!important}
-      .eb2b-nav{margin:7px 0 0;border-top:1px solid var(--line,#e5e7eb);padding-top:7px}
-      .eb2b-nav-parent{display:flex;align-items:center;gap:9px;padding:10px 12px;font-weight:700;color:#146b70}
-      .eb2b-nav-parent svg{width:17px;height:17px;flex:0 0 auto}
-      .eb2b-nav-tabs{display:grid;gap:2px;padding:0 0 3px 14px}
-      .eb2b-nav-item{display:flex!important;align-items:center;gap:8px;min-height:33px;padding:7px 10px!important;border-radius:8px;cursor:pointer;font-size:12px}
-      .eb2b-nav-item.active{background:var(--accent-dim,#e7f5f4);color:var(--accent,#0e7f83);font-weight:700}
-      .eb2b-nav-count{margin-left:auto;font-size:10px;opacity:.75}
       .eb2b-shell{display:grid;gap:16px}
-      .eb2b-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line,#e5e7eb);padding-bottom:10px}
-      .eb2b-tab{border:1px solid var(--line,#e5e7eb);background:var(--surface,#fff);color:var(--text,#1f2937);border-radius:8px;padding:8px 11px;font-size:12px;cursor:pointer}
-      .eb2b-tab.active{background:#0e7f83;color:white;border-color:#0e7f83}
       .eb2b-toolbar{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap}
       .eb2b-toolbar-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
       .eb2b-toolbar input,.eb2b-toolbar select{min-height:34px;border:1px solid var(--line,#d5dbe3);border-radius:7px;padding:7px 9px;background:var(--surface,#fff);color:var(--text,#1f2937)}
@@ -16437,7 +16426,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       topbar.insertAdjacentHTML("afterend", `
         <section id="eb2bViewRoot" class="view" aria-label="EB2B workspace">
           <div class="eb2b-shell">
-            <div class="eb2b-tabs" id="eb2bTabs"></div>
             <div id="eb2bContent"></div>
           </div>
         </section>`);
@@ -16447,16 +16435,53 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     }
     const dms = $e(".workspace-nav[data-workspace='dms']");
     if(dms && !$e("#eb2bNav")){
+      const icons = {
+        dashboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>`,
+        cr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>`,
+        uat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`,
+        release: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 016.34-11.34.99.99 0 01.11-.1c1.62-.9 4-1.1 5.5.4s1.3 3.88.4 5.5c-.03.04-.07.08-.1.11A22 22 0 0112 15z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>`,
+        brd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>`,
+        weekly_mom: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>`
+      };
       dms.insertAdjacentHTML("afterend", `
-        <div class="eb2b-nav" id="eb2bNav" aria-label="Các phân hệ EB2B">
-          <div class="eb2b-nav-parent">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>
-            <span>Workspace EB2B</span>
+        <div class="workspace-nav" data-workspace="eb2b" id="eb2bNav">
+          <div class="nav-item workspace-parent is-open" id="navEb2bWorkspace"
+               title="Mở / thu gọn Quản Lý e-B2B" role="button" tabindex="0"
+               aria-expanded="true" aria-controls="navEb2bChildren">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="16" rx="2"/>
+              <path d="M8 4V2M16 4V2M7 9h10M7 13h6M7 17h8"/>
+            </svg>
+            <span class="nav-label">Quản Lý e-B2B</span>
+            <svg class="workspace-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <path d="m6 9 6 6 6-6"/>
+            </svg>
           </div>
-          <div class="eb2b-nav-tabs">
-            ${EB2B_TABS.map(([key,label])=>`<div class="nav-item eb2b-nav-item" data-eb2b-tab="${key}"><span>${label}</span><span class="eb2b-nav-count" id="eb2bNavCount${key}"></span></div>`).join("")}
+          <div class="workspace-children" id="navEb2bChildren" aria-label="Các phân hệ Quản Lý e-B2B">
+            ${EB2B_TABS.map(([key,label])=>`
+              <div class="nav-item" data-eb2b-tab="${key}" title="${label}">
+                ${icons[key] || ""}
+                <span class="nav-label">${label}</span>
+                <span class="count" id="eb2bNavCount${key}"></span>
+              </div>`).join("")}
           </div>
         </div>`);
+      const parent = $e("#navEb2bWorkspace");
+      const children = $e("#navEb2bChildren");
+      const toggle = (ev)=>{
+        if(ev?.target?.closest?.("[data-eb2b-tab]")) return;
+        const open = parent.getAttribute("aria-expanded") === "true";
+        children.classList.toggle("is-collapsed", open);
+        parent.classList.toggle("is-open", !open);
+        parent.setAttribute("aria-expanded", open ? "false" : "true");
+      };
+      parent.addEventListener("click", toggle);
+      parent.addEventListener("keydown", ev=>{
+        if(ev.key === "Enter" || ev.key === " "){
+          ev.preventDefault();
+          toggle();
+        }
+      });
     }
     eb2bStyles();
     return true;
@@ -16474,14 +16499,18 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.activeTab = tab;
     document.body.classList.add("eb2b-active");
     eb2bSetHeader(tab);
-    $$(".eb2b-nav-item").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
-    $$(".eb2b-tab").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
+    $$("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
+    $e("#navEb2bWorkspace")?.classList.add("is-context");
+    $e("#navEb2bChildren")?.classList.remove("is-collapsed");
+    $e("#navEb2bWorkspace")?.classList.add("is-open");
+    $e("#navEb2bWorkspace")?.setAttribute("aria-expanded", "true");
     eb2bRender();
   }
 
   function eb2bHide(){
     document.body.classList.remove("eb2b-active");
-    $$(".eb2b-nav-item").forEach(n=>n.classList.remove("active"));
+    $$("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
+    $e("#navEb2bWorkspace")?.classList.remove("is-context");
   }
 
   function eb2bOptions(values, selected, empty="— chọn —"){
@@ -16534,14 +16563,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bRenderTabs(){
-    const tabs = $e("#eb2bTabs");
-    if(!tabs) return;
-    tabs.innerHTML = EB2B_TABS.map(([key,label])=>`<button type="button" class="eb2b-tab ${EB2B.activeTab===key?"active":""}" data-eb2b-tab="${key}">${label}</button>`).join("");
+    // e-B2B uses the same sidebar workspace navigation as DMS.
   }
 
   function eb2bRender(){
     if(!$e("#eb2bContent")) return;
-    eb2bRenderTabs();
     const renderers = {
       dashboard: eb2bRenderDashboard, cr: ()=>eb2bRenderDataTable("cr"),
       uat: ()=>eb2bRenderDataTable("uat"), release: ()=>eb2bRenderDataTable("release"),
