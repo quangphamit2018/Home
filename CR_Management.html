@@ -4484,6 +4484,13 @@ body.detail-nav-visible .modal-overlay.full .modal-head{
 .brd-ai-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 .brd-ai-status{ font-size:11.5px; color:#5c8583; }
 .brd-ai-status.err{ color:#c0392b; }
+.brd-ai-lang{ display:none; align-items:center; gap:6px; margin-right:auto; }
+.brd-ai-lang.show{ display:flex; }
+.brd-ai-lang-label{ font-size:11px; color:#5c8583; }
+.brd-ai-lang-btns{ display:inline-flex; border:1px solid #bfe3e0; border-radius:8px; overflow:hidden; }
+.brd-ai-lang-btn{ border:none; background:#fff; color:#4f7a79; font-size:11.5px; font-weight:700; padding:4px 10px; cursor:pointer; }
+.brd-ai-lang-btn:not(:last-child){ border-right:1px solid #bfe3e0; }
+.brd-ai-lang-btn.active{ background:#0c8f92; color:#fff; }
 .btn-ai{ background:linear-gradient(135deg,#12a19b,#0d8b8f); color:#fff; border:none; }
 .btn-ai:hover{ filter:brightness(1.06); }
 .btn-ai:disabled{ opacity:.7; cursor:default; }
@@ -13518,6 +13525,13 @@ function brdModalTemplate(v){
             <input type="file" id="brdAiFileInput" accept="image/*" multiple hidden>
           </div>
           <div class="brd-ai-actions">
+            <div class="brd-ai-lang" id="brdAiLang">
+              <span class="brd-ai-lang-label">Điền bằng:</span>
+              <span class="brd-ai-lang-btns">
+                <button type="button" class="brd-ai-lang-btn active" id="brdAiLangVi" data-lang="vi">VIE</button>
+                <button type="button" class="brd-ai-lang-btn" id="brdAiLangEn" data-lang="en">ENG</button>
+              </span>
+            </div>
             <span class="brd-ai-status" id="brdAiStatus"></span>
             <button type="button" class="btn btn-ai btn-sm" id="brdAiRunBtn"><span class="spin"></span>✨ Phân tích với AI &amp; tự động điền</button>
           </div>
@@ -13638,6 +13652,8 @@ function brdModalTemplate(v){
    Function "brd-ai-fill" (proxy) -> Gemini API (free tier) -> JSON
    ============================================================ */
 STATE.brdAiImages = []; // [{ id, mimeType, base64 (raw, no prefix), previewUrl }]
+STATE.brdAiBilingual = null; // { brd_title:{vi,en}, ..., tobe_bullets:{vi:[],en:[]}, ... } sau khi AI phân tích xong
+STATE.brdAiLang = "vi"; // ngôn ngữ đang hiển thị trên form: "vi" | "en"
 
 function brdAiFileToEntry(file){
   return new Promise((resolve, reject)=>{
@@ -13690,6 +13706,33 @@ function brdLinesFromArray(arr){
   return String(arr||"").trim();
 }
 
+// Đổ dữ liệu song ngữ đã lưu ở STATE.brdAiBilingual vào form theo ngôn ngữ được chọn
+// (lang: "vi" | "en"), KHÔNG gọi lại AI. Field nào bản ngôn ngữ đó rỗng thì bỏ qua,
+// giữ nguyên nội dung người dùng đã tự sửa trong form.
+function applyBrdAiLang(lang){
+  const d = STATE.brdAiBilingual;
+  if(!d) return;
+  STATE.brdAiLang = lang;
+
+  const setVal = (id, val)=>{ const el = $(id); if(el && val!=null && String(val).trim()!==""){ el.value = val; el.dispatchEvent(new Event("input")); } };
+  const pick = (field)=> (d[field] && d[field][lang]) || "";
+  const pickArr = (field)=> (d[field] && d[field][lang]) || [];
+
+  setVal("#b_title", pick("brd_title"));
+  setVal("#b_system", pick("system_name"));
+  setVal("#b_overview", pick("overview"));
+  setVal("#b_asis", pick("asis"));
+  setVal("#b_tobe_intro", pick("tobe_intro"));
+  setVal("#b_tobe_bullets", brdLinesFromArray(pickArr("tobe_bullets")));
+  setVal("#b_success_intro", pick("success_intro"));
+  setVal("#b_success_bullets", brdLinesFromArray(pickArr("success_bullets")));
+  setVal("#b_assumptions", brdLinesFromArray(pickArr("assumptions")));
+  setVal("#b_reviewer_feedback", brdLinesFromArray(pickArr("reviewer_feedback")));
+
+  $("#brdAiLangVi")?.classList.toggle("active", lang === "vi");
+  $("#brdAiLangEn")?.classList.toggle("active", lang === "en");
+}
+
 async function runBrdAiAssist(){
   const desc = ($("#brdAiDesc")?.value || "").trim();
   if(!desc && !STATE.brdAiImages.length){
@@ -13713,18 +13756,12 @@ async function runBrdAiAssist(){
     if(error) throw new Error(error.message || "Gọi AI thất bại");
     if(!data || data.error) throw new Error((data && data.error) || "AI không trả về dữ liệu hợp lệ");
 
-    const setVal = (id, val)=>{ const el = $(id); if(el && val!=null && String(val).trim()!==""){ el.value = val; el.dispatchEvent(new Event("input")); } };
-
-    setVal("#b_title", data.brd_title);
-    setVal("#b_system", data.system_name);
-    setVal("#b_overview", data.overview);
-    setVal("#b_asis", data.asis);
-    setVal("#b_tobe_intro", data.tobe_intro);
-    setVal("#b_tobe_bullets", brdLinesFromArray(data.tobe_bullets));
-    setVal("#b_success_intro", data.success_intro);
-    setVal("#b_success_bullets", brdLinesFromArray(data.success_bullets));
-    setVal("#b_assumptions", brdLinesFromArray(data.assumptions));
-    setVal("#b_reviewer_feedback", brdLinesFromArray(data.reviewer_feedback));
+    // Backend giờ trả mỗi field dạng song ngữ { vi, en } (field list thì { vi:[], en:[] }).
+    // Lưu lại toàn bộ để đổi VIE/ENG không cần gọi AI lại.
+    const { _meta, ...bilingualFields } = data;
+    STATE.brdAiBilingual = bilingualFields;
+    $("#brdAiLang")?.classList.add("show");
+    applyBrdAiLang(STATE.brdAiLang || "vi");
 
     const meta = data._meta || {};
     const providersTxt = (meta.providers||[]).join(", ") || "AI";
@@ -13742,12 +13779,33 @@ async function runBrdAiAssist(){
   }
 }
 
-function bindBrdAiPanel(overlay){
+function bindBrdAiPanel(overlay, v){
   const drop = $("#brdAiDrop", overlay);
   const input = $("#brdAiFileInput", overlay);
   const thumbs = $("#brdAiThumbs", overlay);
   STATE.brdAiImages = [];
+
+  // Nếu đang sửa 1 BRD đã lưu và có sẵn dữ liệu song ngữ (bilingual_content) từ lần
+  // AI phân tích trước -> khôi phục lại để có thể đổi VIE/ENG mà KHÔNG cần chạy AI lại.
+  if(v && v.bilingual_content){
+    STATE.brdAiBilingual = v.bilingual_content;
+    STATE.brdAiLang = v.bilingual_lang || "vi";
+    $("#brdAiLang", overlay)?.classList.add("show");
+    $("#brdAiLangVi", overlay)?.classList.toggle("active", STATE.brdAiLang === "vi");
+    $("#brdAiLangEn", overlay)?.classList.toggle("active", STATE.brdAiLang === "en");
+    // Không gọi applyBrdAiLang() ở đây: các field đã được brdModalTemplate(v) đổ đúng
+    // giá trị đã lưu (đúng ngôn ngữ đã chọn lần trước) rồi, gọi lại sẽ ghi đè vô ích.
+  } else {
+    STATE.brdAiBilingual = null;
+    STATE.brdAiLang = "vi";
+  }
   renderBrdAiThumbs();
+
+  $("#brdAiLang", overlay).addEventListener("click", (e)=>{
+    const btn = e.target.closest(".brd-ai-lang-btn"); if(!btn) return;
+    if(!STATE.brdAiBilingual){ toast("Chưa có dữ liệu AI, hãy bấm \"Phân tích với AI\" trước.", "err"); return; }
+    applyBrdAiLang(btn.dataset.lang);
+  });
 
   drop.addEventListener("click", (e)=>{ if(e.target.closest("[data-rm-img]")) return; input.click(); });
   input.addEventListener("change", ()=> { brdAiAddFiles(input.files); input.value = ""; });
@@ -13784,7 +13842,7 @@ function openBrdModal(v){
   overlay.innerHTML = brdModalTemplate(v);
   initAutoGrow(overlay);
   renderBrdVersionRows();
-  bindBrdAiPanel(overlay);
+  bindBrdAiPanel(overlay, v);
   overlay.classList.add("show");
   $("#brdModalClose").addEventListener("click", ()=> overlay.classList.remove("show"));
   $("#brdModalCancel").addEventListener("click", ()=> overlay.classList.remove("show"));
@@ -13810,11 +13868,33 @@ function openBrdModal(v){
   $("#brdModalSave").addEventListener("click", ()=> saveBrd(overlay, !!v));
 }
 
+// Trước khi lưu: ghi lại mọi chỉnh sửa tay của người dùng (nếu có) vào đúng nhánh
+// ngôn ngữ đang active trong STATE.brdAiBilingual, để lần sau mở lại BRD và đổi
+// qua ngôn ngữ này thì thấy đúng bản đã chỉnh, không bị "hoàn tác" về bản AI gốc.
+function syncActiveLangIntoBilingual(){
+  const d = STATE.brdAiBilingual;
+  if(!d) return;
+  const lang = STATE.brdAiLang || "vi";
+  const setStr = (field, val)=>{ if(!d[field]) d[field] = { vi:"", en:"" }; d[field][lang] = val; };
+  const setArr = (field, val)=>{ if(!d[field]) d[field] = { vi:[], en:[] }; d[field][lang] = brdLinesToArray(val); };
+  setStr("brd_title", $("#b_title").value.trim());
+  setStr("system_name", $("#b_system").value.trim());
+  setStr("overview", $("#b_overview").value);
+  setStr("asis", $("#b_asis").value);
+  setStr("tobe_intro", $("#b_tobe_intro").value.trim());
+  setArr("tobe_bullets", $("#b_tobe_bullets").value);
+  setStr("success_intro", $("#b_success_intro").value.trim());
+  setArr("success_bullets", $("#b_success_bullets").value);
+  setArr("assumptions", $("#b_assumptions").value);
+  setArr("reviewer_feedback", $("#b_reviewer_feedback").value);
+}
+
 async function saveBrd(overlay, isEdit){
   const title = $("#b_title").value.trim();
   const system = $("#b_system").value.trim();
   if(!title || !system){ toast("Vui lòng nhập Tiêu đề BRD và Hệ thống", "err"); return; }
   const cleanRows = STATE.brdVersionRows.filter(r=> Object.values(r).some(x=> String(x||"").trim()));
+  syncActiveLangIntoBilingual();
   const payload = {
     cr_id: $("#b_cr_id").value || null,
     brd_title: title,
@@ -13827,6 +13907,8 @@ async function saveBrd(overlay, isEdit){
     success_bullets: $("#b_success_bullets").value,
     assumptions: $("#b_assumptions").value,
     reviewer_feedback: $("#b_reviewer_feedback").value,
+    bilingual_content: STATE.brdAiBilingual || null,
+    bilingual_lang: STATE.brdAiBilingual ? (STATE.brdAiLang || "vi") : null,
     version_rows: cleanRows,
     signoff_heading: $("#b_signoff_heading").value.trim(),
     signoff_name: $("#b_signoff_name").value.trim(),
