@@ -603,19 +603,25 @@ body.focus-mode .view#view-release .rel-kpis{ display:none; }
    position:absolute menu nested in a scrolling cell would get cut off for
    rows near the table's edges. Positioned in JS (positionInlineDropdownMenu). */
 .cr-dropdown-menu{
-  position:fixed; z-index:400; min-width:170px; max-width:280px; max-height:320px;
+  position:fixed; z-index:400; min-width:170px; max-width:340px; max-height:320px;
   overflow:auto; border:1px solid #d5e6ea; border-radius:12px; background:#fff;
   box-shadow:0 16px 36px rgba(21,63,83,.18); padding:6px; animation:crFilterMenuIn .14s ease;
 }
 .cr-dropdown-option{
   display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:8px;
-  font-size:12.5px; font-weight:650; cursor:pointer; transition:background .12s ease;
-  color:var(--opt-text,#3b5968);
+  font-size:12.5px; font-weight:650; cursor:pointer; transition:filter .12s ease, box-shadow .12s ease;
+  /* Nền LUÔN hiển thị màu admin đã cấu hình (không chỉ khi hover) — trước
+     đây chỉ set màu chữ mà không set nền mặc định, nên với các Status có
+     màu chữ trắng (rất phổ biến, để đọc được trên nền màu đậm) thì chữ biến
+     mất trên nền trắng của menu cho tới khi rê chuột vào. */
+  color:var(--opt-text,#3b5968); background:var(--opt-bg,transparent);
 }
-.cr-dropdown-option:hover{ background:var(--opt-bg,#f0f8f8); }
-.cr-dropdown-option.is-selected{ background:var(--opt-bg,#effafa); font-weight:800; }
+.cr-dropdown-option:hover{ filter:brightness(.95); }
+.cr-dropdown-option.is-selected{ box-shadow:inset 0 0 0 2px rgba(0,0,0,.14); font-weight:800; }
 .cr-dropdown-option-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
-.cr-dropdown-option span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Không cắt/ẩn bớt chữ nữa — tên Status/Sub-Status dài sẽ tự xuống dòng
+   thay vì mất chữ phía sau (trước đây dùng nowrap + ellipsis nên bị cắt). */
+.cr-dropdown-option span{ flex:1; min-width:0; white-space:normal; overflow-wrap:break-word; line-height:1.35; }
 .cr-dropdown-check{ width:14px; height:14px; flex:0 0 auto; }
 .cr-dropdown-option-empty{ color:#8aa0aa; font-weight:650; }
 .view .cr-filter-trigger{ color:#315267; }
@@ -15793,11 +15799,19 @@ async function saveStatus(){
   btn.disabled = true; btn.textContent = "Đang lưu...";
   const values = { name, sort_order: sortOrder, background_color: backgroundColor, text_color: textColor };
   const result = STATE.editingStatusId
-    ? await STATE.sb.from("cr_statuses").update(values).eq("id", STATE.editingStatusId)
-    : await STATE.sb.from("cr_statuses").insert({ ...values, created_by: STATE.session?.user?.id || null });
+    ? await STATE.sb.from("cr_statuses").update(values).eq("id", STATE.editingStatusId).select()
+    : await STATE.sb.from("cr_statuses").insert({ ...values, created_by: STATE.session?.user?.id || null }).select();
   btn.disabled = false;
   if(result.error){
     toast("Lưu Status thất bại: " + result.error.message, "err");
+    return;
+  }
+  // Supabase/PostgREST không tự báo lỗi khi UPDATE khớp 0 dòng (thường do
+  // Row Level Security âm thầm chặn ghi) — nếu không có dòng nào trả về dù
+  // không có "error", coi như lưu thất bại để không hiển thị "thành công"
+  // giả trong khi dữ liệu thực tế chưa hề thay đổi.
+  if(!result.data || result.data.length === 0){
+    toast(`Không lưu được thay đổi cho Status "${name}" — có thể do quyền (RLS) trên bảng cr_statuses đang chặn cập nhật, dù hệ thống không báo lỗi cụ thể. Vui lòng kiểm tra chính sách RLS trên Supabase.`, "err");
     return;
   }
   const syncError = wasEdit ? await syncCrLogRenamedValue("status", oldName, name) : null;
@@ -15927,11 +15941,18 @@ async function saveSubStatus(){
     text_color: textColor
   };
   const result = STATE.editingSubStatusId
-    ? await STATE.sb.from("cr_sub_statuses").update(values).eq("id", STATE.editingSubStatusId)
-    : await STATE.sb.from("cr_sub_statuses").insert({ ...values, created_by: STATE.session?.user?.id || null });
+    ? await STATE.sb.from("cr_sub_statuses").update(values).eq("id", STATE.editingSubStatusId).select()
+    : await STATE.sb.from("cr_sub_statuses").insert({ ...values, created_by: STATE.session?.user?.id || null }).select();
   btn.disabled = false;
   if(result.error){
     toast("Lưu Sub-Status thất bại: " + result.error.message, "err");
+    return;
+  }
+  // Xem giải thích ở saveStatus(): PostgREST không báo lỗi khi UPDATE khớp
+  // 0 dòng (thường do RLS chặn ngầm) — phải tự kiểm tra để không báo
+  // "thành công" giả.
+  if(!result.data || result.data.length === 0){
+    toast(`Không lưu được thay đổi cho Sub-Status "${name}" — có thể do quyền (RLS) trên bảng cr_sub_statuses đang chặn cập nhật, dù hệ thống không báo lỗi cụ thể. Vui lòng kiểm tra chính sách RLS trên Supabase.`, "err");
     return;
   }
   const syncError = wasEdit ? await syncCrLogRenamedValue("sub_status", oldName, name) : null;
@@ -16065,7 +16086,13 @@ async function saveUser(overlay, isEdit){
   const btn = $("#userModalSave"); btn.disabled = true; btn.textContent = "Đang lưu...";
   let error;
   if(isEdit){
-    ({ error } = await STATE.sb.from("app_users").update({ role, active }).eq("id", STATE.editingUserId));
+    let data;
+    ({ data, error } = await STATE.sb.from("app_users").update({ role, active }).eq("id", STATE.editingUserId).select());
+    if(!error && (!data || data.length === 0)){
+      btn.disabled = false; btn.textContent = "Lưu thay đổi";
+      toast("Không lưu được thay đổi — có thể do quyền (RLS) trên bảng app_users đang chặn cập nhật.", "err");
+      return;
+    }
   } else {
     const email = $("#u_email").value.trim().toLowerCase();
     if(!email || !email.includes("@")){ toast("Vui lòng nhập email hợp lệ", "err"); btn.disabled=false; btn.textContent="Cấp quyền"; return; }
