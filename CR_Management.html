@@ -16293,5 +16293,582 @@ document.addEventListener("DOMContentLoaded", initAuth);
 document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
 </script>
+<script>
+/* ===========================================================================
+   EB2B WORKSPACE — additive module
+   ---------------------------------------------------------------------------
+   This block deliberately does not call, replace, or reuse DMS CRUD functions.
+   Every EB2B operational/configuration table has an eb2b_ prefix. The existing
+   authentication directory is shared only so the current login continues to
+   work unchanged.
+=========================================================================== */
+(function(){
+  "use strict";
+
+  const EB2B = {
+    rootId: "eb2bViewRoot",
+    modalId: "eb2bModalOverlay",
+    activeTab: "dashboard",
+    search: "",
+    rows: {
+      cr: [], uat: [], release: [], brd: [], weekly_mom: [],
+      statuses: [], sub_statuses: [], evidence_steps: [], attachment_categories: []
+    },
+    loading: false,
+    ready: false
+  };
+
+  const EB2B_TABLES = {
+    cr: "eb2b_cr_log",
+    uat: "eb2b_uat_testcase",
+    release: "eb2b_release_prd",
+    brd: "eb2b_brd_records",
+    weekly_mom: "eb2b_weekly_mom",
+    statuses: "eb2b_statuses",
+    sub_statuses: "eb2b_sub_statuses",
+    evidence_steps: "eb2b_evidence_steps",
+    attachment_categories: "eb2b_attachment_categories"
+  };
+  const EB2B_META = {
+    dashboard: ["EB2B Dashboard", "Tổng quan workspace EB2B"],
+    cr: ["EB2B · CR Log", "Sổ đăng ký Change Request riêng cho EB2B"],
+    uat: ["EB2B · UAT Test Case", "Test case UAT riêng cho EB2B"],
+    release: ["EB2B · Release / PRD", "Theo dõi kế hoạch phát hành EB2B"],
+    brd: ["EB2B · Tạo BRD", "Quản lý yêu cầu nghiệp vụ EB2B"],
+    weekly_mom: ["EB2B · Weekly MoM", "Biên bản họp và action item EB2B"],
+    admin: ["EB2B · Quản Trị Dữ Liệu", "Danh mục cấu hình riêng cho EB2B"],
+    recycle: ["EB2B · Recycle Bin", "Dữ liệu EB2B đã soft-delete"]
+  };
+  const EB2B_TABS = [
+    ["dashboard", "Tổng quan"], ["cr", "CR Log"], ["uat", "UAT Test Case"],
+    ["release", "Release / PRD"], ["brd", "Tạo BRD"], ["weekly_mom", "Weekly MoM"],
+    ["admin", "Quản trị"], ["recycle", "Recycle Bin"]
+  ];
+  const EB2B_CONFIG = {
+    statuses: { label:"Status", table:"eb2b_statuses", defaultColor:"#64748b" },
+    sub_statuses: { label:"Sub-status", table:"eb2b_sub_statuses", defaultColor:"#2563eb" },
+    evidence_steps: { label:"Evidence Step", table:"eb2b_evidence_steps" },
+    attachment_categories: { label:"Phân loại tài liệu", table:"eb2b_attachment_categories" }
+  };
+
+  const $e = (selector, root=document) => root.querySelector(selector);
+  const $$e = (selector, root=document) => Array.from(root.querySelectorAll(selector));
+  const eEsc = value => {
+    if(typeof window.esc === "function") return window.esc(value == null ? "" : String(value));
+    return String(value == null ? "" : value).replace(/[&<>"']/g, c=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  };
+  const eText = value => String(value == null ? "" : value);
+  const eDate = value => value ? String(value).slice(0,10) : "";
+  const eNow = () => new Date().toISOString();
+  const eUser = () => (typeof STATE !== "undefined" && (STATE.userEmail || STATE.session?.user?.email)) || null;
+  const eToast = (message, type="info") => {
+    if(typeof window.toast === "function") window.toast(message, type);
+    else console[type === "err" ? "error" : "log"](message);
+  };
+  const activeDb = () => typeof STATE !== "undefined" ? STATE.sb : null;
+
+  function eb2bStyles(){
+    if($e("#eb2bStyles")) return;
+    const style = document.createElement("style");
+    style.id = "eb2bStyles";
+    style.textContent = `
+      #eb2bViewRoot{display:none;padding-bottom:32px}
+      body.eb2b-active .view{display:none!important}
+      body.eb2b-active #eb2bViewRoot{display:block}
+      body.eb2b-active .view-action{display:none!important}
+      .eb2b-nav{margin:7px 0 0;border-top:1px solid var(--line,#e5e7eb);padding-top:7px}
+      .eb2b-nav-parent{display:flex;align-items:center;gap:9px;padding:10px 12px;font-weight:700;color:#146b70}
+      .eb2b-nav-parent svg{width:17px;height:17px;flex:0 0 auto}
+      .eb2b-nav-tabs{display:grid;gap:2px;padding:0 0 3px 14px}
+      .eb2b-nav-item{display:flex!important;align-items:center;gap:8px;min-height:33px;padding:7px 10px!important;border-radius:8px;cursor:pointer;font-size:12px}
+      .eb2b-nav-item.active{background:var(--accent-dim,#e7f5f4);color:var(--accent,#0e7f83);font-weight:700}
+      .eb2b-nav-count{margin-left:auto;font-size:10px;opacity:.75}
+      .eb2b-shell{display:grid;gap:16px}
+      .eb2b-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line,#e5e7eb);padding-bottom:10px}
+      .eb2b-tab{border:1px solid var(--line,#e5e7eb);background:var(--surface,#fff);color:var(--text,#1f2937);border-radius:8px;padding:8px 11px;font-size:12px;cursor:pointer}
+      .eb2b-tab.active{background:#0e7f83;color:white;border-color:#0e7f83}
+      .eb2b-toolbar{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+      .eb2b-toolbar-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      .eb2b-toolbar input,.eb2b-toolbar select{min-height:34px;border:1px solid var(--line,#d5dbe3);border-radius:7px;padding:7px 9px;background:var(--surface,#fff);color:var(--text,#1f2937)}
+      .eb2b-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+      .eb2b-kpi{border:1px solid var(--line,#e5e7eb);border-radius:11px;padding:16px;background:var(--surface,#fff)}
+      .eb2b-kpi-label{font-size:11px;color:var(--text-dim,#6b7280);text-transform:uppercase;letter-spacing:.04em}
+      .eb2b-kpi-value{font-size:28px;font-weight:750;margin-top:6px}
+      .eb2b-panel{border:1px solid var(--line,#e5e7eb);border-radius:11px;background:var(--surface,#fff);overflow:hidden}
+      .eb2b-panel-head{padding:14px 16px;border-bottom:1px solid var(--line,#e5e7eb);display:flex;align-items:center;justify-content:space-between;gap:12px}
+      .eb2b-panel-head h3{margin:0;font-size:14px}
+      .eb2b-table-wrap{overflow:auto}
+      .eb2b-table{width:100%;border-collapse:collapse;font-size:12px}
+      .eb2b-table th,.eb2b-table td{padding:10px 12px;border-bottom:1px solid var(--line,#edf0f2);text-align:left;vertical-align:top}
+      .eb2b-table th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim,#6b7280);white-space:nowrap;background:var(--surface-2,#fafbfc)}
+      .eb2b-table tr:last-child td{border-bottom:0}
+      .eb2b-actions{display:flex;gap:5px;white-space:nowrap}
+      .eb2b-muted{color:var(--text-dim,#6b7280)}
+      .eb2b-empty{text-align:center;padding:34px 14px;color:var(--text-dim,#6b7280)}
+      .eb2b-status{display:inline-flex;border-radius:999px;padding:3px 8px;font-size:10px;background:#edf2f7;color:#475569}
+      .eb2b-config-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .eb2b-config-card{border:1px solid var(--line,#e5e7eb);border-radius:10px;padding:13px;background:var(--surface,#fff)}
+      .eb2b-config-card h4{margin:0 0 10px;font-size:13px}
+      .eb2b-config-add{display:flex;gap:6px;margin-bottom:10px}
+      .eb2b-config-add input{min-width:0;flex:1}
+      .eb2b-config-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line,#edf0f2);font-size:12px}
+      .eb2b-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.46);z-index:1000;display:none;align-items:center;justify-content:center;padding:18px}
+      .eb2b-modal-overlay.show{display:flex}
+      .eb2b-modal{width:min(920px,100%);max-height:92vh;overflow:auto;background:var(--surface,#fff);border-radius:13px;box-shadow:0 22px 70px rgba(15,23,42,.25)}
+      .eb2b-modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:17px 20px;border-bottom:1px solid var(--line,#e5e7eb)}
+      .eb2b-modal-head h3{margin:0;font-size:17px}.eb2b-modal-head p{margin:4px 0 0;color:var(--text-dim,#6b7280);font-size:12px}
+      .eb2b-modal-body{padding:18px 20px}.eb2b-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:13px 20px;border-top:1px solid var(--line,#e5e7eb)}
+      .eb2b-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+      .eb2b-field{display:grid;gap:5px}.eb2b-field.span-2{grid-column:span 2}.eb2b-field label{font-size:11px;font-weight:650;color:var(--text-dim,#64748b)}
+      .eb2b-field input,.eb2b-field select,.eb2b-field textarea{width:100%;box-sizing:border-box;border:1px solid var(--line,#d5dbe3);border-radius:7px;padding:8px 9px;background:var(--surface,#fff);color:var(--text,#1f2937);font:inherit}
+      .eb2b-field textarea{min-height:76px;resize:vertical}.eb2b-field textarea.tall{min-height:130px}
+      @media(max-width:760px){.eb2b-kpis,.eb2b-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eb2b-form-grid{grid-template-columns:1fr}.eb2b-field.span-2{grid-column:auto}}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function eb2bBuildShell(){
+    if(!$e("#eb2bViewRoot")){
+      const main = $e(".main");
+      const topbar = $e(".topbar", main);
+      if(!main || !topbar) return false;
+      topbar.insertAdjacentHTML("afterend", `
+        <section id="eb2bViewRoot" class="view" aria-label="EB2B workspace">
+          <div class="eb2b-shell">
+            <div class="eb2b-tabs" id="eb2bTabs"></div>
+            <div id="eb2bContent"></div>
+          </div>
+        </section>`);
+    }
+    if(!$e("#eb2bModalOverlay")){
+      document.body.insertAdjacentHTML("beforeend", `<div class="eb2b-modal-overlay" id="eb2bModalOverlay"></div>`);
+    }
+    const dms = $e(".workspace-nav[data-workspace='dms']");
+    if(dms && !$e("#eb2bNav")){
+      dms.insertAdjacentHTML("afterend", `
+        <div class="eb2b-nav" id="eb2bNav" aria-label="Các phân hệ EB2B">
+          <div class="eb2b-nav-parent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></svg>
+            <span>Workspace EB2B</span>
+          </div>
+          <div class="eb2b-nav-tabs">
+            ${EB2B_TABS.map(([key,label])=>`<div class="nav-item eb2b-nav-item" data-eb2b-tab="${key}"><span>${label}</span><span class="eb2b-nav-count" id="eb2bNavCount${key}"></span></div>`).join("")}
+          </div>
+        </div>`);
+    }
+    eb2bStyles();
+    return true;
+  }
+
+  function eb2bSetHeader(tab){
+    const meta = EB2B_META[tab] || EB2B_META.dashboard;
+    const title = $e("#topbarTitle"), sub = $e("#topbarSub");
+    if(title) title.textContent = meta[0];
+    if(sub) sub.textContent = meta[1];
+  }
+
+  function eb2bShow(tab){
+    if(!EB2B.ready && !eb2bBuildShell()) return;
+    EB2B.activeTab = tab;
+    document.body.classList.add("eb2b-active");
+    eb2bSetHeader(tab);
+    $$(".eb2b-nav-item").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
+    $$(".eb2b-tab").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
+    eb2bRender();
+  }
+
+  function eb2bHide(){
+    document.body.classList.remove("eb2b-active");
+    $$(".eb2b-nav-item").forEach(n=>n.classList.remove("active"));
+  }
+
+  function eb2bOptions(values, selected, empty="— chọn —"){
+    const list = Array.from(new Set([selected, ...(values || [])].filter(Boolean)));
+    return `<option value="">${empty}</option>` + list.map(v=>`<option value="${eEsc(v)}" ${String(v)===String(selected)?"selected":""}>${eEsc(v)}</option>`).join("");
+  }
+  function eb2bStatus(value){
+    return value ? `<span class="eb2b-status">${eEsc(value)}</span>` : `<span class="eb2b-muted">—</span>`;
+  }
+  function eb2bButton(label, action, id, danger=false){
+    return `<button type="button" class="btn btn-ghost btn-sm" data-eb2b-act="${action}" data-eb2b-id="${eEsc(id)}" ${danger?'style="color:#c0433f"':''}>${label}</button>`;
+  }
+  function eb2bConfirm(title, message, fn){
+    if(typeof window.confirmDelete === "function") window.confirmDelete(title, message, fn, "Xác nhận");
+    else if(window.confirm(message)) fn();
+  }
+
+  async function eb2bLoad(){
+    const sb = activeDb();
+    if(!sb || EB2B.loading) return;
+    EB2B.loading = true;
+    const reads = Object.entries(EB2B_TABLES).map(async ([key,table])=>{
+      const isConfig = ["statuses","sub_statuses","evidence_steps","attachment_categories"].includes(key);
+      const orderField = isConfig ? "sort_order" : (key === "brd" ? "updated_at" : "created_at");
+      let request = sb.from(table).select("*");
+      if(!isConfig) request = request.is("deleted_at", null);
+      const result = await request.order(orderField, {ascending:false});
+      if(result.error){
+        if(!["statuses","sub_statuses","evidence_steps","attachment_categories"].includes(key)){
+          eToast(`EB2B: không tải được ${table}: ${result.error.message}`, "warn");
+        }
+        EB2B.rows[key] = [];
+      }else{
+        EB2B.rows[key] = result.data || [];
+      }
+    });
+    await Promise.all(reads);
+    EB2B.loading = false;
+    EB2B.ready = true;
+    eb2bUpdateNavCounts();
+    eb2bRender();
+  }
+
+  function eb2bUpdateNavCounts(){
+    const pairs = {cr:"cr",uat:"uat",release:"release",brd:"brd",weekly_mom:"weekly_mom"};
+    Object.entries(pairs).forEach(([key,rowKey])=>{
+      const n = $e("#eb2bNavCount" + key);
+      if(n) n.textContent = EB2B.rows[rowKey].length || "";
+    });
+  }
+
+  function eb2bRenderTabs(){
+    const tabs = $e("#eb2bTabs");
+    if(!tabs) return;
+    tabs.innerHTML = EB2B_TABS.map(([key,label])=>`<button type="button" class="eb2b-tab ${EB2B.activeTab===key?"active":""}" data-eb2b-tab="${key}">${label}</button>`).join("");
+  }
+
+  function eb2bRender(){
+    if(!$e("#eb2bContent")) return;
+    eb2bRenderTabs();
+    const renderers = {
+      dashboard: eb2bRenderDashboard, cr: ()=>eb2bRenderDataTable("cr"),
+      uat: ()=>eb2bRenderDataTable("uat"), release: ()=>eb2bRenderDataTable("release"),
+      brd: ()=>eb2bRenderDataTable("brd"), weekly_mom: ()=>eb2bRenderDataTable("weekly_mom"),
+      admin: eb2bRenderAdmin, recycle: eb2bRenderRecycle
+    };
+    (renderers[EB2B.activeTab] || renderers.dashboard)();
+  }
+
+  function eb2bRenderDashboard(){
+    const c = $e("#eb2bContent");
+    const cr = EB2B.rows.cr, tc = EB2B.rows.uat, rel = EB2B.rows.release;
+    const active = [...cr,...tc,...rel];
+    const statusCount = {};
+    cr.forEach(row=>{ statusCount[row.status || "Chưa có"] = (statusCount[row.status || "Chưa có"] || 0) + 1; });
+    c.innerHTML = `
+      <div class="eb2b-kpis">
+        <div class="eb2b-kpi"><div class="eb2b-kpi-label">Change Request</div><div class="eb2b-kpi-value">${cr.length}</div></div>
+        <div class="eb2b-kpi"><div class="eb2b-kpi-label">UAT Test Case</div><div class="eb2b-kpi-value">${tc.length}</div></div>
+        <div class="eb2b-kpi"><div class="eb2b-kpi-label">Release / PRD</div><div class="eb2b-kpi-value">${rel.length}</div></div>
+        <div class="eb2b-kpi"><div class="eb2b-kpi-label">BRD / Weekly MoM</div><div class="eb2b-kpi-value">${EB2B.rows.brd.length + EB2B.rows.weekly_mom.length}</div></div>
+      </div>
+      <div class="eb2b-panel">
+        <div class="eb2b-panel-head"><h3>Phân bổ CR theo Status</h3><span class="eb2b-muted">${active.length} bản ghi dữ liệu chính</span></div>
+        <div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>Status</th><th>Số lượng</th></tr></thead><tbody>
+          ${Object.keys(statusCount).length ? Object.entries(statusCount).map(([k,v])=>`<tr><td>${eb2bStatus(k)}</td><td>${v}</td></tr>`).join("") : `<tr><td colspan="2" class="eb2b-empty">Chưa có dữ liệu EB2B.</td></tr>`}
+        </tbody></table></div>
+      </div>
+      <div class="eb2b-panel">
+        <div class="eb2b-panel-head"><h3>CR cập nhật gần đây</h3><button class="btn btn-primary btn-sm" data-eb2b-new="cr">Tạo CR</button></div>
+        <div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>CR ID</th><th>App</th><th>Owner</th><th>Status</th><th>Cập nhật</th></tr></thead><tbody>
+          ${cr.slice(0,8).map(r=>`<tr><td><b>${eEsc(r.cr_id)}</b></td><td>${eEsc(r.app||"—")}</td><td>${eEsc(r.owner||"—")}</td><td>${eb2bStatus(r.status)}</td><td>${eEsc(eDate(r.updated_at||r.created_at))}</td></tr>`).join("") || `<tr><td colspan="5" class="eb2b-empty">Chưa có CR EB2B.</td></tr>`}
+        </tbody></table></div>
+      </div>`;
+  }
+
+  function eb2bSearchRows(key){
+    const q = EB2B.search.trim().toLowerCase();
+    if(!q) return EB2B.rows[key];
+    return EB2B.rows[key].filter(row=>Object.values(row).some(v=>String(v ?? "").toLowerCase().includes(q)));
+  }
+
+  function eb2bTableDefinition(key){
+    const common = [
+      {key:"id",label:"ID", hidden:true},
+      {key:"actions",label:"Thao tác", actions:true}
+    ];
+    if(key==="cr") return [
+      {key:"cr_id",label:"CR ID"},{key:"app",label:"App"},{key:"requester",label:"Requester"},
+      {key:"category",label:"Category"},{key:"priority",label:"Priority"},{key:"status",label:"Status"},
+      {key:"owner",label:"Owner"},{key:"deadline",label:"Deadline"},...common
+    ];
+    if(key==="uat") return [
+      {key:"test_case_id",label:"Test Case ID"},{key:"cr_id",label:"CR ID"},{key:"scenario",label:"Scenario"},
+      {key:"pass_fail",label:"Kết quả"},{key:"testor",label:"Testor"},{key:"testing_date",label:"Ngày test"},...common
+    ];
+    if(key==="release") return [
+      {key:"release_id",label:"Release ID"},{key:"cr_id",label:"CR ID"},{key:"release_name",label:"Release"},
+      {key:"environment",label:"Môi trường"},{key:"status",label:"Status"},{key:"planned_date",label:"Dự kiến"},...common
+    ];
+    if(key==="brd") return [
+      {key:"brd_title",label:"BRD"},{key:"cr_id",label:"CR ID"},{key:"system_name",label:"System"},
+      {key:"version",label:"Version"},{key:"updated_at",label:"Cập nhật"},...common
+    ];
+    return [
+      {key:"meeting_date",label:"Ngày họp"},{key:"vendor",label:"Vendor"},{key:"meeting_title",label:"Tiêu đề"},
+      {key:"participants",label:"Participants"},{key:"updated_at",label:"Cập nhật"},...common
+    ];
+  }
+
+  function eb2bRenderDataTable(key){
+    const c = $e("#eb2bContent"), meta = {
+      cr:["CR Log","Tạo và theo dõi Change Request EB2B","Tạo CR"],
+      uat:["UAT Test Case","Quản lý test case độc lập với DMS","Thêm Test Case"],
+      release:["Release / PRD","Kế hoạch và checklist phát hành EB2B","Thêm Release"],
+      brd:["Tạo BRD","Danh sách Business Requirement Document EB2B","Tạo BRD"],
+      weekly_mom:["Weekly MoM","Biên bản họp và action item EB2B","Tạo biên bản"]
+    }[key];
+    const rows = eb2bSearchRows(key), defs = eb2bTableDefinition(key);
+    c.innerHTML = `
+      <div class="eb2b-toolbar">
+        <div class="eb2b-toolbar-left"><input id="eb2bSearch" placeholder="Tìm trong ${eEsc(meta[0])}..." value="${eEsc(EB2B.search)}"><span class="eb2b-muted">${rows.length} / ${EB2B.rows[key].length} mục</span></div>
+        <button type="button" class="btn btn-primary btn-sm" data-eb2b-new="${key}">＋ ${meta[2]}</button>
+      </div>
+      <div class="eb2b-panel">
+        <div class="eb2b-panel-head"><h3>${meta[0]}</h3><span class="eb2b-muted">Dữ liệu riêng: <code>eb2b_${key==="cr"?"cr_log":key==="uat"?"uat_testcase":key==="release"?"release_prd":key==="brd"?"brd_records":"weekly_mom"}</code></span></div>
+        <div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr>${defs.filter(d=>!d.hidden).map(d=>`<th>${d.label}</th>`).join("")}</tr></thead><tbody>
+          ${rows.length ? rows.map(row=>`<tr>${defs.filter(d=>!d.hidden).map(d=>{
+            if(d.actions) return `<td><div class="eb2b-actions">${eb2bButton("Sửa","edit",row.id)}${eb2bButton("Xóa","delete",row.id,true)}</div></td>`;
+            const val = row[d.key];
+            return `<td>${d.key==="status"||d.key==="pass_fail" ? eb2bStatus(val) : eEsc(val || "—")}</td>`;
+          }).join("")}</tr>`).join("") : `<tr><td colspan="${defs.filter(d=>!d.hidden).length}" class="eb2b-empty">Chưa có dữ liệu. Bấm “${eEsc(meta[2])}” để bắt đầu.</td></tr>`}
+        </tbody></table></div>
+      </div>`;
+    $e("#eb2bSearch")?.addEventListener("input", ev=>{
+      EB2B.search = ev.target.value;
+      const cursor = ev.target.selectionStart;
+      eb2bRenderDataTable(key);
+      const next = $e("#eb2bSearch");
+      if(next){ next.focus(); next.setSelectionRange(cursor, cursor); }
+    });
+  }
+
+  function eb2bField(def, row){
+    const value = row?.[def.key] ?? "";
+    const id = "eb2b_f_" + def.key;
+    const label = `<label for="${id}">${def.label}${def.required?" *":""}</label>`;
+    if(def.type==="select") return `<div class="eb2b-field ${def.span?"span-2":""}">${label}<select id="${id}">${eb2bOptions(def.options, value)}</select></div>`;
+    if(def.type==="textarea") return `<div class="eb2b-field ${def.span?"span-2":""}">${label}<textarea id="${id}" class="${def.tall?"tall":""}">${eEsc(value)}</textarea></div>`;
+    return `<div class="eb2b-field ${def.span?"span-2":""}">${label}<input id="${id}" type="${def.type||"text"}" value="${eEsc(def.type==="date"?eDate(value):value)}"></div>`;
+  }
+
+  function eb2bFormDefs(key, row){
+    const crIds = EB2B.rows.cr.map(x=>x.cr_id).filter(Boolean);
+    const statuses = EB2B.rows.statuses.map(x=>x.name).filter(Boolean);
+    const subs = EB2B.rows.sub_statuses.map(x=>x.name).filter(Boolean);
+    if(key==="cr") return [
+      {key:"cr_id",label:"CR ID",required:true},{key:"app",label:"App"},{key:"old_name",label:"Old Name From InterK"},
+      {key:"rename_folder",label:"Rename Folder"},{key:"requester",label:"Requester"},{key:"department",label:"Department"},
+      {key:"request_date",label:"Request Date",type:"date"},{key:"deadline",label:"Deadline",type:"date"},
+      {key:"category",label:"Category"},{key:"priority",label:"Priority"},{key:"status",label:"Status",type:"select",options:statuses},
+      {key:"sub_status",label:"Sub-status",type:"select",options:subs},{key:"owner",label:"Owner"},
+      {key:"approved_status",label:"Approved Status"},{key:"approved_date",label:"Approved Date",type:"date"},
+      {key:"brd_link",label:"BRD Link",span:true},{key:"fsd_link",label:"FSD Link"},
+      {key:"quotation_link",label:"Quotation Link"},{key:"description_brd",label:"Description BRD",type:"textarea",span:true},
+      {key:"description_fsd",label:"Description FSD",type:"textarea",span:true},{key:"progress",label:"Progress",type:"textarea",span:true},
+      {key:"note",label:"Note",type:"textarea",span:true}
+    ];
+    if(key==="uat") return [
+      {key:"cr_id",label:"CR ID",required:true,type:"select",options:crIds},{key:"test_case_id",label:"Test Case ID",required:true},
+      {key:"scenario",label:"Scenario",span:true},{key:"description",label:"Description",type:"textarea",span:true},
+      {key:"expectation",label:"Expectation",type:"textarea",span:true},{key:"step_by_step",label:"Step by Step",type:"textarea",span:true,tall:true},
+      {key:"data_test",label:"Data test",type:"textarea",span:true},{key:"actual_result",label:"Actual Result",type:"textarea",span:true},
+      {key:"pass_fail",label:"Kết quả",type:"select",options:["Not Started","Pass","Fail","Blocked"]},
+      {key:"owner_scenario",label:"Owner Scenario"},{key:"testor",label:"Testor"},{key:"testing_date",label:"Testing Date",type:"date"},
+      {key:"owner_confirm",label:"Owner Confirm"},{key:"confirmed_date",label:"Confirmed Date",type:"date"},{key:"note",label:"Note",type:"textarea",span:true}
+    ];
+    if(key==="release") return [
+      {key:"cr_id",label:"CR ID",required:true,type:"select",options:crIds},{key:"release_id",label:"Release ID"},
+      {key:"release_name",label:"Tên Release / Version"},{key:"environment",label:"Môi trường"},
+      {key:"planned_date",label:"Ngày dự kiến",type:"date"},{key:"actual_date",label:"Ngày thực tế",type:"date"},
+      {key:"status",label:"Status",type:"select",options:["Planned","In Progress","Released","Rolled Back"]},
+      {key:"checklist_golive",label:"Checklist Go-live",type:"select",options:["Yes","No","Partial"]},
+      {key:"release_owner",label:"Release Owner"},{key:"signoff_by",label:"Sign-off By"},{key:"signoff_date",label:"Sign-off Date",type:"date"},
+      {key:"features",label:"Features",type:"textarea",span:true},{key:"deploy_plan",label:"Deploy Plan",type:"textarea",span:true},
+      {key:"rollback_plan",label:"Rollback Plan",type:"textarea",span:true},{key:"note",label:"Note",type:"textarea",span:true}
+    ];
+    if(key==="brd") return [
+      {key:"brd_title",label:"BRD Title",required:true,span:true},{key:"cr_id",label:"CR ID",type:"select",options:crIds},
+      {key:"system_name",label:"System / Module"},{key:"version",label:"Version"},
+      {key:"business_objective",label:"Business Objective",type:"textarea",span:true},
+      {key:"current_situation",label:"Current Situation",type:"textarea",span:true},
+      {key:"business_requirement",label:"Business Requirement",type:"textarea",span:true,tall:true},
+      {key:"scope_in",label:"Scope In",type:"textarea"},{key:"scope_out",label:"Scope Out",type:"textarea"},
+      {key:"functional_requirement",label:"Functional Requirement",type:"textarea",span:true,tall:true},
+      {key:"non_functional_requirement",label:"Non-functional Requirement",type:"textarea",span:true},
+      {key:"acceptance_criteria",label:"Acceptance Criteria",type:"textarea",span:true},
+      {key:"stakeholders",label:"Stakeholders",type:"textarea"},{key:"risks",label:"Risks",type:"textarea"}
+    ];
+    return [
+      {key:"meeting_date",label:"Ngày họp",required:true,type:"date"},{key:"vendor",label:"Vendor",required:true},
+      {key:"meeting_title",label:"Meeting Title"},{key:"participants",label:"Participants"},
+      {key:"overall_summary",label:"Overall Summary",type:"textarea",span:true},
+      {key:"cr_items",label:"CR / Action Items (JSON)",type:"textarea",span:true,tall:true}
+    ];
+  }
+
+  function eb2bOpenModal(key, row){
+    const overlay = $e("#eb2bModalOverlay");
+    const title = row ? "Sửa " : "Tạo ";
+    const labels = {cr:"CR Log",uat:"UAT Test Case",release:"Release / PRD",brd:"BRD",weekly_mom:"Weekly MoM"};
+    const defs = eb2bFormDefs(key, row || {});
+    overlay.innerHTML = `<div class="eb2b-modal" role="dialog" aria-modal="true">
+      <div class="eb2b-modal-head"><div><h3>${title}${labels[key]}</h3><p>Dữ liệu được lưu vào bảng ${EB2B_TABLES[key]}.</p></div><button type="button" class="modal-close" data-eb2b-close>✕</button></div>
+      <div class="eb2b-modal-body"><div class="eb2b-form-grid">${defs.map(d=>eb2bField(d,row||{})).join("")}</div></div>
+      <div class="eb2b-modal-foot"><button type="button" class="btn btn-ghost" data-eb2b-close>Hủy</button><button type="button" class="btn btn-primary" id="eb2bSaveRecord">Lưu</button></div>
+    </div>`;
+    overlay.classList.add("show");
+    $$e("[data-eb2b-close]", overlay).forEach(btn=>btn.addEventListener("click", ()=>overlay.classList.remove("show")));
+    overlay.onclick = ev=>{ if(ev.target===overlay) overlay.classList.remove("show"); };
+    $e("#eb2bSaveRecord",overlay).addEventListener("click", ()=>eb2bSaveRecord(key,row,defs));
+  }
+
+  async function eb2bSaveRecord(key, row, defs){
+    const payload = {};
+    let invalidJson = false;
+    defs.forEach(def=>{
+      const el = $e("#eb2b_f_"+def.key);
+      let val = el ? el.value : "";
+      if(def.type==="date") val = val || null;
+      if(key==="weekly_mom" && def.key==="cr_items"){
+        try{ val = val.trim() ? JSON.parse(val) : []; }catch(_){ invalidJson=true; }
+      }
+      payload[def.key] = val;
+    });
+    if(invalidJson){ eToast("CR / Action Items phải là JSON hợp lệ.", "err"); return; }
+    if(key==="uat" && !payload.test_case_id) { eToast("Vui lòng nhập Test Case ID.", "err"); return; }
+    if(key==="cr" && !payload.cr_id) { eToast("Vui lòng nhập CR ID.", "err"); return; }
+    if(key==="brd" && !payload.brd_title) { eToast("Vui lòng nhập BRD Title.", "err"); return; }
+    if(key==="weekly_mom" && (!payload.meeting_date || !payload.vendor)) { eToast("Vui lòng nhập Ngày họp và Vendor.", "err"); return; }
+    payload.updated_at = eNow(); payload.updated_by = eUser();
+    if(!row) payload.created_by = eUser();
+    const sb = activeDb(); if(!sb) return;
+    const btn = $e("#eb2bSaveRecord"); if(btn) { btn.disabled=true; btn.textContent="Đang lưu..."; }
+    const result = row
+      ? await sb.from(EB2B_TABLES[key]).update(payload).eq("id", row.id)
+      : await sb.from(EB2B_TABLES[key]).insert(payload);
+    if(result.error){
+      if(btn) { btn.disabled=false; btn.textContent="Lưu"; }
+      eToast(`Lưu EB2B thất bại: ${result.error.message}`, "err"); return;
+    }
+    $e("#eb2bModalOverlay").classList.remove("show");
+    eToast(row ? "Đã cập nhật dữ liệu EB2B." : "Đã tạo dữ liệu EB2B.", "ok");
+    await eb2bLoad();
+  }
+
+  async function eb2bDelete(key, row){
+    const sb = activeDb(); if(!sb || !row) return;
+    const label = row.cr_id || row.test_case_id || row.release_id || row.brd_title || row.meeting_date || row.id;
+    const ok = async ()=>{
+      const result = await sb.from(EB2B_TABLES[key]).update({deleted_at:eNow(),deleted_by:eUser(),updated_at:eNow(),updated_by:eUser()}).eq("id",row.id);
+      if(result.error){ eToast("Xóa EB2B thất bại: " + result.error.message, "err"); return; }
+      eToast("Đã chuyển dữ liệu EB2B vào Recycle Bin.", "ok"); await eb2bLoad();
+    };
+    eb2bConfirm("Xóa dữ liệu EB2B?", `“${label}” sẽ được chuyển vào Recycle Bin EB2B.`, ok);
+  }
+
+  function eb2bRenderAdmin(){
+    const c = $e("#eb2bContent");
+    c.innerHTML = `<div class="eb2b-panel"><div class="eb2b-panel-head"><h3>Cấu hình riêng cho EB2B</h3><span class="eb2b-muted">Không đọc hoặc ghi các bảng cấu hình DMS.</span></div>
+      <div style="padding:14px"><div class="eb2b-config-grid" id="eb2bConfigGrid"></div></div></div>`;
+    const grid = $e("#eb2bConfigGrid");
+    Object.entries(EB2B_CONFIG).forEach(([key,def])=>{
+      const rows = EB2B.rows[key] || [];
+      const card = document.createElement("div"); card.className="eb2b-config-card";
+      card.innerHTML = `<h4>${def.label}</h4><div class="eb2b-config-add"><input placeholder="Thêm ${def.label}..." data-eb2b-config-input="${key}"><button class="btn btn-primary btn-sm" data-eb2b-config-add="${key}">Thêm</button></div>
+        <div>${rows.map(r=>`<div class="eb2b-config-row"><span>${eEsc(r.name)}${r.is_active===false?' <span class="eb2b-muted">(ẩn)</span>':''}</span><button class="btn btn-ghost btn-sm" data-eb2b-config-delete="${key}" data-eb2b-id="${r.id}">Ẩn</button></div>`).join("") || `<div class="eb2b-muted">Chưa có danh mục.</div>`}</div>`;
+      grid.appendChild(card);
+    });
+  }
+
+  async function eb2bAddConfig(key){
+    const input = $e(`[data-eb2b-config-input="${key}"]`), name = input?.value.trim();
+    if(!name) return;
+    const def = EB2B_CONFIG[key], sb=activeDb();
+    const payload = {name,sort_order:((EB2B.rows[key]||[]).length+1)*10,is_active:true};
+    if(key==="statuses" || key==="sub_statuses") payload.color=def.defaultColor;
+    const result = await sb.from(def.table).insert(payload);
+    if(result.error){ eToast("Không thêm được danh mục: "+result.error.message,"err"); return; }
+    await eb2bLoad();
+  }
+
+  async function eb2bHideConfig(key,id){
+    const def=EB2B_CONFIG[key], result=await activeDb().from(def.table).update({is_active:false}).eq("id",id);
+    if(result.error){eToast("Không cập nhật được danh mục: "+result.error.message,"err");return;}
+    await eb2bLoad();
+  }
+
+  async function eb2bRenderRecycle(){
+    const c=$e("#eb2bContent"), defs=[
+      ["cr","eb2b_cr_log","cr_id","CR Log"],["uat","eb2b_uat_testcase","test_case_id","UAT"],
+      ["release","eb2b_release_prd","release_id","Release"],["brd","eb2b_brd_records","brd_title","BRD"],
+      ["weekly_mom","eb2b_weekly_mom","meeting_date","Weekly MoM"]
+    ];
+    const results=await Promise.all(defs.map(async d=>{
+      const r=await activeDb().from(d[1]).select("*").not("deleted_at","is",null).order("deleted_at",{ascending:false});
+      return r.error?[]:(r.data||[]).map(x=>({...x,__kind:d[0],__table:d[1],__labelField:d[2],__label:d[3]}));
+    }));
+    const rows=results.flat().sort((a,b)=>new Date(b.deleted_at)-new Date(a.deleted_at));
+    c.innerHTML=`<div class="eb2b-panel"><div class="eb2b-panel-head"><h3>Recycle Bin EB2B</h3><span class="eb2b-muted">${rows.length} mục</span></div><div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>Loại</th><th>Mã / tiêu đề</th><th>Đã xóa lúc</th><th>Người xóa</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${eEsc(r.__label)}</td><td>${eEsc(r[r.__labelField]||r.id)}</td><td>${eEsc(r.deleted_at||"")}</td><td>${eEsc(r.deleted_by||"—")}</td><td><div class="eb2b-actions"><button class="btn btn-ghost btn-sm" data-eb2b-restore="${r.__table}" data-eb2b-id="${r.id}">Khôi phục</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-purge="${r.__table}" data-eb2b-id="${r.id}">Xóa vĩnh viễn</button></div></td></tr>`).join("")||`<tr><td colspan="5" class="eb2b-empty">Recycle Bin EB2B trống.</td></tr>`}</tbody></table></div></div>`;
+  }
+
+  async function eb2bRestore(table,id){
+    const r=await activeDb().from(table).update({deleted_at:null,deleted_by:null}).eq("id",id);
+    if(r.error){eToast("Khôi phục thất bại: "+r.error.message,"err");return;} eToast("Đã khôi phục dữ liệu EB2B.","ok"); await eb2bLoad(); eb2bRenderRecycle();
+  }
+  async function eb2bPurge(table,id){
+    const ok=async()=>{const r=await activeDb().from(table).delete().eq("id",id);if(r.error){eToast("Xóa vĩnh viễn thất bại: "+r.error.message,"err");return;}eToast("Đã xóa vĩnh viễn dữ liệu EB2B.","ok");eb2bRenderRecycle();};
+    eb2bConfirm("Xóa vĩnh viễn?", "Dữ liệu EB2B sẽ không thể khôi phục.", ok);
+  }
+
+  function eb2bEvents(){
+    document.addEventListener("click", ev=>{
+      const tab=ev.target.closest("[data-eb2b-tab]");
+      if(tab){ ev.preventDefault(); eb2bShow(tab.dataset.eb2bTab); return; }
+      const dmsNav = ev.target.closest(".nav-item[data-view]");
+      if(dmsNav){ eb2bHide(); return; }
+      const create=ev.target.closest("[data-eb2b-new]");
+      if(create){ eb2bOpenModal(create.dataset.eb2bNew,null); return; }
+      const action=ev.target.closest("[data-eb2b-act]");
+      if(action){
+        const key=action.closest("tr")?.querySelector("[data-eb2b-act]") ? action.dataset.eb2bAct : action.dataset.eb2bAct;
+        const map={cr:"cr",uat:"uat",release:"release",brd:"brd",weekly_mom:"weekly_mom"};
+        const rowKey=map[EB2B.activeTab]; const row=(EB2B.rows[rowKey]||[]).find(x=>String(x.id)===String(action.dataset.eb2bId));
+        if(action.dataset.eb2bAct==="edit" && row) eb2bOpenModal(rowKey,row);
+        if(action.dataset.eb2bAct==="delete" && row) eb2bDelete(rowKey,row);
+        return;
+      }
+      const add=ev.target.closest("[data-eb2b-config-add]");
+      if(add){eb2bAddConfig(add.dataset.eb2bConfigAdd);return;}
+      const hide=ev.target.closest("[data-eb2b-config-delete]");
+      if(hide){eb2bHideConfig(hide.dataset.eb2bConfigDelete,hide.dataset.eb2bId);return;}
+      const restore=ev.target.closest("[data-eb2b-restore]");
+      if(restore){eb2bRestore(restore.dataset.eb2bRestore,restore.dataset.eb2bId);return;}
+      const purge=ev.target.closest("[data-eb2b-purge]");
+      if(purge){eb2bPurge(purge.dataset.eb2bPurge,purge.dataset.eb2bId);return;}
+    });
+    document.addEventListener("keydown", ev=>{
+      if(ev.key==="Escape") $e("#eb2bModalOverlay")?.classList.remove("show");
+    });
+  }
+
+  function eb2bStart(){
+    if(!eb2bBuildShell()) return;
+    eb2bEvents();
+    const waitForSession = ()=>{
+      if(activeDb()){
+        eb2bLoad();
+        return;
+      }
+      window.setTimeout(waitForSession, 600);
+    };
+    waitForSession();
+  }
+
+  document.addEventListener("DOMContentLoaded", eb2bStart);
+})();
+</script>
 </body>
 </html>
