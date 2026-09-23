@@ -4484,8 +4484,7 @@ body.detail-nav-visible .modal-overlay.full .modal-head{
 .brd-ai-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 .brd-ai-status{ font-size:11.5px; color:#5c8583; }
 .brd-ai-status.err{ color:#c0392b; }
-.brd-ai-lang{ display:none; align-items:center; gap:6px; margin-right:auto; }
-.brd-ai-lang.show{ display:flex; }
+.brd-ai-lang{ display:flex; align-items:center; gap:6px; margin-right:auto; }
 .brd-ai-lang-label{ font-size:11px; color:#5c8583; }
 .brd-ai-lang-btns{ display:inline-flex; border:1px solid #bfe3e0; border-radius:8px; overflow:hidden; }
 .brd-ai-lang-btn{ border:none; background:#fff; color:#4f7a79; font-size:11.5px; font-weight:700; padding:4px 10px; cursor:pointer; }
@@ -13525,8 +13524,8 @@ function brdModalTemplate(v){
             <input type="file" id="brdAiFileInput" accept="image/*" multiple hidden>
           </div>
           <div class="brd-ai-actions">
-            <div class="brd-ai-lang" id="brdAiLang">
-              <span class="brd-ai-lang-label">Điền bằng:</span>
+            <div class="brd-ai-lang" id="brdAiLang" title="Chuyển tab để xem/gõ nội dung riêng cho từng ngôn ngữ — cả 2 bản VIE và ENG đều được lưu vào BRD này.">
+              <span class="brd-ai-lang-label">Ngôn ngữ nội dung:</span>
               <span class="brd-ai-lang-btns">
                 <button type="button" class="brd-ai-lang-btn active" id="brdAiLangVi" data-lang="vi">VIE</button>
                 <button type="button" class="brd-ai-lang-btn" id="brdAiLangEn" data-lang="en">ENG</button>
@@ -13642,7 +13641,8 @@ function brdModalTemplate(v){
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="brdModalCancel">Hủy</button>
-      <button class="btn btn-primary" id="brdModalSave">${isEdit? "Lưu thay đổi & Xuất Word" : "Tạo BRD & Xuất Word"}</button>
+      <button class="btn btn-ghost" id="brdModalExportOnly" type="button">⬇ Chỉ xuất Word</button>
+      <button class="btn btn-primary" id="brdModalSave">${isEdit? "Lưu thay đổi" : "Tạo BRD"}</button>
     </div>
   </div>`;
 }
@@ -13707,14 +13707,15 @@ function brdLinesFromArray(arr){
 }
 
 // Đổ dữ liệu song ngữ đã lưu ở STATE.brdAiBilingual vào form theo ngôn ngữ được chọn
-// (lang: "vi" | "en"), KHÔNG gọi lại AI. Field nào bản ngôn ngữ đó rỗng thì bỏ qua,
-// giữ nguyên nội dung người dùng đã tự sửa trong form.
+// (lang: "vi" | "en"), KHÔNG gọi lại AI. Luôn set lại từng field theo đúng bản ngôn ngữ
+// đang chọn (kể cả rỗng) để form phản ánh đúng nội dung của ngôn ngữ đó — nếu chưa có
+// bản dịch thì để trống cho người dùng tự gõ (không còn lẫn nội dung ngôn ngữ khác).
 function applyBrdAiLang(lang){
+  if(!STATE.brdAiBilingual) STATE.brdAiBilingual = {};
   const d = STATE.brdAiBilingual;
-  if(!d) return;
   STATE.brdAiLang = lang;
 
-  const setVal = (id, val)=>{ const el = $(id); if(el && val!=null && String(val).trim()!==""){ el.value = val; el.dispatchEvent(new Event("input")); } };
+  const setVal = (id, val)=>{ const el = $(id); if(el){ el.value = val || ""; el.dispatchEvent(new Event("input")); } };
   const pick = (field)=> (d[field] && d[field][lang]) || "";
   const pickArr = (field)=> (d[field] && d[field][lang]) || [];
 
@@ -13785,26 +13786,32 @@ function bindBrdAiPanel(overlay, v){
   const thumbs = $("#brdAiThumbs", overlay);
   STATE.brdAiImages = [];
 
-  // Nếu đang sửa 1 BRD đã lưu và có sẵn dữ liệu song ngữ (bilingual_content) từ lần
-  // AI phân tích trước -> khôi phục lại để có thể đổi VIE/ENG mà KHÔNG cần chạy AI lại.
+  // Nếu đang sửa 1 BRD đã lưu và có sẵn dữ liệu song ngữ (bilingual_content, do AI điền
+  // hoặc do người dùng tự gõ tay cả 2 bản trước đó) -> khôi phục lại để đổi VIE/ENG được
+  // ngay, không cần chạy AI lại. Nếu chưa có, khởi tạo rỗng để vẫn ghi nhận được song ngữ
+  // dù người dùng chỉ gõ tay, không dùng AI.
   if(v && v.bilingual_content){
     STATE.brdAiBilingual = v.bilingual_content;
     STATE.brdAiLang = v.bilingual_lang || "vi";
-    $("#brdAiLang", overlay)?.classList.add("show");
-    $("#brdAiLangVi", overlay)?.classList.toggle("active", STATE.brdAiLang === "vi");
-    $("#brdAiLangEn", overlay)?.classList.toggle("active", STATE.brdAiLang === "en");
     // Không gọi applyBrdAiLang() ở đây: các field đã được brdModalTemplate(v) đổ đúng
     // giá trị đã lưu (đúng ngôn ngữ đã chọn lần trước) rồi, gọi lại sẽ ghi đè vô ích.
   } else {
-    STATE.brdAiBilingual = null;
+    STATE.brdAiBilingual = {};
     STATE.brdAiLang = "vi";
   }
+  $("#brdAiLangVi", overlay)?.classList.toggle("active", STATE.brdAiLang === "vi");
+  $("#brdAiLangEn", overlay)?.classList.toggle("active", STATE.brdAiLang === "en");
   renderBrdAiThumbs();
 
+  // Cho phép đổi VIE/ENG bất cứ lúc nào, kể cả khi chưa chạy AI: nội dung đang gõ
+  // dở ở ngôn ngữ hiện tại được lưu tạm vào bilingual_content trước khi chuyển, để
+  // không bị mất, rồi mới đổ dữ liệu (hoặc để trống) của ngôn ngữ vừa chọn.
   $("#brdAiLang", overlay).addEventListener("click", (e)=>{
     const btn = e.target.closest(".brd-ai-lang-btn"); if(!btn) return;
-    if(!STATE.brdAiBilingual){ toast("Chưa có dữ liệu AI, hãy bấm \"Phân tích với AI\" trước.", "err"); return; }
-    applyBrdAiLang(btn.dataset.lang);
+    const lang = btn.dataset.lang;
+    if(lang === STATE.brdAiLang) return;
+    syncActiveLangIntoBilingual();
+    applyBrdAiLang(lang);
   });
 
   drop.addEventListener("click", (e)=>{ if(e.target.closest("[data-rm-img]")) return; input.click(); });
@@ -13866,6 +13873,7 @@ function openBrdModal(v){
     renderBrdVersionRows();
   });
   $("#brdModalSave").addEventListener("click", ()=> saveBrd(overlay, !!v));
+  $("#brdModalExportOnly").addEventListener("click", exportBrdWordOnly);
 }
 
 // Trước khi lưu: ghi lại mọi chỉnh sửa tay của người dùng (nếu có) vào đúng nhánh
@@ -13889,13 +13897,15 @@ function syncActiveLangIntoBilingual(){
   setArr("reviewer_feedback", $("#b_reviewer_feedback").value);
 }
 
-async function saveBrd(overlay, isEdit){
+// Gom toàn bộ giá trị đang có trên form BRD thành 1 object payload, dùng chung
+// cho cả "Lưu thay đổi" (ghi Supabase) và "Chỉ xuất Word" (không ghi DB).
+function buildBrdPayloadFromForm(){
   const title = $("#b_title").value.trim();
   const system = $("#b_system").value.trim();
-  if(!title || !system){ toast("Vui lòng nhập Tiêu đề BRD và Hệ thống", "err"); return; }
+  if(!title || !system){ toast("Vui lòng nhập Tiêu đề BRD và Hệ thống", "err"); return null; }
   const cleanRows = STATE.brdVersionRows.filter(r=> Object.values(r).some(x=> String(x||"").trim()));
   syncActiveLangIntoBilingual();
-  const payload = {
+  return {
     cr_id: $("#b_cr_id").value || null,
     brd_title: title,
     system_name: system,
@@ -13917,6 +13927,27 @@ async function saveBrd(overlay, isEdit){
     signoff_signature: $("#b_signoff_signature").value.trim(),
     updated_at: new Date().toISOString(),
   };
+}
+
+// Nút "Chỉ xuất Word": xuất file .docx trực tiếp từ dữ liệu đang có trên form,
+// KHÔNG ghi vào Supabase — dùng khi chỉ muốn xem thử file, không muốn lưu bản nháp.
+async function exportBrdWordOnly(){
+  const payload = buildBrdPayloadFromForm();
+  if(!payload) return;
+  const btn = $("#brdModalExportOnly"); if(!btn) return;
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = "Đang xuất...";
+  try{
+    await generateBrdDocx({ ...payload, id: STATE.editingBrdId });
+  }catch(e){
+    toast("Tạo file Word thất bại: " + e.message, "err");
+  }finally{
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+async function saveBrd(overlay, isEdit){
+  const payload = buildBrdPayloadFromForm();
+  if(!payload) return;
 
   const btn = $("#brdModalSave"); btn.disabled = true; btn.textContent = "Đang lưu...";
   let error, data;
@@ -13927,17 +13958,12 @@ async function saveBrd(overlay, isEdit){
     payload.created_by = STATE.userEmail || null;
     ({ data, error } = await STATE.sb.from("brd_records").insert(payload).select().single());
   }
-  btn.disabled = false; btn.textContent = isEdit? "Lưu thay đổi & Xuất Word" : "Tạo BRD & Xuất Word";
+  btn.disabled = false; btn.textContent = isEdit? "Lưu thay đổi" : "Tạo BRD";
   if(error){ toast("Lưu BRD thất bại: " + error.message, "err"); return; }
   toast(isEdit? "Đã cập nhật BRD" : "Đã tạo BRD mới", "ok");
   overlay.classList.remove("show");
   await fetchBrdList();
   renderBrdList();
-  try{
-    await generateBrdDocx(data.id ? data : { ...payload, id: STATE.editingBrdId });
-  }catch(e){
-    toast("Đã lưu BRD nhưng tạo file Word thất bại: " + e.message, "err");
-  }
 }
 
 async function deleteBrd(v){
