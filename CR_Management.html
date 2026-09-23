@@ -569,25 +569,55 @@ body.focus-mode .view#view-release .rel-kpis{ display:none; }
 @keyframes crFilterMenuIn{ from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)} }
 
 /* Inline editable fields keep the table scannable while making the four
-   operational fields editable without opening the full CR modal. */
+   operational fields editable without opening the full CR modal.
+   Rebuilt as a custom trigger + portal menu (instead of a native <select>)
+   so the open list can be fully styled — native <select> popups cannot be
+   restyled consistently across browsers/OS, which is what made the old
+   dropdown look inconsistent/unpolished. Visual language matches the
+   existing .cr-filter-menu toolbar dropdowns for a consistent look. */
 .inline-edit-cell{ overflow:visible!important; }
-.inline-cr-select{
-  width:100%; min-width:110px; max-width:100%; padding:6px 24px 6px 24px; border:1px solid transparent;
-  border-radius:8px; color:#244b60; background-color:transparent; font-size:12px; font-weight:750;
-  background-repeat:no-repeat; background-position:10px 50%; background-size:6px 6px;
-  cursor:pointer; transition:all .15s ease;
+.cr-dropdown-trigger{
+  display:flex; align-items:center; gap:7px; width:100%; min-width:110px; max-width:100%;
+  padding:6px 10px; border:1px solid transparent; border-radius:8px;
+  color:#244b60; background-color:transparent; font: inherit; font-size:12px; font-weight:750;
+  cursor:pointer; transition:all .15s ease; text-align:left;
 }
-.inline-cr-select:hover,.inline-cr-select:focus{
+.cr-dropdown-trigger:hover,.cr-dropdown-trigger:focus-visible,.cr-dropdown-trigger.is-open{
   border-color:#8acdd0; background-color:#f2fbfb; outline:none; box-shadow:0 0 0 3px rgba(23,159,160,.08);
 }
-.inline-cr-select.is-saving{ opacity:.55; pointer-events:none; }
-.inline-cr-select.is-saved{ animation:inlineSaved .55s ease; }
+.cr-dropdown-dot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
+.cr-dropdown-label{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cr-dropdown-caret{ width:13px; height:13px; flex:0 0 auto; color:#8aa0aa; transition:transform .15s ease; }
+.cr-dropdown-trigger.is-open .cr-dropdown-caret{ transform:rotate(180deg); }
+.cr-dropdown-trigger.is-saving{ opacity:.55; pointer-events:none; }
+.cr-dropdown-trigger.is-saved{ animation:inlineSaved .55s ease; }
 @keyframes inlineSaved{ 0%{background:#dff8ee} 100%{background:transparent} }
 .cr-card-inline-fields{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:10px; }
 .cr-card-inline-fields label{ display:grid; gap:4px; color:#77919e; font-size:9px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
-.cr-card-inline-fields .inline-cr-select{ min-width:0; padding:7px 22px 7px 22px; border-color:#dcebed; background:#fbfeff; font-size:11px; }
+.cr-card-inline-fields .cr-dropdown-trigger{ min-width:0; padding:7px 10px; border-color:#dcebed; background:#fbfeff; font-size:11px; }
 .inline-edit-cell{ padding-left:12px!important; padding-right:12px!important; }
-#crTable tbody td.inline-edit-cell .inline-cr-select{ min-height:28px; font-size:11.5px; letter-spacing:.005em; }
+#crTable tbody td.inline-edit-cell .cr-dropdown-trigger{ min-height:28px; font-size:11.5px; letter-spacing:.005em; }
+
+/* Portal menu: appended straight to <body> as position:fixed so it is never
+   clipped by the table's own horizontal/vertical scroll container — a plain
+   position:absolute menu nested in a scrolling cell would get cut off for
+   rows near the table's edges. Positioned in JS (positionInlineDropdownMenu). */
+.cr-dropdown-menu{
+  position:fixed; z-index:400; min-width:170px; max-width:280px; max-height:320px;
+  overflow:auto; border:1px solid #d5e6ea; border-radius:12px; background:#fff;
+  box-shadow:0 16px 36px rgba(21,63,83,.18); padding:6px; animation:crFilterMenuIn .14s ease;
+}
+.cr-dropdown-option{
+  display:flex; align-items:center; gap:9px; padding:8px 9px; border-radius:8px;
+  font-size:12.5px; font-weight:650; cursor:pointer; transition:background .12s ease;
+  color:var(--opt-text,#3b5968);
+}
+.cr-dropdown-option:hover{ background:var(--opt-bg,#f0f8f8); }
+.cr-dropdown-option.is-selected{ background:var(--opt-bg,#effafa); font-weight:800; }
+.cr-dropdown-option-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+.cr-dropdown-option span{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cr-dropdown-check{ width:14px; height:14px; flex:0 0 auto; }
+.cr-dropdown-option-empty{ color:#8aa0aa; font-weight:650; }
 .view .cr-filter-trigger{ color:#315267; }
 .view .cr-filter-value{ color:#183b50; }
 @media(max-width:980px){
@@ -6616,8 +6646,10 @@ function renderColgroup(kind, keys){
    A manually resized column is locked by its persisted width and is left
    untouched; double-clicking its resize handle returns it to auto-fit mode. */
 function autoFitCrColumns(){
-  const keys = ["category","priority","status","sub_status"];
+  const dropdownKeys = ["category","priority","status","sub_status"];
+  const plainKeys = ["requester"];
   const values = {
+    requester: STATE.crList.map(c=>c.requester),
     category: [...(CR_LISTS.category || []), ...STATE.crList.map(c=>c.category)],
     priority: [...(CR_LISTS.priority || []), ...STATE.crList.map(c=>c.priority)],
     status: [...(CR_LISTS.status || []), ...STATE.crList.map(c=>c.status)],
@@ -6627,22 +6659,26 @@ function autoFitCrColumns(){
   try{
     const canvas = document.createElement("canvas");
     ctx = canvas.getContext("2d");
-    if(ctx) ctx.font = "750 11.5px Inter, system-ui, sans-serif";
   }catch(_){}
+  // "overhead" = padding + (chấm màu + mũi tên caret cho ô dropdown, nếu có).
+  // Nới rộng hơn mức cũ (48px) vì trước đây bị chặn quá thấp khiến chữ dài
+  // như "Infrastructure"/"New Feature" bị cắt (đúng lỗi người dùng báo).
   const limits = {
-    category: [118, 190],
-    priority: [100, 145],
-    status: [126, 205],
-    sub_status: [148, 240]
+    requester:  { min:100, max:200, overhead:28,  bold:false },
+    category:   { min:130, max:230, overhead:60,  bold:true  },
+    priority:   { min:110, max:180, overhead:60,  bold:true  },
+    status:     { min:140, max:240, overhead:60,  bold:true  },
+    sub_status: { min:160, max:280, overhead:60,  bold:true  },
   };
-  keys.forEach(key=>{
+  [...plainKeys, ...dropdownKeys].forEach(key=>{
     if(STATE.colWidthLocks?.cr?.[key]) return;
+    const cfg = limits[key];
+    if(ctx) ctx.font = `${cfg.bold ? "750" : "600"} 11.5px Inter, system-ui, sans-serif`;
     const textValues = values[key].filter(Boolean).map(String);
     const longest = [CR_COLUMNS.find(c=>c.key===key)?.label || "", ...textValues]
       .sort((a,b)=>b.length-a.length)[0] || "";
-    const textWidth = ctx ? ctx.measureText(longest).width : longest.length * 7;
-    const [min, max] = limits[key];
-    STATE.colWidths.cr[key] = Math.round(Math.min(max, Math.max(min, textWidth + 48)));
+    const textWidth = ctx ? ctx.measureText(longest).width : longest.length * 7.2;
+    STATE.colWidths.cr[key] = Math.round(Math.min(cfg.max, Math.max(cfg.min, textWidth + cfg.overhead)));
   });
 }
 
@@ -9668,45 +9704,139 @@ function crDocumentStatusLabel(c, type){
 }
 
 function inlineCrVisual(field, value){
+  // Dùng ĐÚNG cặp màu admin đã cấu hình (background_color/text_color), giống
+  // hệt cách badge()/badgeColors() đang hiển thị ở mọi nơi khác trong app —
+  // trước đây hàm này tự pha loãng background xuống 14% alpha nên trên bảng
+  // CR Log màu luôn nhạt/nhòe, không khớp màu admin đã chọn trong "Quản Trị
+  // Dữ Liệu" dù dữ liệu màu đọc vào đã đúng.
   const item = (field === "status" || field === "sub_status") ? colorItem(field, value) : null;
-  const accent = normalizeHexColor(
-    item?.background_color,
-    normalizeHexColor(COLOR[field]?.[value], textColorFor(field, value))
-  );
-  const r = parseInt(accent.slice(1,3), 16) / 255;
-  const g = parseInt(accent.slice(3,5), 16) / 255;
-  const b = parseInt(accent.slice(5,7), 16) / 255;
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  const text = luminance > .58 ? "#315569" : accent;
+  const text = textColorFor(field, value);
+  const background = normalizeHexColor(item?.background_color, "") || hexToRgba(text, .14);
   return {
-    accent,
+    accent: text,
     text,
-    background: hexToRgba(accent, .14),
-    border: hexToRgba(accent, .38)
+    background,
+    border: hexToRgba(text, .35)
   };
 }
 
 function inlineCrSelectHtml(field, cr){
+  const selectedValue = cr[field] || "";
+  const colors = selectedValue ? inlineCrVisual(field, selectedValue) : null;
+  const style = colors
+    ? `background-color:${colors.background};color:${colors.text};border-color:${colors.border};`
+    : "";
+  const label = selectedValue ? esc(selectedValue) : "— Chọn —";
+  return `<button type="button" class="cr-dropdown-trigger" style="${style}" data-inline-field="${field}" data-cr="${esc(cr.cr_id)}" aria-haspopup="listbox" aria-expanded="false" aria-label="Cập nhật ${field}">
+    ${colors ? `<span class="cr-dropdown-dot" style="background:${colors.text}"></span>` : ""}
+    <span class="cr-dropdown-label">${label}</span>
+    <svg class="cr-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+  </button>`;
+}
+
+/* ---------------------------------------------------------------------------
+   Custom dropdown "portal" cho 4 ô inline-edit (Category/Priority/Status/
+   Sub-Status) trong bảng CR Log — thay cho <select> gốc của trình duyệt vì
+   phần popup của <select> KHÔNG thể tùy biến giao diện nhất quán giữa các
+   trình duyệt/OS. Menu được gắn thẳng vào <body> (position:fixed) thay vì
+   nằm lồng trong ô bảng, để không bị cắt bởi vùng cuộn ngang/dọc của bảng.
+--------------------------------------------------------------------------- */
+let activeInlineDropdown = null; // { trigger, menu, field, crId }
+
+function positionInlineDropdownMenu(trigger, menu){
+  const rect = trigger.getBoundingClientRect();
+  menu.style.minWidth = Math.max(170, rect.width) + "px";
+  const menuHeight = menu.offsetHeight;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const openUp = spaceBelow < menuHeight + 12 && rect.top > menuHeight + 12;
+  const menuWidth = menu.offsetWidth;
+  const left = Math.min(rect.left, window.innerWidth - menuWidth - 8);
+  menu.style.left = Math.max(8, left) + "px";
+  menu.style.top = (openUp ? (rect.top - menuHeight - 6) : (rect.bottom + 6)) + "px";
+}
+
+function closeInlineDropdown(){
+  if(!activeInlineDropdown) return;
+  const { trigger, menu } = activeInlineDropdown;
+  menu.remove();
+  trigger.setAttribute("aria-expanded", "false");
+  trigger.classList.remove("is-open");
+  activeInlineDropdown = null;
+  window.removeEventListener("scroll", handleInlineDropdownReposition, true);
+  window.removeEventListener("resize", handleInlineDropdownReposition);
+}
+
+function handleInlineDropdownReposition(){
+  if(!activeInlineDropdown) return;
+  positionInlineDropdownMenu(activeInlineDropdown.trigger, activeInlineDropdown.menu);
+}
+
+function openInlineDropdown(trigger){
+  const field = trigger.dataset.inlineField;
+  const crId = trigger.dataset.cr;
+  const cr = STATE.crList.find(item=>String(item.cr_id) === String(crId));
+  if(!cr) return;
+  closeInlineDropdown();
+
   const listKey = field === "sub_status" ? "subStatus" : field;
   const selectedValue = cr[field] || "";
+  const allowEmpty = field === "sub_status" || field === "category" || field === "priority";
   const options = Array.from(new Set([
     ...(Array.isArray(CR_LISTS[listKey]) ? CR_LISTS[listKey] : []),
     selectedValue
-  ].filter(value=>value !== undefined)));
-  const allowEmpty = field === "sub_status" || field === "category" || field === "priority";
-  const selectedColors = selectedValue ? inlineCrVisual(field, selectedValue) : null;
-  const selectedStyle = selectedColors
-    ? `--inline-accent:${selectedColors.accent};background-color:${selectedColors.background};background-image:radial-gradient(circle at 11px 50%,${selectedColors.accent} 0 3px,transparent 3.5px);color:${selectedColors.text};border-color:${selectedColors.border};`
-    : "";
-  return `<select class="inline-cr-select" style="${selectedStyle}" data-inline-field="${field}" data-cr="${esc(cr.cr_id)}" aria-label="Cập nhật ${field}">
-    ${allowEmpty ? `<option value="">— Chọn —</option>` : ""}
-    ${options.filter(value=>value !== "").map(value=>{
+  ].filter(value=>value !== undefined && value !== "")));
+
+  const menu = document.createElement("div");
+  menu.className = "cr-dropdown-menu";
+  menu.setAttribute("role", "listbox");
+  menu.innerHTML =
+    (allowEmpty ? `<div class="cr-dropdown-option cr-dropdown-option-empty" role="option" data-value="">— Chọn —</div>` : "") +
+    options.map(value=>{
       const colors = inlineCrVisual(field, value);
-      const optionStyle = `color:${colors.text};background:${colors.background};`;
-      return `<option value="${esc(value)}" style="${optionStyle}" ${String(value) === String(selectedValue) ? "selected" : ""}>${esc(value)}</option>`;
-    }).join("")}
-  </select>`;
+      const selected = String(value) === String(selectedValue);
+      return `<div class="cr-dropdown-option ${selected ? "is-selected" : ""}" role="option" data-value="${esc(value)}" style="--opt-text:${colors.text};--opt-bg:${colors.background};">
+        <span class="cr-dropdown-option-dot" style="background:${colors.text}"></span>
+        <span>${esc(value)}</span>
+        ${selected ? `<svg class="cr-dropdown-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>` : ""}
+      </div>`;
+    }).join("");
+
+  document.body.appendChild(menu);
+  positionInlineDropdownMenu(trigger, menu);
+  trigger.setAttribute("aria-expanded", "true");
+  trigger.classList.add("is-open");
+  activeInlineDropdown = { trigger, menu, field, crId };
+
+  $all(".cr-dropdown-option", menu).forEach(opt=>{
+    opt.addEventListener("click", e=>{
+      e.stopPropagation();
+      const value = opt.dataset.value;
+      closeInlineDropdown();
+      updateCrInlineField(crId, field, value, trigger);
+    });
+  });
+
+  window.addEventListener("scroll", handleInlineDropdownReposition, true);
+  window.addEventListener("resize", handleInlineDropdownReposition);
 }
+
+function toggleInlineDropdown(trigger){
+  if(activeInlineDropdown && activeInlineDropdown.trigger === trigger){
+    closeInlineDropdown();
+  } else {
+    openInlineDropdown(trigger);
+  }
+}
+
+document.addEventListener("click", e=>{
+  if(!activeInlineDropdown) return;
+  if(activeInlineDropdown.menu.contains(e.target)) return;
+  if(e.target.closest(".cr-dropdown-trigger") === activeInlineDropdown.trigger) return;
+  closeInlineDropdown();
+});
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape") closeInlineDropdown();
+});
 
 async function updateCrInlineField(crId, field, value, select){
   const allowed = new Set(["category","priority","status","sub_status"]);
@@ -9796,6 +9926,10 @@ function renderCrThead(){
 }
 
 function renderCrTable(){
+  // Đóng dropdown inline đang mở (nếu có) trước khi vẽ lại bảng — tránh menu
+  // nổi bị "mồ côi" (trigger cũ đã bị gỡ khỏi DOM do render lại, ví dụ khi
+  // có cập nhật realtime từ người khác trong lúc đang mở dropdown).
+  closeInlineDropdown();
   renderCrKpis();
   autoFitCrColumns();
   renderCrThead();
@@ -9844,11 +9978,10 @@ function renderCrTable(){
     </tr>`;
   }).join("");
 
-  $all("#crTableBody [data-inline-field]").forEach(select=>{
-    select.addEventListener("click", e=> e.stopPropagation());
-    select.addEventListener("change", e=>{
+  $all("#crTableBody [data-inline-field]").forEach(trigger=>{
+    trigger.addEventListener("click", e=>{
       e.stopPropagation();
-      updateCrInlineField(select.dataset.cr, select.dataset.inlineField, select.value, select);
+      toggleInlineDropdown(trigger);
     });
   });
   $all("#crTableBody tr[data-cr]").forEach(tr=>{
@@ -9920,11 +10053,10 @@ function renderCrMobileList(rows){
       </div>
     </div>`;
   }).join("");
-  $all("#crMobileList [data-inline-field]").forEach(select=>{
-    select.addEventListener("click", e=> e.stopPropagation());
-    select.addEventListener("change", e=>{
+  $all("#crMobileList [data-inline-field]").forEach(trigger=>{
+    trigger.addEventListener("click", e=>{
       e.stopPropagation();
-      updateCrInlineField(select.dataset.cr, select.dataset.inlineField, select.value, select);
+      toggleInlineDropdown(trigger);
     });
   });
   $all("#crMobileList .cr-card").forEach(card=>{
