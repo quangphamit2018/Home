@@ -16338,6 +16338,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      uatSelection: new Set(),
      uatSort: {key:"created_at", dir:"desc"},
      editingUatId: null,
+     releaseFilters: {cr:"", status:"", environment:"", owner:"", search:""},
+     releaseColumns: {release_id:true, release_name:true, environment:true, planned_date:true, actual_date:true, status:true, checklist_golive:true, release_owner:true, signoff_by:true, signoff_date:true},
+     releaseDensity: localStorage.getItem("eb2bReleaseDensity") || "comfortable",
+     releaseSelection: new Set(),
+     weeklyMomExpanded: {},
+     weeklyMomSort: {},
     loading: false,
     ready: false
   };
@@ -17346,7 +17352,127 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     ];
   }
 
+  function eb2bReleaseBadge(value){
+    const v = String(value || "").trim();
+    if(!v) return `<span class="badge" style="background:rgba(255,255,255,.06);color:var(--text-faint)"><span class="dot" style="background:var(--text-faint)"></span>—</span>`;
+    const colors = {
+      "Planned":["#e8f0ff","#3569c8"],"In Progress":["#e8f7f6","#087d82"],
+      "Released":["#e7f7ed","#147a48"],"Completed":["#e7f7ed","#147a48"],
+      "Rolled Back":["#fff0ef","#b54b45"],"Yes":["#e7f7ed","#147a48"],
+      "No":["#fff0ef","#b54b45"],"Partial":["#fff6df","#9a6b16"]
+    }[v] || ["#eef2f5","#5f7484"];
+    return `<span class="badge" style="background:${colors[0]};color:${colors[1]};border:1px solid ${colors[1]}33"><span class="dot" style="background:${colors[1]}"></span>${eEsc(v)}</span>`;
+  }
+
+  function eb2bKpiCard(label, value, foot, cls="", pct=null){
+    return `<div class="kpi-card ${cls}">
+      <div class="kpi-top"><div class="kpi-label">${eEsc(label)}</div>${pct !== null ? `<span class="kpi-pct">${pct}%</span>` : ""}</div>
+      <div class="kpi-value">${value}</div>${foot ? `<div class="kpi-foot">${eEsc(foot)}</div>` : ""}
+    </div>`;
+  }
+
+  function eb2bReleaseRows(){
+    const f = EB2B.releaseFilters;
+    return EB2B.rows.release.filter(r=>{
+      if(f.cr && r.cr_id !== f.cr) return false;
+      if(f.status && r.status !== f.status) return false;
+      if(f.environment && r.environment !== f.environment) return false;
+      if(f.owner && r.release_owner !== f.owner) return false;
+      if(f.search){
+        const hay = [r.cr_id,r.release_id,r.release_name,r.environment,r.status,r.checklist_golive,
+          r.release_owner,r.signoff_by,r.features,r.deploy_plan,r.rollback_plan,r.note].join(" ").toLowerCase();
+        if(!hay.includes(f.search)) return false;
+      }
+      return true;
+    });
+  }
+
+  function eb2bReleaseCell(key, r){
+    if(key==="release_id") return `<td class="cell-id"><span class="id-chip">${eEsc(r.release_id || "—")}</span></td>`;
+    if(key==="release_name") return `<td class="cell-title" title="${eEsc(r.release_name || "")}">${eEsc(r.release_name || "—")}</td>`;
+    if(key==="environment") return `<td class="cell-dim">${eEsc(r.environment || "—")}</td>`;
+    if(key==="planned_date") return `<td class="cell-dim">${eEsc(r.planned_date || "—")}</td>`;
+    if(key==="actual_date") return `<td class="cell-dim">${eEsc(r.actual_date || "—")}</td>`;
+    if(key==="status") return `<td>${eb2bReleaseBadge(r.status)}</td>`;
+    if(key==="checklist_golive") return `<td>${eb2bReleaseBadge(r.checklist_golive || "—")}</td>`;
+    if(key==="release_owner") return `<td class="cell-dim">${eEsc(r.release_owner || "—")}</td>`;
+    if(key==="signoff_by") return `<td class="cell-dim">${eEsc(r.signoff_by || "—")}</td>`;
+    if(key==="signoff_date") return `<td class="cell-dim">${eEsc(r.signoff_date || "—")}</td>`;
+    return "";
+  }
+
+  function eb2bRenderRelease(){
+    const c = $e("#eb2bContent");
+    const all = EB2B.rows.release;
+    const rows = eb2bReleaseRows();
+    const visible = Object.entries(EB2B.releaseColumns).filter(([,on])=>on).map(([key])=>key);
+    const completed = all.filter(r=>["Released","Completed"].includes(r.status)).length;
+    const active = all.filter(r=>r.status === "In Progress").length;
+    const overdue = all.filter(r=>r.planned_date && !r.actual_date && !["Released","Completed","Rolled Back"].includes(r.status) && r.planned_date < eNow().slice(0,10)).length;
+    const pct = n => all.length ? Math.round(n / all.length * 100) : 0;
+    const crOptions = [...new Set(all.map(r=>r.cr_id).filter(Boolean))].sort();
+    const envOptions = [...new Set(all.map(r=>r.environment).filter(Boolean))].sort();
+    const ownerOptions = [...new Set(all.map(r=>r.release_owner).filter(Boolean))].sort();
+    const option = (value,label="Tất cả")=>`<option value="${eEsc(value)}" ${value===label?"":""}>${eEsc(label)}</option>`;
+    c.innerHTML = `<div class="crlog-shell release-shell">
+      <div class="crlog-kpis rel-kpis" id="eb2bRelKpis">
+        ${eb2bKpiCard("Tổng số Release",all.length,"Toàn bộ release package đã ghi nhận")}
+        ${eb2bKpiCard("Đã hoàn tất",completed,"Release status Released / Completed","success",pct(completed))}
+        ${eb2bKpiCard("Đang triển khai",active,"Release status In Progress","accent",pct(active))}
+        ${eb2bKpiCard("Quá hạn",overdue,"Đã qua ngày dự kiến","danger",pct(overdue))}
+      </div>
+      <div class="list-panel crlog-panel release-panel">
+        <div class="list-panel-head">
+          <div class="list-panel-count"><b>${rows.length}</b> Release</div>
+          <div class="table-toolbar" id="eb2bRelToolbar">
+            <div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bRelSearch" value="${eEsc(EB2B.releaseFilters.search)}" placeholder="Tìm Release, version, owner..."></div>
+            <div class="filter-chip"><span>CR ID</span><select id="eb2bRelFilterCr"><option value="">Tất cả</option>${crOptions.map(v=>`<option value="${eEsc(v)}" ${v===EB2B.releaseFilters.cr?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div>
+            <div class="filter-chip"><span>Trạng thái</span><select id="eb2bRelFilterStatus"><option value="">Tất cả</option>${["Planned","In Progress","Released","Rolled Back"].map(v=>`<option value="${v}" ${v===EB2B.releaseFilters.status?"selected":""}>${v}</option>`).join("")}</select></div>
+            <div class="tb-dropdown" data-dd-root="eb2bRelMore"><button class="btn btn-ghost btn-sm tb-btn" data-eb2b-rel-menu="more" type="button">Lọc thêm<span class="tb-badge hidden" id="eb2bRelMoreBadge">0</span></button>
+              <div class="tb-menu" id="eb2bRelMoreMenu"><div class="tb-menu-item-label">Môi trường</div><select id="eb2bRelFilterEnvironment"><option value="">Tất cả</option>${envOptions.map(v=>`<option value="${eEsc(v)}" ${v===EB2B.releaseFilters.environment?"selected":""}>${eEsc(v)}</option>`).join("")}</select><div class="tb-menu-divider"></div><div class="tb-menu-item-label">Release Owner</div><select id="eb2bRelFilterOwner"><option value="">Tất cả</option>${ownerOptions.map(v=>`<option value="${eEsc(v)}" ${v===EB2B.releaseFilters.owner?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div>
+            </div>
+            <div class="chip-clear" id="eb2bRelClear">Xóa lọc</div>
+            <div class="tb-dropdown"><button class="btn btn-ghost btn-sm tb-btn" data-eb2b-rel-menu="columns" type="button">Columns</button><div class="tb-menu right" id="eb2bRelColumns"><div class="tb-menu-item-label">Hiển thị cột</div>${["release_id","release_name","environment","planned_date","actual_date","status","checklist_golive","release_owner","signoff_by","signoff_date"].map(k=>`<label class="tb-checkbox-row"><input type="checkbox" data-eb2b-rel-col="${k}" ${EB2B.releaseColumns[k]?"checked":""}> ${eEsc({release_id:"Release ID",release_name:"Tên Release / Version",environment:"Môi trường",planned_date:"Ngày dự kiến",actual_date:"Ngày thực tế",status:"Trạng thái",checklist_golive:"Go-live Checklist",release_owner:"Release Owner",signoff_by:"Sign-off by",signoff_date:"Ngày sign-off"}[k])}</label>`).join("")}</div></div>
+            <div class="tb-dropdown"><button class="btn btn-ghost btn-sm tb-btn" data-eb2b-rel-menu="density" type="button">Density</button><div class="tb-menu right" id="eb2bRelDensity"><label class="tb-radio-row"><input type="radio" name="eb2bReleaseDensity" value="compact" ${EB2B.releaseDensity==="compact"?"checked":""}> Compact</label><label class="tb-radio-row"><input type="radio" name="eb2bReleaseDensity" value="comfortable" ${EB2B.releaseDensity==="comfortable"?"checked":""}> Comfortable</label><label class="tb-radio-row"><input type="radio" name="eb2bReleaseDensity" value="spacious" ${EB2B.releaseDensity==="spacious"?"checked":""}> Spacious</label></div></div>
+            <button class="btn btn-ghost btn-sm tb-btn" id="eb2bRelFocus" type="button" title="Chế độ toàn màn hình">⛶ Focus</button><button class="btn btn-primary btn-sm" data-eb2b-new="release" type="button">＋ Thêm Release</button>
+          </div>
+        </div>
+        <div class="bulk-bar hidden"><span><b>0</b> đã chọn</span></div>
+        <div class="crlog-table-outer"><div class="table-wrap crlog-table-wrap" id="eb2bRelTableWrap"><table id="eb2bRelTable" class="density-${EB2B.releaseDensity}"><thead><tr><th class="col-check"> </th><th>CR ID</th>${visible.map(k=>`<th>${eEsc({release_id:"Release ID",release_name:"Tên Release / Version",environment:"Môi trường",planned_date:"Ngày dự kiến",actual_date:"Ngày thực tế",status:"Trạng thái",checklist_golive:"Go-live Checklist",release_owner:"Release Owner",signoff_by:"Sign-off by",signoff_date:"Ngày sign-off"}[k])}</th>`).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length ? rows.map(r=>`<tr data-eb2b-rel="${eEsc(r.id)}"><td class="cell-check"> </td><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id||"—")}</span></td>${visible.map(k=>eb2bReleaseCell(k,r)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-rel-act="edit" title="Sửa">✎</button><button class="icon-btn danger" data-eb2b-rel-act="del" title="Xóa">⌫</button></div></td></tr>`).join("") : `<tr><td colspan="${visible.length+3}"><div class="empty-state" style="padding:24px 10px;"><p>Chưa có Release</p><span>Bấm “Thêm Release” để tạo release package đầu tiên.</span></div></td></tr>`}</tbody></table><div class="cr-mobile-list rel-mobile-list">${rows.map(r=>`<div class="cr-card" data-eb2b-rel="${eEsc(r.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id||"—")}</span>${eb2bReleaseBadge(r.status)}</div><div class="cr-card-title">${eEsc(r.release_id||r.release_name||"—")}</div><div class="cr-card-meta"><span>${eEsc(r.release_name||"Chưa có version")}</span><span>${eEsc(r.environment||"Chưa chọn môi trường")}</span><span>${eEsc(r.planned_date||"Chưa có ngày dự kiến")}</span></div><div class="cr-card-actions"><button class="icon-btn" data-eb2b-rel-act="edit">✎</button><button class="icon-btn danger" data-eb2b-rel-act="del">⌫</button></div></div>`).join("")}</div></div></div>
+        <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Release</span></div>
+      </div>
+    </div>`;
+    const rerender = ()=>eb2bRenderRelease();
+    $e("#eb2bRelSearch")?.addEventListener("input", ev=>{EB2B.releaseFilters.search=ev.target.value.trim().toLowerCase();rerender();});
+    [["eb2bRelFilterCr","cr"],["eb2bRelFilterStatus","status"],["eb2bRelFilterEnvironment","environment"],["eb2bRelFilterOwner","owner"]].forEach(([id,key])=>$e("#"+id)?.addEventListener("change",ev=>{EB2B.releaseFilters[key]=ev.target.value;rerender();}));
+    $e("#eb2bRelClear")?.addEventListener("click",()=>{EB2B.releaseFilters={cr:"",status:"",environment:"",owner:"",search:""};rerender();});
+    $all("[data-eb2b-rel-col]",c).forEach(cb=>cb.addEventListener("change",()=>{if(!cb.checked && Object.values(EB2B.releaseColumns).filter(Boolean).length<=1){cb.checked=true;return;}EB2B.releaseColumns[cb.dataset.eb2bRelCol]=cb.checked;localStorage.setItem("eb2bReleaseColumns",JSON.stringify(EB2B.releaseColumns));rerender();}));
+    $all('input[name="eb2bReleaseDensity"]',c).forEach(r=>r.addEventListener("change",()=>{EB2B.releaseDensity=r.value;localStorage.setItem("eb2bReleaseDensity",r.value);rerender();}));
+    $all("[data-eb2b-rel-menu]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const menu=$e("#eb2bRel"+({more:"MoreMenu",columns:"Columns",density:"Density"}[btn.dataset.eb2bRelMenu]));if(menu)menu.classList.toggle("show");}));
+    $e("#eb2bRelFocus")?.addEventListener("click",()=>c.querySelector(".release-shell")?.classList.toggle("focus-mode"));
+    $all("[data-eb2b-rel-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.release.find(x=>String(x.id)===String(btn.closest("[data-eb2b-rel]")?.dataset.eb2bRel));if(!row)return;if(btn.dataset.eb2bRelAct==="edit")eb2bOpenModal("release",row);else eb2bDelete("release",row);}));
+    $all("#eb2bRelTable tbody tr[data-eb2b-rel]",c).forEach(tr=>tr.addEventListener("dblclick",()=>{const row=EB2B.rows.release.find(x=>String(x.id)===String(tr.dataset.eb2bRel));if(row)eb2bOpenModal("release",row);}));
+  }
+
+  function eb2bRenderBrd(){
+    const c=$e("#eb2bContent"), rows=EB2B.rows.brd;
+    c.innerHTML=`<div class="brd-workspace"><div class="brd-toolbar"><div class="brd-toolbar-copy"><div class="brd-toolbar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div><div><div class="brd-toolbar-title">Danh sách Business Requirement Document</div><div class="brd-toolbar-note">Quản lý tài liệu yêu cầu nghiệp vụ và xuất file Word theo mẫu chuẩn</div></div></div><div class="brd-count"><b>${rows.length}</b> BRD đã tạo</div></div><div class="brd-grid">${rows.length?rows.map(v=>`<article class="brd-card" data-eb2b-brd="${eEsc(v.id)}"><div class="brd-card-head"><div class="brd-card-docicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div><div class="brd-card-copy"><div class="brd-card-title">${eEsc(v.brd_title||"(Chưa đặt tên)")}</div><div class="brd-card-sub">Hệ thống: ${eEsc(v.system_name||"—")}</div></div></div><div class="brd-card-meta">${v.cr_id?`<span><b>CR</b> ${eEsc(v.cr_id)}</span>`:""}<span><b>Phiên bản</b> ${Array.isArray(v.version_rows)?v.version_rows.length:(v.version||"—")}</span><span><b>Cập nhật</b> ${eEsc(v.updated_at||"—")}</span></div><div class="brd-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-brd-act="edit">Sửa</button><button class="btn btn-ghost btn-sm brd-delete-btn" data-eb2b-brd-act="del">Xóa</button></div></article>`).join(""):`<div class="brd-empty"><div class="brd-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`}</div></div>`;
+    $e(".brd-toolbar .brd-count",c)?.insertAdjacentHTML("afterend",`<button class="btn btn-primary btn-sm" data-eb2b-new="brd" type="button">＋ Tạo BRD mới</button>`);
+    $all("[data-eb2b-brd-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.brd.find(x=>String(x.id)===String(btn.closest("[data-eb2b-brd]")?.dataset.eb2bBrd));if(!row)return;btn.dataset.eb2bBrdAct==="edit"?eb2bOpenModal("brd",row):eb2bDelete("brd",row);}));
+  }
+
+  function eb2bRenderWeeklyMom(){
+    const c=$e("#eb2bContent"), rows=EB2B.rows.weekly_mom;
+    c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg></div><div><div class="weekly-mom-title">Biên bản Weekly với Vendor</div><div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]!==false;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
+    $e(".weekly-mom-intro .weekly-mom-total",c)?.insertAdjacentHTML("afterend",`<button class="btn btn-primary btn-sm" data-eb2b-new="weekly_mom" type="button">＋ Tạo biên bản</button>`);
+    $all("[data-eb2b-weekly-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.weekly_mom.find(x=>String(x.id)===String(btn.closest("[data-eb2b-weekly]")?.dataset.eb2bWeekly));if(!row)return;btn.dataset.eb2bWeeklyAct==="edit"?eb2bOpenModal("weekly_mom",row):eb2bDelete("weekly_mom",row);}));
+    $all("[data-eb2b-weekly-toggle]",c).forEach(btn=>btn.addEventListener("click",()=>{const card=btn.closest("[data-eb2b-weekly]"),key=card.dataset.eb2bWeekly;EB2B.weeklyMomExpanded[key]=EB2B.weeklyMomExpanded[key]===false;eb2bRenderWeeklyMom();}));
+  }
+
   function eb2bRenderDataTable(key){
+    if(key==="release"){ eb2bRenderRelease(); return; }
+    if(key==="brd"){ eb2bRenderBrd(); return; }
+    if(key==="weekly_mom"){ eb2bRenderWeeklyMom(); return; }
     const c = $e("#eb2bContent"), meta = {
       cr:["CR Log","Tạo và theo dõi Change Request EB2B","Tạo CR"],
       uat:["UAT Test Case","Quản lý test case riêng cho e-B2B","Thêm Test Case"],
