@@ -16411,6 +16411,31 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const style = document.createElement("style");
     style.id = "eb2bStyles";
     style.textContent = `
+       /* =====================================================================
+          EB2B SCOPED DESIGN TOKENS
+          These aliases map the DMS language into the e-B2B light workspace
+          without changing any global token or DMS selector.
+          ===================================================================== */
+       #eb2bViewRoot,#eb2bModalOverlay,#eb2bUatModalOverlay{
+         --eb2b-workspace:#edf5f7;
+         --eb2b-surface:#ffffff;
+         --eb2b-surface-subtle:#f6fafb;
+         --eb2b-surface-hover:#f0f7f7;
+         --eb2b-text:#22394e;
+         --eb2b-heading:#0a1e33;
+         --eb2b-muted:#5f7690;
+         --eb2b-faint:#8498ad;
+         --eb2b-border:#dde7ec;
+         --eb2b-border-soft:#edf2f5;
+         --eb2b-accent:#0e9a94;
+         --eb2b-accent-soft:rgba(63,208,201,.12);
+         --eb2b-radius-sm:var(--radius-sm);
+         --eb2b-radius-md:var(--radius-md);
+         --eb2b-radius-lg:var(--radius-lg);
+         --eb2b-shadow-sm:var(--shadow-sm);
+         --eb2b-shadow-md:var(--shadow-md);
+         --eb2b-shadow-floating:var(--shadow-floating);
+       }
       #eb2bViewRoot{display:none;padding-bottom:60px}
       body.eb2b-active .view{display:none!important}
       body.eb2b-active #eb2bViewRoot{display:block!important}
@@ -16588,6 +16613,136 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        @media(prefers-reduced-motion:reduce){#eb2bViewRoot.eb2b-view-enter,body.eb2b-active #topbarTitle.eb2b-header-swap,#eb2bViewRoot .cr-filter-menu,#eb2bViewRoot .eb2b-cr-tool-popover,#eb2bViewRoot .tb-menu{animation:none!important}#eb2bViewRoot button,#eb2bModalOverlay button,#eb2bUatModalOverlay button{transition:none!important}}
         @media(max-width:640px){#eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap table{display:none}#eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:flex}#eb2bUatModalOverlay .eb2b-uat-summary{grid-template-columns:1fr;padding:14px}#eb2bUatModalOverlay .eb2b-uat-group{padding:14px}#eb2bUatModalOverlay .eb2b-uat-field-grid{grid-template-columns:1fr!important}#eb2bUatModalOverlay .eb2b-uat-modal-head{padding:16px}}
       @media(max-width:760px){.eb2b-kpis,.eb2b-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eb2b-form-grid{grid-template-columns:1fr}.eb2b-field.span-2{grid-column:auto}}
+
+       /* =====================================================================
+          COMPONENT PARITY
+          Keep the existing e-B2B markup and behavior; normalize its visual
+          surfaces, controls, tables and overlays to the DMS token grammar.
+          Every rule remains inside an e-B2B mount or overlay.
+          ===================================================================== */
+       #eb2bViewRoot .eb2b-toolbar input,
+       #eb2bViewRoot .eb2b-toolbar select,
+       #eb2bViewRoot .eb2b-field input,
+       #eb2bViewRoot .eb2b-field select,
+       #eb2bViewRoot .eb2b-field textarea,
+       #eb2bModalOverlay .eb2b-field input,
+       #eb2bModalOverlay .eb2b-field select,
+       #eb2bModalOverlay .eb2b-field textarea{
+         border-color:var(--eb2b-border);
+         border-radius:var(--eb2b-radius-sm);
+         background:var(--eb2b-surface);
+         color:var(--eb2b-text);
+         transition:var(--transition-focus);
+       }
+       #eb2bViewRoot .eb2b-toolbar input:focus-visible,
+       #eb2bViewRoot .eb2b-toolbar select:focus-visible,
+       #eb2bViewRoot .eb2b-field input:focus-visible,
+       #eb2bViewRoot .eb2b-field select:focus-visible,
+       #eb2bViewRoot .eb2b-field textarea:focus-visible,
+       #eb2bModalOverlay .eb2b-field input:focus-visible,
+       #eb2bModalOverlay .eb2b-field select:focus-visible,
+       #eb2bModalOverlay .eb2b-field textarea:focus-visible{
+         border-color:var(--eb2b-accent);
+         box-shadow:var(--focus-ring);
+         outline:none;
+       }
+       #eb2bViewRoot .eb2b-kpi,
+       #eb2bViewRoot .eb2b-panel,
+       #eb2bViewRoot .eb2b-config-card,
+       #eb2bViewRoot .eb2b-file-row{
+         border-color:var(--eb2b-border);
+         background:var(--eb2b-surface);
+         box-shadow:var(--eb2b-shadow-sm);
+       }
+       #eb2bViewRoot .eb2b-kpi,
+       #eb2bViewRoot .eb2b-panel,
+       #eb2bViewRoot .eb2b-config-card{
+         border-radius:var(--eb2b-radius-lg);
+       }
+       #eb2bViewRoot .eb2b-kpi:hover,
+       #eb2bViewRoot .eb2b-config-card:hover{
+         border-color:var(--eb2b-border);
+         box-shadow:var(--eb2b-shadow-md);
+       }
+       #eb2bViewRoot .eb2b-kpi-label,
+       #eb2bViewRoot .eb2b-muted,
+       #eb2bViewRoot .eb2b-file-sub{
+         color:var(--eb2b-muted);
+       }
+       #eb2bViewRoot .eb2b-kpi-value,
+       #eb2bViewRoot .eb2b-panel-head h3,
+       #eb2bViewRoot .eb2b-config-card h4{
+         color:var(--eb2b-heading);
+       }
+       #eb2bViewRoot .eb2b-panel-head{
+         border-bottom-color:var(--eb2b-border);
+       }
+       #eb2bViewRoot .eb2b-table th{
+         background:var(--eb2b-surface-subtle);
+         color:var(--eb2b-muted);
+         border-bottom-color:var(--eb2b-border);
+       }
+       #eb2bViewRoot .eb2b-table td{
+         color:var(--eb2b-text);
+         border-bottom-color:var(--eb2b-border-soft);
+       }
+       #eb2bViewRoot .eb2b-table tbody tr:hover{
+         background:var(--eb2b-surface-hover);
+       }
+       #eb2bViewRoot .eb2b-status{
+         background:var(--eb2b-accent-soft);
+         color:var(--eb2b-accent);
+       }
+       #eb2bViewRoot .eb2b-config-row{
+         border-top-color:var(--eb2b-border-soft);
+       }
+       #eb2bModalOverlay .eb2b-modal,
+       #eb2bUatModalOverlay .eb2b-uat-modal{
+         box-shadow:var(--eb2b-shadow-floating);
+       }
+       #eb2bModalOverlay .eb2b-modal-head,
+       #eb2bModalOverlay .eb2b-modal-foot{
+         border-color:var(--eb2b-border);
+       }
+       #eb2bModalOverlay .eb2b-modal-head h3,
+       #eb2bUatModalOverlay .eb2b-uat-modal-head h3{
+         color:var(--eb2b-heading);
+       }
+       #eb2bModalOverlay .eb2b-modal-head p,
+       #eb2bUatModalOverlay .eb2b-uat-modal-sub{
+         color:var(--eb2b-muted);
+       }
+       #eb2bModalOverlay .modal-close:hover,
+       #eb2bViewRoot .table-tool-btn:hover{
+         border-color:var(--eb2b-accent);
+         color:var(--eb2b-accent);
+       }
+       #eb2bViewRoot .cr-filter-trigger:focus-visible,
+       #eb2bViewRoot .table-tool-btn:focus-visible,
+       #eb2bViewRoot .btn:focus-visible,
+       #eb2bModalOverlay .btn:focus-visible,
+       #eb2bUatModalOverlay .btn:focus-visible{
+         outline:none;
+         box-shadow:var(--focus-ring);
+       }
+
+       /* The DMS motion system is the only motion source for e-B2B. */
+       @media(prefers-reduced-motion:reduce){
+         #eb2bViewRoot *,
+         #eb2bModalOverlay *,
+         #eb2bUatModalOverlay *{
+           animation-duration:.01ms!important;
+           animation-iteration-count:1!important;
+           scroll-behavior:auto!important;
+           transition-duration:.01ms!important;
+         }
+         #eb2bViewRoot .eb2b-kpi:hover,
+         #eb2bViewRoot .eb2b-config-card:hover,
+         #eb2bViewRoot .brd-card:hover,
+         #eb2bViewRoot .weekly-mom-card:hover{
+           transform:none!important;
+         }
+       }
     `;
     document.head.appendChild(style);
   }
