@@ -5759,6 +5759,37 @@ html{
   .import-modal .imp-step,.import-modal .imp-info li,.import-modal .import-stat,.import-modal .table-wrap tbody tr{ opacity:1 !important; }
 }
 </style>
+<style id="admin-scope-style">
+/* Quản Trị Dữ Liệu: tách rõ phạm vi Dùng chung / DMS / e-B2B */
+#view-admin{ --scope-shared:#5d7688; --scope-dms:#0d8a93; --scope-eb2b:#2b7fd6; }
+.admin-scope-bar{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0 0 16px; }
+.admin-scope-tab{
+  --c:var(--scope-shared); display:flex; align-items:flex-start; gap:11px; text-align:left; cursor:pointer; font:inherit;
+  padding:12px 14px; border-radius:14px; border:1px solid #dbe8ec; background:rgba(255,255,255,.85); color:#5d7688;
+  transition:border-color .2s, background .2s, box-shadow .2s, transform .2s;
+}
+.admin-scope-tab.is-dms{ --c:var(--scope-dms); } .admin-scope-tab.is-eb2b{ --c:var(--scope-eb2b); }
+.admin-scope-tab .dot{ flex:none; width:10px; height:10px; margin-top:4px; border-radius:50%; background:var(--c); }
+.admin-scope-tab b{ display:block; font-size:13.5px; color:#16344e; line-height:1.25; }
+.admin-scope-tab small{ display:block; margin-top:3px; font-size:11.5px; line-height:1.4; }
+.admin-scope-tab:hover{ border-color:var(--c); }
+.admin-scope-tab.active{ border-color:var(--c); background:#fff; box-shadow:0 8px 20px rgba(22,52,78,.08), inset 3px 0 0 var(--c); }
+.admin-scope-tab:focus-visible{ outline:2px solid var(--c); outline-offset:2px; }
+.admin-scope-tag{
+  display:inline-flex; align-items:center; margin-right:8px; padding:2px 8px; border-radius:999px; vertical-align:middle;
+  font-size:10.5px; font-weight:800; letter-spacing:.02em; color:var(--c); background:color-mix(in srgb,var(--c) 12%, #fff); border:1px solid color-mix(in srgb,var(--c) 30%, #fff);
+}
+.admin-scope-tag.is-shared{ --c:var(--scope-shared); } .admin-scope-tag.is-dms{ --c:var(--scope-dms); } .admin-scope-tag.is-eb2b{ --c:var(--scope-eb2b); }
+.admin-scope-pane > .list-panel{ border-top:3px solid var(--pane-c,#dbe8ec); }
+.admin-scope-pane[data-admin-pane="shared"]{ --pane-c:var(--scope-shared); }
+.admin-scope-pane[data-admin-pane="dms"]{ --pane-c:var(--scope-dms); }
+.admin-scope-pane[data-admin-pane="eb2b"]{ --pane-c:var(--scope-eb2b); }
+.admin-scope-pane #eb2bAdminConfigHost > .list-panel{ border-top:3px solid var(--scope-eb2b); }
+body.role-no-manage-users .admin-scope-tab[data-admin-scope="shared"],
+body.role-no-manage-users #sharedTablesPanel,
+body.role-no-manage-users #eb2bSupabaseTablesPanel{ display:none !important; }
+@media(max-width:760px){ .admin-scope-bar{ grid-template-columns:1fr; } }
+</style>
 <style id="morphicons-base">
 /* <mi-icon> = web component của morphicons (display:contents => không thêm box, svg bên trong hành xử như svg cũ) */
 mi-icon{ display:contents; }
@@ -6527,11 +6558,89 @@ lucide/dist/esm/lucide.mjs:
 
     <!-- ============ ADMIN VIEW ============ -->
     <section class="view hidden" id="view-admin">
+      <div class="admin-scope-bar" role="tablist" aria-label="Phạm vi dữ liệu">
+        <button type="button" class="admin-scope-tab is-shared" role="tab" data-admin-scope="shared"><span class="dot"></span><span><b>Dùng chung</b><small>Người dùng và yêu cầu cấp quyền — áp dụng cho cả DMS và e-B2B</small></span></button>
+        <button type="button" class="admin-scope-tab is-dms" role="tab" data-admin-scope="dms"><span class="dot"></span><span><b>DMS</b><small>Status, Sub-status, Evidence Step, Phân loại tài liệu và bảng dữ liệu của DMS</small></span></button>
+        <button type="button" class="admin-scope-tab is-eb2b" role="tab" data-admin-scope="eb2b"><span class="dot"></span><span><b>e-B2B</b><small>Danh mục và bảng dữ liệu riêng của workspace e-B2B</small></span></button>
+      </div>
+      <div class="admin-scope-pane" data-admin-pane="shared">
+      <div class="list-panel" id="sharedTablesPanel" style="margin-bottom:16px;">
+        <div class="list-panel-head"><div>
+          <div class="list-panel-count"><span class="admin-scope-tag is-shared">Dùng chung</span>Bảng dùng chung DMS + e-B2B</div>
+          <div class="hint">Tài khoản và yêu cầu cấp quyền chỉ có một bản, áp dụng cho cả hai workspace. Chỉ Quản trị viên (Super-admin) mới thấy được mục này.</div>
+        </div></div>
+        <div class="table-wrap"><table><thead><tr>
+              <th style="width:180px;">Table / Bucket</th><th style="width:110px;">Loại</th><th>Mục đích sử dụng</th>
+            </tr></thead><tbody>
+<tr>
+                <td class="cell-id">app_users</td><td class="cell-dim">Table</td>
+                <td>Danh sách tài khoản được cấp quyền dùng app: email, vai trò (super_admin / senior_member / member / viewer), trạng thái đang hoạt động hay đã khóa, ngày thêm. Là nguồn dữ liệu cho phần "Người dùng" ở tab này và dùng để phân quyền toàn app.</td>
+              </tr>
+<tr>
+                <td class="cell-id">access_requests</td><td class="cell-dim">Table</td>
+                <td>Danh sách yêu cầu cấp quyền do người dùng đăng nhập bằng Google nhưng chưa có tài khoản tự gửi (email, thời điểm gửi, trạng thái pending/approved/rejected, người & thời điểm duyệt). Nguồn dữ liệu cho khối "Yêu cầu cấp quyền đang chờ duyệt" ở ngay trên mục này.</td>
+              </tr>
+        </tbody></table></div>
+      </div>
+      <div class="list-panel hidden access-request-panel" id="adminAccessRequestsPanel" style="margin-bottom:16px;">
+        <div class="list-panel-head">
+          <div>
+            <div class="list-panel-count">
+              <span class="admin-scope-tag is-shared">Dùng chung</span><b id="accessRequestBadge">0</b> Yêu cầu cấp quyền đang chờ duyệt
+            </div>
+            <div class="hint">Người dùng đăng nhập bằng Google nhưng chưa được cấp quyền có thể tự gửi yêu cầu ở màn "Đang chờ được cấp quyền". Duyệt để mở modal cấp quyền có sẵn email, hoặc từ chối nếu không hợp lệ.</div>
+          </div>
+        </div>
+        <div id="accessRequestBody"></div>
+      </div>
+
+      <div class="list-panel" id="adminUsersPanel">
+        <div class="list-panel-head">
+          <div class="list-panel-count"><span class="admin-scope-tag is-shared">Dùng chung</span><b id="userCount">0</b> người dùng</div>
+          <div class="table-toolbar">
+            <div class="tb-search">
+              <mi-icon name="search" stroke-width="2"></mi-icon>
+              <input id="userSearchInput" type="text" placeholder="Tìm theo email...">
+            </div>
+            <div class="filter-chip"><span>Vai trò</span>
+              <select id="filterUserRole">
+                <option value="">Tất cả</option>
+                <option value="super_admin">Quản trị viên</option>
+                <option value="senior_member">Thành viên cao cấp</option>
+                <option value="member">Thành viên</option>
+                <option value="viewer">Thành viên (chỉ xem)</option>
+              </select>
+            </div>
+            <div class="filter-chip"><span>Trạng thái</span>
+              <select id="filterUserStatus">
+                <option value="">Tất cả</option>
+                <option value="active">Đang hoạt động</option>
+                <option value="locked">Đã khóa</option>
+              </select>
+            </div>
+            <div class="chip-clear" id="clearUserFilters">Xóa lọc</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày thêm</th><th></th>
+            </tr></thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+        <div class="list-panel-foot">
+          <span id="userFootCount">Hiển thị 0 / 0 người dùng</span>
+        </div>
+      </div>
+
+      </div>
+      <div class="admin-scope-pane hidden" data-admin-pane="dms">
       <div class="list-panel" id="supabaseTablesPanel" style="margin-bottom:16px;">
         <div class="list-panel-head">
           <div>
-            <div class="list-panel-count">Dữ liệu Supabase đang sử dụng</div>
-            <div class="hint">Danh sách các Table (và Storage Bucket) mà web app này đang dùng trên Supabase, cùng mục đích của từng bảng. Chỉ Quản trị viên (Super-admin) mới thấy được mục này.</div>
+            <div class="list-panel-count"><span class="admin-scope-tag is-dms">DMS</span>Bảng dữ liệu DMS</div>
+            <div class="hint">Các Table và Storage Bucket của workspace DMS, cùng mục đích của từng bảng. Chỉ Quản trị viên (Super-admin) mới thấy được mục này.</div>
           </div>
         </div>
         <div class="table-wrap">
@@ -6540,11 +6649,7 @@ lucide/dist/esm/lucide.mjs:
               <th style="width:180px;">Table / Bucket</th><th style="width:110px;">Loại</th><th>Mục đích sử dụng</th>
             </tr></thead>
             <tbody>
-              <tr>
-                <td class="cell-id">app_users</td><td class="cell-dim">Table</td>
-                <td>Danh sách tài khoản được cấp quyền dùng app: email, vai trò (super_admin / senior_member / member / viewer), trạng thái đang hoạt động hay đã khóa, ngày thêm. Là nguồn dữ liệu cho phần "Người dùng" ở tab này và dùng để phân quyền toàn app.</td>
-              </tr>
-              <tr>
+                            <tr>
                 <td class="cell-id">cr_log</td><td class="cell-dim">Table</td>
                 <td>Dữ liệu chính của các Change Request (CR): tiêu đề, mô tả, status, priority, category, người phụ trách, ngày tạo... Nguồn dữ liệu cho tab "CR Log" và Dashboard. Có cột <code>deleted_at</code> để soft-delete (xóa mềm vào Recycle Bin).</td>
               </tr>
@@ -6588,70 +6693,14 @@ lucide/dist/esm/lucide.mjs:
                 <td class="cell-id">cr-attachments</td><td class="cell-dim">Storage Bucket</td>
                 <td>Nơi lưu file thật (BRD, FSD, ảnh evidence, quotation...) được người dùng upload. Bảng <code>cr_attachments</code> ở trên chỉ lưu đường dẫn trỏ tới các file nằm trong bucket này.</td>
               </tr>
-              <tr>
-                <td class="cell-id">access_requests</td><td class="cell-dim">Table</td>
-                <td>Danh sách yêu cầu cấp quyền do người dùng đăng nhập bằng Google nhưng chưa có tài khoản tự gửi (email, thời điểm gửi, trạng thái pending/approved/rejected, người & thời điểm duyệt). Nguồn dữ liệu cho khối "Yêu cầu cấp quyền đang chờ duyệt" ở ngay trên mục này.</td>
-              </tr>
-            </tbody>
+                          </tbody>
           </table>
         </div>
       </div>
 
-      <div class="list-panel hidden access-request-panel" id="adminAccessRequestsPanel" style="margin-bottom:16px;">
+            <div class="list-panel" style="margin-top:16px;">
         <div class="list-panel-head">
-          <div>
-            <div class="list-panel-count">
-              <b id="accessRequestBadge">0</b> Yêu cầu cấp quyền đang chờ duyệt
-            </div>
-            <div class="hint">Người dùng đăng nhập bằng Google nhưng chưa được cấp quyền có thể tự gửi yêu cầu ở màn "Đang chờ được cấp quyền". Duyệt để mở modal cấp quyền có sẵn email, hoặc từ chối nếu không hợp lệ.</div>
-          </div>
-        </div>
-        <div id="accessRequestBody"></div>
-      </div>
-
-      <div class="list-panel" id="adminUsersPanel">
-        <div class="list-panel-head">
-          <div class="list-panel-count"><b id="userCount">0</b> người dùng</div>
-          <div class="table-toolbar">
-            <div class="tb-search">
-              <mi-icon name="search" stroke-width="2"></mi-icon>
-              <input id="userSearchInput" type="text" placeholder="Tìm theo email...">
-            </div>
-            <div class="filter-chip"><span>Vai trò</span>
-              <select id="filterUserRole">
-                <option value="">Tất cả</option>
-                <option value="super_admin">Quản trị viên</option>
-                <option value="senior_member">Thành viên cao cấp</option>
-                <option value="member">Thành viên</option>
-                <option value="viewer">Thành viên (chỉ xem)</option>
-              </select>
-            </div>
-            <div class="filter-chip"><span>Trạng thái</span>
-              <select id="filterUserStatus">
-                <option value="">Tất cả</option>
-                <option value="active">Đang hoạt động</option>
-                <option value="locked">Đã khóa</option>
-              </select>
-            </div>
-            <div class="chip-clear" id="clearUserFilters">Xóa lọc</div>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr>
-              <th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày thêm</th><th></th>
-            </tr></thead>
-            <tbody id="userTableBody"></tbody>
-          </table>
-        </div>
-        <div class="list-panel-foot">
-          <span id="userFootCount">Hiển thị 0 / 0 người dùng</span>
-        </div>
-      </div>
-
-      <div class="list-panel" style="margin-top:16px;">
-        <div class="list-panel-head">
-          <div class="list-panel-count"><b id="statusCount">0</b> status</div>
+          <div class="list-panel-count"><span class="admin-scope-tag is-dms">DMS</span><b id="statusCount">0</b> status</div>
           <div class="status-create">
             <input id="statusNameInput" type="text" maxlength="80" placeholder="Ví dụ: Pending Review">
             <button class="btn btn-primary btn-sm" id="btnAddStatus" type="button">
@@ -6676,7 +6725,7 @@ lucide/dist/esm/lucide.mjs:
       <div class="list-panel" style="margin-top:16px;">
         <div class="list-panel-head">
           <div>
-            <div class="list-panel-count"><b id="subStatusCount">0</b> sub-status</div>
+            <div class="list-panel-count"><span class="admin-scope-tag is-dms">DMS</span><b id="subStatusCount">0</b> sub-status</div>
             <div class="hint">Danh sách giá trị dùng để theo dõi chi tiết bên trong từng Status</div>
           </div>
           <div class="status-create">
@@ -6703,7 +6752,7 @@ lucide/dist/esm/lucide.mjs:
 
       <div class="list-panel" style="margin-top:16px;">
         <div class="list-panel-head">
-          <div class="list-panel-count"><b id="evidenceStepCount">0</b> Evidence Step</div>
+          <div class="list-panel-count"><span class="admin-scope-tag is-dms">DMS</span><b id="evidenceStepCount">0</b> Evidence Step</div>
           <div class="status-create">
             <input id="evidenceStepNameInput" type="text" maxlength="150" placeholder="Ví dụ: Prepare Data Testing 01">
             <input id="evidenceStepOrderInput" type="number" min="0" step="1" value="0" style="width:86px;" aria-label="Thứ tự">
@@ -6729,7 +6778,7 @@ lucide/dist/esm/lucide.mjs:
       <div class="list-panel" style="margin-top:16px;">
         <div class="list-panel-head">
           <div>
-            <div class="list-panel-count"><b id="attachCategoryCount">0</b> Phân loại tài liệu</div>
+            <div class="list-panel-count"><span class="admin-scope-tag is-dms">DMS</span><b id="attachCategoryCount">0</b> Phân loại tài liệu</div>
             <div class="hint">Danh sách nhóm tài liệu hiển thị trong dropdown "Phân loại tài liệu" ở tab Tệp đính kèm của CR (BRD, FSD, Quotation...)</div>
           </div>
           <div class="status-create">
@@ -6752,6 +6801,31 @@ lucide/dist/esm/lucide.mjs:
         <div class="list-panel-foot">
           <span id="attachCategoryFootCount">Hiển thị 0 / 0 phân loại</span>
         </div>
+      </div>
+      </div>
+      <div class="admin-scope-pane hidden" data-admin-pane="eb2b">
+      <div class="list-panel" id="eb2bSupabaseTablesPanel" style="margin-bottom:16px;">
+        <div class="list-panel-head"><div>
+          <div class="list-panel-count"><span class="admin-scope-tag is-eb2b">e-B2B</span>Bảng dữ liệu e-B2B</div>
+          <div class="hint">Các Table và Storage Bucket riêng của workspace e-B2B (tiền tố <code>eb2b_</code>), tách biệt hoàn toàn với DMS. Chỉ Quản trị viên (Super-admin) mới thấy được mục này.</div>
+        </div></div>
+        <div class="table-wrap"><table><thead><tr>
+              <th style="width:180px;">Table / Bucket</th><th style="width:110px;">Loại</th><th>Mục đích sử dụng</th>
+            </tr></thead><tbody>
+<tr><td class="cell-id">eb2b_cr_log</td><td class="cell-dim">Table</td><td>Change Request của e-B2B. Nguồn dữ liệu cho tab "CR Log" trong Quản Lý e-B2B. Có soft-delete qua <code>deleted_at</code>.</td></tr>
+<tr><td class="cell-id">eb2b_uat_testcase</td><td class="cell-dim">Table</td><td>UAT Test Case của e-B2B, gắn với CR e-B2B. Có soft-delete qua <code>deleted_at</code>.</td></tr>
+<tr><td class="cell-id">eb2b_release_prd</td><td class="cell-dim">Table</td><td>Release / PRD của e-B2B. Có soft-delete qua <code>deleted_at</code>.</td></tr>
+<tr><td class="cell-id">eb2b_brd_records</td><td class="cell-dim">Table</td><td>Bản ghi BRD của e-B2B. Có soft-delete qua <code>deleted_at</code>.</td></tr>
+<tr><td class="cell-id">eb2b_weekly_mom</td><td class="cell-dim">Table</td><td>Biên bản Weekly MoM của e-B2B (mỗi bản gồm danh sách CR / action item). Có soft-delete qua <code>deleted_at</code>.</td></tr>
+<tr><td class="cell-id">eb2b_attachments</td><td class="cell-dim">Table</td><td>Metadata tệp evidence / tài liệu đính kèm của e-B2B (file thật nằm ở bucket <code>eb2b-attachments</code>).</td></tr>
+<tr><td class="cell-id">eb2b_statuses</td><td class="cell-dim">Table</td><td>Danh mục Status cho CR e-B2B (quản lý ở khối bên dưới).</td></tr>
+<tr><td class="cell-id">eb2b_sub_statuses</td><td class="cell-dim">Table</td><td>Danh mục Sub-status cho CR e-B2B.</td></tr>
+<tr><td class="cell-id">eb2b_evidence_steps</td><td class="cell-dim">Table</td><td>Danh mục Evidence Step cho Test Case e-B2B.</td></tr>
+<tr><td class="cell-id">eb2b_attachment_categories</td><td class="cell-dim">Table</td><td>Danh mục Phân loại tài liệu cho tệp đính kèm e-B2B.</td></tr>
+<tr><td class="cell-id">eb2b-attachments</td><td class="cell-dim">Storage Bucket</td><td>Nơi lưu file evidence / tài liệu đính kèm của e-B2B.</td></tr>
+        </tbody></table></div>
+      </div>
+      <div id="eb2bAdminConfigHost"></div>
       </div>
     </section>
 
@@ -8349,7 +8423,7 @@ const VIEW_META = {
   release:   { title:"Release / PRD", sub:"Thông tin phát hành cho từng Change Request", search:false },
   brd:       { title:"Tạo BRD", sub:"Nhập thông tin và xuất file BRD theo template chuẩn", search:false },
   weekly_mom:{ title:"Weekly MoM", sub:"Biên bản họp Weekly với Vendor và cập nhật theo từng CR", search:false },
-  admin:     { title:"Quản Trị Dữ Liệu", sub:"Quản lý người dùng, Status, Evidence Step, Phân loại tài liệu và dữ liệu Supabase", search:false },
+  admin:     { title:"Quản Trị Dữ Liệu", sub:"Người dùng dùng chung; danh mục và bảng dữ liệu tách riêng cho DMS và e-B2B", search:false },
   recycle:   { title:"Recycle Bin", sub:"Dữ liệu đã xóa — khôi phục hoặc xóa vĩnh viễn", search:false },
 };
 
@@ -15939,8 +16013,27 @@ function confirmDelete(title, msg, onConfirm, confirmLabel){
 /* ---------------------------------------------------------------------------
    12b. ADMIN — QUẢN LÝ NGƯỜI DÙNG ĐƯỢC CẤP QUYỀN
 --------------------------------------------------------------------------- */
+let ADMIN_SCOPE = (()=>{ try{ return localStorage.getItem("adminScope") || ""; }catch(_){ return ""; } })();
+function setAdminScope(scope){
+  if(!["shared","dms","eb2b"].includes(scope)) scope = "";
+  if(!scope || (scope === "shared" && !canManageUsers())) scope = canManageUsers() ? "shared" : "dms";
+  ADMIN_SCOPE = scope;
+  try{ localStorage.setItem("adminScope", scope); }catch(_){}
+  const view = $("#view-admin"); if(!view) return;
+  view.querySelectorAll(".admin-scope-tab").forEach(b=>{
+    const on = b.dataset.adminScope === scope;
+    b.classList.toggle("active", on); b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  view.querySelectorAll(".admin-scope-pane").forEach(p=> p.classList.toggle("hidden", p.dataset.adminPane !== scope));
+  if(scope === "eb2b" && typeof window.__eb2bRenderAdminHost === "function") window.__eb2bRenderAdminHost();
+}
+document.addEventListener("click", e=>{
+  const b = e.target.closest(".admin-scope-tab");
+  if(b) setAdminScope(b.dataset.adminScope);
+});
 async function loadAndRenderAdmin(){
   if(!canViewAdminTab()){ return; }
+  setAdminScope(ADMIN_SCOPE);
   const statusBody = $("#statusTableBody");
   if(statusBody) skeletonTableRows(statusBody, 3, 3);
   const subStatusBody = $("#subStatusTableBody");
@@ -17886,6 +17979,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.ready = true;
     eb2bUpdateNavCounts();
     eb2bRender();
+    eb2bRenderAdminHost();
   }
 
   function eb2bUpdateNavCounts(){
@@ -19112,8 +19206,29 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     await eb2bLoad();
   }
 
-  async function eb2bHideConfig(key,id){
-    const def=EB2B_CONFIG[key], result=await activeDb().from(def.table).update({is_active:false}).eq("id",id);
+  function eb2bRenderAdminHost(){
+    const host=$e("#eb2bAdminConfigHost"); if(!host) return;
+    host.innerHTML=Object.entries(EB2B_CONFIG).map(([key,def])=>{
+      const rows=[...(EB2B.rows[key]||[])].sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
+      const on=rows.filter(r=>r.is_active!==false).length, colored=key==="statuses"||key==="sub_statuses";
+      return `<div class="list-panel" style="margin-top:16px;">
+        <div class="list-panel-head">
+          <div class="list-panel-count"><span class="admin-scope-tag is-eb2b">e-B2B</span><b>${on}</b> ${eEsc(def.label)} đang dùng${rows.length>on?` · ${rows.length-on} đang ẩn`:""}</div>
+          <div class="status-create"><input type="text" maxlength="120" placeholder="Thêm ${eEsc(def.label)}..." data-eb2b-config-input="${key}"><button class="btn btn-primary btn-sm" type="button" data-eb2b-config-add="${key}"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>Thêm</button></div>
+        </div>
+        <div class="table-wrap"><table>
+          <thead><tr><th style="width:80px;">Thứ tự</th><th>${eEsc(def.label)}</th><th style="width:130px;">Trạng thái</th><th style="width:110px;"></th></tr></thead>
+          <tbody>${rows.length?rows.map(r=>{const off=r.is_active===false;return `<tr><td class="cell-dim">${eEsc(r.sort_order??"")}</td><td>${colored?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;background:${eEsc(r.color||def.defaultColor)}"></span>`:""}${eEsc(r.name)}</td><td class="cell-dim">${off?"Đang ẩn":"Đang dùng"}</td><td><button class="btn btn-ghost btn-sm" type="button" data-eb2b-config-delete="${key}" data-eb2b-id="${r.id}" data-eb2b-active="${off?1:0}">${off?"Hiện lại":"Ẩn"}</button></td></tr>`;}).join(""):`<tr><td colspan="4" class="cell-dim" style="text-align:center;padding:18px;">Chưa có danh mục.</td></tr>`}</tbody>
+        </table></div>
+        <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${rows.length} ${eEsc(def.label)}</span></div>
+      </div>`;
+    }).join("");
+    host.onkeydown=ev=>{ if(ev.key==="Enter"&&ev.target.dataset?.eb2bConfigInput) host.querySelector(`[data-eb2b-config-add="${ev.target.dataset.eb2bConfigInput}"]`)?.click(); };
+  }
+  window.__eb2bRenderAdminHost = eb2bRenderAdminHost;
+
+  async function eb2bHideConfig(key,id,makeActive){
+    const def=EB2B_CONFIG[key], result=await activeDb().from(def.table).update({is_active:!!makeActive}).eq("id",id);
     if(result.error){eToast("Không cập nhật được danh mục: "+result.error.message,"err");return;}
     await eb2bLoad();
   }
@@ -19184,7 +19299,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const add=ev.target.closest("[data-eb2b-config-add]");
       if(add){eb2bAddConfig(add.dataset.eb2bConfigAdd);return;}
       const hide=ev.target.closest("[data-eb2b-config-delete]");
-      if(hide){eb2bHideConfig(hide.dataset.eb2bConfigDelete,hide.dataset.eb2bId);return;}
+      if(hide){eb2bHideConfig(hide.dataset.eb2bConfigDelete,hide.dataset.eb2bId,hide.dataset.eb2bActive==="1");return;}
       const restore=ev.target.closest("[data-eb2b-restore]");
       if(restore){eb2bRestore(restore.dataset.eb2bRestore,restore.dataset.eb2bId);return;}
       const purge=ev.target.closest("[data-eb2b-purge]");
