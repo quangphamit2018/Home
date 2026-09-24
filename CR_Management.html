@@ -1342,21 +1342,39 @@ td.cell-id .id-chip{
 }
 @keyframes spin{ to{ transform: rotate(360deg); } }
 
-/* ---- Workspace-switch loading bar --------------------------------------
-   A slim top progress bar, shown only for a real DMS <-> e-B2B workspace
-   switch (never for a plain tab click inside one workspace). Mirrors the
-   ws-workspace-enter / eb2b-view-enter reveal so the sequence reads as
-   "loading -> reveal" instead of an abrupt content swap. */
-#wsLoadingBar{
-  position:fixed; top:0; left:0; right:0; height:2.5px; z-index:4000;
-  background:linear-gradient(90deg, var(--accent), #7ee6df);
-  box-shadow:0 0 10px rgba(63,208,201,.55);
-  transform:scaleX(0); transform-origin:0 50%; opacity:0;
+/* ---- Workspace-switch loading screen -----------------------------------
+   A full-screen loading overlay, shown only for a real DMS <-> e-B2B
+   workspace switch (never for a plain tab click inside one workspace).
+   Replaces the old slim top progress bar: the outgoing workspace is
+   covered while the new one mounts, then the overlay fades out onto the
+   already-settled content — "loading -> reveal" instead of a visible
+   slide/fade of the underlying view. */
+.ws-loading-screen{
+  position:fixed; inset:0; z-index:5000;
+  display:flex; align-items:center; justify-content:center;
+  background: var(--bg-workspace);
+  opacity:0; visibility:hidden;
+  transition:opacity var(--duration-base) var(--ease-standard), visibility 0s linear var(--duration-base);
   pointer-events:none;
-  transition:transform var(--duration-slow) var(--ease-decel), opacity var(--duration-fast) var(--ease-standard);
 }
-#wsLoadingBar.is-active{ opacity:1; }
-@media(prefers-reduced-motion:reduce){ #wsLoadingBar{ transition:opacity var(--duration-fast) linear; } }
+.ws-loading-screen.is-active{
+  opacity:1; visibility:visible; pointer-events:auto;
+  transition:opacity var(--duration-fast) var(--ease-standard), visibility 0s linear 0s;
+}
+.ws-loading-card{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+.ws-loading-spinner{
+  width:34px; height:34px; border-radius:50%;
+  border:3px solid rgba(255,255,255,0.14); border-top-color:var(--accent);
+  animation: spin .7s linear infinite;
+}
+.ws-loading-text{
+  font-family: var(--font-body); font-size:13.5px; font-weight:600;
+  color: var(--text-secondary); letter-spacing:.01em;
+}
+@media(prefers-reduced-motion:reduce){
+  .ws-loading-screen{ transition:opacity var(--duration-fast) linear; }
+  .ws-loading-spinner{ animation:none; }
+}
 
 /* ---- Light-theme bổ sung: dashboard panels, charts, headings ---- */
 .view .view-head h2{ color:#0a1e33; }
@@ -5469,10 +5487,16 @@ html{
 </head>
 <body>
 
-<!-- Slim top progress bar shown only while switching between the DMS and
-     e-B2B workspaces (see wsLoadingStart/wsLoadingDone). Not used for
-     in-workspace tab clicks, same rule the workspace-enter animation uses. -->
-<div id="wsLoadingBar" aria-hidden="true"></div>
+<!-- Full-screen loading transition shown only while switching between the
+     DMS and e-B2B workspaces (see wsLoadingStart/wsLoadingDone). Not used
+     for in-workspace tab clicks, same rule the old workspace-enter
+     animation used. -->
+<div id="wsLoadingScreen" class="ws-loading-screen" aria-hidden="true">
+  <div class="ws-loading-card">
+    <div class="ws-loading-spinner"></div>
+    <div class="ws-loading-text" id="wsLoadingText">Đang chuyển không gian làm việc…</div>
+  </div>
+</div>
 
 <!-- ============================== LOGIN SCREEN ============================== -->
 <div id="loginScreen">
@@ -8716,38 +8740,32 @@ function initAutoGrow(root){
    next tab is shown. Both setView() (DMS side) and eb2bShow() (e-B2B side)
    go through these two helpers, so the behaviour cannot drift apart again.
 --------------------------------------------------------------------------- */
-/* Slim top progress bar for a real DMS <-> e-B2B workspace switch (see
-   #wsLoadingBar CSS). wsLoadingStart() jumps the bar to ~72% right away;
-   wsLoadingDone() completes it to 100% and fades it out, with a small
+/* Full-screen loading transition for a real DMS <-> e-B2B workspace switch
+   (see .ws-loading-screen CSS). wsLoadingStart(label) shows the overlay
+   immediately with an optional status label; wsLoadingDone() fades it out
+   once the new workspace has mounted underneath, holding a small
    minimum-visible floor so a very fast switch doesn't just flash. Safe to
    call from either script block (setView on the DMS side, eb2bShow on the
    e-B2B side) since both are plain top-level functions on window. */
 let wsLoadingShownAt = 0;
 let wsLoadingHideTimer = null;
-function wsLoadingStart(){
-  const bar = document.getElementById("wsLoadingBar");
-  if(!bar) return;
+function wsLoadingStart(label){
+  const screen = document.getElementById("wsLoadingScreen");
+  if(!screen) return;
+  const text = document.getElementById("wsLoadingText");
+  if(text) text.textContent = label ? `Đang chuyển sang ${label}…` : "Đang chuyển không gian làm việc…";
   clearTimeout(wsLoadingHideTimer);
-  bar.style.transition = "none";
-  bar.style.transform = "scaleX(0)";
-  bar.classList.add("is-active");
-  void bar.offsetWidth;
-  bar.style.transition = "";
-  requestAnimationFrame(()=>{ bar.style.transform = "scaleX(.72)"; });
+  screen.classList.add("is-active");
   wsLoadingShownAt = Date.now();
 }
 function wsLoadingDone(){
-  const bar = document.getElementById("wsLoadingBar");
-  if(!bar) return;
-  const minVisibleMs = 220;
+  const screen = document.getElementById("wsLoadingScreen");
+  if(!screen) return;
+  const minVisibleMs = 380;
   const wait = Math.max(0, minVisibleMs - (Date.now() - wsLoadingShownAt));
   clearTimeout(wsLoadingHideTimer);
   wsLoadingHideTimer = setTimeout(()=>{
-    bar.style.transform = "scaleX(1)";
-    wsLoadingHideTimer = setTimeout(()=>{
-      bar.classList.remove("is-active");
-      bar.style.transform = "scaleX(0)";
-    }, 180);
+    screen.classList.remove("is-active");
   }, wait);
 }
 
@@ -8778,7 +8796,7 @@ function setView(view){
   // __eb2bLeave() clears the "eb2b-active" class, so we can tell a real
   // cross-workspace switch (e-B2B -> DMS) apart from a plain DMS tab click.
   const wasEb2bActive = document.body.classList.contains("eb2b-active");
-  if(wasEb2bActive) wsLoadingStart();
+  if(wasEb2bActive) wsLoadingStart(VIEW_META[view]?.title || "DMS");
   // Leaving e-B2B (if we were in it): un-highlight its tabs, close its forms.
   if(typeof window.__eb2bLeave === "function") window.__eb2bLeave();
   closeDmsOverlays();
@@ -17007,7 +17025,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     // DMS) gets the reveal animation; re-playing it on every tab click is what
     // was causing the "chớp chớp" flicker.
     const wasEb2bActive = document.body.classList.contains("eb2b-active");
-    if(!wasEb2bActive && typeof wsLoadingStart === "function") wsLoadingStart();
+    if(!wasEb2bActive && typeof wsLoadingStart === "function") wsLoadingStart((EB2B_META[tab] || EB2B_META.dashboard)[0]);
     if(typeof closeDmsOverlays === "function") closeDmsOverlays();
     if(typeof clearDmsNavState === "function") clearDmsNavState();
     // Accordion behaviour: only one workspace's child list stays expanded at
