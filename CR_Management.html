@@ -8224,6 +8224,8 @@ async function handleAuthState(){
     initShell();
     refreshAll();
     subscribeRealtime();
+    // e-B2B: nạp lại dữ liệu + đăng ký realtime SAU khi đã có phiên đăng nhập hợp lệ.
+    if(typeof window.__eb2bStartSync === "function") window.__eb2bStartSync();
   }
   $("#sidebarUserEmail").textContent = STATE.userEmail;
   $("#sidebarUserRole").textContent = roleLabel(STATE.userRole);
@@ -8301,7 +8303,8 @@ function subscribeRealtime(){
       list.splice(idx, 1);
       return true;
     }
-    if(idx === -1) list.unshift(row); else list[idx] = row;
+    // Merge thay vì ghi đè: Postgres không gửi lại các cột TOAST (text/json lớn) nếu không đổi.
+    if(idx === -1) list.unshift(row); else list[idx] = Object.assign({}, list[idx], row);
     return true;
   }
 
@@ -8345,35 +8348,71 @@ function subscribeRealtime(){
     if(STATE.currentView === "admin"){ loadAndRenderAdmin(); }
   }, 500);
 
+  // Nếu websocket rớt rồi nối lại, các thay đổi xảy ra trong lúc mất kết nối KHÔNG được phát lại
+  // -> tải đồng bộ lại một lần khi kênh SUBSCRIBED trở lại.
+  let rtWasDown = false;
+  function rtStatus(status){
+    if(status === "SUBSCRIBED"){
+      if(rtWasDown){ rtWasDown = false; debouncedConfigRefresh(); }
+    }else if(status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED"){
+      rtWasDown = true;
+    }
+  }
+  // Tab bị ẩn lâu -> trình duyệt có thể làm nghẽn websocket; quay lại thì đồng bộ lại.
+  let rtHiddenAt = 0;
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.hidden){ rtHiddenAt = Date.now(); return; }
+    if(rtHiddenAt && Date.now() - rtHiddenAt > 60000) debouncedConfigRefresh();
+    rtHiddenAt = 0;
+  });
+  // Đang mở Recycle Bin: có ai xóa mềm / khôi phục / xóa vĩnh viễn thì tải lại danh sách.
+  const debouncedRecycleRefresh = debounce(()=>{
+    if(STATE.currentView === "recycle") loadAndRenderRecycleBin();
+  }, 600);
+
   STATE.sb.channel("realtime-cr_log")
     .on("postgres_changes", { event:"*", schema:"public", table:"cr_log" }, payload=>{
+      debouncedRecycleRefresh();
       if(!patchListInPlace(STATE.crList, payload, "id")) return;
       renderCrTable();
       afterDataPatch((payload.new && payload.new.cr_id) || (payload.old && payload.old.cr_id));
     })
-    .subscribe();
+    .subscribe(rtStatus);
   STATE.sb.channel("realtime-uat_testcase")
     .on("postgres_changes", { event:"*", schema:"public", table:"uat_testcase" }, payload=>{
+      debouncedRecycleRefresh();
       if(!patchListInPlace(STATE.tcList, payload, "id")) return;
       renderTcTable();
       afterDataPatch((payload.new && payload.new.cr_id) || (payload.old && payload.old.cr_id));
     })
-    .subscribe();
+    .subscribe(rtStatus);
   STATE.sb.channel("realtime-release_prd")
     .on("postgres_changes", { event:"*", schema:"public", table:"release_prd" }, payload=>{
+      debouncedRecycleRefresh();
       if(!patchListInPlace(STATE.relList, payload, "id")) return;
       renderRelTable();
       afterDataPatch((payload.new && payload.new.cr_id) || (payload.old && payload.old.cr_id));
     })
-    .subscribe();
+    .subscribe(rtStatus);
   STATE.sb.channel("realtime-weekly_mom")
     .on("postgres_changes", { event:"*", schema:"public", table:"weekly_mom" }, payload=>{
+      debouncedRecycleRefresh();
       if(!patchListInPlace(STATE.weeklyMomList, payload, "id")) return;
       STATE.weeklyMomList = STATE.weeklyMomList.filter(item=>!item.deleted_at);
       renderWeeklyMomList();
       renderNavCounts();
     })
-    .subscribe();
+    .subscribe(rtStatus);
+  // BRD: trước đây chưa có kênh realtime -> người khác tạo/sửa/xóa BRD phải F5 mới thấy.
+  STATE.sb.channel("realtime-brd_records")
+    .on("postgres_changes", { event:"*", schema:"public", table:"brd_records" }, payload=>{
+      debouncedRecycleRefresh();
+      if(!patchListInPlace(STATE.brdList, payload, "id")) return;
+      STATE.brdList.sort((a,b)=> String(b.updated_at||"").localeCompare(String(a.updated_at||"")));
+      renderBrdList();
+      renderNavCounts();
+    })
+    .subscribe(rtStatus);
   STATE.sb.channel("realtime-cr_statuses")
     .on("postgres_changes", { event:"*", schema:"public", table:"cr_statuses" }, debouncedConfigRefresh)
     .subscribe();
@@ -17723,7 +17762,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      weeklyMomExpanded: {},
      weeklyMomSort: {},
     loading: false,
-    ready: false
+    ready: false,
+    reloadQueued: false,   // realtime báo có thay đổi trong lúc đang tải -> tải lại 1 lần sau đó
+    rtDirty: new Set(),    // các nhóm dữ liệu vừa đổi qua realtime, chờ vẽ lại
+    rtForeign: [],         // thay đổi do NGƯỜI KHÁC thực hiện (để cảnh báo khi đang sửa cùng bản ghi)
+    drawerCrId: null,
+    editingRec: null
   };
 
   const EB2B_TABLES = {
@@ -18355,9 +18399,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(window.confirm(message)) fn();
   }
 
-  async function eb2bLoad(){
+  async function eb2bLoad(opts){
     const sb = activeDb();
-    if(!sb || EB2B.loading) return;
+    if(!sb) return;
+    if(EB2B.loading){ if(opts && opts.queue) EB2B.reloadQueued = true; return; }
     EB2B.loading = true;
     const reads = Object.entries(EB2B_TABLES).map(async ([key,table])=>{
       const isConfig = ["statuses","sub_statuses","evidence_steps","attachment_categories"].includes(key);
@@ -18378,8 +18423,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.loading = false;
     EB2B.ready = true;
     eb2bUpdateNavCounts();
-    eb2bRender();
-    eb2bRenderAdminHost();
+    if(opts && opts.soft){
+      // Đồng bộ nền (sau đăng nhập / nối lại mạng): vẽ lại có giữ focus, cuộn, dropdown đang mở.
+      Object.keys(EB2B_TABLES).forEach(k=>EB2B.rtDirty.add(k));
+      eb2bRtFlush();
+    }else{
+      eb2bRender();
+      eb2bRenderAdminHost();
+    }
+    if(EB2B.reloadQueued){ EB2B.reloadQueued = false; eb2bLoad({ soft:true }); }
   }
 
   function eb2bUpdateNavCounts(){
@@ -18637,9 +18689,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bCloseCrDrawer(){
     $e("#eb2bDrawerOverlay")?.classList.remove("show");$e("#eb2bCrDrawer")?.classList.remove("show");
+    EB2B.drawerCrId=null;
   }
   function eb2bOpenCrDrawer(row){
-    if(!row)return;const drawer=$e("#eb2bCrDrawer"),overlay=$e("#eb2bDrawerOverlay");
+    if(!row)return;EB2B.drawerCrId=row.id;const drawer=$e("#eb2bCrDrawer"),overlay=$e("#eb2bDrawerOverlay");
     const files=EB2B.rows.attachments.filter(x=>x.cr_id===row.cr_id&&!x.deleted_at),tests=EB2B.rows.uat.filter(x=>x.cr_id===row.cr_id),rels=EB2B.rows.release.filter(x=>x.cr_id===row.cr_id);
     const field=(l,v)=>`<div class="crlog-field"><div class="crlog-field-label">${eEsc(l)}</div><div class="crlog-field-value ${v?"":"empty"}">${v?eEsc(v):"Chưa có dữ liệu"}</div></div>`;
     drawer.innerHTML=`<div class="drawer-head"><div class="drawer-head-top"><div><h2>${eEsc(row.cr_id)}</h2><div class="drawer-app">${eEsc(eb2bCrTitle(row))}</div><div class="drawer-head-context"><span><b>App</b> ${eEsc(row.app||"—")}</span><span><b>Requester</b> ${eEsc(row.requester||"—")}</span><span><b>Request Date</b> ${eEsc(eDate(row.request_date)||"—")}</span></div></div><div class="drawer-head-actions"><button class="icon-btn" data-eb2b-cr-edit="${row.id}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="drawer-close" data-eb2b-drawer-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></div></div><div class="drawer-badges">${eb2bCrBadge("status",row.status)}${eb2bCrBadge("priority",row.priority)}${eb2bCrBadge("category",row.category)}${eb2bCrOverdue(row)?`<span class="badge" style="background:var(--danger-dim);color:var(--danger)">Trễ hạn</span>`:""}</div></div>
@@ -19305,6 +19358,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     return "CR_"+String(n).padStart(3,"0");
   }
   function eb2bCloseModal(){
+    EB2B.editingRec=null;
     const overlay=$e("#eb2bModalOverlay");
     overlay?.classList.remove("show","full");
     document.body.classList.remove("eb2b-cr-form-active");
@@ -19519,6 +19573,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bOpenModal(key, row){
+    EB2B.editingRec = row ? {key, id:row.id} : null;
     const overlay = $e("#eb2bModalOverlay");
     const title = row ? "Sửa " : "Tạo ";
     const labels = {cr:"CR Log",uat:"UAT Test Case",release:"Release / PRD",brd:"BRD",weekly_mom:"Weekly MoM"};
@@ -19739,6 +19794,195 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        if(ev.key==="Escape"){eb2bCloseModal();eb2bUatCloseModal();eb2bCloseCrDrawer();}
     });
   }
+
+  /* ===========================================================================
+     REALTIME e-B2B — tự đồng bộ khi người khác thêm / sửa / xóa dữ liệu
+     Vá thẳng vào EB2B.rows (không tải lại cả bảng), rồi vẽ lại có kiểm soát:
+     giữ focus + con trỏ ô tìm kiếm, giữ vị trí cuộn bảng, không vẽ đè lúc đang mở
+     dropdown / đang gõ trong ô nhập, và làm mới Drawer CR đang mở.
+     Yêu cầu phía Supabase: các bảng eb2b_* phải nằm trong publication supabase_realtime.
+  =========================================================================== */
+  const EB2B_RT_CONFIG = new Set(["statuses","sub_statuses","evidence_steps","attachment_categories"]);
+  let eb2bRtStarted = false, eb2bRtDown = false, eb2bRtTimer = null, eb2bRtHiddenAt = 0;
+
+  function eb2bRtSort(key){
+    const f = EB2B_RT_CONFIG.has(key) ? "sort_order" : (key === "brd" ? "updated_at" : "created_at");
+    // Cùng thứ tự với eb2bLoad(): giảm dần, NULL đứng trước (mặc định của Postgres).
+    EB2B.rows[key].sort((a,b)=>{
+      const x = a[f], y = b[f];
+      if(x == y) return 0;
+      if(x == null) return -1;
+      if(y == null) return 1;
+      return x < y ? 1 : -1;
+    });
+  }
+
+  function eb2bRtApply(key, payload){
+    const list = EB2B.rows[key];
+    if(!list) return false;
+    if(payload.eventType === "DELETE"){
+      const id = payload.old && payload.old.id;
+      if(id == null) return false;
+      const i = list.findIndex(r=>String(r.id) === String(id));
+      if(i < 0) return false;
+      list.splice(i, 1);
+      return true;
+    }
+    const row = payload.new;
+    if(!row || row.id == null) return false;
+    const i = list.findIndex(r=>String(r.id) === String(row.id));
+    // Xóa mềm = UPDATE set deleted_at -> loại khỏi danh sách đang hiển thị (giống DELETE).
+    if(!EB2B_RT_CONFIG.has(key) && row.deleted_at){
+      if(i < 0) return false;
+      list.splice(i, 1);
+      return true;
+    }
+    if(i < 0) list.push(row); else list[i] = Object.assign({}, list[i], row);
+    eb2bRtSort(key);
+    return true;
+  }
+
+  function eb2bRtOnChange(key, payload){
+    // Đang tải toàn bộ: kết quả tải có thể cũ hơn sự kiện này -> tải lại 1 lần sau khi xong.
+    if(EB2B.loading){ EB2B.reloadQueued = true; return; }
+    const changed = eb2bRtApply(key, payload);
+    if(!changed && EB2B.activeTab !== "recycle") return;
+    EB2B.rtDirty.add(key);
+    const row = payload.new || {}, old = payload.old || {};
+    if((row.updated_by || null) !== eUser()){
+      EB2B.rtForeign.push({ key, id: row.id != null ? row.id : old.id, type: payload.eventType });
+    }
+    clearTimeout(eb2bRtTimer);
+    eb2bRtTimer = setTimeout(eb2bRtFlush, 250);
+  }
+
+  // Không vẽ đè khi người dùng đang thao tác dở (dropdown mở / đang gõ trong ô không định danh được).
+  function eb2bRtBusy(){
+    if(eb2bActiveCrInline) return true;
+    const a = document.activeElement, root = $e("#eb2bContent");
+    if(a && root && root.contains(a) && !a.id
+       && a.matches('select, textarea, input:not([type="checkbox"]):not([type="radio"]):not([type="button"])')) return true;
+    return false;
+  }
+
+  function eb2bRtRenderContent(){
+    const root = $e("#eb2bContent");
+    if(!root) return;
+    const a = document.activeElement;
+    const keep = (a && a.id && root.contains(a))
+      ? { id:a.id, s:a.selectionStart, e:a.selectionEnd } : null;
+    const scrolls = $$e(".eb2b-table-wrap", root).map(el=>[el.scrollLeft, el.scrollTop]);
+    eb2bRender();
+    const nr = $e("#eb2bContent");
+    if(!nr) return;
+    $$e(".eb2b-table-wrap", nr).forEach((el,i)=>{
+      if(scrolls[i]){ el.scrollLeft = scrolls[i][0]; el.scrollTop = scrolls[i][1]; }
+    });
+    if(keep){
+      const el = document.getElementById(keep.id);
+      if(el && nr.contains(el)){
+        try{
+          el.focus({ preventScroll:true });
+          if(keep.s != null && el.setSelectionRange) el.setSelectionRange(keep.s, keep.e);
+        }catch(_){}
+      }
+    }
+  }
+
+  function eb2bRtFlush(){
+    eb2bRtTimer = null;
+    if(!EB2B.ready || !EB2B.rtDirty.size) return;
+    if(eb2bRtBusy()){ eb2bRtTimer = setTimeout(eb2bRtFlush, 800); return; }
+    const dirty = new Set(EB2B.rtDirty), foreign = EB2B.rtForeign.splice(0);
+    EB2B.rtDirty.clear();
+    eb2bUpdateNavCounts();
+    const has = (...keys)=>keys.some(k=>dirty.has(k));
+
+    // 1) Danh mục cấu hình ở Quản Trị Dữ Liệu (không vẽ đè nếu đang gõ ô "Thêm ...").
+    if(has(...EB2B_RT_CONFIG)){
+      const host = $e("#eb2bAdminConfigHost");
+      const typing = host && $$e("[data-eb2b-config-input]", host).some(i=>i.value);
+      if(host && !typing) eb2bRenderAdminHost();
+    }
+
+    // 2) Form (CR/Release/BRD/MoM) hoặc modal UAT đang mở: KHÔNG vẽ lại để khỏi mất chữ đang gõ,
+    //    nhưng báo nếu người khác vừa sửa/xóa đúng bản ghi này (lưu sẽ ghi đè).
+    const formOpen = $e("#eb2bModalOverlay")?.classList.contains("show") && EB2B.editingRec;
+    const uatOpen = EB2B.editingUatId != null && $e("#eb2bUatModalOverlay")?.classList.contains("show");
+    const hit = foreign.find(f=>
+      (formOpen && f.key === EB2B.editingRec.key && String(f.id) === String(EB2B.editingRec.id)) ||
+      (uatOpen && f.key === "uat" && String(f.id) === String(EB2B.editingUatId)));
+    if(hit){
+      eToast(hit.type === "DELETE"
+        ? "Bản ghi bạn đang sửa vừa bị người khác xóa."
+        : "Bản ghi bạn đang sửa vừa được người khác cập nhật — nếu lưu, thay đổi của họ sẽ bị ghi đè.", "warn");
+    }
+    // Danh sách evidence trong modal UAT: cập nhật riêng phần danh sách, không đụng tới form.
+    if(uatOpen && has("attachments")){
+      const overlay = $e("#eb2bUatModalOverlay");
+      const row = EB2B.rows.uat.find(x=>String(x.id) === String(EB2B.editingUatId));
+      const cur = $e(".eb2b-uat-evidence-list", overlay);
+      if(row && cur){
+        const tmp = document.createElement("div");
+        tmp.innerHTML = eb2bUatEvidenceHtml(row);
+        const fresh = $e(".eb2b-uat-evidence-list", tmp);
+        if(fresh) cur.innerHTML = fresh.innerHTML;
+      }
+    }
+
+    // 3) Drawer CR đang mở: dựng lại nhưng giữ tab đang xem + vị trí cuộn.
+    const drawer = $e("#eb2bCrDrawer");
+    if(EB2B.drawerCrId != null && drawer?.classList.contains("show") && has("cr","attachments","uat","release")){
+      const row = EB2B.rows.cr.find(x=>String(x.id) === String(EB2B.drawerCrId));
+      if(!row){
+        eb2bCloseCrDrawer();
+        eToast("CR đang xem vừa bị người khác xóa.", "warn");
+      }else{
+        const tab = $e("[data-eb2b-drawer-tab].active", drawer)?.dataset.eb2bDrawerTab;
+        const sc = $e(".drawer-body", drawer)?.scrollTop || 0;
+        eb2bOpenCrDrawer(row);
+        if(tab && tab !== "info") $e(`[data-eb2b-drawer-tab="${tab}"]`, drawer)?.click();
+        const body = $e(".drawer-body", drawer);
+        if(body) body.scrollTop = sc;
+      }
+    }
+
+    // 4) Nội dung tab đang xem (Quản Trị Dữ Liệu đã xử lý ở bước 1).
+    if(document.body.classList.contains("eb2b-active") && EB2B.activeTab !== "admin") eb2bRtRenderContent();
+  }
+
+  function eb2bSubscribeRealtime(){
+    if(eb2bRtStarted) return;
+    const sb = activeDb();
+    if(!sb) return;
+    eb2bRtStarted = true;
+    Object.entries(EB2B_TABLES).forEach(([key, table])=>{
+      sb.channel("realtime-" + table)
+        .on("postgres_changes", { event:"*", schema:"public", table }, payload=>eb2bRtOnChange(key, payload))
+        .subscribe(status=>{
+          if(status === "SUBSCRIBED"){
+            // Nối lại sau khi rớt: sự kiện trong lúc mất kết nối không được phát lại -> tải đồng bộ 1 lần.
+            if(eb2bRtDown){ eb2bRtDown = false; eb2bLoad({ queue:true, soft:true }); }
+          }else if(status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED"){
+            eb2bRtDown = true;
+            if(status === "CHANNEL_ERROR") console.warn(`e-B2B realtime: không đăng ký được ${table} (kiểm tra bảng đã thêm vào publication supabase_realtime chưa).`);
+          }
+        });
+    });
+    document.addEventListener("visibilitychange", ()=>{
+      if(document.hidden){ eb2bRtHiddenAt = Date.now(); return; }
+      if(eb2bRtHiddenAt && Date.now() - eb2bRtHiddenAt > 60000) eb2bLoad({ queue:true, soft:true });
+      eb2bRtHiddenAt = 0;
+    });
+    window.addEventListener("online", ()=>eb2bLoad({ queue:true, soft:true }));
+  }
+
+  // Gọi từ DMS (handleAuthState) sau khi đăng nhập xong.
+  window.__eb2bStartSync = function(){
+    const go = ()=>{ if(!activeDb()) return; eb2bSubscribeRealtime(); eb2bLoad({ queue:true, soft:true }); };
+    if($e("#eb2bViewRoot")) go();
+    else document.addEventListener("DOMContentLoaded", ()=>setTimeout(go, 0), { once:true });
+  };
 
   function eb2bStart(){
     if(!eb2bBuildShell()) return;
