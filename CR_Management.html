@@ -3057,6 +3057,44 @@ tbody tr.detail-selected:hover{ background:
 .attachments-upload-cta{
   flex:0 0 auto; display:inline-flex; align-items:center; gap:7px; padding:9px 13px;
   border-radius:9px; background:#0e9a94; color:#fff; font-size:11.5px; font-weight:750;
+  transition:transform .2s, box-shadow .2s, background .2s;
+}
+.pro-dropzone .attachments-upload-cta{ box-shadow:0 8px 18px -6px rgba(14,154,148,.55); }
+.pro-dropzone:hover .attachments-upload-cta{ transform:translateY(-1px); background:#0d8a83; box-shadow:0 10px 22px -6px rgba(14,154,148,.65); }
+
+/* =====================================================================
+   PRO DROPZONE — khu vực upload chuyên nghiệp, đồng bộ animation với
+   khối "Nhập Excel" (icon nổi + vòng lan tỏa + vệt sáng khi hover/kéo file).
+   Dùng chung cho mọi ô upload: Tệp đính kèm CR, Evidence UAT (DMS & e-B2B).
+   ===================================================================== */
+.pro-dropzone{
+  position:relative; overflow:hidden; cursor:pointer;
+  transition:transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s ease, background .3s ease, border-color .3s ease;
+}
+.pro-dropzone::after{
+  content:""; position:absolute; top:0; bottom:0; left:0; width:42%; pointer-events:none; opacity:0;
+  background:linear-gradient(90deg, transparent, rgba(14,154,148,.16), transparent);
+}
+.pro-dropzone:hover{ transform:translateY(-3px); box-shadow:0 18px 36px -18px rgba(14,154,148,.42); }
+.pro-dropzone:hover::after{ opacity:1; animation:impShine 1.15s ease; }
+.pro-dropzone.drag{
+  transform:scale(1.015); border-color:#22b9b0 !important; background:#ecfbf9 !important;
+  box-shadow:0 0 0 4px rgba(49,189,181,.14), 0 20px 38px -16px rgba(14,154,148,.45);
+}
+.pro-drop-icon{
+  position:relative; flex:0 0 auto; width:54px; height:54px; border-radius:50%; display:grid; place-items:center;
+  background:linear-gradient(135deg,#e2faf8,#c9f1ee); color:#0d8a93; margin:0;
+  animation:impFloat 3s ease-in-out infinite;
+}
+.pro-drop-icon::before,.pro-drop-icon::after{
+  content:""; position:absolute; inset:0; border-radius:50%; border:2px solid #22d1c4; opacity:0;
+  animation:impRing 2.6s ease-out infinite;
+}
+.pro-drop-icon::after{ animation-delay:1.3s; }
+.pro-drop-icon svg{ width:25px; height:25px; margin:0; color:inherit; position:relative; }
+@media(prefers-reduced-motion:reduce){
+  .pro-drop-icon,.pro-drop-icon::before,.pro-drop-icon::after{ animation:none !important; }
+  .pro-dropzone{ transition:none; }
 }
 .attachments-section-bar{
   display:flex; align-items:end; justify-content:space-between; gap:12px;
@@ -3952,6 +3990,9 @@ tbody tr.detail-selected:hover{ background:
   background:linear-gradient(135deg,#fbfefe,#f1fbfa);
   text-align:left;
 }
+.tc-evidence-upload .file-drop:hover,.tc-evidence-upload .file-drop.drag{
+  border-color:#31bdb5; background:#ecfbf9;
+}
 .tc-evidence-upload .file-drop svg{
   width:34px;
   height:34px;
@@ -3961,6 +4002,7 @@ tbody tr.detail-selected:hover{ background:
 }
 .tc-evidence-upload .file-drop p{ margin:0 0 4px; }
 .tc-evidence-upload .file-drop .hint{ margin:0; }
+.tc-evidence-upload .file-drop p b{ color:#0e9a94; }
 .tc-evidence-list-head{
   display:flex;
   align-items:flex-end;
@@ -13339,13 +13381,13 @@ function renderDrawer(cr){
               <select id="uploadCategory">${CR_LISTS.attachCategory.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select>
               <div class="category-hint">Chọn nhóm trước khi tải lên để hồ sơ luôn được sắp xếp nhất quán.</div>
             </div>
-            <div class="file-drop attachments-dropzone" id="crFileDrop">
-              <mi-icon name="upload" stroke-width="1.6"></mi-icon>
+            <div class="file-drop attachments-dropzone pro-dropzone" id="crFileDrop">
+              <div class="pro-drop-icon"><mi-icon name="upload" stroke-width="1.6"></mi-icon></div>
               <div class="attachments-dropzone-copy">
                 <p><b>Chọn file</b> hoặc kéo thả vào khu vực này</p>
                 <div class="hint">Hỗ trợ ảnh, PDF, Word, Excel, mail (.eml/.msg) và tải nhiều file cùng lúc.</div>
               </div>
-              <span class="attachments-upload-cta">Tải tài liệu lên</span>
+              <span class="attachments-upload-cta"><mi-icon name="upload" stroke-width="2" size="13"></mi-icon>Tải tài liệu lên</span>
               <input type="file" id="crFileInput" multiple hidden>
             </div>
           </div>
@@ -14212,8 +14254,8 @@ function tcModalTemplate(t, presetCrId){
                 </select>
                 <input id="evidenceStepCustom" type="text" placeholder="Hoặc nhập tên bước tùy chỉnh...">
               </div>
-              <div class="file-drop" id="evidenceDrop">
-                <mi-icon name="upload" stroke-width="1.6"></mi-icon>
+              <div class="file-drop pro-dropzone" id="evidenceDrop">
+                <div class="pro-drop-icon"><mi-icon name="upload" stroke-width="1.6"></mi-icon></div>
                 <div>
                   <p><b>Bấm để chọn evidence</b> hoặc kéo thả vào đây</p>
                   <div class="hint">Ảnh chụp màn hình kết quả test — có thể chọn nhiều ảnh</div>
@@ -18179,6 +18221,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        #eb2bUatModalOverlay .eb2b-uat-field input:focus,#eb2bUatModalOverlay .eb2b-uat-field textarea:focus,#eb2bUatModalOverlay .eb2b-uat-field select:focus{background:#fff;border-color:#49c6bf;box-shadow:0 0 0 3px rgba(63,208,201,.1);outline:none}
        #eb2bUatModalOverlay .eb2b-uat-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:13px clamp(20px,4vw,52px);border-top:1px solid #dce8eb;background:rgba(255,255,255,.94);box-shadow:0 -8px 18px -22px rgba(15,42,68,.5)}
        #eb2bUatModalOverlay .eb2b-uat-evidence{padding:20px 22px;border:1px solid #d9e8eb;border-radius:15px;background:linear-gradient(135deg,#fff 0%,#f2fbfa 100%)}
+       #eb2bUatModalOverlay .eb2b-uat-evidence-upload{display:flex;flex-direction:column;gap:12px;margin:16px 0 18px}
+       #eb2bUatModalOverlay .eb2b-uat-evidence-upload .eb2b-uat-field{padding:10px 12px}
+       #eb2bUatModalOverlay .eb2b-evidence-drop{display:flex;align-items:center;gap:16px;min-height:96px;margin:0;padding:16px 20px;border:1.5px dashed #b9d9dc;border-radius:14px;background:linear-gradient(135deg,#fbfefe,#f1fbfa);text-align:left}
+       #eb2bUatModalOverlay .eb2b-evidence-drop:hover,#eb2bUatModalOverlay .eb2b-evidence-drop.drag{border-color:#31bdb5;background:#ecfbf9}
+       #eb2bUatModalOverlay .eb2b-evidence-drop p{color:#18364f;font-size:13px;font-weight:700;margin:0 0 4px}
+       #eb2bUatModalOverlay .eb2b-evidence-drop p b{color:#0e9a94}
+       #eb2bUatModalOverlay .eb2b-evidence-drop .hint{color:#8399a7;font-size:11px;line-height:1.45;margin:0}
+       #eb2bUatModalOverlay .eb2b-uat-evidence-upload .btn-primary{align-self:flex-end;display:inline-flex;align-items:center;gap:7px}
        #eb2bUatModalOverlay .eb2b-uat-evidence h4{margin-bottom:6px;color:#153852;font-size:18px}
        #eb2bUatModalOverlay .eb2b-uat-evidence p{color:#6d8494;font-size:12px;line-height:1.6}
        #eb2bUatModalOverlay .eb2b-uat-evidence-list{display:grid;gap:8px;margin-top:18px}
@@ -19008,7 +19058,18 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        <div class="tc-modal-kicker">TEST EVIDENCE</div>
        <h4>Quản lý bằng chứng kiểm thử</h4>
        <p>Gắn ảnh hoặc tài liệu vào đúng bước kiểm thử để đội ngũ dễ đối chiếu kết quả.</p>
-       <div class="eb2b-uat-evidence-upload"><div class="form-grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end"><div class="eb2b-uat-field"><label for="eb2bUatEvidenceStep">Bước kiểm thử</label><input id="eb2bUatEvidenceStep" type="text" placeholder="Ví dụ: Step 01 - Tạo đơn hàng"></div><div class="eb2b-uat-field"><label for="eb2bUatEvidenceFiles">Chọn file</label><input id="eb2bUatEvidenceFiles" type="file" multiple></div></div><button class="btn btn-primary btn-sm" type="button" id="eb2bUatUploadEvidence">Tải evidence lên</button></div>
+       <div class="eb2b-uat-evidence-upload">
+         <div class="eb2b-uat-field"><label for="eb2bUatEvidenceStep">Bước kiểm thử</label><input id="eb2bUatEvidenceStep" type="text" placeholder="Ví dụ: Step 01 - Tạo đơn hàng"></div>
+         <div class="file-drop pro-dropzone eb2b-evidence-drop" id="eb2bUatEvidenceDrop">
+           <div class="pro-drop-icon"><mi-icon name="upload" stroke-width="1.6"></mi-icon></div>
+           <div class="attachments-dropzone-copy">
+             <p id="eb2bUatEvidenceDropText"><b>Bấm để chọn evidence</b> hoặc kéo thả vào đây</p>
+             <div class="hint">Ảnh chụp màn hình kết quả test — có thể chọn nhiều ảnh</div>
+           </div>
+           <input id="eb2bUatEvidenceFiles" type="file" multiple hidden>
+         </div>
+         <button class="btn btn-primary btn-sm" type="button" id="eb2bUatUploadEvidence"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Tải evidence lên</button>
+       </div>
        <div class="eb2b-uat-evidence-list">
          ${files.length ? files.map(file=>`<div class="eb2b-uat-evidence-row"><span>${eEsc(file.file_name)}</span><small>${eEsc(file.step_name || file.category || "Evidence")} · ${eEsc(file.uploaded_by || "—")}</small></div>`).join("") : `<div class="empty-state"><p>Chưa có ảnh evidence nào cho test case này.</p></div>`}
        </div>
@@ -19088,6 +19149,24 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      }));
      $e("#eb2bUatSave",overlay)?.addEventListener("click", ()=>eb2bUatSave(row));
      $e("#eb2bUatUploadEvidence",overlay)?.addEventListener("click", ()=>eb2bUatUploadEvidence(row));
+     (function wireEb2bEvidenceDrop(){
+       const drop = $e("#eb2bUatEvidenceDrop", overlay);
+       const input = $e("#eb2bUatEvidenceFiles", overlay);
+       const label = $e("#eb2bUatEvidenceDropText", overlay);
+       if(!drop || !input) return;
+       const describe = ()=>{
+         const n = input.files ? input.files.length : 0;
+         if(label) label.innerHTML = n ? `<b>${n} file đã chọn</b> — bấm để chọn lại` : `<b>Bấm để chọn evidence</b> hoặc kéo thả vào đây`;
+       };
+       drop.addEventListener("click", ()=> input.click());
+       input.addEventListener("change", describe);
+       ["dragenter","dragover"].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add("drag"); }));
+       ["dragleave","drop"].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove("drag"); }));
+       drop.addEventListener("drop", e=>{
+         const dt = e.dataTransfer;
+         if(dt && dt.files && dt.files.length){ input.files = dt.files; describe(); }
+       });
+     })();
      if(typeof initAutoGrow === "function") initAutoGrow(overlay);
    }
 
@@ -19106,19 +19185,19 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      const step=($e("#eb2bUatEvidenceStep",overlay)?.value || "").trim();
      if(!files.length){eToast("Vui lòng chọn ít nhất một file.","err");return;}
      const button=$e("#eb2bUatUploadEvidence",overlay);
-     if(button){button.disabled=true;button.textContent="Đang tải lên...";}
+     if(button){button.disabled=true;button.innerHTML="Đang tải lên...";}
      const sb=activeDb();
      for(const file of files){
        const safeName=file.name.replace(/[^\w.\-() ]+/g,"_");
        const path=`uat/${row.cr_id || "no-cr"}/${row.id}/${Date.now()}_${safeName}`;
        const upload=await sb.storage.from("eb2b-attachments").upload(path,file,{upsert:false});
-       if(upload.error){eToast("Tải file thất bại: "+upload.error.message,"err");if(button){button.disabled=false;button.textContent="Tải evidence lên";}return;}
+       if(upload.error){eToast("Tải file thất bại: "+upload.error.message,"err");if(button){button.disabled=false;button.innerHTML='<mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Tải evidence lên';}return;}
        const inserted=await sb.from(EB2B_TABLES.attachments).insert({
          cr_id:row.cr_id || null,testcase_id:row.id,category:"uat_evidence",
          step_name:step || null,file_name:file.name,file_path:path,mime_type:file.type || null,
          file_size:file.size,uploaded_by:eUser()
        }).select("*").single();
-       if(inserted.error){await sb.storage.from("eb2b-attachments").remove([path]);eToast("Không ghi được metadata evidence: "+inserted.error.message,"err");if(button){button.disabled=false;button.textContent="Tải evidence lên";}return;}
+       if(inserted.error){await sb.storage.from("eb2b-attachments").remove([path]);eToast("Không ghi được metadata evidence: "+inserted.error.message,"err");if(button){button.disabled=false;button.innerHTML='<mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Tải evidence lên';}return;}
        if(inserted.data) EB2B.rows.attachments.unshift(inserted.data);
      }
      eToast("Đã tải evidence vào bucket EB2B.","ok");
