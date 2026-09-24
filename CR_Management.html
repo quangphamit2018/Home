@@ -1187,6 +1187,10 @@ tbody tr.detail-selected td.cell-actions{ background:#163a4a; }
 }
 .bulk-bar b{ color: var(--accent); }
 .bulk-actions{ display:flex; gap:8px; margin-left:auto; }
+.bulk-actions .bulk-delete-btn{ display:inline-flex; align-items:center; gap:6px; }
+.bulk-actions .bulk-delete-btn mi-icon svg{ width:14px; height:14px; }
+/* Xóa nhiều: chỉ hiện với role được phép xóa (cùng quy tắc với nút xóa từng dòng). */
+body.role-no-delete .bulk-delete-btn{ display:none !important; }
 
 /* ---- row selection checkbox column ---- */
 th.col-check, td.cell-check{ width:40px; padding-left:18px; padding-right:6px; }
@@ -6331,6 +6335,7 @@ lucide/dist/esm/lucide.mjs:
             <span><b id="crBulkCount">0</b> đã chọn</span>
             <div class="bulk-actions">
               <button class="btn btn-ghost btn-sm" id="crBulkClear">Bỏ chọn</button>
+              <button class="btn btn-danger btn-sm bulk-delete-btn" id="crBulkDelete" type="button"><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button>
             </div>
           </div>
 
@@ -6414,6 +6419,7 @@ lucide/dist/esm/lucide.mjs:
             <span><b id="tcBulkCount">0</b> đã chọn</span>
             <div class="bulk-actions">
               <button class="btn btn-ghost btn-sm" id="tcBulkClear">Bỏ chọn</button>
+              <button class="btn btn-danger btn-sm bulk-delete-btn" id="tcBulkDelete" type="button"><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button>
             </div>
           </div>
 
@@ -6497,6 +6503,7 @@ lucide/dist/esm/lucide.mjs:
             <span><b id="relBulkCount">0</b> đã chọn</span>
             <div class="bulk-actions">
               <button class="btn btn-ghost btn-sm" id="relBulkClear">Bỏ chọn</button>
+              <button class="btn btn-danger btn-sm bulk-delete-btn" id="relBulkDelete" type="button"><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button>
             </div>
           </div>
 
@@ -8974,11 +8981,72 @@ function applyCrDensity(){
   table.classList.add("density-" + STATE.crDensity);
 }
 
+/* ---------------------------------------------------------------------------
+   XÓA NHIỀU (bulk soft-delete) — CR Log / UAT Test Case / Release-PRD (DMS)
+   Dùng đúng cơ chế xóa từng dòng: chuyển vào Recycle Bin (deleted_at), KHÔNG xóa
+   file đính kèm. Gửi 1 request duy nhất (.in("id", [...])) nên xóa là "được cả
+   loạt hoặc không có gì", không bị xóa dở dang.
+--------------------------------------------------------------------------- */
+function bulkDeletePreview(labels, max=5){
+  const shown = labels.slice(0, max).join(", ");
+  const extra = labels.length - max;
+  return extra > 0 ? `${shown} và ${extra} mục khác` : shown;
+}
+function confirmBulkDelete(title, noun, labels, run){
+  if(!canDeleteData()){ toast("Bạn không có quyền xóa dữ liệu.", "err"); return; }
+  const msg = `${labels.length} ${noun} đã chọn (${bulkDeletePreview(labels)}) sẽ được chuyển vào Recycle Bin. Quản trị viên có thể khôi phục hoặc xóa vĩnh viễn sau.`;
+  confirmDelete(title, msg, run, `Xóa ${labels.length} mục`);
+}
+async function bulkSoftDelete(table, rowIds){
+  const { error } = await STATE.sb.from(table).update({
+    deleted_at: new Date().toISOString(),
+    deleted_by: STATE.userEmail || null,
+  }).in("id", rowIds);
+  return error;
+}
+function bulkDeleteCr(){
+  const rows = STATE.crList.filter(c=> STATE.crSelection.has(c.cr_id));
+  if(!rows.length) return;
+  confirmBulkDelete(`Xóa ${rows.length} Change Request?`, "CR", rows.map(r=>r.cr_id), async ()=>{
+    const error = await bulkSoftDelete("cr_log", rows.map(r=>r.id));
+    if(error){ toast("Xóa thất bại: " + error.message, "err"); return; }
+    STATE.crSelection.clear();
+    toast(`Đã chuyển ${rows.length} CR vào Recycle Bin`, "ok");
+    try{ closeDrawer(); }catch(_){}
+    await refreshAll();
+  });
+}
+function bulkDeleteTc(){
+  const rows = STATE.tcList.filter(t=> STATE.tcSelection.has(t.id));
+  if(!rows.length) return;
+  confirmBulkDelete(`Xóa ${rows.length} Test Case?`, "Test Case", rows.map(r=>r.test_case_id || r.cr_id || "—"), async ()=>{
+    const error = await bulkSoftDelete("uat_testcase", rows.map(r=>r.id));
+    if(error){ toast("Xóa thất bại: " + error.message, "err"); return; }
+    STATE.tcSelection.clear();
+    toast(`Đã chuyển ${rows.length} test case vào Recycle Bin`, "ok");
+    await refreshAll();
+    if(STATE.drawerCrId){ try{ renderDrawerLinked(STATE.drawerCrId); }catch(_){} }
+  });
+}
+function bulkDeleteRel(){
+  const rows = STATE.relList.filter(r=> STATE.relSelection.has(r.id));
+  if(!rows.length) return;
+  confirmBulkDelete(`Xóa ${rows.length} Release / PRD?`, "Release", rows.map(r=>r.release_id || r.cr_id || "—"), async ()=>{
+    const error = await bulkSoftDelete("release_prd", rows.map(r=>r.id));
+    if(error){ toast("Xóa thất bại: " + error.message, "err"); return; }
+    STATE.relSelection.clear();
+    toast(`Đã chuyển ${rows.length} release vào Recycle Bin`, "ok");
+    await refreshAll();
+    if(STATE.drawerCrId){ try{ renderDrawerLinked(STATE.drawerCrId); }catch(_){} }
+  });
+}
+
 function initCrSelection(){
   $("#crBulkClear").addEventListener("click", ()=>{
     STATE.crSelection.clear();
     renderCrTable();
   });
+  $("#crBulkDelete")?.addEventListener("click", bulkDeleteCr);
 }
 function updateCrBulkBar(){
   const bar = $("#crBulkBar");
@@ -9060,6 +9128,7 @@ function initTcSelection(){
     STATE.tcSelection.clear();
     renderTcTable();
   });
+  $("#tcBulkDelete")?.addEventListener("click", bulkDeleteTc);
 }
 function updateTcBulkBar(){
   const bar = $("#tcBulkBar");
@@ -9135,6 +9204,7 @@ function initRelSelection(){
     STATE.relSelection.clear();
     renderRelTable();
   });
+  $("#relBulkDelete")?.addEventListener("click", bulkDeleteRel);
 }
 function updateRelBulkBar(){
   const bar = $("#relBulkBar");
@@ -18237,8 +18307,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     };
     const mobileHtml=r=>`<article class="cr-card eb2b-cr-card ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-view="${eEsc(r.id)}"><div class="cr-card-top"><label class="cr-card-select" onclick="event.stopPropagation()"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""}></label><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}${eb2bCrOverdue(r)?`<span class="badge badge-danger">Trễ hạn</span>`:""}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(r.deadline?eDate(r.deadline):"—")}</span></div><div class="cr-card-inline">${eb2bCrInlineHtml("status",r)}${eb2bCrInlineHtml("priority",r)}</div><div class="cr-card-actions"><button class="btn btn-secondary btn-sm" data-eb2b-cr-edit="${eEsc(r.id)}">Sửa</button><button class="btn btn-secondary btn-sm danger" data-eb2b-cr-delete="${eEsc(r.id)}">Xóa</button></div></article>`;
     c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrCatalog("category"))}<div class="filter-chip eb2b-requester-filter"><span>Requester</span><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
-    const bulk=document.createElement("div");bulk.className=`bulk-bar ${EB2B.crSelection.size?"":"hidden"}`;bulk.innerHTML=`<span><b>${EB2B.crSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-cr-selection-clear>Bỏ chọn</button></div>`;const crWrap=$e("#eb2bCrTableWrap");crWrap?.parentElement?.insertBefore(bulk,crWrap);
+    const bulk=document.createElement("div");bulk.className=`bulk-bar ${EB2B.crSelection.size?"":"hidden"}`;bulk.innerHTML=`<span><b>${EB2B.crSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-cr-selection-clear>Bỏ chọn</button><button class="btn btn-danger btn-sm bulk-delete-btn" type="button" data-eb2b-cr-bulk-delete><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button></div>`;const crWrap=$e("#eb2bCrTableWrap");crWrap?.parentElement?.insertBefore(bulk,crWrap);
     bulk.querySelector("[data-eb2b-cr-selection-clear]")?.addEventListener("click",()=>{EB2B.crSelection.clear();eb2bRenderCrLog();});
+    bulk.querySelector("[data-eb2b-cr-bulk-delete]")?.addEventListener("click",()=>eb2bBulkDelete("cr",EB2B.crSelection));
     eb2bWireCrHScroll();
     $e("#eb2bCrSearch")?.addEventListener("input",ev=>{EB2B.search=ev.target.value;eb2bRenderCrLog();});
     $all("[data-eb2b-cr-filter-trigger]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const group=btn.closest(".cr-filter-group"),open=group.classList.contains("is-open");$all(".cr-filter-group.is-open",c).forEach(item=>{item.classList.remove("is-open");item.querySelector("[data-eb2b-cr-filter-trigger]")?.setAttribute("aria-expanded","false");});if(!open){group.classList.add("is-open");btn.setAttribute("aria-expanded","true");}}));
@@ -18581,7 +18652,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
              ${canEdit?`<button class="btn btn-primary btn-sm" type="button" data-eb2b-new="uat"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Test Case</button>`:""}
            </div>
          </div>
-         <div class="bulk-bar ${selectedCount?"":"hidden"}" id="eb2bUatBulkBar"><span><b>${selectedCount}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-uat-bulk-clear>Bỏ chọn</button></div></div>
+         <div class="bulk-bar ${selectedCount?"":"hidden"}" id="eb2bUatBulkBar"><span><b>${selectedCount}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-uat-bulk-clear>Bỏ chọn</button><button class="btn btn-danger btn-sm bulk-delete-btn" type="button" data-eb2b-uat-bulk-delete><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button></div></div>
          <div class="crlog-table-outer">
            <div class="table-wrap crlog-table-wrap" id="eb2bUatTableWrap">
              <table id="eb2bUatTable" class="density-${eEsc(EB2B.uatDensity)}"><colgroup>${["__check","cr_id",...visibleColumns.map(column=>column.key),"__actions"].map(key=>`<col data-eb2b-uat-col-width="${key}">`).join("")}</colgroup><thead><tr>
@@ -18636,6 +18707,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        eb2bRenderUat();
      });
      $e("[data-eb2b-uat-bulk-clear]",root)?.addEventListener("click",()=>{EB2B.uatSelection.clear();eb2bRenderUat();});
+     $e("[data-eb2b-uat-bulk-delete]",root)?.addEventListener("click",()=>eb2bBulkDelete("uat",EB2B.uatSelection));
      $$e("[data-eb2b-uat-sort]",root).forEach(header=>header.addEventListener("click",()=>{
        const key=header.dataset.eb2bUatSort;
        EB2B.uatSort={key,dir:EB2B.uatSort.key===key&&EB2B.uatSort.dir==="asc"?"desc":"asc"};
@@ -18775,10 +18847,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(relSelectAll) relSelectAll.innerHTML=`<input type="checkbox" id="eb2bRelSelectAll" ${relRows.length&&relRows.every(tr=>EB2B.releaseSelection.has(String(tr.dataset.eb2bRel)))?"checked":""} title="Chọn tất cả">`;
     relRows.forEach(tr=>{const id=String(tr.dataset.eb2bRel),cell=tr.querySelector(".cell-check");if(cell)cell.innerHTML=`<input type="checkbox" class="row-check" data-eb2b-rel-check="${eEsc(id)}" ${EB2B.releaseSelection.has(id)?"checked":""}>`;});
     const relBulk=$e(".bulk-bar",c);
-    if(relBulk){relBulk.classList.toggle("hidden",EB2B.releaseSelection.size===0);relBulk.innerHTML=`<span><b>${EB2B.releaseSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" id="eb2bRelBulkClear">Bỏ chọn</button></div>`;}
+    if(relBulk){relBulk.classList.toggle("hidden",EB2B.releaseSelection.size===0);relBulk.innerHTML=`<span><b>${EB2B.releaseSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" id="eb2bRelBulkClear">Bỏ chọn</button><button class="btn btn-danger btn-sm bulk-delete-btn" type="button" id="eb2bRelBulkDelete"><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button></div>`;}
     $e("#eb2bRelSelectAll",c)?.addEventListener("change",ev=>{relRows.forEach(tr=>ev.target.checked?EB2B.releaseSelection.add(String(tr.dataset.eb2bRel)):EB2B.releaseSelection.delete(String(tr.dataset.eb2bRel)));eb2bRenderRelease();});
     $all("[data-eb2b-rel-check]",c).forEach(box=>box.addEventListener("change",()=>{const id=String(box.dataset.eb2bRelCheck);box.checked?EB2B.releaseSelection.add(id):EB2B.releaseSelection.delete(id);eb2bRenderRelease();}));
     $e("#eb2bRelBulkClear",c)?.addEventListener("click",()=>{EB2B.releaseSelection.clear();eb2bRenderRelease();});
+    $e("#eb2bRelBulkDelete",c)?.addEventListener("click",()=>eb2bBulkDelete("release",EB2B.releaseSelection));
     $e('[data-eb2b-new="release"]',c)?.remove();
     const rerender = ()=>eb2bRenderRelease();
     $e("#eb2bRelSearch")?.addEventListener("input", ev=>{EB2B.releaseFilters.search=ev.target.value.trim().toLowerCase();rerender();});
@@ -19187,6 +19260,30 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     eb2bCloseModal();
     eToast(row ? "Đã cập nhật dữ liệu EB2B." : "Đã tạo dữ liệu EB2B.", "ok");
     await eb2bLoad();
+  }
+
+  /* Xóa nhiều (soft delete) cho CR / UAT / Release của e-B2B — cùng cơ chế eb2bDelete:
+     chuyển vào Recycle Bin EB2B, 1 request .in("id", [...]) cho cả loạt. */
+  async function eb2bBulkDelete(key, selection){
+    const sb = activeDb(); if(!sb) return;
+    if(typeof canDeleteData === "function" && !canDeleteData()){ eToast("Bạn không có quyền xóa dữ liệu.", "err"); return; }
+    const rows = (EB2B.rows[key] || []).filter(r=>selection.has(String(r.id)));
+    if(!rows.length) return;
+    const noun = {cr:"Change Request", uat:"Test Case", release:"Release"}[key] || "mục";
+    const labels = rows.map(r=>(key==="uat" ? r.test_case_id : key==="release" ? r.release_id : "") || r.cr_id || r.id);
+    const shown = labels.slice(0,5).join(", "), extra = labels.length - 5;
+    const preview = extra > 0 ? `${shown} và ${extra} mục khác` : shown;
+    const title = `Xóa ${rows.length} ${noun} EB2B?`;
+    const msg = `${rows.length} ${noun} đã chọn (${preview}) sẽ được chuyển vào Recycle Bin EB2B.`;
+    const run = async ()=>{
+      const result = await sb.from(EB2B_TABLES[key]).update({deleted_at:eNow(),deleted_by:eUser(),updated_at:eNow(),updated_by:eUser()}).in("id", rows.map(r=>r.id));
+      if(result.error){ eToast("Xóa EB2B thất bại: " + result.error.message, "err"); return; }
+      selection.clear();
+      eToast(`Đã chuyển ${rows.length} ${noun} EB2B vào Recycle Bin.`, "ok");
+      await eb2bLoad();
+    };
+    if(typeof confirmDelete === "function") confirmDelete(title, msg, run, `Xóa ${rows.length} mục`);
+    else if(window.confirm(msg)) run();
   }
 
   async function eb2bDelete(key, row){
