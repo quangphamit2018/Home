@@ -8687,18 +8687,40 @@ function initAutoGrow(root){
   });
 }
 
+/* ---------------------------------------------------------------------------
+   NAVIGATION HARDENING
+   One rule for the whole sidebar: exactly ONE leaf item is "active" at a time,
+   across ALL workspaces (DMS + e-B2B + Dashboard/Admin/Recycle), and every
+   open form / drawer / modal of the workspace being left is closed before the
+   next tab is shown. Both setView() (DMS side) and eb2bShow() (e-B2B side)
+   go through these two helpers, so the behaviour cannot drift apart again.
+--------------------------------------------------------------------------- */
+function closeDmsOverlays(){
+  try{ closeDrawer(); }catch(_){}
+  const tc = $("#tcModalOverlay"), rel = $("#relModalOverlay");
+  if(tc && tc.classList.contains("show")) closeDetailOverlay(tc, "tc");
+  if(rel && rel.classList.contains("show")) closeDetailOverlay(rel, "rel");
+  // CR / BRD / Weekly MoM forms, confirm dialogs, import/export dialogs...
+  $all(".modal-overlay.show").forEach(m=>{
+    if(m.id !== "tcModalOverlay" && m.id !== "relModalOverlay") m.classList.remove("show");
+  });
+  if(typeof closeGlobalSearch === "function") closeGlobalSearch();
+  syncDetailNavVisibility();
+}
+function clearDmsNavState(){
+  $all(".nav-item[data-view]").forEach(i=> i.classList.remove("active"));
+  $("#navDmsWorkspace")?.classList.remove("is-context");
+}
+
 function setView(view){
   if(!VALID_VIEWS.has(view)) view = "dashboard";
   if(view === "admin" && !canViewAdminTab()) view = "dashboard";
   if(view === "recycle" && !isSuperAdmin()) view = "dashboard";
   STATE.currentView = view;
   try{ localStorage.setItem(VIEW_STORAGE_KEY, view); }catch(_){}
-  closeDrawer();
-  if($("#tcModalOverlay").classList.contains("show")) closeDetailOverlay($("#tcModalOverlay"), "tc");
-  if($("#relModalOverlay").classList.contains("show")) closeDetailOverlay($("#relModalOverlay"), "rel");
-  $all(".modal-overlay.show").forEach(m=>{
-    if(m.id !== "tcModalOverlay" && m.id !== "relModalOverlay") m.classList.remove("show");
-  });
+  // Leaving e-B2B (if we were in it): un-highlight its tabs, close its forms.
+  if(typeof window.__eb2bLeave === "function") window.__eb2bLeave();
+  closeDmsOverlays();
   $all(".nav-item[data-view]").forEach(i=> i.classList.toggle("active", i.dataset.view===view));
   if(isDmsView(view)){
     setDmsWorkspaceNavOpen(true);
@@ -16840,8 +16862,24 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(sub) sub.textContent = meta[1];
   }
 
+  /* Close every e-B2B form / drawer / modal (CR form, UAT full modal, drawer). */
+  function eb2bCloseOverlays(){
+    eb2bCloseModal();
+    eb2bUatCloseModal();
+    eb2bCloseCrDrawer();
+    $e("#eb2bViewRoot")?.classList.remove("eb2b-uat-focus");
+    document.body.classList.remove("eb2b-cr-form-active");
+  }
+
   function eb2bShow(tab){
     if(!EB2B.ready && !eb2bBuildShell()) return;
+    // Entering e-B2B: DMS must go fully dark (no active leaf, no context parent,
+    // no open CR form / drawer / modal left behind) and any e-B2B form from the
+    // previous tab must be closed too.
+    if(typeof closeDmsOverlays === "function") closeDmsOverlays();
+    if(typeof clearDmsNavState === "function") clearDmsNavState();
+    eb2bCloseOverlays();
+    if(typeof closeMobileNav === "function") closeMobileNav();
     EB2B.activeTab = tab;
     document.body.classList.add("eb2b-active");
     document.body.classList.toggle("eb2b-cr-active", tab === "cr");
@@ -16863,11 +16901,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bHide(){
     document.body.classList.remove("eb2b-active", "eb2b-cr-active", "eb2b-uat-active", "eb2b-release-active", "eb2b-brd-active", "eb2b-weekly-active");
-    $e("#eb2bViewRoot")?.classList.remove("eb2b-uat-focus");
-    eb2bCloseCrDrawer();
+    eb2bCloseOverlays();
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
     $e("#navEb2bWorkspace")?.classList.remove("is-context");
   }
+  // Exposed so the DMS-side setView() can reset e-B2B from ANY entry point
+  // (sidebar click, dashboard tile, global search, programmatic navigation).
+  window.__eb2bLeave = eb2bHide;
 
   function eb2bOptions(values, selected, empty="— chọn —"){
     const list = Array.from(new Set([selected, ...(values || [])].filter(Boolean)));
@@ -18035,8 +18075,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     document.addEventListener("click", ev=>{
       const tab=ev.target.closest("[data-eb2b-tab]");
       if(tab){ ev.preventDefault(); eb2bShow(tab.dataset.eb2bTab); return; }
-      const appNav = ev.target.closest(".nav-item[data-view]");
-      if(appNav){ eb2bHide(); return; }
+      // DMS nav clicks are handled by setView() -> window.__eb2bLeave().
       if(ev.target.closest("#eb2bAddCrTop")){eb2bOpenModal("cr",null);return;}
       if(ev.target.closest("#eb2bRefreshCrTop")){eb2bLoad();return;}
       if(ev.target.closest("#eb2bCrTemplateTop")){eb2bDownloadCrTemplate();return;}
