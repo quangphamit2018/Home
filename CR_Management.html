@@ -5616,8 +5616,10 @@ html{
 .imp-step.is-active{ color:#0b5d64; border-color:#7fd3cd; background:#fff; box-shadow:0 8px 20px rgba(14,154,148,.13); transform:translateY(-2px); }
 .imp-step.is-active .imp-step-dot{ background:linear-gradient(135deg,#22d1c4,#0d8a93); color:#fff; animation:impStepPulse 1.6s ease-out infinite; }
 .imp-step.is-done{ color:#2c7a6a; border-color:#bfe6dc; }
-.imp-step.is-done .imp-step-dot{ background:#2fbf8c; color:#fff; font-size:0; }
-.imp-step.is-done .imp-step-dot::before{ content:"✓"; font-size:14px; }
+.imp-step.is-done .imp-step-dot{ background:#2fbf8c; color:#fff; }
+.imp-step-dot .ck{ display:none; line-height:0; }
+.imp-step.is-done .imp-step-dot .n{ display:none; }
+.imp-step.is-done .imp-step-dot .ck{ display:inline-flex; }
 
 /* Dropzone + info */
 .imp-grid{ display:grid; grid-template-columns:minmax(0,1.65fr) minmax(260px,1fr); gap:18px; margin-bottom:20px; }
@@ -5679,9 +5681,9 @@ html{
   display:flex; gap:9px; font-size:12.5px; line-height:1.45; color:#456778;
   opacity:0; animation:impUp .45s var(--ease-standard) forwards; animation-delay:calc(var(--n) * 80ms + 420ms);
 }
-.imp-info li::before{
-  content:"✓"; flex:none; width:18px; height:18px; margin-top:1px; border-radius:50%; display:grid; place-items:center;
-  font-size:10.5px; font-weight:800; color:#0d8a93; background:#dff7f4;
+.imp-li-ic{
+  flex:none; width:18px; height:18px; margin-top:1px; border-radius:50%; display:grid; place-items:center;
+  color:#0d8a93; background:#dff7f4; line-height:0;
 }
 .imp-info li b{ color:#16344e; }
 .imp-template-btn{
@@ -5757,6 +5759,80 @@ html{
   .import-modal .imp-step,.import-modal .imp-info li,.import-modal .import-stat,.import-modal .table-wrap tbody tr{ opacity:1 !important; }
 }
 </style>
+<style id="morphicons-base">
+/* <mi-icon> = web component của morphicons (display:contents => không thêm box, svg bên trong hành xử như svg cũ) */
+mi-icon{ display:contents; }
+mi-icon > svg{ flex:none; }
+.imp-drop-icon mi-icon,.imp-head-icon mi-icon{ display:contents; }
+</style>
+<script id="morphicons-runtime">
+/* morphicons v1.7.1 (MIT) + dữ liệu icon Lucide (ISC) — đóng gói sẵn, không cần CDN */
+(()=>{var ha=Object.defineProperty;var Xt=a=>{throw TypeError(a)};var Ca=(a,e,r)=>e in a?ha(a,e,{enumerable:!0,configurable:!0,writable:!0,value:r}):a[e]=r;var V=(a,e,r)=>Ca(a,typeof e!="symbol"?e+"":e,r),Ie=(a,e,r)=>e.has(a)||Xt("Cannot "+r);var P=(a,e,r)=>(Ie(a,e,"read from private field"),r?r.call(a):e.get(a)),U=(a,e,r)=>e.has(a)?Xt("Cannot add the same private member more than once"):e instanceof WeakSet?e.add(a):e.set(a,r),R=(a,e,r,t)=>(Ie(a,e,"write to private field"),t?t.call(a,r):e.set(a,r),r),q=(a,e,r)=>(Ie(a,e,"access private method"),r);var ga="MmLlHhVvCcSsQqTtAaZz";function Zt(a){let e=[],r=a.length,t=0,o=0,s=0,f=0,u=0,n=null,d="",l=0,p=0,x="",c=!1,k=g=>{throw new Error(`morphicons: ${g} at d[${t}]`)},A=g=>g>=48&&g<=57,w=()=>{for(;t<r;){let g=a.charCodeAt(t);if(g===32||g===9||g===10||g===13||g===12||g===44)t++;else break}},b=()=>{w();let g=t;t<r&&(a[t]==="+"||a[t]==="-")&&t++;let M=!1;for(;t<r&&A(a.charCodeAt(t));)t++,M=!0;if(t<r&&a[t]===".")for(t++;t<r&&A(a.charCodeAt(t));)t++,M=!0;if(M||k("expected number"),t<r&&(a[t]==="e"||a[t]==="E")){let y=t;t++,t<r&&(a[t]==="+"||a[t]==="-")&&t++;let F=!1;for(;t<r&&A(a.charCodeAt(t));)t++,F=!0;F||(t=y)}return Number(a.slice(g,t))},C=()=>{w();let g=a[t];return g==="0"||g==="1"?(t++,g==="1"?1:0):k("expected arc flag (0|1)")},m=()=>(c||k("path must start with M/m"),n||(n={x0:o,y0:s,segs:[],closed:!1},e.push(n)),n),i=!1,S=()=>b()+(i?o:0),h=()=>b()+(i?s:0);for(;w(),!(t>=r);){let g=a[t];switch(ga.includes(g)?(d=g,t++):d===""?k("path must start with M/m"):d==="M"?d="L":d==="m"?d="l":(d==="Z"||d==="z")&&k("stray data after Z"),i=d>="a",i?d.toUpperCase():d){case"M":{c=!0;let M=S(),y=h();o=M,s=y,f=M,u=y,n={x0:M,y0:y,segs:[],closed:!1},e.push(n),x="";break}case"L":{let M=S(),y=h();m().segs.push(["L",M,y]),o=M,s=y,x="";break}case"H":{let M=S();m().segs.push(["L",M,s]),o=M,x="";break}case"V":{let M=h();m().segs.push(["L",o,M]),s=M,x="";break}case"C":case"S":{let M,y;d==="C"||d==="c"?(M=S(),y=h()):(M=x==="C"?2*o-l:o,y=x==="C"?2*s-p:s);let F=S(),B=h(),I=S(),O=h();m().segs.push(["C",M,y,F,B,I,O]),l=F,p=B,o=I,s=O,x="C";break}case"Q":case"T":{let M,y;d==="Q"||d==="q"?(M=S(),y=h()):(M=x==="Q"?2*o-l:o,y=x==="Q"?2*s-p:s);let F=S(),B=h();m().segs.push(["Q",M,y,F,B]),l=M,p=y,o=F,s=B,x="Q";break}case"A":{let M=b(),y=b(),F=b(),B=C(),I=C(),O=S(),E=h();m().segs.push(["A",M,y,F,B,I,O,E]),o=O,s=E,x="";break}case"Z":n&&(n.closed=!0,n=null),o=f,s=u,x="";break;default:k(`unsupported command "${d}"`)}}return e.filter(g=>g.segs.length>0)}function xe(a){return String(Math.round(a*100)/100)}function he(a,e){let r="";for(let t=0;t<a.length;t++){let o=a[t],s=o.length/2;r+=`M${xe(o[0])} ${xe(o[1])}`;for(let f=1;f<s;f++)r+=`L${xe(o[2*f])} ${xe(o[2*f+1])}`;e?.[t]&&(r+="Z")}return r}function N(a){return String(Math.round(a*1e4)/1e4)}function Jt(a){let e="";for(let{pts:r,closed:t}of a){e+=`M${N(r[0])} ${N(r[1])}`;for(let o=2;o<r.length;o+=6)e+=`C${N(r[o])} ${N(r[o+1])} ${N(r[o+2])} ${N(r[o+3])} ${N(r[o+4])} ${N(r[o+5])}`;t&&(e+="Z")}return e}var ce=4/3*Math.tan(Math.PI/8),Kt=2*Math.PI;function fe(a,e){let r=[a,e],t=a,o=e,s=(l,p,x,c,k,A)=>{r.push(l,p,x,c,k,A),t=k,o=A},f=(l,p)=>{Math.abs(l-t)<1e-12&&Math.abs(p-o)<1e-12||s(t+(l-t)/3,o+(p-o)/3,t+2*(l-t)/3,o+2*(p-o)/3,l,p)};return[s,f,(l,p,x,c)=>{s(t+2/3*(l-t),o+2/3*(p-o),x+2/3*(l-x),c+2/3*(p-c),x,c)},(l,p,x,c,k,A,w)=>{let b=t,C=o;if(Math.abs(A-b)<1e-12&&Math.abs(w-C)<1e-12)return;let m=Math.abs(l),i=Math.abs(p);if(m<1e-12||i<1e-12){f(A,w);return}let S=x*Math.PI/180,h=Math.cos(S),g=Math.sin(S),M=(b-A)/2,y=(C-w)/2,F=h*M+g*y,B=-g*M+h*y,I=F*F/(m*m)+B*B/(i*i);if(I>1){let D=Math.sqrt(I);m*=D,i*=D}let O=m*m,E=i*i,Ht=F*F,It=B*B,Re=(O*E-O*It-E*Ht)/(O*It+E*Ht);Re<0&&(Re=0);let Et=(c===k?-1:1)*Math.sqrt(Re),pe=Et*m*B/i,me=-Et*i*F/m,na=h*pe-g*me+(b+A)/2,ia=g*pe+h*me+(C+w)/2,qe=Math.atan2((B-me)/i,(F-pe)/m),Z=Math.atan2((-B-me)/i,(-F-pe)/m)-qe;k===0&&Z>0?Z-=Kt:k===1&&Z<0&&(Z+=Kt);let ne=Math.max(1,Math.ceil(Math.abs(Z)/(Math.PI/2)-1e-9)),Vt=Z/ne,ie=4/3*Math.tan(Vt/4),xa=D=>na+m*Math.cos(D)*h-i*Math.sin(D)*g,ca=D=>ia+m*Math.cos(D)*g+i*Math.sin(D)*h,Gt=D=>-m*Math.sin(D)*h-i*Math.cos(D)*g,Nt=D=>-m*Math.sin(D)*g+i*Math.cos(D)*h,Oe=qe,zt=b,Wt=C;for(let D=1;D<=ne;D++){let oe=qe+Vt*D,Ue=D===ne?A:xa(oe),He=D===ne?w:ca(oe);s(zt+ie*Gt(Oe),Wt+ie*Nt(Oe),Ue-ie*Gt(oe),He-ie*Nt(oe),Ue,He),Oe=oe,zt=Ue,Wt=He}},l=>(l&&f(r[0],r[1]),r.length<8?null:{pts:Float64Array.from(r),closed:l})]}function $t(a){let[e,r,t,o,s]=fe(a.x0,a.y0);for(let f of a.segs)switch(f[0]){case"L":r(f[1],f[2]);break;case"C":e(f[1],f[2],f[3],f[4],f[5],f[6]);break;case"Q":t(f[1],f[2],f[3],f[4]);break;case"A":o(f[1],f[2],f[3],f[4],f[5],f[6],f[7])}return s(a.closed)}function T(a,e,r=0){let t=a[e];if(t===void 0)return r;let o=typeof t=="number"?t:Number(t);return Number.isFinite(o)?o:r}function Qt(a){let e=String(a??"").trim();if(!e)return[];let r=e.split(/[\s,]+/).map(Number);if(r.some(t=>!Number.isFinite(t)))throw new Error(`morphicons: invalid points: "${e}"`);return r}function Ee(a,e){if(a.length<4)return null;let[,r,,,t]=fe(a[0],a[1]);for(let o=2;o+1<a.length;o+=2)r(a[o],a[o+1]);return t(e)}function jt(a,e,r,t){if(r<1e-12||t<1e-12)return null;let o=ce*r,s=ce*t,f=a+r,u=a-r,n=e+t,d=e-t,[l,,,,p]=fe(f,e);return l(f,e+s,a+o,n,a,n),l(a-o,n,u,e+s,u,e),l(u,e-s,a-o,d,a,d),l(a+o,d,f,e-s,f,e),p(!0)}function Sa(a){let e=T(a,"x"),r=T(a,"y"),t=T(a,"width"),o=T(a,"height");if(t<1e-12||o<1e-12)return null;let s=T(a,"rx",NaN),f=T(a,"ry",NaN);if(Number.isNaN(s)&&(s=Number.isNaN(f)?0:f),Number.isNaN(f)&&(f=s),s=Math.min(Math.max(s,0),t/2),f=Math.min(Math.max(f,0),o/2),s<1e-12||f<1e-12)return Ee([e,r,e+t,r,e+t,r+o,e,r+o],!0);let u=e+s,n=e+t-s,d=e+t,l=r+f,p=r+o-f,x=r+o,c=ce*s,k=ce*f,[A,w,,,b]=fe(u,r);return w(n,r),A(n+c,r,d,l-k,d,l),w(d,p),A(d,p+k,n+c,x,n,x),w(u,x),A(u-c,x,e,p+k,e,p),w(e,l),A(e,l-k,u-c,r,u,r),b(!0)}function Ce(a){let e=[],r=t=>{t&&e.push(t)};if(typeof a=="string"){for(let t of Zt(a))r($t(t));return e}for(let[t,o]of a)switch(t){case"path":for(let s of Zt(String(o.d??"")))r($t(s));break;case"line":{let[,s,,,f]=fe(T(o,"x1"),T(o,"y1"));s(T(o,"x2"),T(o,"y2")),r(f(!1));break}case"circle":{let s=T(o,"r");r(jt(T(o,"cx"),T(o,"cy"),s,s));break}case"ellipse":r(jt(T(o,"cx"),T(o,"cy"),T(o,"rx"),T(o,"ry")));break;case"rect":r(Sa(o));break;case"polyline":r(Ee(Qt(o.points),!1));break;case"polygon":r(Ee(Qt(o.points),!0));break;default:throw new Error(`morphicons: unsupported tag <${t}>`)}return e}function ge(a){return a.items.map(()=>new Float64Array(2*a.n))}function Se(a,e,r){for(let t=0;t<a.items.length;t++){let o=a.items[t],s=r[t],f=a.n,u=Math.exp(o.lnSigma*e),n=o.theta*e,d=Math.cos(n)*u,l=Math.sin(n)*u,p,x;if(o.block){let[c,k]=o.block.off,[A,w]=o.block.drift;p=o.ca[0]+A*e+(c*d-k*l-c),x=o.ca[1]+w*e+(c*l+k*d-k)}else p=o.ca[0]+(o.cb[0]-o.ca[0])*e,x=o.ca[1]+(o.cb[1]-o.ca[1])*e;for(let c=0;c<f;c++){let k=o.aC[2*c]+(o.bT[2*c]-o.aC[2*c])*e,A=o.aC[2*c+1]+(o.bT[2*c+1]-o.aC[2*c+1])*e;s[2*c]=p+k*d-A*l,s[2*c+1]=x+k*l+A*d}}}var Ma=.35,ka=.05,wa=.005,Pa=8,Aa=1e5;function K(a){let e=a.length/2,r=0,t=0;for(let o=0;o<e;o++)r+=a[2*o],t+=a[2*o+1];return[r/e,t/e]}function _t(a){let e=a.length/2,r=0;for(let t=1;t<e;t++)r+=Math.hypot(a[2*t]-a[2*t-2],a[2*t+1]-a[2*t-1]);return r}function ya(a){let e=a.length/2,r=new Float64Array(2*e);for(let t=0;t<e;t++)r[2*t]=a[2*(e-1-t)],r[2*t+1]=a[2*(e-1-t)+1];return r}function ba(a,e){let r=a.length/2,t=new Float64Array(2*r);for(let o=0;o<r;o++){let s=(o+e)%r;t[2*o]=a[2*s],t[2*o+1]=a[2*s+1]}return t}function Ge(a,e,r,t){let o=a.length/2,s=0,f=0,u=0,n=0,d=0,l=0;for(let w=0;w<o;w++){let b=a[2*w]-r[0],C=a[2*w+1]-r[1],m=e[2*w]-t[0],i=e[2*w+1]-t[1];s+=b*m,n+=C*i,f+=b*i,u+=C*m,d+=b*b+C*C,l+=m*m+i*i}let p=Math.atan2(f-u,s+n),x=Math.cos(p)*(s+n)+Math.sin(p)*(f-u),c=d>1e-12?x/d:1;c>1e-6||(c=1e-6);let k=Math.max(0,c*c*d-2*c*x+l),A=l>1e-12?Math.sqrt(k/l):0;return{theta:p,sigma:c,res:A}}function La(a,e,r=!1,t=!1){let o=K(a),s=K(e),f=r&&!t,u=f?a:e,n=r||t?u.length/2:1,d=Number.POSITIVE_INFINITY,l=u,p={theta:0,sigma:1,res:0};for(let x=0;x<2;x++){let c=x?ya(u):u;for(let k=0;k<n;k++){let A=k?ba(c,k):c,w=f?Ge(A,e,o,s):Ge(a,A,o,s),b=w.res+ka*Math.abs(w.theta)/Math.PI;b<d&&(d=b,l=A,p=w)}}return f?{ca:o,cb:s,a:l,b:e,...p}:{ca:o,cb:s,a,b:l,...p}}function Ve(a,e){let r=e.map(K),t=e.map(_t);return a.map(o=>{let s=K(o),f=_t(o);return r.map((u,n)=>Math.hypot(s[0]-u[0],s[1]-u[1])+Ma*Math.abs(f-t[n]))})}function Fa(a){let e=a.length;if(e>Pa){let f=[];for(let d=0;d<e;d++)for(let l=0;l<e;l++)f.push([a[d][l],d,l]);f.sort((d,l)=>d[0]-l[0]);let u=new Array(e).fill(-1),n=new Array(e).fill(!1);for(let[,d,l]of f)u[d]<0&&!n[l]&&(u[d]=l,n[l]=!0);return u}let r=Array.from({length:e},(f,u)=>u),t=r.slice(),o=Number.POSITIVE_INFINITY,s=(f,u,n)=>{if(!(n>=o)){if(u===e){o=n,t=f.slice();return}for(let d=u;d<e;d++)[f[u],f[d]]=[f[d],f[u]],s(f,u+1,n+a[u][f[u]]),[f[u],f[d]]=[f[d],f[u]]}};return s(r,0,0),t}function Yt(a){let e=a.length,r=a[0].length;if(r**e>Aa){let n=a.map(l=>{let p=0;for(let x=1;x<l.length;x++)l[x]<l[p]&&(p=x);return p}),d=new Array(r).fill(0);for(let l of n)d[l]++;for(let l=0;l<r;l++){if(d[l]>0)continue;let p=-1,x=Number.POSITIVE_INFINITY;for(let c=0;c<e;c++){if(d[n[c]]<2)continue;let k=a[c][l]-a[c][n[c]];k<x&&(x=k,p=c)}d[n[p]]--,n[p]=l,d[l]++}return n}let t=null,o=Number.POSITIVE_INFINITY,s=new Array(e),f=new Array(r).fill(0),u=(n,d,l)=>{if(!(d>=o||r-l>e-n)){if(n===e){o=d,t=s.slice();return}for(let p=0;p<r;p++)s[n]=p,f[p]++,u(n+1,d+a[n][p],l+(f[p]===1?1:0)),f[p]--}};if(u(0,0,0),!t)throw new Error("morphicons: no valid surjection (B < S)");return t}function Ba(a,e){let r=a.length*e,t=new Float64Array(2*r),o=new Float64Array(2*r);a.forEach((p,x)=>{t.set(p.a,2*e*x),o.set(p.bO,2*e*x)});let s=K(t),f=Ge(t,o,s,K(o));if(f.res>=wa)return;let u=Math.cos(-f.theta),n=Math.sin(-f.theta),d=Math.cos(f.theta),l=Math.sin(f.theta);for(let p of a){let x=0,c=0;for(let S=0;S<e;S++){let h=p.bO[2*S]-p.cb[0],g=p.bO[2*S+1]-p.cb[1];p.bT[2*S]=(h*u-g*n)/f.sigma,p.bT[2*S+1]=(h*n+g*u)/f.sigma;let M=f.sigma*(d*p.aC[2*S]-l*p.aC[2*S+1])-h,y=f.sigma*(l*p.aC[2*S]+d*p.aC[2*S+1])-g;x+=M*M+y*y,c+=h*h+g*g}p.theta=f.theta,p.lnSigma=Math.log(f.sigma),p.res=c>1e-12?Math.sqrt(x/c):0;let k=Math.exp(p.lnSigma),A=Math.cos(p.theta)*k,w=Math.sin(p.theta)*k,b=p.ca[0]-s[0],C=p.ca[1]-s[1],m=b*A-C*w-b,i=b*w+C*A-C;p.block={off:[b,C],drift:[p.cb[0]-p.ca[0]-m,p.cb[1]-p.ca[1]-i]}}}function $(a,e){let r=a.length,t=e.length;if(r===0||t===0)throw new Error("morphicons: icon has no subpaths");let o=a.map(d=>d.pts),s=e.map(d=>d.pts),f=[];if(r===t){let d=Fa(Ve(o,s));for(let l=0;l<r;l++)f.push([l,d[l]])}else if(r<t){let d=Yt(Ve(s,o));for(let l=0;l<t;l++)f.push([d[l],l])}else{let d=Yt(Ve(o,s));for(let l=0;l<r;l++)f.push([l,d[l]])}let u=o[0].length/2,n=f.map(([d,l])=>{let p=La(o[d],s[l],a[d].closed,e[l].closed),x=p.a,c=new Float64Array(2*u),k=new Float64Array(2*u),A=new Float64Array(2*u),w=Math.cos(-p.theta),b=Math.sin(-p.theta);for(let C=0;C<u;C++){c[2*C]=x[2*C]-p.ca[0],c[2*C+1]=x[2*C+1]-p.ca[1];let m=p.b[2*C]-p.cb[0],i=p.b[2*C+1]-p.cb[1];k[2*C]=(m*w-i*b)/p.sigma,k[2*C+1]=(m*b+i*w)/p.sigma,A[2*C]=p.b[2*C],A[2*C+1]=p.b[2*C+1]}return{a:x,aC:c,bT:k,bO:A,ca:p.ca,cb:p.cb,theta:p.theta,lnSigma:Math.log(p.sigma),res:p.res,closed:a[d].closed&&e[l].closed,block:null}});return n.length>1&&Ba(n,u),{items:n,n:u}}var aa=Math.PI/8,ea=[.18343464249564978,.525532409916329,.7966664774136267,.9602898564975363],Da=[.362683783378362,.31370664587788727,.22238103445337448,.10122853629037626];function Ne(a,e,r){let t=6*e,o=1-r,s=3*o*o,f=6*o*r,u=3*r*r,n=s*(a[t+2]-a[t])+f*(a[t+4]-a[t+2])+u*(a[t+6]-a[t+4]),d=s*(a[t+3]-a[t+1])+f*(a[t+5]-a[t+3])+u*(a[t+7]-a[t+5]);return Math.hypot(n,d)}function ze(a,e,r=1){let t=r/2,o=0;for(let s=0;s<4;s++)o+=Da[s]*(Ne(a,e,t+t*ea[s])+Ne(a,e,t-t*ea[s]));return o*t}function va(a,e,r,t,o){let s=6*e,f=1-r,u=f*f*f,n=3*f*f*r,d=3*f*r*r,l=r*r*r;t[o]=u*a[s]+n*a[s+2]+d*a[s+4]+l*a[s+6],t[o+1]=u*a[s+1]+n*a[s+3]+d*a[s+5]+l*a[s+7]}function ta(a,e,r){let t=6*e,o=r?t+6:t,s=r?-1:1;for(let f of r?[4,2,0]:[2,4,6]){let u=s*(a[t+f]-a[o]),n=s*(a[t+f+1]-a[o+1]);if(u*u+n*n>1e-18)return[u,n]}return null}function Ta(a,e=aa){let r=a.pts,t=(r.length/2-1)/3,o=[];for(let u=0;u<t;u++)ze(r,u)>1e-9&&o.push(u);if(o.length===0)return[];let s=new Set,f=(u,n)=>{let d=ta(r,u,!0),l=ta(r,n,!1);!d||!l||Math.abs(Math.atan2(d[0]*l[1]-d[1]*l[0],d[0]*l[0]+d[1]*l[1]))>e&&s.add(n)};for(let u=0;u+1<o.length;u++)f(o[u],o[u+1]);return a.closed&&o.length>1&&f(o[o.length-1],o[0]),[...s].sort((u,n)=>u-n)}function Ra(a,e,r,t){if(r<=0)return 0;if(r>=t)return 1;let o=0,s=1,f=r/t;for(let u=0;u<12;u++){let n=ze(a,e,f)-r;if(Math.abs(n)<1e-10*t+1e-14)break;n>0?s=f:o=f;let d=Ne(a,e,f),l=d>1e-12?f-n/d:(o+s)/2;l>o&&l<s||(l=(o+s)/2),f=l}return f}function qa(a,e=64,r=aa){let t=a.pts,o=(t.length/2-1)/3,s=new Float64Array(2*e),f=()=>{for(let m=0;m<e;m++)s[2*m]=t[0],s[2*m+1]=t[1];return s};if(o<1)return f();let u=new Array(o),n=0;for(let m=0;m<o;m++)u[m]=ze(t,m),n+=u[m];if(n<1e-12)return f();let d=Ta(a,r),l=a.closed?d.length>0?d:[0]:[...new Set([0,...d,o])].sort((m,i)=>m-i),p=[];if(a.closed)for(let m=0;m<l.length;m++){let i=l[m],S=m+1<l.length?l[m+1]:l[0]+o;p.push([i,S])}else for(let m=0;m+1<l.length;m++)p.push([l[m],l[m+1]]);let x=p.map(([m,i])=>{let S=0;for(let h=m;h<i;h++)S+=u[h%o];return S}),c=a.closed?e:e-1;if(p.length>c)throw new Error(`morphicons: N=${e} too small (${p.length} runs)`);let k=x.reduce((m,i)=>m+i,0)||1,A=x.map(m=>c*m/k),w=A.map(m=>Math.max(1,Math.floor(m))),b=c-w.reduce((m,i)=>m+i,0);if(b>0){let m=A.map((i,S)=>[Math.round((i-Math.floor(i))*1e9),S]).sort((i,S)=>S[0]-i[0]||i[1]-S[1]);for(let i=0;i<b;i++)w[m[i%w.length][1]]++}for(;b<0;){let m=0;for(let i=1;i<w.length;i++)w[i]>w[m]&&(m=i);if(w[m]<=1)break;w[m]--,b++}let C=0;for(let m=0;m<p.length;m++){let[i,S]=p[m],h=w[m],g=x[m],M=6*(i%o);s[2*C]=t[M],s[2*C+1]=t[M+1],C++;let y=i,F=0;for(let B=1;B<h;B++){let I=g*B/h;for(;y<S-1&&F+u[y%o]<I;)F+=u[y%o],y++;let O=y%o,E=u[O];va(t,O,E>1e-12?Ra(t,O,I-F,E):0,s,2*C),C++}}if(!a.closed){let m=6*o;s[2*C]=t[m],s[2*C+1]=t[m+1]}return s}function Q(a,e=64){return Ce(a).map(r=>({pts:qa(r,e),closed:r.closed}))}var ra=class{constructor(){V(this,"x",1);V(this,"v",0);V(this,"k",250);V(this,"c",24)}config(a,e){this.k=a,this.c=e}start(){this.x=0,this.v>14&&(this.v=14),this.v<-14&&(this.v=-14)}step(a){let e=Math.max(1,Math.min(16,Math.ceil(a/.004166666666666667))),r=a/e;for(let t=0;t<e;t++){let o=this.k*(1-this.x)-this.c*this.v;this.v+=o*r,this.x+=this.v*r}return Math.abs(1-this.x)<.001&&Math.abs(this.v)<.02}},We={smooth:{k:170,c:26},snappy:{k:420,c:30},bouncy:{k:300,c:14}};var se=new Set,W=0,j=-1;function la(a){let e=j<0?0:Math.min(Math.max((a-j)/1e3,0),.1);j=a;for(let r of[...se])r(e);se.size>0?W=requestAnimationFrame(la):(W=0,j=-1)}function Oa(a){se.add(a),W===0&&(j=-1,W=requestAnimationFrame(la))}function Ua(a){se.delete(a),se.size===0&&W!==0&&(cancelAnimationFrame(W),W=0,j=-1)}var oa=new WeakMap,fa=new WeakMap,sa=new WeakMap;function J(a){if(typeof a=="string")return Q(a);let e=oa.get(a);return e||(e=Q(a),oa.set(a,e)),e}function _(a){if(typeof a=="string")return a;let e=fa.get(a);return e||(e=Jt(Ce(a)),fa.set(a,e)),e}function Ha(a,e){if(typeof a=="string"||typeof e=="string")return $(J(a),J(e));let r=sa.get(a);r||(r=new WeakMap,sa.set(a,r));let t=r.get(e);return t||(t=$(J(a),J(e)),r.set(e,t)),t}function Ia(a){if(typeof a=="string")return We[a];let e=We.snappy;return{k:a?.stiffness??e.k,c:a?.damping??e.c}}function Xe(a,e,r){let t=new ra,o=r?.reducedMotion??"never",s=e,f=!0,u=null,n=null,d=null,l=1,p=!1,x=!1;a.setAttribute("d",_(e));let c=h=>{let g=u,M=n,y=d;!g||!M||!y||(l=h,Se(g,h,M),a.setAttribute("d",he(M,y)))},k=()=>{p&&(p=!1,Ua(A))},A=h=>{let g=t.step(h);c(t.x),g&&(k(),w())},w=()=>{f=!0,u=null,n=null,d=null,l=1,t.x=1,t.v=0,a.setAttribute("d",_(s))},b=()=>{let h=u,g=n;return f||!h||!g?J(s):g.map((M,y)=>({pts:Float64Array.from(M),closed:h.items[y].closed}))},C=h=>{u=f?Ha(s,h):$(b(),J(h)),n=ge(u),d=u.items.map(g=>g.closed),s=h,f=!1},m=h=>{k(),s=h,w()},i=()=>o==="always"?!0:o!=="user"||typeof matchMedia>"u"?!1:matchMedia?.("(prefers-reduced-motion: reduce)").matches??!1,S=(h,g)=>{if(x)return;let M=!f&&u!==null&&h===s;k(),t.v=0,M||C(h),c(g)};return{morphTo(h,g){if(x||h===s&&(f||p))return;if(i()){m(h);return}let{k:M,c:y}=Ia(g);t.config(M,y),C(h),t.start(),p||(p=!0,Oa(A))},set(h){x||m(h)},seek:S,get progress(){return f?1:l},set progress(h){x||S(s,h)},get reducedMotion(){return o},set reducedMotion(h){o=h},destroy(){k(),x=!0,u=null,n=null,d=null}}}function Ea(a,e,r){if(r<=0)return _(a);if(r>=1)return _(e);let t=$(Q(a),Q(e)),o=ge(t);return Se(t,r,o),he(o,t.items.map(s=>s.closed))}function ua({icon:a,from:e,to:r,progress:t}){if(e!==void 0&&r!==void 0)return Ea(e,r,t??0);let o=a??e??r;return o!==void 0?_(o):""}function da({icon:a,from:e,to:r,progress:t,reducedMotion:o}){let s=null,f=!1,u=null,n=o??"never",d=!1,l=null,p=a,x=e!==void 0&&r!==void 0,c=e,k=r,A=t,w=C=>u||(f||!s?null:(u=Xe(s,C,{reducedMotion:n}),u)),b=(C,m,i)=>{let S=u;if(!S)return;let h=i??0;(!l||l[0]!==C||l[1]!==m)&&(l=[C,m],d=!1),h<=0?(S.set(C),d=!1):h>=1?(S.set(m),d=!1):(d||(S.set(C),d=!0),S.seek(m,h))};return{mount(C,{icon:m,from:i,to:S,progress:h,reducedMotion:g}){s=C,n=g??n;let M=i!==void 0&&S!==void 0,y=m??i??S;if(y===void 0)return;let F=Xe(s,M?i:y,{reducedMotion:n});if(u=F,M){l=[i,S];let B=h??0;B<=0?F.set(i):B>=1?F.set(S):(F.seek(S,B),d=!0)}},destroy(){f=!0,s=null,u?.destroy(),u=null,d=!1,l=null},watch({icon:C,from:m,to:i,progress:S,spring:h,reducedMotion:g}){n=g??"never",u&&(u.reducedMotion=n);let M=m!==void 0&&i!==void 0,y=x&&!M,F=C!==p,B=m!==c||i!==k||S!==A;if(x=M,p=C,c=m,k=i,A=S,M){if(!B||!(u??w(m)))return;b(m,i,S);return}C===void 0||!F&&!y||(l=null,d=!1,u?u.morphTo(C,h):w(C))},morphTo(C,m){l=null,d=!1,u?u.morphTo(C,m):w(C)},set(C){l=null,d=!1,u?u.set(C):w(C)}}}var Me="http://www.w3.org/2000/svg",Va=["icon","from","to","progress","spring","reducedMotion"],Ga=new Set(["size","color","stroke-width","absolute-stroke-width","label"]),Na=typeof HTMLElement>"u"?class{}:HTMLElement,Ze,L,H,G,Y,ee,X,le,te,ue,de,v,pa,z,Ke,ma,$e,Qe=(Ze=class extends Na{constructor(){super(...arguments);U(this,v);U(this,L,{});U(this,H,null);U(this,G,null);U(this,Y,!1);U(this,ee,!1);U(this,X,"24");U(this,le,"currentColor");U(this,te,"2");U(this,ue,!1);U(this,de,null)}get icon(){return P(this,L).icon}set icon(e){P(this,L).icon=e,q(this,v,z).call(this)}get from(){return P(this,L).from}set from(e){P(this,L).from=e,q(this,v,z).call(this)}get to(){return P(this,L).to}set to(e){P(this,L).to=e,q(this,v,z).call(this)}get progress(){return P(this,L).progress}set progress(e){P(this,L).progress=e,q(this,v,z).call(this)}get spring(){return P(this,L).spring}set spring(e){P(this,L).spring=e,q(this,v,z).call(this)}get reducedMotion(){return P(this,L).reducedMotion}set reducedMotion(e){P(this,L).reducedMotion=e,q(this,v,z).call(this)}morphTo(e,r){let t=P(this,H);if(!t){q(this,v,Ke).call(this,e);return}t.morphTo(e,r??P(this,L).spring)}set(e){let r=P(this,H);if(!r){q(this,v,Ke).call(this,e);return}r.set(e)}connectedCallback(){for(let e of Va)q(this,v,pa).call(this,e);if(P(this,G)||q(this,v,ma).call(this),this.style.display===""&&(this.style.display="contents"),P(this,G)&&!P(this,H)){let e=P(this,G),r=P(this,Y)&&!P(this,ee);if(R(this,Y,!1),R(this,H,da(P(this,L))),r){let t=!1,o={setAttribute(s,f){t&&e.setAttribute(s,f)}};try{P(this,H).mount(o,P(this,L))}finally{t=!0}}else P(this,H).mount(e,P(this,L))}}disconnectedCallback(){P(this,H)?.destroy(),R(this,H,null)}attributeChangedCallback(e,r,t){switch(e){case"icon":P(this,L).icon=t??void 0;break;case"from":P(this,L).from=t??void 0;break;case"to":P(this,L).to=t??void 0;break;case"progress":{let o=t===null?NaN:Number(t);P(this,L).progress=Number.isFinite(o)?o:void 0;break}case"spring":P(this,L).spring=t??void 0;break;case"reduced-motion":P(this,L).reducedMotion=t??void 0;break;case"size":R(this,X,t??"24");break;case"color":R(this,le,t??"currentColor");break;case"stroke-width":R(this,te,t??"2");break;case"absolute-stroke-width":R(this,ue,t!==null);break;case"label":R(this,de,t)}if(P(this,G)){if(Ga.has(e)){let o=this.querySelector("svg");o&&q(this,v,$e).call(this,o);return}q(this,v,z).call(this)}}},L=new WeakMap,H=new WeakMap,G=new WeakMap,Y=new WeakMap,ee=new WeakMap,X=new WeakMap,le=new WeakMap,te=new WeakMap,ue=new WeakMap,de=new WeakMap,v=new WeakSet,pa=function(e){if(Object.hasOwn(this,e)){let r=this,t=r[e];delete r[e],r[e]=t}},z=function(){let e=P(this,H);if(!e){R(this,ee,!0);return}e.watch(P(this,L))},Ke=function(e){P(this,L).icon=e,P(this,L).from=void 0,P(this,L).to=void 0,R(this,ee,!0)},ma=function(){let e=this.querySelector("path");if(e){R(this,G,e),R(this,Y,!0);let s=P(this,L);if(s.icon===void 0&&s.from===void 0&&s.to===void 0){let f=e.getAttribute("d");f&&(s.icon=f)}return}let r=this.ownerDocument,t=r.createElementNS(Me,"svg");t.setAttribute("xmlns",Me),t.setAttribute("viewBox","0 0 24 24"),t.setAttribute("fill","none"),t.setAttribute("stroke-linecap","round"),t.setAttribute("stroke-linejoin","round"),q(this,v,$e).call(this,t);let o=r.createElementNS(Me,"path");o.setAttribute("d",ua(P(this,L))),t.appendChild(o),this.appendChild(t),R(this,G,o)},$e=function(e){e.setAttribute("width",P(this,X)),e.setAttribute("height",P(this,X)),e.setAttribute("stroke",P(this,le));let r=P(this,ue)?String(Number(P(this,te))*24/Number(P(this,X))):P(this,te);e.setAttribute("stroke-width",r);let t=P(this,de),o=e.querySelector("title");t?(e.setAttribute("role","img"),e.removeAttribute("aria-hidden"),o||(o=this.ownerDocument.createElementNS(Me,"title"),e.insertBefore(o,e.firstChild)),o.textContent=t):(e.removeAttribute("role"),e.setAttribute("aria-hidden","true"),o?.remove())},V(Ze,"observedAttributes",["icon","from","to","progress","spring","reduced-motion","size","color","stroke-width","absolute-stroke-width","label"]),Ze);var je=[["rect",{width:"20",height:"5",x:"2",y:"3",rx:"1"}],["path",{d:"M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"}],["path",{d:"M10 12h4"}]];var Je=[["path",{d:"M7 7h10v10"}],["path",{d:"M7 17 17 7"}]];var _e=[["path",{d:"M8 2v3"}],["path",{d:"M16 2v3"}],["rect",{x:"3",y:"3",width:"18",height:"18",rx:"2"}],["path",{d:"M3 9h18"}],["path",{d:"M8 13h.01"}],["path",{d:"M12 13h.01"}],["path",{d:"M16 13h.01"}],["path",{d:"M8 17h.01"}],["path",{d:"M12 17h.01"}],["path",{d:"M16 17h.01"}]];var Ye=[["rect",{x:"3",y:"3",width:"18",height:"18",rx:"2"}],["path",{d:"M16 2v3"}],["path",{d:"M3 9h18"}],["path",{d:"M8 2v3"}],["path",{d:"M17 13h-6"}],["path",{d:"M13 17H7"}],["path",{d:"M7 13h.01"}],["path",{d:"M17 17h.01"}]];var et=[["path",{d:"M20 6 9 17l-5-5"}]];var tt=[["path",{d:"m6 9 6 6 6-6"}]];var at=[["path",{d:"m9 18 6-6-6-6"}]];var rt=[["path",{d:"m18 15-6-6-6 6"}]];var ke=[["circle",{cx:"12",cy:"12",r:"10"}],["line",{x1:"12",x2:"12",y1:"8",y2:"12"}],["line",{x1:"12",x2:"12.01",y1:"16",y2:"16"}]];var we=[["path",{d:"M21.801 10A10 10 0 1 1 17 3.335"}],["path",{d:"m9 11 3 3L22 4"}]];var ot=[["circle",{cx:"12",cy:"12",r:"10"}],["path",{d:"M12 6v6l4 2"}]];var ft=[["path",{d:"M12 15V3"}],["path",{d:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}],["path",{d:"m7 10 5 5 5-5"}]];var st=[["path",{d:"M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"}],["circle",{cx:"12",cy:"12",r:"3"}]];var lt=[["path",{d:"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{d:"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{d:"m9 15 2 2 4-4"}]];var ut=[["path",{d:"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{d:"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{d:"M9 15h6"}],["path",{d:"M12 18v-6"}]];var dt=[["path",{d:"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{d:"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{d:"M8 13h2"}],["path",{d:"M14 13h2"}],["path",{d:"M8 17h2"}],["path",{d:"M14 17h2"}]];var pt=[["path",{d:"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{d:"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{d:"M10 9H8"}],["path",{d:"M16 13H8"}],["path",{d:"M16 17H8"}]];var mt=[["path",{d:"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{d:"M14 2v5a1 1 0 0 0 1 1h5"}],["path",{d:"M11 18h2"}],["path",{d:"M12 12v6"}],["path",{d:"M9 13v-.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v.5"}]];var nt=[["path",{d:"M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"}],["path",{d:"M14 2v5a1 1 0 0 0 1 1h5"}]];var it=[["path",{d:"M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"}],["path",{d:"M12 10v6"}],["path",{d:"m15 13-3 3-3-3"}]];var xt=[["rect",{width:"18",height:"18",x:"3",y:"3",rx:"2",ry:"2"}],["circle",{cx:"9",cy:"9",r:"2"}],["path",{d:"m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"}]];var ct=[["circle",{cx:"12",cy:"12",r:"10"}],["path",{d:"M12 16v-4"}],["path",{d:"M12 8h.01"}]];var ht=[["path",{d:"m5 8 6 6"}],["path",{d:"m4 14 6-6 2-3"}],["path",{d:"M2 5h12"}],["path",{d:"M7 2h1"}],["path",{d:"m22 22-5-10-5 10"}],["path",{d:"M14 18h6"}]];var Ct=[["rect",{width:"7",height:"9",x:"3",y:"3",rx:"1"}],["rect",{width:"7",height:"5",x:"14",y:"3",rx:"1"}],["rect",{width:"7",height:"9",x:"14",y:"12",rx:"1"}],["rect",{width:"7",height:"5",x:"3",y:"16",rx:"1"}]];var gt=[["rect",{width:"7",height:"7",x:"3",y:"3",rx:"1"}],["rect",{width:"7",height:"7",x:"14",y:"3",rx:"1"}],["rect",{width:"7",height:"7",x:"14",y:"14",rx:"1"}],["rect",{width:"7",height:"7",x:"3",y:"14",rx:"1"}]];var Pe=[["rect",{width:"18",height:"11",x:"3",y:"11",rx:"2",ry:"2"}],["path",{d:"M7 11V7a5 5 0 0 1 9.9-1"}]];var St=[["rect",{width:"18",height:"11",x:"3",y:"11",rx:"2",ry:"2"}],["path",{d:"M7 11V7a5 5 0 0 1 10 0v4"}]];var Mt=[["path",{d:"m10 17 5-5-5-5"}],["path",{d:"M15 12H3"}],["path",{d:"M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"}]];var kt=[["path",{d:"m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"}],["rect",{x:"2",y:"4",width:"20",height:"16",rx:"2"}]];var wt=[["path",{d:"M8 3H5a2 2 0 0 0-2 2v3"}],["path",{d:"M21 8V5a2 2 0 0 0-2-2h-3"}],["path",{d:"M3 16v3a2 2 0 0 0 2 2h3"}],["path",{d:"M16 21h3a2 2 0 0 0 2-2v-3"}]];var Pt=[["path",{d:"M4 5h16"}],["path",{d:"M4 12h16"}],["path",{d:"M4 19h16"}]];var At=[["rect",{width:"20",height:"14",x:"2",y:"3",rx:"2"}],["line",{x1:"8",x2:"16",y1:"21",y2:"21"}],["line",{x1:"12",x2:"12",y1:"17",y2:"21"}]];var yt=[["path",{d:"M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"}],["path",{d:"M12 22V12"}],["polyline",{points:"3.29 7 12 12 20.71 7"}],["path",{d:"m7.5 4.27 9 5.15"}]];var Ae=[["rect",{width:"18",height:"18",x:"3",y:"3",rx:"2"}],["path",{d:"M9 3v18"}],["path",{d:"m16 15-3-3 3-3"}]];var ye=[["rect",{width:"18",height:"18",x:"3",y:"3",rx:"2"}],["path",{d:"M9 3v18"}]];var be=[["path",{d:"M13 21h8"}],["path",{d:"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"}]];var Le=[["path",{d:"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"}]];var bt=[["path",{d:"M5 12h14"}],["path",{d:"M12 5v14"}]];var Lt=[["path",{d:"M2 3h20"}],["path",{d:"M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"}],["path",{d:"m7 21 5-5 5 5"}]];var Ft=[["path",{d:"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"}],["path",{d:"M21 3v5h-5"}],["path",{d:"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"}],["path",{d:"M8 16H3v5"}]];var Bt=[["path",{d:"M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"}],["path",{d:"M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09"}],["path",{d:"M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z"}],["path",{d:"M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05"}]];var Dt=[["path",{d:"M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"}],["path",{d:"M21 3v5h-5"}]];var vt=[["path",{d:"m21 21-4.34-4.34"}],["circle",{cx:"11",cy:"11",r:"8"}]];var Tt=[["path",{d:"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"}],["path",{d:"m9 12 2 2 4-4"}]];var Fe=[["path",{d:"M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"}],["path",{d:"M20 2v4"}],["path",{d:"M22 4h-4"}],["circle",{cx:"4",cy:"20",r:"2"}]];var Be=[["path",{d:"M21 10.656V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12.344"}],["path",{d:"m9 11 3 3L22 4"}]];var ae=[["path",{d:"M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"}],["path",{d:"M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"}]];var De=[["path",{d:"M10 11v6"}],["path",{d:"M14 11v6"}],["path",{d:"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"}],["path",{d:"M3 6h18"}],["path",{d:"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"}]];var ve=[["path",{d:"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"}],["path",{d:"M12 9v4"}],["path",{d:"M12 17h.01"}]];var Rt=[["path",{d:"M12 3v12"}],["path",{d:"m17 8-5-5-5 5"}],["path",{d:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"}]];var qt=[["path",{d:"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"}],["circle",{cx:"12",cy:"7",r:"4"}]];var Ot=[["path",{d:"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"}],["path",{d:"M16 3.128a4 4 0 0 1 0 7.744"}],["path",{d:"M22 21v-2a4 4 0 0 0-3-3.87"}],["circle",{cx:"9",cy:"7",r:"4"}]];var Ut=[["path",{d:"M18 6 6 18"}],["path",{d:"m6 6 12 12"}]];var re={archive:je,"arrow-up-right":Je,"calendar-days":_e,"calendar-range":Ye,check:et,"chevron-down":tt,"chevron-right":at,"chevron-up":rt,"circle-alert":ke,"circle-check-big":we,clock:ot,download:ft,eye:st,file:nt,"file-check":lt,"file-plus":ut,"file-spreadsheet":dt,"file-text":pt,"file-type":mt,"folder-down":it,image:xt,info:ct,languages:ht,"layout-dashboard":Ct,"layout-grid":gt,lock:St,"lock-open":Pe,"log-in":Mt,mail:kt,maximize:wt,menu:Pt,monitor:At,package:yt,"panel-left":ye,"panel-left-close":Ae,pen:Le,"pen-line":be,plus:bt,presentation:Lt,"refresh-cw":Ft,rocket:Bt,"rotate-cw":Dt,search:vt,"shield-check":Tt,sparkles:Fe,"square-check-big":Be,"square-pen":ae,trash:De,"triangle-alert":ve,upload:Rt,user:qt,users:Ot,x:Ut},Te=class extends Qe{connectedCallback(){if(this.icon===void 0){let t=this.getAttribute("name");t&&re[t]&&(this.icon=re[t])}super.connectedCallback();let e=this.getAttribute("svg-class"),r=this.querySelector("svg");r&&e&&e.split(/\s+/).forEach(t=>t&&r.classList.add(t))}attributeChangedCallback(e,r,t){if(e!=="svg-class"){if(e==="name"){this.isConnected&&this.icon!==void 0&&t&&re[t]&&this.morphTo(re[t]);return}super.attributeChangedCallback(e,r,t)}}};V(Te,"observedAttributes",[...Qe.observedAttributes,"name","svg-class"]);typeof customElements<"u"&&!customElements.get("mi-icon")&&customElements.define("mi-icon",Te);window.MI={ICONS:re,html(a,e={}){return`<mi-icon name="${a}"${e.size?` size="${e.size}"`:""}${e.sw?` stroke-width="${e.sw}"`:""}${e.color?` color="${e.color}"`:""}${e.cls?` svg-class="${e.cls}"`:""}></mi-icon>`},morph(a,e){let r=a&&(a.tagName==="MI-ICON"?a:a.querySelector&&a.querySelector("mi-icon"));r&&re[e]&&r.setAttribute("name",e)}};})();
+/*! Bundled license information:
+
+lucide/dist/esm/icons/archive.mjs:
+lucide/dist/esm/icons/arrow-up-right.mjs:
+lucide/dist/esm/icons/calendar-days.mjs:
+lucide/dist/esm/icons/calendar-range.mjs:
+lucide/dist/esm/icons/check.mjs:
+lucide/dist/esm/icons/chevron-down.mjs:
+lucide/dist/esm/icons/chevron-right.mjs:
+lucide/dist/esm/icons/chevron-up.mjs:
+lucide/dist/esm/icons/circle-alert.mjs:
+lucide/dist/esm/icons/circle-check-big.mjs:
+lucide/dist/esm/icons/clock.mjs:
+lucide/dist/esm/icons/download.mjs:
+lucide/dist/esm/icons/eye.mjs:
+lucide/dist/esm/icons/file-check.mjs:
+lucide/dist/esm/icons/file-plus.mjs:
+lucide/dist/esm/icons/file-spreadsheet.mjs:
+lucide/dist/esm/icons/file-text.mjs:
+lucide/dist/esm/icons/file-type.mjs:
+lucide/dist/esm/icons/file.mjs:
+lucide/dist/esm/icons/folder-down.mjs:
+lucide/dist/esm/icons/image.mjs:
+lucide/dist/esm/icons/info.mjs:
+lucide/dist/esm/icons/languages.mjs:
+lucide/dist/esm/icons/layout-dashboard.mjs:
+lucide/dist/esm/icons/layout-grid.mjs:
+lucide/dist/esm/icons/lock-open.mjs:
+lucide/dist/esm/icons/lock.mjs:
+lucide/dist/esm/icons/log-in.mjs:
+lucide/dist/esm/icons/mail.mjs:
+lucide/dist/esm/icons/maximize.mjs:
+lucide/dist/esm/icons/menu.mjs:
+lucide/dist/esm/icons/monitor.mjs:
+lucide/dist/esm/icons/package.mjs:
+lucide/dist/esm/icons/panel-left-close.mjs:
+lucide/dist/esm/icons/panel-left.mjs:
+lucide/dist/esm/icons/pen-line.mjs:
+lucide/dist/esm/icons/pen.mjs:
+lucide/dist/esm/icons/plus.mjs:
+lucide/dist/esm/icons/presentation.mjs:
+lucide/dist/esm/icons/refresh-cw.mjs:
+lucide/dist/esm/icons/rocket.mjs:
+lucide/dist/esm/icons/rotate-cw.mjs:
+lucide/dist/esm/icons/search.mjs:
+lucide/dist/esm/icons/shield-check.mjs:
+lucide/dist/esm/icons/sparkles.mjs:
+lucide/dist/esm/icons/square-check-big.mjs:
+lucide/dist/esm/icons/square-pen.mjs:
+lucide/dist/esm/icons/trash.mjs:
+lucide/dist/esm/icons/triangle-alert.mjs:
+lucide/dist/esm/icons/upload.mjs:
+lucide/dist/esm/icons/user.mjs:
+lucide/dist/esm/icons/users.mjs:
+lucide/dist/esm/icons/x.mjs:
+lucide/dist/esm/lucide.mjs:
+  (**
+   * @license lucide v1.48.0 - ISC
+   *
+   * This source code is licensed under the ISC license.
+   * See the LICENSE file in the root directory of this source tree.
+   *)
+*/
+
+</script>
 </head>
 <body>
 
@@ -5797,13 +5873,13 @@ html{
       <div class="auth-highlights">
         <div class="auth-highlight">
           <span class="auth-highlight-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+            <mi-icon name="shield-check" stroke-width="1.8"></mi-icon>
           </span>
           <span><b>Phân quyền an toàn</b><small>Chỉ thành viên được cấp quyền mới có thể truy cập.</small></span>
         </div>
         <div class="auth-highlight">
           <span class="auth-highlight-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17V7a2 2 0 012-2h12a2 2 0 012 2v10"/><path d="M8 21h8M12 17v4M8 9h8M8 13h5"/></svg>
+            <mi-icon name="monitor" stroke-width="1.8"></mi-icon>
           </span>
           <span><b>Luồng làm việc rõ ràng</b><small>CR → UAT → Release trong cùng một hệ thống.</small></span>
         </div>
@@ -5820,7 +5896,7 @@ html{
           <div class="tag">Change Request Management</div>
         </div>
         <span class="auth-secure-badge">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+          <mi-icon name="shield-check" stroke-width="2"></mi-icon>
           Secure access
         </span>
       </div>
@@ -5831,7 +5907,7 @@ html{
         <p class="lead">Sử dụng tài khoản Google đã được cấp quyền để truy cập workspace của bạn.</p>
       </div>
       <div class="auth-access-note">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7.5v.1"/></svg>
+        <mi-icon name="info" stroke-width="1.8"></mi-icon>
         Tài khoản chưa được cấp quyền sẽ được chuyển đến màn hình chờ duyệt.
       </div>
       <div class="config-actions">
@@ -5859,13 +5935,13 @@ html{
       <div class="auth-highlights">
         <div class="auth-highlight">
           <span class="auth-highlight-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 4.4-3 8.4-7 10-4-1.6-7-5.6-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+            <mi-icon name="shield-check" stroke-width="1.8"></mi-icon>
           </span>
           <span><b>Phân quyền an toàn</b><small>Chỉ thành viên được cấp quyền mới có thể truy cập.</small></span>
         </div>
         <div class="auth-highlight">
           <span class="auth-highlight-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17V7a2 2 0 012-2h12a2 2 0 012 2v10"/><path d="M8 21h8M12 17v4M8 9h8M8 13h5"/></svg>
+            <mi-icon name="monitor" stroke-width="1.8"></mi-icon>
           </span>
           <span><b>Luồng làm việc rõ ràng</b><small>CR → UAT → Release trong cùng một hệ thống.</small></span>
         </div>
@@ -5882,7 +5958,7 @@ html{
           <div class="tag">Change Request Management</div>
         </div>
         <span class="auth-secure-badge is-pending">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <mi-icon name="clock" stroke-width="2"></mi-icon>
           Pending
         </span>
       </div>
@@ -5894,7 +5970,7 @@ html{
       </div>
       <div class="auth-pending-account">
         <span class="auth-pending-avatar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <mi-icon name="user" stroke-width="1.8"></mi-icon>
         </span>
         <div>
           <div class="auth-pending-email" id="pendingEmail"></div>
@@ -5905,7 +5981,7 @@ html{
       <div class="config-actions auth-pending-actions">
         <button class="btn btn-ghost auth-pending-btn" id="btnLogoutPending">Đăng xuất</button>
         <button class="btn btn-primary auth-pending-btn" id="btnRecheckPending">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          <mi-icon name="rotate-cw" stroke-width="2"></mi-icon>
           Kiểm tra lại
         </button>
       </div>
@@ -5928,7 +6004,7 @@ html{
 
     <div class="nav-group-label">Tổng quan</div>
     <div class="nav-item active" data-view="dashboard" title="Dashboard">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      <mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>
       <span class="nav-label">Dashboard</span>
     </div>
 
@@ -5939,39 +6015,34 @@ html{
       <div class="nav-item workspace-parent is-open" id="navDmsWorkspace"
            title="Mở / thu gọn Quản Lý DMS" role="button" tabindex="0"
            aria-expanded="true" aria-controls="navDmsChildren">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="16" rx="2"/>
-          <path d="M8 4V2M16 4V2M7 9h10M7 13h6M7 17h8"/>
-        </svg>
+        <mi-icon name="calendar-range" stroke-width="2"></mi-icon>
         <span class="nav-label">Quản Lý DMS</span>
-        <svg class="workspace-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
+        <mi-icon name="chevron-down" stroke-width="2.2" svg-class="workspace-chevron"></mi-icon>
       </div>
 
       <div class="workspace-children" id="navDmsChildren" aria-label="Các phân hệ Quản Lý DMS">
         <div class="nav-item" data-view="crlog" title="CR Log">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2-2z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+          <mi-icon name="file-text" stroke-width="2"></mi-icon>
           <span class="nav-label">CR Log</span>
           <span class="count" id="navCountCr">0</span>
         </div>
         <div class="nav-item" data-view="uat" title="UAT Test Case">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          <mi-icon name="square-check-big" stroke-width="2"></mi-icon>
           <span class="nav-label">UAT Test Case</span>
           <span class="count" id="navCountUat">0</span>
         </div>
         <div class="nav-item" data-view="release" title="Release / PRD">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 016.34-11.34.99.99 0 01.11-.1c1.62-.9 4-1.1 5.5.4s1.3 3.88.4 5.5c-.03.04-.07.08-.1.11A22 22 0 0112 15z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+          <mi-icon name="rocket" stroke-width="2"></mi-icon>
           <span class="nav-label">Release / PRD</span>
           <span class="count" id="navCountRel">0</span>
         </div>
         <div class="nav-item" data-view="brd" title="Tạo BRD">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>
+          <mi-icon name="file-text" stroke-width="2"></mi-icon>
           <span class="nav-label">Tạo BRD</span>
           <span class="count" id="navCountBrd">0</span>
         </div>
         <div class="nav-item" data-view="weekly_mom" title="Weekly MoM">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>
+          <mi-icon name="calendar-days" stroke-width="2"></mi-icon>
           <span class="nav-label">Weekly MoM</span>
           <span class="count" id="navCountWeeklyMom">0</span>
         </div>
@@ -5983,12 +6054,12 @@ html{
 
     <div class="global-nav-tools" aria-label="Công cụ dùng chung">
       <div class="nav-item global-nav-item hidden" data-view="admin" id="navAdmin" title="Quản Trị Dữ Liệu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a2 2 0 00-2 2v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <mi-icon name="users" stroke-width="2"></mi-icon>
         <span class="nav-label">Quản Trị Dữ Liệu</span>
         <span class="count hidden" id="navAdminRequestBadge" title="Yêu cầu cấp quyền đang chờ duyệt" style="background:var(--warning-dim); color:var(--warning);">0</span>
       </div>
       <div class="nav-item global-nav-item hidden" data-view="recycle" id="navRecycleBin" title="Recycle Bin">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+        <mi-icon name="trash" stroke-width="2"></mi-icon>
         <span class="nav-label">Recycle Bin</span>
         <span class="count" id="navCountRecycle">0</span>
       </div>
@@ -5996,13 +6067,13 @@ html{
 
     <!-- Legacy standalone admin/recycle markup intentionally omitted after
          moving both items into the Workspace navigation above.
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <mi-icon name="users" stroke-width="2"></mi-icon>
       <span class="nav-label">Quản Trị Dữ Liệu</span>
       <span class="count hidden" id="navAdminRequestBadgeLegacy" title="Yêu cầu cấp quyền đang chờ duyệt" style="background:var(--warning-dim); color:var(--warning);">0</span>
     </div>
 
     <div class="nav-item hidden" data-view-legacy="recycle" id="navRecycleBinLegacy" title="Recycle Bin">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+      <mi-icon name="trash" stroke-width="2"></mi-icon>
       <span class="nav-label">Recycle Bin</span>
       <span class="count" id="navCountRecycleLegacy">0</span>
     -->
@@ -6013,7 +6084,7 @@ html{
         <span id="sidebarUserRole" style="padding-left:15px; font-size:10.5px;"></span>
       </div>
       <div class="nav-item" id="btnLogout" style="margin-bottom:0;" title="Đăng xuất">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        <mi-icon name="log-in" stroke-width="2"></mi-icon>
         <span class="nav-label">Đăng xuất</span>
       </div>
     </div>
@@ -6022,7 +6093,7 @@ html{
   <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
 
   <button class="mobile-nav-toggle" id="btnMobileNav" title="Mở / đóng menu" aria-label="Mở / đóng menu" aria-expanded="false" type="button">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    <mi-icon name="menu" stroke-width="2.2"></mi-icon>
   </button>
 
   <div class="main">
@@ -6032,69 +6103,69 @@ html{
         <div class="sub" id="topbarSub">Tổng quan tình trạng Change Request</div>
       </div>
       <div class="search-box" id="globalSearchBox">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <mi-icon name="search" stroke-width="2"></mi-icon>
         <input id="globalSearch" type="text" placeholder="Tìm CR, UAT, Release..." readonly>
         <span class="kbd-hint">Ctrl K</span>
       </div>
       <div class="topbar-actions" id="topbarActions">
         <button class="btn btn-ghost btn-sm tb-btn refresh-btn" id="btnDashRefresh" type="button" title="Làm mới dữ liệu">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          <mi-icon name="refresh-cw" size="14" stroke-width="2.5"></mi-icon>
           <span class="refresh-label">Làm mới</span>
         </button>
          <button class="btn btn-ghost btn-sm tb-btn view-action hidden" data-for="dashboard" id="btnProgressReport" type="button" title="Tải báo cáo tiến độ CR và UAT">
-           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+           <mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>
            <span class="report-label">Tải báo cáo</span>
          </button>
         <button class="btn btn-ghost btn-sm tb-btn view-action hidden" data-for="dashboard,uat" id="btnEvidenceZip" type="button" title="Tải toàn bộ ảnh evidence theo cấu trúc thư mục">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16a1 1 0 001-1v-4H3v4a1 1 0 001 1z"/><path d="M8 17h8"/></svg>
+          <mi-icon name="folder-down" size="14" stroke-width="2.5"></mi-icon>
           <span class="evidence-zip-label">Tải ảnh</span>
         </button>
         <button class="btn btn-ghost btn-sm view-action hidden" data-for="crlog" id="btnCrTemplate" type="button" title="Tải file Excel mẫu để điền thông tin CR">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3M7 10l5 5 5-5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+          <mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>
           Tải template
         </button>
         <button class="btn btn-ghost btn-sm view-action hidden" data-for="crlog" id="btnCrImport" type="button" title="Nhập nhiều CR cùng lúc từ file Excel">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12M7 10l5-5 5 5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+          <mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>
           Nhập Excel
         </button>
         <button class="btn btn-primary view-action hidden" data-for="crlog" id="btnAddCr">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
           Tạo CR mới
         </button>
         <button class="btn btn-ghost btn-sm view-action hidden" data-for="uat" id="btnUatTemplate" type="button" title="Tải file Excel mẫu để điền Test Case UAT">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3M7 10l5 5 5-5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+          <mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>
           Tải Template
         </button>
         <button class="btn btn-ghost btn-sm view-action hidden" data-for="uat" id="btnUatImport" type="button" title="Nhập nhiều Test Case cùng lúc từ file Excel">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12M7 10l5-5 5 5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+          <mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>
           Nhập Excel
         </button>
         <button class="btn btn-primary view-action hidden" data-for="uat" id="btnAddTc">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
           Thêm Test Case
         </button>
         <button class="btn btn-primary view-action hidden" data-for="release" id="btnAddRel">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
           Thêm Release
         </button>
         <button class="btn btn-primary view-action hidden" data-for="brd" id="btnAddBrd">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
           Tạo BRD mới
         </button>
         <button class="btn btn-primary view-action hidden" data-for="weekly_mom" id="btnAddWeeklyMom">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
           Tạo biên bản Weekly
         </button>
         <button class="btn btn-ghost view-action hidden" data-for="weekly_mom" id="btnWeeklyMomImport" type="button" title="Nhập một batch Weekly MoM mới từ file Excel">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5-5 5 5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+          <mi-icon name="upload" size="14" stroke-width="2"></mi-icon>
           Nhập Excel
         </button>
         <button class="btn btn-ghost view-action hidden" data-for="weekly_mom" id="btnWeeklyMomDownload" type="button" title="Tải file Excel của batch Weekly MoM mới nhất">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16a1 1 0 001-1v-4H3v4a1 1 0 001 1z"/></svg>
+          <mi-icon name="folder-down" size="14" stroke-width="2"></mi-icon>
           Tải Excel
         </button>
         <button class="btn btn-primary view-action hidden" data-for="admin" id="btnAddUser">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
           Thêm người dùng
         </button>
       </div>
@@ -6163,7 +6234,7 @@ html{
             <div class="list-panel-count"><b id="crCount">0</b> Change Request</div>
             <div class="table-toolbar" id="crToolbar">
               <div class="tb-search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <mi-icon name="search" stroke-width="2"></mi-icon>
                 <input id="crSearchInput" type="text" placeholder="Tìm CR ID, tiêu đề, requester...">
               </div>
               <div class="cr-filter-group" data-filter-key="status">
@@ -6221,7 +6292,7 @@ html{
                 </div>
               </div>
 
-              <button class="btn btn-ghost btn-sm tb-btn" id="btnFocusMode" type="button" title="Chế độ toàn màn hình">⛶ Focus</button>
+              <button class="btn btn-ghost btn-sm tb-btn" id="btnFocusMode" type="button" title="Chế độ toàn màn hình"><mi-icon name="maximize" size="14" stroke-width="2.2"></mi-icon> Focus</button>
             </div>
           </div>
 
@@ -6267,7 +6338,7 @@ html{
             <div class="list-panel-count"><b id="tcCount">0</b> Test Case</div>
             <div class="table-toolbar" id="tcToolbar">
               <div class="tb-search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <mi-icon name="search" stroke-width="2"></mi-icon>
                 <input id="tcSearchInput" type="text" placeholder="Tìm Test Case, scenario, testor...">
               </div>
               <div class="filter-chip"><span>CR ID</span>
@@ -6304,7 +6375,7 @@ html{
                 </div>
               </div>
 
-              <button class="btn btn-ghost btn-sm tb-btn" id="btnUatFocusMode" type="button" title="Chế độ toàn màn hình">⛶ Focus</button>
+              <button class="btn btn-ghost btn-sm tb-btn" id="btnUatFocusMode" type="button" title="Chế độ toàn màn hình"><mi-icon name="maximize" size="14" stroke-width="2.2"></mi-icon> Focus</button>
             </div>
           </div>
 
@@ -6350,7 +6421,7 @@ html{
             <div class="list-panel-count"><b id="relCount">0</b> Release</div>
             <div class="table-toolbar" id="relToolbar">
               <div class="tb-search">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <mi-icon name="search" stroke-width="2"></mi-icon>
                 <input id="relSearchInput" type="text" placeholder="Tìm Release, version, owner...">
               </div>
               <div class="filter-chip"><span>CR ID</span>
@@ -6387,7 +6458,7 @@ html{
                 </div>
               </div>
 
-              <button class="btn btn-ghost btn-sm tb-btn" id="btnRelFocusMode" type="button" title="Chế độ toàn màn hình">⛶ Focus</button>
+              <button class="btn btn-ghost btn-sm tb-btn" id="btnRelFocusMode" type="button" title="Chế độ toàn màn hình"><mi-icon name="maximize" size="14" stroke-width="2.2"></mi-icon> Focus</button>
             </div>
           </div>
 
@@ -6428,7 +6499,7 @@ html{
       <div class="brd-workspace">
         <div class="brd-toolbar">
           <div class="brd-toolbar-copy">
-            <div class="brd-toolbar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+            <div class="brd-toolbar-icon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div>
             <div><div class="brd-toolbar-title">Danh sách Business Requirement Document</div><div class="brd-toolbar-note">Quản lý tài liệu yêu cầu nghiệp vụ và xuất file Word theo mẫu chuẩn</div></div>
           </div>
           <div class="brd-count"><b id="brdCount">0</b> BRD đã tạo</div>
@@ -6442,7 +6513,7 @@ html{
       <div class="weekly-mom-workspace">
         <div class="weekly-mom-intro">
           <div class="weekly-mom-intro-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>
+            <mi-icon name="calendar-days" stroke-width="2"></mi-icon>
           </div>
           <div>
             <div class="weekly-mom-title">Biên bản Weekly với Vendor</div>
@@ -6543,7 +6614,7 @@ html{
           <div class="list-panel-count"><b id="userCount">0</b> người dùng</div>
           <div class="table-toolbar">
             <div class="tb-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <mi-icon name="search" stroke-width="2"></mi-icon>
               <input id="userSearchInput" type="text" placeholder="Tìm theo email...">
             </div>
             <div class="filter-chip"><span>Vai trò</span>
@@ -6584,7 +6655,7 @@ html{
           <div class="status-create">
             <input id="statusNameInput" type="text" maxlength="80" placeholder="Ví dụ: Pending Review">
             <button class="btn btn-primary btn-sm" id="btnAddStatus" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
               Thêm status
             </button>
           </div>
@@ -6612,7 +6683,7 @@ html{
             <input id="subStatusNameInput" type="text" maxlength="120" placeholder="Ví dụ: Vendor Testing">
             <input id="subStatusOrderInput" type="number" min="0" step="1" value="0" style="width:86px;" aria-label="Thứ tự sub-status">
             <button class="btn btn-primary btn-sm" id="btnAddSubStatus" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
               Thêm sub-status
             </button>
           </div>
@@ -6637,7 +6708,7 @@ html{
             <input id="evidenceStepNameInput" type="text" maxlength="150" placeholder="Ví dụ: Prepare Data Testing 01">
             <input id="evidenceStepOrderInput" type="number" min="0" step="1" value="0" style="width:86px;" aria-label="Thứ tự">
             <button class="btn btn-primary btn-sm" id="btnAddEvidenceStep" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
               Thêm bước
             </button>
           </div>
@@ -6665,7 +6736,7 @@ html{
             <input id="attachCategoryNameInput" type="text" maxlength="80" placeholder="Ví dụ: BRD">
             <input id="attachCategoryOrderInput" type="number" min="0" step="1" value="0" style="width:86px;" aria-label="Thứ tự">
             <button class="btn btn-primary btn-sm" id="btnAddAttachCategory" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              <mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>
               Thêm phân loại
             </button>
           </div>
@@ -6705,7 +6776,7 @@ html{
             </div>
             <div class="chip-clear" id="clearRecycleFilters">Xóa lọc</div>
             <button class="btn btn-ghost btn-sm" id="btnRefreshRecycle" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 11-3-6.7"/><path d="M21 3v6h-6"/></svg>
+              <mi-icon name="rotate-cw" size="14" stroke-width="2.5"></mi-icon>
               Làm mới
             </button>
           </div>
@@ -6745,16 +6816,16 @@ html{
 <div class="drawer-overlay" id="drawerOverlay" role="presentation"></div>
 <div class="drawer" id="crDrawer"></div>
 
-<div id="lightbox"><button class="lb-close" id="lbClose">✕</button><img id="lbImg" src="" alt=""></div>
+<div id="lightbox"><button class="lb-close" id="lbClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button><img id="lbImg" src="" alt=""></div>
 <div id="toastHost" aria-live="polite" aria-atomic="false"></div>
 
 <!-- ============================== GLOBAL SEARCH (command palette) ============================== -->
 <div class="gsearch-overlay" id="gsearchOverlay">
   <div class="gsearch-panel">
     <div class="gsearch-input-row">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <mi-icon name="search" stroke-width="2"></mi-icon>
       <input id="gsearchInput" type="text" placeholder="Tìm CR ID, App, Requester, Test Case, Release...">
-      <button class="gsearch-close" id="gsearchClose" title="Đóng (Esc)">✕</button>
+      <button class="gsearch-close" id="gsearchClose" title="Đóng (Esc)"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="gsearch-results" id="gsearchResults"></div>
     <div class="gsearch-foot">
@@ -7608,14 +7679,14 @@ function fileKind(name, mime){
   return "other";
 }
 const FILE_ICON = {
-  image: `<svg viewBox="0 0 24 24" fill="none" stroke="#5b8def" stroke-width="1.8" width="26" height="26"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`,
-  pdf: `<svg viewBox="0 0 24 24" fill="none" stroke="#ee6b74" stroke-width="1.8" width="26" height="26"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><text x="7" y="17" font-size="7" fill="#ee6b74" stroke="none" font-family="sans-serif">PDF</text></svg>`,
-  docx: `<svg viewBox="0 0 24 24" fill="none" stroke="#5b8def" stroke-width="1.8" width="26" height="26"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><text x="6" y="17" font-size="6.5" fill="#5b8def" stroke="none" font-family="sans-serif">DOC</text></svg>`,
-  xlsx: `<svg viewBox="0 0 24 24" fill="none" stroke="#4cc38a" stroke-width="1.8" width="26" height="26"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><text x="6" y="17" font-size="6" fill="#4cc38a" stroke="none" font-family="sans-serif">XLS</text></svg>`,
-  mail: `<svg viewBox="0 0 24 24" fill="none" stroke="#f2b84b" stroke-width="1.8" width="26" height="26"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>`,
-  ppt: `<svg viewBox="0 0 24 24" fill="none" stroke="#e08a3c" stroke-width="1.8" width="26" height="26"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><text x="6" y="17" font-size="6" fill="#e08a3c" stroke="none" font-family="sans-serif">PPT</text></svg>`,
-  zip: `<svg viewBox="0 0 24 24" fill="none" stroke="#b78af0" stroke-width="1.8" width="26" height="26"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>`,
-  other: `<svg viewBox="0 0 24 24" fill="none" stroke="#7488a0" stroke-width="1.8" width="26" height="26"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg>`
+  image: `<mi-icon name="image" size="26" stroke-width="1.8" color="#5b8def"></mi-icon>`,
+  pdf: `<mi-icon name="file-text" size="26" stroke-width="1.8" color="#ee6b74"></mi-icon>`,
+  docx: `<mi-icon name="file-type" size="26" stroke-width="1.8" color="#5b8def"></mi-icon>`,
+  xlsx: `<mi-icon name="file-spreadsheet" size="26" stroke-width="1.8" color="#4cc38a"></mi-icon>`,
+  mail: `<mi-icon name="mail" size="26" stroke-width="1.8" color="#f2b84b"></mi-icon>`,
+  ppt: `<mi-icon name="presentation" size="26" stroke-width="1.8" color="#e08a3c"></mi-icon>`,
+  zip: `<mi-icon name="archive" size="26" stroke-width="1.8" color="#b78af0"></mi-icon>`,
+  other: `<mi-icon name="file" size="26" stroke-width="1.8" color="#7488a0"></mi-icon>`
 };
 
 /* ---------------------------------------------------------------------------
@@ -7646,7 +7717,7 @@ const DLProgress = (function(){
     overlay.innerHTML = `
       <div class="dlprog-card">
         <div class="dlprog-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+          <mi-icon name="download" stroke-width="2"></mi-icon>
         </div>
         <div class="dlprog-title" id="dlprogTitle">Đang xử lý...</div>
         <div class="dlprog-step" id="dlprogStep">Đang chuẩn bị...</div>
@@ -7710,15 +7781,15 @@ const DLProgress = (function(){
 --------------------------------------------------------------------------- */
 function toastIcon(type){
   if(type === "ok"){
-    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12.5l4.2 4L19 7"/></svg>`;
+    return `<mi-icon name="check" stroke-width="2.2"></mi-icon>`;
   }
   if(type === "err"){
-    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v5M12 16.5v.1"/></svg>`;
+    return `<mi-icon name="circle-alert" stroke-width="2.2"></mi-icon>`;
   }
   if(type === "warn"){
-    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 4.5l9 15.5H3l9-15.5Z" stroke-linejoin="round"/><path d="M12 10.2v4.3M12 17v.1"/></svg>`;
+    return `<mi-icon name="triangle-alert" stroke-width="2.2"></mi-icon>`;
   }
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="8.5"/><path d="M12 10.5v5M12 8v.1"/></svg>`;
+  return `<mi-icon name="info" stroke-width="2.2"></mi-icon>`;
 }
 
 const TOAST_TITLES = { ok:"Thành công", err:"Có lỗi xảy ra", warn:"Cần lưu ý", info:"Thông báo" };
@@ -7738,7 +7809,7 @@ function toast(msg, type="info", title){
       <span class="t-title">${esc(heading)}</span>
       <span class="t-message">${esc(msg)}</span>
     </span>
-    <button class="t-close" type="button" aria-label="Đóng thông báo">×</button>
+    <button class="t-close" type="button" aria-label="Đóng thông báo"><mi-icon name="x" size="1em" stroke-width="2.4"></mi-icon></button>
   `;
   host.appendChild(el);
 
@@ -8393,9 +8464,20 @@ function initSidebarVisibility(){
   const backdrop = $("#mobileNavBackdrop");
   const mqMobile = window.matchMedia("(max-width: 900px)");
   if(!btn) return;
+  // Icon nút điều hướng morph theo trạng thái (morphicons): mobile menu↔X, desktop panel đóng↔mở.
+  const syncNavIcon = ()=>{
+    const cl = document.body.classList;
+    const name = mqMobile.matches
+      ? (cl.contains("mobile-nav-open") ? "x" : "menu")
+      : (cl.contains("sidebar-hidden") ? "panel-left" : "panel-left-close");
+    if(window.MI) window.MI.morph(btn, name);
+  };
   const syncButtonState = ()=>{
     btn.setAttribute("aria-expanded", document.body.classList.contains("mobile-nav-open") ? "true" : "false");
+    syncNavIcon();
   };
+  new MutationObserver(syncNavIcon).observe(document.body, { attributes:true, attributeFilter:["class"] });
+  mqMobile.addEventListener("change", syncNavIcon);
   if(!mqMobile.matches && localStorage.getItem("sidebarHidden") === "1"){
     document.body.classList.add("sidebar-hidden");
   }
@@ -8991,9 +9073,9 @@ function setFocusMode(on){
   const btn = $("#btnFocusMode");
   const uatBtn = $("#btnUatFocusMode");
   const relBtn = $("#btnRelFocusMode");
-  if(btn) btn.innerHTML = on ? "✕ Thoát Focus" : "⛶ Focus";
-  if(uatBtn) uatBtn.innerHTML = on ? "✕ Thoát Focus" : "⛶ Focus";
-  if(relBtn) relBtn.innerHTML = on ? "✕ Thoát Focus" : "⛶ Focus";
+  if(btn) btn.innerHTML = on ? "<mi-icon name=\"x\" size=\"14\" stroke-width=\"2.4\"></mi-icon> Thoát Focus" : "<mi-icon name=\"maximize\" size=\"14\" stroke-width=\"2.2\"></mi-icon> Focus";
+  if(uatBtn) uatBtn.innerHTML = on ? "<mi-icon name=\"x\" size=\"14\" stroke-width=\"2.4\"></mi-icon> Thoát Focus" : "<mi-icon name=\"maximize\" size=\"14\" stroke-width=\"2.2\"></mi-icon> Focus";
+  if(relBtn) relBtn.innerHTML = on ? "<mi-icon name=\"x\" size=\"14\" stroke-width=\"2.4\"></mi-icon> Thoát Focus" : "<mi-icon name=\"maximize\" size=\"14\" stroke-width=\"2.2\"></mi-icon> Focus";
 }
 
 function populateSelect(sel, arr, withEmpty){
@@ -9254,9 +9336,9 @@ function gsSearchRel(q){
 }
 
 const GS_ICONS = {
-  cr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg>`,
-  uat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`,
-  rel: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05"/><path d="M12 22.08V12"/></svg>`,
+  cr: `<mi-icon name="file" stroke-width="2"></mi-icon>`,
+  uat: `<mi-icon name="square-check-big" stroke-width="2"></mi-icon>`,
+  rel: `<mi-icon name="package" stroke-width="2"></mi-icon>`,
 };
 
 function gsGroupHtml(label, type, matches){
@@ -9307,7 +9389,7 @@ function renderGlobalSearchResults(q){
 
   if(!q){
     host.innerHTML = `<div class="gsearch-empty">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <mi-icon name="search" stroke-width="1.5"></mi-icon>
       <h4>Tìm kiếm trên toàn bộ hệ thống</h4>
       <p>Nhập CR ID, App, Requester, Scenario, Release... để bắt đầu.</p>
     </div>`;
@@ -9321,7 +9403,7 @@ function renderGlobalSearchResults(q){
 
   if(!crMatches.length && !uatMatches.length && !relMatches.length){
     host.innerHTML = `<div class="gsearch-empty">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <mi-icon name="search" stroke-width="1.5"></mi-icon>
       <h4>No results</h4>
       <p>Search across CR, UAT and Release.</p>
     </div>`;
@@ -9598,7 +9680,7 @@ function showLoadingSkeletons(){
    and KPI/grid containers when a fetch fails outright. */
 function errorStateBlock(title, msg, retryAttr){
   return `<div class="error-state">
-    <div class="err-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg></div>
+    <div class="err-icon"><mi-icon name="circle-alert" stroke-width="2"></mi-icon></div>
     <h4>${esc(title)}</h4>
     <p>${esc(msg)}</p>
     <button class="btn btn-ghost btn-sm" data-retry="${retryAttr}">Thử lại</button>
@@ -9716,13 +9798,11 @@ function exportSelectionModalTemplate(mode){
           <h3>${title}</h3>
           <div class="sub">Có thể chọn 1 CR, nhiều CR hoặc tất cả CR trước khi bắt đầu tải.</div>
         </div>
-        <button class="modal-close" id="exportSelectionClose" type="button" aria-label="Đóng">✕</button>
+        <button class="modal-close" id="exportSelectionClose" type="button" aria-label="Đóng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
       </div>
       <div class="modal-body">
         <div class="export-selection-intro">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"></circle><path d="M12 10v6"></path><path d="M12 7h.01"></path>
-          </svg>
+          <mi-icon name="info" stroke-width="1.8"></mi-icon>
           <span>${description}</span>
         </div>
         ${isReport ? `
@@ -10207,11 +10287,11 @@ function kpiCard(label, value, foot, cls, icon, pct){
 }
 
 const KPI_ICONS = {
-  total: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>`,
-  inflight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`,
-  overdue: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`,
-  released: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>`,
-  testcase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`,
+  total: `<mi-icon name="layout-grid" stroke-width="2"></mi-icon>`,
+  inflight: `<mi-icon name="clock" stroke-width="2"></mi-icon>`,
+  overdue: `<mi-icon name="triangle-alert" stroke-width="2"></mi-icon>`,
+  released: `<mi-icon name="circle-check-big" stroke-width="2"></mi-icon>`,
+  testcase: `<mi-icon name="square-check-big" stroke-width="2"></mi-icon>`,
 };
 
 /* Relative time — presentational only, used for the recent-activity list and
@@ -10284,7 +10364,7 @@ function crDocumentStatusHtml(c, type){
   const label = present ? "Có file" : "Chưa có";
   return `<td class="doc-status-cell" title="${type} ${present ? "đã được đính kèm" : "chưa được đính kèm"}">
     <span class="doc-status ${present ? "is-present" : "is-missing"}">
-      <span class="doc-status-icon" aria-hidden="true">${present ? "✓" : "—"}</span>
+      <span class="doc-status-icon" aria-hidden="true">${present ? '<mi-icon name="check" size="1em" stroke-width="3"></mi-icon>' : "—"}</span>
       <span>${label}</span>
     </span>
   </td>`;
@@ -10321,7 +10401,7 @@ function inlineCrSelectHtml(field, cr){
   return `<button type="button" class="cr-dropdown-trigger" style="${style}" data-inline-field="${field}" data-cr="${esc(cr.cr_id)}" aria-haspopup="listbox" aria-expanded="false" aria-label="Cập nhật ${field}">
     ${colors ? `<span class="cr-dropdown-dot" style="background:${colors.text}"></span>` : ""}
     <span class="cr-dropdown-label">${label}</span>
-    <svg class="cr-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+    <mi-icon name="chevron-down" stroke-width="2.4" svg-class="cr-dropdown-caret"></mi-icon>
   </button>`;
 }
 
@@ -10393,7 +10473,7 @@ function openInlineDropdown(trigger){
       const optStyle = isPlainField ? "" : ` style="--opt-text:${colors.text};--opt-bg:${colors.background};"`;
       return `<div class="cr-dropdown-option ${selected ? "is-selected" : ""}" role="option" data-value="${esc(value)}"${optStyle}>
         <span>${esc(value)}</span>
-        ${selected ? `<svg class="cr-dropdown-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>` : ""}
+        ${selected ? `<mi-icon name="check" stroke-width="3" svg-class="cr-dropdown-check"></mi-icon>` : ""}
       </div>`;
     }).join("");
 
@@ -10566,9 +10646,9 @@ function renderCrTable(){
       ${cols.map(col=> crRowCellHtml(col.key, c, overdue)).join("")}
       <td class="cell-actions">
         <div class="row-actions">
-          <button class="icon-btn" data-act="view" title="Xem chi tiết"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-          <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>
+          <button class="icon-btn" data-act="view" title="Xem chi tiết"><mi-icon name="eye" stroke-width="2"></mi-icon></button>
+          <button class="icon-btn" data-act="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+          <button class="icon-btn danger" data-act="del"><mi-icon name="trash" stroke-width="2"></mi-icon></button>
         </div>
       </td>
     </tr>`;
@@ -10634,8 +10714,8 @@ function renderCrMobileList(rows){
         <span>${c.deadline ? (overdue? `<span class="deadline-overdue"><span class="dl-warn">!</span>${fmtDate(c.deadline)}</span>` : fmtDate(c.deadline)) : "—"}</span>
       </div>
       <div class="cr-card-meta">
-        <span class="${crHasDocument(c, "BRD") ? "doc-mobile-present" : "doc-mobile-missing"}">BRD ${crHasDocument(c, "BRD") ? "✓" : "—"}</span>
-        <span class="${crHasDocument(c, "FSD") ? "doc-mobile-present" : "doc-mobile-missing"}">FSD ${crHasDocument(c, "FSD") ? "✓" : "—"}</span>
+        <span class="${crHasDocument(c, "BRD") ? "doc-mobile-present" : "doc-mobile-missing"}">BRD ${crHasDocument(c, "BRD") ? '<mi-icon name="check" size="1em" stroke-width="3"></mi-icon>' : "—"}</span>
+        <span class="${crHasDocument(c, "FSD") ? "doc-mobile-present" : "doc-mobile-missing"}">FSD ${crHasDocument(c, "FSD") ? '<mi-icon name="check" size="1em" stroke-width="3"></mi-icon>' : "—"}</span>
       </div>
       ${canEditData() ? `<div class="cr-card-inline-fields">
         <label>Category${inlineCrSelectHtml("category", c)}</label>
@@ -10644,8 +10724,8 @@ function renderCrMobileList(rows){
         <label>Sub-status${inlineCrSelectHtml("sub_status", c)}</label>
       </div>` : ""}
       <div class="cr-card-actions">
-        <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>
+        <button class="icon-btn" data-act="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+        <button class="icon-btn danger" data-act="del"><mi-icon name="trash" stroke-width="2"></mi-icon></button>
       </div>
     </div>`;
   }).join("");
@@ -10669,7 +10749,7 @@ function renderCrMobileList(rows){
 
 function emptyStateBlock(title, msg){
   return `<div class="empty-state">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg>
+    <mi-icon name="file" stroke-width="1.5"></mi-icon>
     <h4>${esc(title)}</h4>
     <p>${esc(msg)}</p>
   </div>`;
@@ -10714,7 +10794,7 @@ function crModalTemplate(cr){
     <div class="modal-head">
       <div><h3>${isEdit? "Sửa Change Request" : "Tạo Change Request mới"}</h3>
         <div class="sub">${isEdit? esc(v.cr_id) : "Điền thông tin CR — tương ứng sheet CR_Log"}</div></div>
-      <button class="modal-close" id="crModalClose">✕</button>
+      <button class="modal-close" id="crModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="form-grid">
@@ -11673,10 +11753,10 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all")
 
 /* ---- Import modal: khung dùng chung (CR + UAT) ---------------------------- */
 function importModalShell(p, cfg){
-  const svgSheet = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/><path d="M8.5 13h7M8.5 17h7M11 10v10"/></svg>';
-  const svgUp = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>';
-  const svgDl = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>';
-  const svgShield = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';
+  const svgSheet = '<mi-icon name="file-spreadsheet" stroke-width="1.8"></mi-icon>';
+  const svgUp = '<mi-icon name="upload" stroke-width="1.8"></mi-icon>';
+  const svgDl = '<mi-icon name="download" stroke-width="2.2"></mi-icon>';
+  const svgShield = '<mi-icon name="shield-check" stroke-width="2"></mi-icon>';
   const steps = [
     ["Tải template", "Đúng cấu trúc cột"],
     ["Điền dữ liệu", `Sheet "${cfg.sheet}"`],
@@ -11691,23 +11771,23 @@ function importModalShell(p, cfg){
         <div><h3>${esc(cfg.title)}</h3>
           <div class="sub">Dùng đúng file template đã tải — hệ thống sẽ đọc sheet "${esc(cfg.sheet)}"</div></div>
       </div>
-      <button class="modal-close" id="${p}ModalClose" type="button">✕</button>
+      <button class="modal-close" id="${p}ModalClose" type="button"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="imp-steps" data-step="3">
-        ${steps.map((st,i)=>`<div class="imp-step ${i<2?'is-done':(i===2?'is-active':'')}" style="--n:${i}"><span class="imp-step-dot">${i+1}</span><span><b>${esc(st[0])}</b><small>${esc(st[1])}</small></span></div>`).join("")}
+        ${steps.map((st,i)=>`<div class="imp-step ${i<2?'is-done':(i===2?'is-active':'')}" style="--n:${i}"><span class="imp-step-dot"><span class="n">${i+1}</span><span class="ck"><mi-icon name="check" size="14" stroke-width="3"></mi-icon></span></span><span><b>${esc(st[0])}</b><small>${esc(st[1])}</small></span></div>`).join("")}
       </div>
       <div class="imp-grid">
         <div class="file-drop" id="${p}FileDrop">
           <span class="imp-drop-icon">${svgUp}</span>
           <p class="imp-drop-title"><b>Bấm để chọn file Excel</b> hoặc kéo thả vào đây</p>
-          <div class="imp-drop-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/><path d="M9 15l2 2 4-4"/></svg><span><b></b><small></small></span></div>
+          <div class="imp-drop-file"><mi-icon name="file-check" stroke-width="1.9"></mi-icon><span><b></b><small></small></span></div>
           <div class="hint">Chỉ nhận file .xlsx / .xls theo đúng cấu trúc template</div>
           <input type="file" id="${p}FileInput" accept=".xlsx,.xls" hidden>
         </div>
         <aside class="imp-info">
           <h4>Yêu cầu file</h4>
-          <ul>${cfg.reqs.map((r,i)=>`<li style="--n:${i}"><span>${r}</span></li>`).join("")}</ul>
+          <ul>${cfg.reqs.map((r,i)=>`<li style="--n:${i}"><span class="imp-li-ic"><mi-icon name="check" size="11" stroke-width="3.2"></mi-icon></span><span>${r}</span></li>`).join("")}</ul>
           <button class="imp-template-btn" id="${p}TemplateLink" type="button">${svgDl}Tải file template</button>
         </aside>
       </div>
@@ -12295,7 +12375,7 @@ function crLogField(label, value, options={}){
   const valueHtml = empty
     ? "Chưa có dữ liệu"
     : isUrl
-      ? `<a href="${esc(raw)}" target="_blank" rel="noopener"><span class="field-link-icon">↗</span>${esc(raw)}</a>`
+      ? `<a href="${esc(raw)}" target="_blank" rel="noopener"><span class="field-link-icon"><mi-icon name="arrow-up-right" size="1em" stroke-width="2.4"></mi-icon></span>${esc(raw)}</a>`
       : esc(raw);
   return `<div class="crlog-field ${options.long?'is-long':''}">
     <div class="crlog-field-label">${esc(label)}</div>
@@ -12383,11 +12463,11 @@ function statusProgressHtml(status, subStatus){
       if(i < idx) cls = "done";
       else if(i === idx) cls = (status==="Rejected") ? "rejected" : "current";
     }
-    const dotContent = cls==="done" ? "✓" : cls==="rejected" ? "✕" : (i+1);
+    const dotContent = cls==="done" ? '<mi-icon name="check" size="1em" stroke-width="3"></mi-icon>' : cls==="rejected" ? '<mi-icon name="x" size="1em" stroke-width="3"></mi-icon>' : (i+1);
     return `<div class="progress-step ${cls}"><div class="line"></div><div class="dot">${dotContent}</div><div class="lbl">${esc(s)}</div></div>`;
   }).join("");
   const noteHtml = note ? `<div class="progress-note ${note.danger?'is-danger':''}">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+    <mi-icon name="circle-alert" stroke-width="2"></mi-icon>
     <span>${esc(note.text)}</span>
   </div>` : "";
   const subStatusHtml = `<div class="progress-substatus ${subStatus ? "" : "is-empty"}" title="Sub-Status hiện tại">
@@ -12428,7 +12508,7 @@ function tcMiniCardHtml(t){
         <span><b>Ngày test</b> ${t.testing_date ? fmtDate(t.testing_date) : 'Chưa cập nhật'}</span>
       </div>
     </div>
-    <div class="workflow-record-status">${badge("pass_fail", t.pass_fail)}<span class="workflow-record-arrow">›</span></div>
+    <div class="workflow-record-status">${badge("pass_fail", t.pass_fail)}<span class="workflow-record-arrow"><mi-icon name="chevron-right" size="1em" stroke-width="2.4"></mi-icon></span></div>
   </div>`;
 }
 function relMiniCardHtml(r){
@@ -12445,7 +12525,7 @@ function relMiniCardHtml(r){
         <span><b>Owner</b> ${esc(r.release_owner || '—')}</span>
       </div>
     </div>
-    <div class="workflow-record-status">${badge("release_status", r.status)}<span class="workflow-record-arrow">›</span></div>
+    <div class="workflow-record-status">${badge("release_status", r.status)}<span class="workflow-record-arrow"><mi-icon name="chevron-right" size="1em" stroke-width="2.4"></mi-icon></span></div>
   </div>`;
 }
 
@@ -12505,8 +12585,8 @@ function renderDrawer(cr){
            </div>
         </div>
         <div class="drawer-head-actions">
-          <button class="icon-btn" id="drawerEditBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="drawer-close" id="drawerCloseBtn" title="Đóng">✕</button>
+          <button class="icon-btn" id="drawerEditBtn"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+          <button class="drawer-close" id="drawerCloseBtn" title="Đóng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
         </div>
       </div>
       <div class="drawer-badges">
@@ -12599,7 +12679,7 @@ function renderDrawer(cr){
               <div class="category-hint">Chọn nhóm trước khi tải lên để hồ sơ luôn được sắp xếp nhất quán.</div>
             </div>
             <div class="file-drop attachments-dropzone" id="crFileDrop">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              <mi-icon name="upload" stroke-width="1.6"></mi-icon>
               <div class="attachments-dropzone-copy">
                 <p><b>Chọn file</b> hoặc kéo thả vào khu vực này</p>
                 <div class="hint">Hỗ trợ ảnh, PDF, Word, Excel, mail (.eml/.msg) và tải nhiều file cùng lúc.</div>
@@ -12629,7 +12709,7 @@ function renderDrawer(cr){
               <p>Theo dõi toàn bộ kịch bản kiểm thử của Change Request, kết quả thực thi và người phụ trách trong một luồng làm việc thống nhất.</p>
             </div>
             <button class="btn btn-primary workflow-hero-action" id="drawerAddTc">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              <mi-icon name="plus" stroke-width="2"></mi-icon>
               Thêm Test Case
             </button>
           </div>
@@ -12675,7 +12755,7 @@ function renderDrawer(cr){
               <p>Quản lý kế hoạch phát hành, môi trường triển khai và tình trạng bàn giao của Change Request trước khi đưa vào production.</p>
             </div>
             <button class="btn btn-primary workflow-hero-action" id="drawerAddRel">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              <mi-icon name="plus" stroke-width="2"></mi-icon>
               Thêm Release
             </button>
           </div>
@@ -12793,12 +12873,12 @@ function fileCardHtml(f, url){
     <span class="file-cat-tag" data-cat="${esc(f.category||'Other')}">${esc(f.category||'Other')}</span>
     <div class="file-actions">
       <button class="file-download" data-download="${f.id}" data-url="${esc(url)}" data-name="${esc(f.file_name)}" type="button" title="Tải xuống">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        <mi-icon name="download" stroke-width="2"></mi-icon>
       </button>
       <button class="file-edit" data-edit="${f.id}" type="button" title="Sửa">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L8 18l-4 1 1-4L16.5 3.5z"/></svg>
+        <mi-icon name="pen-line" stroke-width="2"></mi-icon>
       </button>
-      <button class="file-del" data-del="${f.id}" data-path="${esc(f.file_path)}" type="button" title="Xóa">✕</button>
+      <button class="file-del" data-del="${f.id}" data-path="${esc(f.file_path)}" type="button" title="Xóa"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="file-thumb">${thumb}</div>
     <div class="file-meta">
@@ -12966,7 +13046,7 @@ function openAttachmentEditor(file){
           <h3>Chỉnh sửa tệp đính kèm</h3>
           <div class="sub">${esc(file.file_name || "Tệp chưa có tên")}</div>
         </div>
-        <button class="modal-close" id="attachmentModalClose" type="button" title="Đóng">✕</button>
+        <button class="modal-close" id="attachmentModalClose" type="button" title="Đóng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
       </div>
       <div class="modal-body">
         <div class="field">
@@ -13203,8 +13283,8 @@ function renderTcTable(){
       ${cols.map(col=>tcRowCellHtml(col.key, t)).join("")}
       <td class="cell-actions">
         <div class="row-actions">
-          <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>
+          <button class="icon-btn" data-act="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+          <button class="icon-btn danger" data-act="del"><mi-icon name="trash" stroke-width="2"></mi-icon></button>
         </div>
       </td>
     </tr>
@@ -13258,8 +13338,8 @@ function renderTcMobileList(rows){
         <span>${t.testing_date ? fmtDate(t.testing_date) : "Chưa test"}</span>
       </div>
       <div class="cr-card-actions">
-        <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7A2 2 0 015 20V6h14z"/></svg></button>
+        <button class="icon-btn" data-act="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+        <button class="icon-btn danger" data-act="del"><mi-icon name="trash" stroke-width="2"></mi-icon></button>
       </div>
     </div>
   `).join("");
@@ -13333,7 +13413,7 @@ function tcModalTemplate(t, presetCrId){
           <span><b>Kết quả</b> ${badge("pass_fail", resultLabel)}</span>
         </div>
       </div>
-      <button class="modal-close" id="tcModalClose">✕</button>
+      <button class="modal-close" id="tcModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="tabs">
       <button class="tab-btn active" data-tctab="info">Thông tin</button>
@@ -13472,7 +13552,7 @@ function tcModalTemplate(t, presetCrId){
                 <input id="evidenceStepCustom" type="text" placeholder="Hoặc nhập tên bước tùy chỉnh...">
               </div>
               <div class="file-drop" id="evidenceDrop">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+                <mi-icon name="upload" stroke-width="1.6"></mi-icon>
                 <div>
                   <p><b>Bấm để chọn evidence</b> hoặc kéo thả vào đây</p>
                   <div class="hint">Ảnh chụp màn hình kết quả test — có thể chọn nhiều ảnh</div>
@@ -13765,8 +13845,8 @@ function renderRelTable(){
       ${cols.map(col=>relRowCellHtml(col.key, r)).join("")}
       <td class="cell-actions">
         <div class="row-actions">
-          <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>
+          <button class="icon-btn" data-act="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+          <button class="icon-btn danger" data-act="del"><mi-icon name="trash" stroke-width="2"></mi-icon></button>
         </div>
       </td>
     </tr>
@@ -13820,8 +13900,8 @@ function renderRelMobileList(rows){
         <span>${r.planned_date ? fmtDate(r.planned_date) : "Chưa có ngày dự kiến"}</span>
       </div>
       <div class="cr-card-actions">
-        <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002-2h7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7A2 2 0 015 20V6h14z"/></svg></button>
+        <button class="icon-btn" data-act="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+        <button class="icon-btn danger" data-act="del"><mi-icon name="trash" stroke-width="2"></mi-icon></button>
       </div>
     </div>
   `).join("");
@@ -13868,7 +13948,7 @@ function relModalTemplate(r, presetCrId){
           <span><b>Trạng thái</b> ${badge("release_status", releaseStatus)}</span>
         </div>
       </div>
-      <button class="modal-close" id="relModalClose">✕</button>
+      <button class="modal-close" id="relModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="rel-detail-summary">
@@ -14255,7 +14335,7 @@ function renderWeeklyMomList(){
           ${weeklyMomActionButton("delete", record.id, "Xóa", true)}
           <button class="weekly-mom-card-toggle" data-weekly-toggle="${esc(recordKey)}" type="button" aria-expanded="${isExpanded ? "true" : "false"}">
             <span>${isExpanded ? "Thu lại" : "Xem chi tiết"}</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg>
+            <mi-icon name="chevron-down" stroke-width="2.2"></mi-icon>
           </button>
         </div>
       </div>
@@ -14323,7 +14403,7 @@ function weeklyMomDateEditTemplate(record){
   return `<div class="modal modal-sm brd-modal">
     <div class="modal-head">
       <div><h3>Chỉnh sửa ngày họp</h3><div class="hint">${esc(weeklyMomText(record.source_file_name) || "Batch nhập từ Excel")}</div></div>
-      <button class="icon-btn" id="weeklyMomModalClose" type="button">✕</button>
+      <button class="icon-btn" id="weeklyMomModalClose" type="button"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="weekly-mom-date-edit-note">
@@ -14350,7 +14430,7 @@ function weeklyMomModalTemplate(record){
   return `<div class="modal modal-lg brd-modal">
     <div class="modal-head">
       <div><h3>${record ? "Sửa biên bản Weekly" : "Tạo biên bản Weekly"}</h3><div class="hint">Ghi nhận thông tin buổi họp và từng CR được cập nhật.</div></div>
-      <button class="icon-btn" id="weeklyMomModalClose" type="button">✕</button>
+      <button class="icon-btn" id="weeklyMomModalClose" type="button"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="tc-form-group">
@@ -14394,7 +14474,7 @@ function renderWeeklyMomFormRows(){
       <td><textarea data-field="next_action" placeholder="Việc tiếp theo">${esc(row.next_action || "")}</textarea></td>
       <td><input data-field="eta" type="text" value="${esc(row.eta || "")}" placeholder="dd/mm/yyyy"></td>
       <td><textarea data-field="note" placeholder="Ghi chú">${esc(row.note || "")}</textarea></td>
-      <td><button class="weekly-mom-row-remove" data-remove-row="${idx}" type="button" title="Xóa dòng">✕</button></td>
+      <td><button class="weekly-mom-row-remove" data-remove-row="${idx}" type="button" title="Xóa dòng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></td>
     </tr>
   `).join("") : `<tr><td colspan="6" style="text-align:center;color:#8a9ca9;padding:20px;">Chưa có CR. Bấm “Thêm CR” để bắt đầu.</td></tr>`;
 }
@@ -14543,7 +14623,7 @@ function weeklyMomExcelImportModalTemplate(){
         <h3>Nhập Weekly MoM từ Excel</h3>
         <div class="sub">Đọc sheet "${esc(WEEKLY_MOM_EXCEL_SHEET_NAME)}" theo cấu trúc file báo cáo Weekly.</div>
       </div>
-      <button class="modal-close" id="weeklyMomExcelImportClose" type="button">✕</button>
+      <button class="modal-close" id="weeklyMomExcelImportClose" type="button"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="hint" style="margin-bottom:14px;">
@@ -14551,7 +14631,7 @@ function weeklyMomExcelImportModalTemplate(){
         Mỗi lần nhập tạo một batch mới; không cập nhật hoặc xóa dữ liệu của các batch trước.
       </div>
       <div class="file-drop" id="weeklyMomExcelImportDrop">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+        <mi-icon name="upload" stroke-width="1.6"></mi-icon>
         <p><b>Bấm để chọn file Excel</b> hoặc kéo thả vào đây</p>
         <div class="hint">Khuyến nghị dùng sheet "${esc(WEEKLY_MOM_EXCEL_SHEET_NAME)}"; nếu không có, hệ thống sẽ đọc sheet đầu tiên.</div>
         <input type="file" id="weeklyMomExcelImportInput" accept=".xlsx,.xls" hidden>
@@ -14796,7 +14876,7 @@ function openWeeklyMomDownloadModal(){
   overlay.innerHTML = `<div class="modal modal-lg brd-modal">
     <div class="modal-head">
       <div><h3>Tải Weekly MoM theo ngày</h3><div class="hint">Chọn đúng ngày hoặc batch nội dung cần xuất thành file Report_Weekly.</div></div>
-      <button class="icon-btn" id="weeklyMomModalClose" type="button">✕</button>
+      <button class="icon-btn" id="weeklyMomModalClose" type="button"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="weekly-mom-date-edit-note" style="margin-bottom:12px;">
@@ -14997,13 +15077,13 @@ function renderBrdList(){
     return;
   }
   if(!STATE.brdList.length){
-    grid.innerHTML = `<div class="brd-empty"><div class="brd-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`;
+    grid.innerHTML = `<div class="brd-empty"><div class="brd-empty-icon"><mi-icon name="file-plus" stroke-width="2"></mi-icon></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`;
     return;
   }
   grid.innerHTML = STATE.brdList.map(v=>`
     <article class="brd-card" data-id="${esc(String(v.id))}">
       <div class="brd-card-head">
-        <div class="brd-card-docicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div>
+        <div class="brd-card-docicon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div>
         <div class="brd-card-copy"><div class="brd-card-title">${esc(v.brd_title || "(Chưa đặt tên)")}</div><div class="brd-card-sub">Hệ thống: ${esc(v.system_name || "—")}</div></div>
       </div>
       <div class="brd-card-meta">
@@ -15040,7 +15120,7 @@ function renderBrdVersionRows(){
       <td><input data-f="date" value="${esc(r.date||'')}" placeholder="VD: Sep-12-2026"></td>
       <td><input data-f="author" value="${esc(r.author||'')}"></td>
       <td><input data-f="reviewer" value="${esc(r.reviewer||'')}"></td>
-      <td class="brd-version-actcell"><button type="button" class="brd-version-rm" data-rm="${i}">✕</button></td>
+      <td class="brd-version-actcell"><button type="button" class="brd-version-rm" data-rm="${i}"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></td>
     </tr>`).join("");
 }
 
@@ -15055,12 +15135,12 @@ function brdModalTemplate(v){
         <h3>${isEdit? "Sửa BRD" : "Tạo BRD mới"}</h3>
         <div class="sub">${isEdit? esc(v.brd_title||"") : "Điền thông tin theo template BRD chuẩn"}</div>
       </div>
-      <button class="modal-close" id="brdModalClose">✕</button>
+      <button class="modal-close" id="brdModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="brd-ai-panel" id="brdAiPanel">
         <div class="brd-ai-head">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4L12 3z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z"/></svg>
+          <mi-icon name="sparkles" stroke-width="2"></mi-icon>
           <div class="brd-ai-title">AI hỗ trợ điền BRD</div>
         </div>
         <p class="brd-ai-sub">Mô tả yêu cầu bằng lời + dán (paste)/kéo-thả ảnh liên quan (mockup, email yêu cầu, chụp màn hình...). Hệ thống sẽ gửi song song tới nhiều AI (Gemini, Mistral, OpenRouter) và dùng 1 AI trọng tài đối chiếu chéo để chọn thông tin chính xác nhất trước khi điền.</p>
@@ -15069,7 +15149,7 @@ function brdModalTemplate(v){
           <div class="brd-ai-drop" id="brdAiDrop" tabindex="0">
             <div class="brd-ai-thumbs" id="brdAiThumbs"></div>
             <div class="brd-ai-drop-hint">
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l4.5-4.5a2 2 0 012.8 0L15 15"/><circle cx="16.5" cy="9.5" r="1.5"/></svg>
+              <mi-icon name="image" size="15" stroke-width="2"></mi-icon>
               <span>Bấm để chọn ảnh, kéo-thả, hoặc <b>Ctrl+V</b> để dán ảnh</span>
             </div>
             <input type="file" id="brdAiFileInput" accept="image/*" multiple hidden>
@@ -15241,7 +15321,7 @@ function renderBrdAiThumbs(){
   box.innerHTML = STATE.brdAiImages.map(img=> `
     <div class="brd-ai-thumb" data-img="${img.id}">
       <img src="${img.previewUrl}" alt="attached">
-      <button type="button" class="brd-ai-thumb-rm" data-rm-img="${img.id}" title="Xóa ảnh">✕</button>
+      <button type="button" class="brd-ai-thumb-rm" data-rm-img="${img.id}" title="Xóa ảnh"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>`).join("");
 }
 
@@ -15730,7 +15810,7 @@ function promptBrdExportLang(rec){
     <div class="modal modal-sm brd-export-lang-modal">
       <div class="modal-body" style="padding-top:26px;">
         <div class="confirm-icon accent">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8h9M9 5v3M12.5 8c-.7 3-2.4 5.3-5 7M8 8c1 3.5 3.5 6 8 8"/><path d="M13 21l4-9 4 9M14.6 18h4.8"/></svg>
+          <mi-icon name="languages" stroke-width="2"></mi-icon>
         </div>
         <h3 style="font-size:16px; margin-bottom:8px;">Xuất file Word</h3>
         <p style="font-size:13.5px; color:var(--text-dim); line-height:1.6;">BRD "${esc(rec.brd_title||"")}" có cả bản Tiếng Việt và English. Chọn ngôn ngữ muốn xuất:</p>
@@ -15842,7 +15922,7 @@ function confirmDelete(title, msg, onConfirm, confirmLabel){
     <div class="modal modal-sm">
       <div class="modal-body" style="padding-top:26px;">
         <div class="confirm-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <mi-icon name="triangle-alert" stroke-width="2"></mi-icon>
         </div>
         <h3 style="font-size:16px; margin-bottom:8px;">${esc(title)}</h3>
         <p style="font-size:13.5px; color:var(--text-dim); line-height:1.6;">${esc(msg)}</p>
@@ -16032,8 +16112,8 @@ function renderAccessRequestsPanel(){
         </div>
       </div>
       <div class="row-actions" style="opacity:1;">
-        <button class="btn btn-primary btn-sm" data-req-act="approve">✓ Duyệt</button>
-        <button class="btn btn-ghost btn-sm" data-req-act="reject">✕ Từ chối</button>
+        <button class="btn btn-primary btn-sm" data-req-act="approve"><mi-icon name="check" size="14" stroke-width="2.6"></mi-icon> Duyệt</button>
+        <button class="btn btn-ghost btn-sm" data-req-act="reject"><mi-icon name="x" size="14" stroke-width="2.6"></mi-icon> Từ chối</button>
       </div>
     </div>
   `).join("");
@@ -16115,11 +16195,11 @@ function renderAdminTable(){
         <div class="row-actions" style="opacity:1;">
           <button class="icon-btn" data-act="toggle" title="${u.active?'Khóa quyền':'Kích hoạt lại'}">
             ${u.active
-              ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>`
-              : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>`}
+              ? `<mi-icon name="lock" stroke-width="2"></mi-icon>`
+              : `<mi-icon name="lock-open" stroke-width="2"></mi-icon>`}
           </button>
-          <button class="icon-btn" data-act="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="icon-btn danger" data-act="del"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>
+          <button class="icon-btn" data-act="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>
+          <button class="icon-btn danger" data-act="del"><mi-icon name="trash" stroke-width="2"></mi-icon></button>
         </div>
       </td>
     </tr>
@@ -16182,10 +16262,10 @@ function renderAdminStatusTable(){
       <td class="cell-actions">
         <div class="row-actions" style="opacity:1;">
           <button class="icon-btn" data-status-act="edit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <mi-icon name="square-pen" stroke-width="2"></mi-icon>
           </button>
           <button class="icon-btn danger" data-status-act="delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            <mi-icon name="trash" stroke-width="2"></mi-icon>
           </button>
         </div>
       </td>
@@ -16235,10 +16315,10 @@ function renderAdminSubStatusTable(){
       <td class="cell-actions">
         <div class="row-actions" style="opacity:1;">
           <button class="icon-btn" data-sub-status-act="edit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <mi-icon name="square-pen" stroke-width="2"></mi-icon>
           </button>
           <button class="icon-btn danger" data-sub-status-act="delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            <mi-icon name="trash" stroke-width="2"></mi-icon>
           </button>
         </div>
       </td>
@@ -16289,10 +16369,10 @@ function renderAdminEvidenceStepTable(){
       <td class="cell-actions">
         <div class="row-actions" style="opacity:1;">
           <button class="icon-btn" data-evidence-act="edit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <mi-icon name="square-pen" stroke-width="2"></mi-icon>
           </button>
           <button class="icon-btn danger" data-evidence-act="delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            <mi-icon name="trash" stroke-width="2"></mi-icon>
           </button>
         </div>
       </td>
@@ -16327,7 +16407,7 @@ function evidenceStepModalTemplate(step){
           <h3>${isEdit ? "Sửa Evidence Step" : "Thêm Evidence Step"}</h3>
           <div class="sub">Danh sách được lưu trên Supabase</div>
         </div>
-        <button class="modal-close" id="evidenceStepModalClose">✕</button>
+        <button class="modal-close" id="evidenceStepModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
       </div>
       <div class="modal-body">
         <div class="field">
@@ -16513,10 +16593,10 @@ function renderAdminAttachCategoryTable(){
       <td class="cell-actions">
         <div class="row-actions" style="opacity:1;">
           <button class="icon-btn" data-attach-category-act="edit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            <mi-icon name="square-pen" stroke-width="2"></mi-icon>
           </button>
           <button class="icon-btn danger" data-attach-category-act="delete">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            <mi-icon name="trash" stroke-width="2"></mi-icon>
           </button>
         </div>
       </td>
@@ -16551,7 +16631,7 @@ function attachCategoryModalTemplate(cat){
           <h3>${isEdit ? "Sửa Phân loại tài liệu" : "Thêm Phân loại tài liệu"}</h3>
           <div class="sub">Danh sách được lưu trên Supabase</div>
         </div>
-        <button class="modal-close" id="attachCategoryModalClose">✕</button>
+        <button class="modal-close" id="attachCategoryModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
       </div>
       <div class="modal-body">
         <div class="field">
@@ -16713,7 +16793,7 @@ function statusModalTemplate(status){
     <div class="modal-head">
       <div><h3>${isEdit ? "Sửa Status" : "Thêm Status"}</h3>
         <div class="sub">Thiết lập màu nền và màu chữ hiển thị trong hệ thống</div></div>
-      <button class="modal-close" id="statusModalClose">✕</button>
+      <button class="modal-close" id="statusModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="field">
@@ -16854,7 +16934,7 @@ function subStatusModalTemplate(subStatus){
     <div class="modal-head">
       <div><h3>${isEdit ? "Sửa Sub-Status" : "Thêm Sub-Status"}</h3>
         <div class="sub">Giá trị chi tiết hiển thị trong CR Log và tiến trình</div></div>
-      <button class="modal-close" id="subStatusModalClose">✕</button>
+      <button class="modal-close" id="subStatusModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="field">
@@ -17017,7 +17097,7 @@ function userModalTemplate(u){
     <div class="modal-head">
       <div><h3>${isEdit? "Sửa quyền người dùng" : "Cấp quyền truy cập"}</h3>
         <div class="sub">${isEdit? esc(v.email) : "Nhập email Gmail được phép đăng nhập"}</div></div>
-      <button class="modal-close" id="userModalClose">✕</button>
+      <button class="modal-close" id="userModalClose"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
     </div>
     <div class="modal-body">
       <div class="field">
@@ -17639,41 +17719,36 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     }
     if(!$e("#eb2bAddCrTop")){
       const actions=$e("#topbarActions");
-      actions?.insertAdjacentHTML("beforeend", `<div class="eb2b-cr-top-actions" id="eb2bCrTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bRefreshCrTop" type="button" title="Làm mới dữ liệu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Làm mới</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bCrTemplateTop" type="button" title="Tải file Excel mẫu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3M7 10l5 5 5-5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>Tải template</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bCrImportTop" type="button" title="Nhập nhiều CR từ Excel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12M7 10l5-5 5 5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>Nhập Excel</button><input id="eb2bCrImportFile" type="file" accept=".xlsx,.xls,.csv" hidden><button class="btn btn-primary" id="eb2bAddCrTop" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Tạo CR mới</button></div>`);
+      actions?.insertAdjacentHTML("beforeend", `<div class="eb2b-cr-top-actions" id="eb2bCrTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bRefreshCrTop" type="button" title="Làm mới dữ liệu"><mi-icon name="refresh-cw" size="14" stroke-width="2.5"></mi-icon>Làm mới</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bCrTemplateTop" type="button" title="Tải file Excel mẫu"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>Tải template</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bCrImportTop" type="button" title="Nhập nhiều CR từ Excel"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Nhập Excel</button><input id="eb2bCrImportFile" type="file" accept=".xlsx,.xls,.csv" hidden><button class="btn btn-primary" id="eb2bAddCrTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>Tạo CR mới</button></div>`);
     }
      if(!$e("#eb2bAddTcTop")){
        const actions=$e("#topbarActions");
        actions?.insertAdjacentHTML("beforeend", `
-         <div class="eb2b-context-actions eb2b-uat-top-actions" id="eb2bUatTopActions"><button class="btn btn-primary" id="eb2bAddTcTop" type="button">＋ Thêm Test Case</button></div>
-         <div class="eb2b-context-actions eb2b-release-top-actions" id="eb2bReleaseTopActions"><button class="btn btn-primary" id="eb2bAddRelTop" type="button">＋ Thêm Release</button></div>
-         <div class="eb2b-context-actions eb2b-brd-top-actions" id="eb2bBrdTopActions"><button class="btn btn-primary" id="eb2bAddBrdTop" type="button">＋ Tạo BRD</button></div>
-         <div class="eb2b-context-actions eb2b-weekly-top-actions" id="eb2bWeeklyTopActions"><button class="btn btn-primary" id="eb2bAddWeeklyTop" type="button">＋ Tạo biên bản Weekly</button><button class="btn btn-ghost" id="eb2bWeeklyImportTop" type="button">Nhập Excel</button><button class="btn btn-ghost" id="eb2bWeeklyDownloadTop" type="button">Tải Excel</button><input id="eb2bWeeklyImportFile" type="file" accept=".xlsx,.xls,.csv" hidden></div>`);
+         <div class="eb2b-context-actions eb2b-uat-top-actions" id="eb2bUatTopActions"><button class="btn btn-primary" id="eb2bAddTcTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Test Case</button></div>
+         <div class="eb2b-context-actions eb2b-release-top-actions" id="eb2bReleaseTopActions"><button class="btn btn-primary" id="eb2bAddRelTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Release</button></div>
+         <div class="eb2b-context-actions eb2b-brd-top-actions" id="eb2bBrdTopActions"><button class="btn btn-primary" id="eb2bAddBrdTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo BRD</button></div>
+         <div class="eb2b-context-actions eb2b-weekly-top-actions" id="eb2bWeeklyTopActions"><button class="btn btn-primary" id="eb2bAddWeeklyTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo biên bản Weekly</button><button class="btn btn-ghost" id="eb2bWeeklyImportTop" type="button">Nhập Excel</button><button class="btn btn-ghost" id="eb2bWeeklyDownloadTop" type="button">Tải Excel</button><input id="eb2bWeeklyImportFile" type="file" accept=".xlsx,.xls,.csv" hidden></div>`);
      }
      const sidebar = $e("#sidebar");
      const sidebarFoot = $e(".sidebar-foot", sidebar);
      const eb2bMount = $e("#eb2bNavMount", sidebar);
      if(sidebar && (eb2bMount || sidebarFoot) && !$e("#eb2bNav")){
       const icons = {
-        dashboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>`,
-        cr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>`,
-        uat: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`,
-        release: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 016.34-11.34.99.99 0 01.11-.1c1.62-.9 4-1.1 5.5.4s1.3 3.88.4 5.5c-.03.04-.07.08-.1.11A22 22 0 0112 15z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>`,
-        brd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>`,
-        weekly_mom: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>`
+        dashboard: `<mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>`,
+        cr: `<mi-icon name="file-text" stroke-width="2"></mi-icon>`,
+        uat: `<mi-icon name="square-check-big" stroke-width="2"></mi-icon>`,
+        release: `<mi-icon name="rocket" stroke-width="2"></mi-icon>`,
+        brd: `<mi-icon name="file-text" stroke-width="2"></mi-icon>`,
+        weekly_mom: `<mi-icon name="calendar-days" stroke-width="2"></mi-icon>`
       };
        (eb2bMount || sidebarFoot).insertAdjacentHTML("beforebegin", `
         <div class="workspace-nav" data-workspace="eb2b" id="eb2bNav">
           <div class="nav-item workspace-parent" id="navEb2bWorkspace"
                title="Mở / thu gọn Quản Lý e-B2B" role="button" tabindex="0"
                aria-expanded="false" aria-controls="navEb2bChildren">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="16" rx="2"/>
-              <path d="M8 4V2M16 4V2M7 9h10M7 13h6M7 17h8"/>
-            </svg>
+            <mi-icon name="calendar-range" stroke-width="2"></mi-icon>
             <span class="nav-label">Quản Lý e-B2B</span>
-            <svg class="workspace-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-              <path d="m6 9 6 6 6-6"/>
-            </svg>
+            <mi-icon name="chevron-down" stroke-width="2.2" svg-class="workspace-chevron"></mi-icon>
           </div>
           <div class="workspace-children is-collapsed" id="navEb2bChildren" aria-label="Các phân hệ Quản Lý e-B2B">
             ${EB2B_TABS.map(([key,label])=>`
@@ -17970,7 +18045,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bCrInlineHtml(field,row){
     const value=row[field]||"";
     const color=eb2bCrColor(field,value);
-    return `<button type="button" class="cr-dropdown-trigger" style="${value?`background:${typeof hexToRgba==="function"?hexToRgba(color,.14):"#eef2f7"};color:${color};border-color:${typeof hexToRgba==="function"?hexToRgba(color,.35):"#d7dee7"};`:""}" data-eb2b-cr-inline="${field}" data-eb2b-cr-id="${eEsc(row.id)}" aria-haspopup="listbox" aria-expanded="false">${value?`<span class="cr-dropdown-dot" style="background:${color}"></span>`:""}<span class="cr-dropdown-label">${eEsc(value||"— Chọn —")}</span><svg class="cr-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>`;
+    return `<button type="button" class="cr-dropdown-trigger" style="${value?`background:${typeof hexToRgba==="function"?hexToRgba(color,.14):"#eef2f7"};color:${color};border-color:${typeof hexToRgba==="function"?hexToRgba(color,.35):"#d7dee7"};`:""}" data-eb2b-cr-inline="${field}" data-eb2b-cr-id="${eEsc(row.id)}" aria-haspopup="listbox" aria-expanded="false">${value?`<span class="cr-dropdown-dot" style="background:${color}"></span>`:""}<span class="cr-dropdown-label">${eEsc(value||"— Chọn —")}</span><mi-icon name="chevron-down" stroke-width="2.4" svg-class="cr-dropdown-caret"></mi-icon></button>`;
   }
   function eb2bCrCellHtml(key,row,overdue,canEdit){
     if(key==="title") return `<td class="cell-title" title="${eEsc(eb2bCrTitle(row))}">${eEsc(eb2bCrTitle(row))}</td>`;
@@ -18004,7 +18079,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     else if(field==="sub_status") values=EB2B.rows.sub_statuses.map(item=>item.name);
     else values=eb2bCrCatalog(field);
     values=Array.from(new Set([row[field],...values].filter(Boolean)));
-    const menu=document.createElement("div"); menu.className="eb2b-cr-dropdown-menu"; menu.innerHTML=values.map(value=>`<div class="cr-dropdown-option ${String(value)===String(row[field]||"")?"is-selected":""}" data-eb2b-cr-value="${eEsc(value)}">${eEsc(value)}${String(value)===String(row[field]||"")?`<span class="cr-dropdown-check">✓</span>`:""}</div>`).join("");
+    const menu=document.createElement("div"); menu.className="eb2b-cr-dropdown-menu"; menu.innerHTML=values.map(value=>`<div class="cr-dropdown-option ${String(value)===String(row[field]||"")?"is-selected":""}" data-eb2b-cr-value="${eEsc(value)}">${eEsc(value)}${String(value)===String(row[field]||"")?`<span class="cr-dropdown-check"><mi-icon name="check" size="14" stroke-width="3"></mi-icon></span>`:""}</div>`).join("");
     document.body.appendChild(menu);
     const rect=trigger.getBoundingClientRect(); menu.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-menu.offsetWidth-8))+"px"; menu.style.top=Math.min(window.innerHeight-menu.offsetHeight-8,rect.bottom+6)+"px"; menu.style.minWidth=Math.max(170,rect.width)+"px";
     trigger.setAttribute("aria-expanded","true");trigger.classList.add("is-open");eb2bActiveCrInline={trigger,menu};
@@ -18018,11 +18093,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     c.innerHTML=`<div class="crlog-shell eb2b-cr-shell">
       <div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div>
       <div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div>
-      <div class="table-toolbar"><div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>
+      <div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>
       ${eb2bCrFilter("Status","status",eb2bCrCatalog("status"))}${eb2bCrFilter("Sub-status","sub_status",eb2bCrCatalog("sub_status"))}${eb2bCrFilter("Priority","priority",eb2bCrCatalog("priority"))}${eb2bCrFilter("Category","category",eb2bCrCatalog("category"))}${eb2bCrFilter("Requester","requester",requesters)}
       <label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div></div></div>
       <div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap"><table class="density-comfortable"><thead><tr>${sortTh("cr_id","CR ID")}${sortTh("rename_folder","Tiêu đề")}${sortTh("requester","Requester")}<th>Category</th><th>Priority</th><th>Status</th><th>Sub-status</th><th>Owner</th>${sortTh("deadline","Deadline")}<th>Thao tác</th></tr></thead><tbody>
-      ${rows.length?rows.map(r=>`<tr class="eb2b-cr-row" data-eb2b-cr-row="${r.id}"><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td><td class="cell-title" title="${eEsc(eb2bCrTitle(r))}">${eEsc(eb2bCrTitle(r))}</td><td class="cell-dim">${eEsc(r.requester||"—")}</td><td>${eb2bCrBadge("category",r.category)}</td><td>${eb2bCrBadge("priority",r.priority)}</td><td>${eb2bCrBadge("status",r.status)}</td><td>${eb2bCrBadge("sub_status",r.sub_status)}</td><td class="cell-dim">${eEsc(r.owner||"—")}</td><td class="cell-dim">${r.deadline?(eb2bCrOverdue(r)?`<span class="deadline-overdue"><span class="dl-warn">!</span>${eEsc(eDate(r.deadline))}</span>`:eEsc(eDate(r.deadline))):"—"}</td><td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${r.id}" title="Xem chi tiết"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="icon-btn" data-eb2b-cr-edit="${r.id}" title="Sửa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="icon-btn danger" data-eb2b-cr-delete="${r.id}" title="Xóa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button></div></td></tr>`).join(""):`<tr><td colspan="10"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div>
+      ${rows.length?rows.map(r=>`<tr class="eb2b-cr-row" data-eb2b-cr-row="${r.id}"><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td><td class="cell-title" title="${eEsc(eb2bCrTitle(r))}">${eEsc(eb2bCrTitle(r))}</td><td class="cell-dim">${eEsc(r.requester||"—")}</td><td>${eb2bCrBadge("category",r.category)}</td><td>${eb2bCrBadge("priority",r.priority)}</td><td>${eb2bCrBadge("status",r.status)}</td><td>${eb2bCrBadge("sub_status",r.sub_status)}</td><td class="cell-dim">${eEsc(r.owner||"—")}</td><td class="cell-dim">${r.deadline?(eb2bCrOverdue(r)?`<span class="deadline-overdue"><span class="dl-warn">!</span>${eEsc(eDate(r.deadline))}</span>`:eEsc(eDate(r.deadline))):"—"}</td><td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${r.id}" title="Xem chi tiết"><mi-icon name="eye" stroke-width="2"></mi-icon></button><button class="icon-btn" data-eb2b-cr-edit="${r.id}" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-cr-delete="${r.id}" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></td></tr>`).join(""):`<tr><td colspan="10"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div>
       <div class="cr-mobile-list eb2b-cr-mobile">${rows.map(r=>`<div class="cr-card" data-eb2b-cr-view="${r.id}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(eDate(r.deadline)||"—")}</span></div></div>`).join("")}</div>
       <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span></div></div></div>`;
   }
@@ -18054,10 +18129,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const sortTh=(key,label)=>`<th class="sortable-th ${EB2B.crSort.key===key?"is-sorted":""}" data-eb2b-cr-sort="${key}">${eEsc(label)}<span class="sort-marker">${EB2B.crSort.key===key?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>`;
     const rowHtml=r=>{
       const overdueRow=eb2bCrOverdue(r),canEdit=typeof canEditData!=="function"||canEditData();
-      return `<tr class="eb2b-cr-row ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-row="${eEsc(r.id)}"><td class="col-check"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""} aria-label="Chọn ${eEsc(r.cr_id)}"></td><td class="cell-id sticky-cr-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td>${visible.map(col=>eb2bCrCellHtml(col.key,r,overdueRow,canEdit)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${eEsc(r.id)}" title="Xem chi tiết"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="icon-btn" data-eb2b-cr-edit="${eEsc(r.id)}" title="Sửa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="icon-btn danger" data-eb2b-cr-delete="${eEsc(r.id)}" title="Xóa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v14a2 2 0 01-2 2H7V6h14z"/></svg></button></div></td></tr>`;
+      return `<tr class="eb2b-cr-row ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-row="${eEsc(r.id)}"><td class="col-check"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""} aria-label="Chọn ${eEsc(r.cr_id)}"></td><td class="cell-id sticky-cr-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td>${visible.map(col=>eb2bCrCellHtml(col.key,r,overdueRow,canEdit)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${eEsc(r.id)}" title="Xem chi tiết"><mi-icon name="eye" stroke-width="2"></mi-icon></button><button class="icon-btn" data-eb2b-cr-edit="${eEsc(r.id)}" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-cr-delete="${eEsc(r.id)}" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></td></tr>`;
     };
     const mobileHtml=r=>`<article class="cr-card eb2b-cr-card ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-view="${eEsc(r.id)}"><div class="cr-card-top"><label class="cr-card-select" onclick="event.stopPropagation()"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""}></label><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}${eb2bCrOverdue(r)?`<span class="badge badge-danger">Trễ hạn</span>`:""}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(r.deadline?eDate(r.deadline):"—")}</span></div><div class="cr-card-inline">${eb2bCrInlineHtml("status",r)}${eb2bCrInlineHtml("priority",r)}</div><div class="cr-card-actions"><button class="btn btn-secondary btn-sm" data-eb2b-cr-edit="${eEsc(r.id)}">Sửa</button><button class="btn btn-secondary btn-sm danger" data-eb2b-cr-delete="${eEsc(r.id)}">Xóa</button></div></article>`;
-    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrCatalog("category"))}<div class="filter-chip eb2b-requester-filter"><span>Requester</span><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
+    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrCatalog("category"))}<div class="filter-chip eb2b-requester-filter"><span>Requester</span><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
     const bulk=document.createElement("div");bulk.className=`bulk-bar ${EB2B.crSelection.size?"":"hidden"}`;bulk.innerHTML=`<span><b>${EB2B.crSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-cr-selection-clear>Bỏ chọn</button></div>`;const crWrap=$e("#eb2bCrTableWrap");crWrap?.parentElement?.insertBefore(bulk,crWrap);
     bulk.querySelector("[data-eb2b-cr-selection-clear]")?.addEventListener("click",()=>{EB2B.crSelection.clear();eb2bRenderCrLog();});
     eb2bWireCrHScroll();
@@ -18081,7 +18156,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(!row)return;const drawer=$e("#eb2bCrDrawer"),overlay=$e("#eb2bDrawerOverlay");
     const files=EB2B.rows.attachments.filter(x=>x.cr_id===row.cr_id&&!x.deleted_at),tests=EB2B.rows.uat.filter(x=>x.cr_id===row.cr_id),rels=EB2B.rows.release.filter(x=>x.cr_id===row.cr_id);
     const field=(l,v)=>`<div class="crlog-field"><div class="crlog-field-label">${eEsc(l)}</div><div class="crlog-field-value ${v?"":"empty"}">${v?eEsc(v):"Chưa có dữ liệu"}</div></div>`;
-    drawer.innerHTML=`<div class="drawer-head"><div class="drawer-head-top"><div><h2>${eEsc(row.cr_id)}</h2><div class="drawer-app">${eEsc(eb2bCrTitle(row))}</div><div class="drawer-head-context"><span><b>App</b> ${eEsc(row.app||"—")}</span><span><b>Requester</b> ${eEsc(row.requester||"—")}</span><span><b>Request Date</b> ${eEsc(eDate(row.request_date)||"—")}</span></div></div><div class="drawer-head-actions"><button class="icon-btn" data-eb2b-cr-edit="${row.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="drawer-close" data-eb2b-drawer-close>✕</button></div></div><div class="drawer-badges">${eb2bCrBadge("status",row.status)}${eb2bCrBadge("priority",row.priority)}${eb2bCrBadge("category",row.category)}${eb2bCrOverdue(row)?`<span class="badge" style="background:var(--danger-dim);color:var(--danger)">Trễ hạn</span>`:""}</div></div>
+    drawer.innerHTML=`<div class="drawer-head"><div class="drawer-head-top"><div><h2>${eEsc(row.cr_id)}</h2><div class="drawer-app">${eEsc(eb2bCrTitle(row))}</div><div class="drawer-head-context"><span><b>App</b> ${eEsc(row.app||"—")}</span><span><b>Requester</b> ${eEsc(row.requester||"—")}</span><span><b>Request Date</b> ${eEsc(eDate(row.request_date)||"—")}</span></div></div><div class="drawer-head-actions"><button class="icon-btn" data-eb2b-cr-edit="${row.id}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="drawer-close" data-eb2b-drawer-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></div></div><div class="drawer-badges">${eb2bCrBadge("status",row.status)}${eb2bCrBadge("priority",row.priority)}${eb2bCrBadge("category",row.category)}${eb2bCrOverdue(row)?`<span class="badge" style="background:var(--danger-dim);color:var(--danger)">Trễ hạn</span>`:""}</div></div>
     <div class="tabs"><button class="tab-btn active" data-eb2b-drawer-tab="info">Thông tin</button><button class="tab-btn" data-eb2b-drawer-tab="files">Tệp đính kèm <span class="tab-count">${files.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="uat">Test Case UAT <span class="tab-count">${tests.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="release">Release / PRD <span class="tab-count">${rels.length}</span></button></div>
     <div class="drawer-body"><div class="tab-panel active" data-eb2b-panel="info"><div class="dsec"><div class="dsec-head"><span class="dsec-title">Tóm tắt</span></div><div class="summary-grid">${field("Requester",row.requester)}${field("Department",row.department)}${field("Owner",row.owner)}${field("Request Date",eDate(row.request_date))}${field("Deadline",eDate(row.deadline))}${field("App",row.app)}${field("Approved Status",row.approved_status)}${field("Approved Date",eDate(row.approved_date))}</div></div><div class="crlog-detail-groups"><div class="crlog-field-group"><div class="crlog-field-group-title">Nội dung & cập nhật</div><div class="crlog-field-grid">${field("Old Name From InterK",row.old_name)}${field("Rename Folder",row.rename_folder)}${field("Description BRD",row.description_brd)}${field("Description FSD",row.description_fsd)}${field("Progress",row.progress)}${field("Note",row.note)}</div></div></div></div>
     <div class="tab-panel" data-eb2b-panel="files"><div class="dsec"><div class="dsec-head"><span class="dsec-title">Tệp đính kèm</span></div><div class="eb2b-files">${files.map(f=>`<div class="eb2b-file-row"><div class="eb2b-file-meta"><div class="eb2b-file-name">${eEsc(f.file_name)}</div><div class="eb2b-file-sub">${eEsc(f.category||"Tài liệu")} · ${eEsc(f.uploaded_by||"—")}</div></div></div>`).join("")||`<div class="empty-state"><p>Chưa có tệp đính kèm.</p></div>`}</div></div></div>
@@ -18220,7 +18295,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
            <div class="eb2b-uat-modal-sub">${isEdit ? eEsc(value.test_case_id || value.cr_id || "") : "Tương ứng bảng eb2b_uat_testcase"}</div>
            <div class="eb2b-uat-modal-context"><span><b>CR liên kết</b> ${eEsc(value.cr_id || "Chưa chọn")}</span><span><b>Test Case ID</b> ${eEsc(value.test_case_id || "Chưa đặt mã")}</span><span><b>Kết quả</b> ${eb2bUatResultBadge(result)}</span></div>
          </div>
-         <button class="modal-close" type="button" data-eb2b-uat-close>✕</button>
+         <button class="modal-close" type="button" data-eb2b-uat-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
        </div>
        <div class="tabs">
          <button class="tab-btn active" type="button" data-eb2b-uat-tab="info">Thông tin</button>
@@ -18391,15 +18466,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
          <div class="list-panel-head">
            <div class="list-panel-count"><b id="eb2bUatCount">${rows.length}</b> Test Case</div>
            <div class="table-toolbar" id="eb2bUatToolbar">
-             <div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bUatSearch" type="text" placeholder="Tìm Test Case, scenario, testor..." value="${eEsc(f.search)}"></div>
+             <div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bUatSearch" type="text" placeholder="Tìm Test Case, scenario, testor..." value="${eEsc(f.search)}"></div>
              ${eb2bUatFilter("CR ID","cr",crIds)}
              ${eb2bUatFilter("Kết quả","result",resultOptions)}
              <div class="tb-dropdown" data-eb2b-uat-menu-root="more"><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-uat-menu="more">Lọc thêm<span class="tb-badge ${f.testor||f.owner?"":"hidden"}" id="eb2bUatMoreBadge">${[f.testor,f.owner].filter(Boolean).length}</span></button><div class="tb-menu" data-eb2b-uat-menu-panel="more"><div class="tb-menu-item-label">Testor</div><select data-eb2b-uat-filter="testor"><option value="">Tất cả</option>${testors.map(value=>`<option value="${eEsc(value)}" ${value===f.testor?"selected":""}>${eEsc(value)}</option>`).join("")}</select><div class="tb-menu-divider"></div><div class="tb-menu-item-label">Owner Scenario</div><select data-eb2b-uat-filter="owner"><option value="">Tất cả</option>${owners.map(value=>`<option value="${eEsc(value)}" ${value===f.owner?"selected":""}>${eEsc(value)}</option>`).join("")}</select></div></div>
              <div class="chip-clear" data-eb2b-uat-clear>Xóa lọc</div>
              <div class="tb-dropdown" data-eb2b-uat-menu-root="columns"><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-uat-menu="columns">Columns</button><div class="tb-menu right" data-eb2b-uat-menu-panel="columns">${eb2bUatColumnMenu()}</div></div>
              <div class="tb-dropdown" data-eb2b-uat-menu-root="density"><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-uat-menu="density">Density</button><div class="tb-menu right" data-eb2b-uat-menu-panel="density"><label class="tb-radio-row"><input type="radio" name="eb2bUatDensity" value="compact" ${EB2B.uatDensity==="compact"?"checked":""}> Compact</label><label class="tb-radio-row"><input type="radio" name="eb2bUatDensity" value="comfortable" ${EB2B.uatDensity==="comfortable"?"checked":""}> Comfortable</label><label class="tb-radio-row"><input type="radio" name="eb2bUatDensity" value="spacious" ${EB2B.uatDensity==="spacious"?"checked":""}> Spacious</label></div></div>
-             <button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatFocus" type="button" title="Chế độ toàn màn hình">⛶ Focus</button>
-             ${canEdit?`<button class="btn btn-primary btn-sm" type="button" data-eb2b-new="uat">＋ Thêm Test Case</button>`:""}
+             <button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatFocus" type="button" title="Chế độ toàn màn hình"><mi-icon name="maximize" size="14" stroke-width="2.2"></mi-icon> Focus</button>
+             ${canEdit?`<button class="btn btn-primary btn-sm" type="button" data-eb2b-new="uat"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Test Case</button>`:""}
            </div>
          </div>
          <div class="bulk-bar ${selectedCount?"":"hidden"}" id="eb2bUatBulkBar"><span><b>${selectedCount}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-uat-bulk-clear>Bỏ chọn</button></div></div>
@@ -18416,9 +18491,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
                  if(column.key==="pass_fail") return `<td class="cell-result">${eb2bUatResultBadge(value || "Not Started")}</td>`;
                  if(column.key==="testing_date" || column.key==="confirmed_date") return `<td class="cell-dim">${eEsc(eDate(value) || "—")}</td>`;
                  return `<td class="cell-dim">${eEsc(value || "—")}</td>`;
-               }).join("")}<td class="cell-actions"><div class="row-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit" title="Sửa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete" title="Xóa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>`:""}</div></td></tr>`).join(""):`<tr><td colspan="${colspan}"><div class="empty-state"><h4>Chưa có Test Case</h4><p>Bấm “Thêm Test Case” để tạo test case UAT đầu tiên.</p></div></td></tr>`}
+               }).join("")}<td class="cell-actions"><div class="row-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button>`:""}</div></td></tr>`).join(""):`<tr><td colspan="${colspan}"><div class="empty-state"><h4>Chưa có Test Case</h4><p>Bấm “Thêm Test Case” để tạo test case UAT đầu tiên.</p></div></td></tr>`}
              </tbody></table>
-             <div class="cr-mobile-list eb2b-uat-mobile" id="eb2bUatMobile">${rows.map(row=>`<div class="cr-card" data-eb2b-uat-row="${eEsc(row.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(row.cr_id || "—")}</span>${eb2bUatResultBadge(row.pass_fail || "Not Started")}</div><div class="cr-card-title">${eEsc(row.test_case_id || row.scenario || "—")}</div><div class="cr-card-meta"><span>${eEsc(row.scenario || "Chưa có scenario")}</span><span>${eEsc(row.testor || "Chưa có testor")}</span><span>${eEsc(eDate(row.testing_date) || "Chưa test")}</span></div><div class="cr-card-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 002 2v7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4v2m3 0v14a2 2 0 01-2 2H7A2 2 0 015 20V6h14z"/></svg></button>`:""}</div></div>`).join("")}</div>
+             <div class="cr-mobile-list eb2b-uat-mobile" id="eb2bUatMobile">${rows.map(row=>`<div class="cr-card" data-eb2b-uat-row="${eEsc(row.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(row.cr_id || "—")}</span>${eb2bUatResultBadge(row.pass_fail || "Not Started")}</div><div class="cr-card-title">${eEsc(row.test_case_id || row.scenario || "—")}</div><div class="cr-card-meta"><span>${eEsc(row.scenario || "Chưa có scenario")}</span><span>${eEsc(row.testor || "Chưa có testor")}</span><span>${eEsc(eDate(row.testing_date) || "Chưa test")}</span></div><div class="cr-card-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete"><mi-icon name="trash" stroke-width="2"></mi-icon></button>`:""}</div></div>`).join("")}</div>
            </div>
          </div>
          <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${EB2B.rows.uat.length} Test Case</span></div>
@@ -18574,7 +18649,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         <div class="list-panel-head">
           <div class="list-panel-count"><b>${rows.length}</b> Release</div>
           <div class="table-toolbar" id="eb2bRelToolbar">
-            <div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bRelSearch" value="${eEsc(EB2B.releaseFilters.search)}" placeholder="Tìm Release, version, owner..."></div>
+            <div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bRelSearch" value="${eEsc(EB2B.releaseFilters.search)}" placeholder="Tìm Release, version, owner..."></div>
             <div class="filter-chip"><span>CR ID</span><select id="eb2bRelFilterCr"><option value="">Tất cả</option>${crOptions.map(v=>`<option value="${eEsc(v)}" ${v===EB2B.releaseFilters.cr?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div>
             <div class="filter-chip"><span>Trạng thái</span><select id="eb2bRelFilterStatus"><option value="">Tất cả</option>${["Planned","In Progress","Released","Rolled Back"].map(v=>`<option value="${v}" ${v===EB2B.releaseFilters.status?"selected":""}>${v}</option>`).join("")}</select></div>
             <div class="tb-dropdown" data-dd-root="eb2bRelMore"><button class="btn btn-ghost btn-sm tb-btn" data-eb2b-rel-menu="more" type="button">Lọc thêm<span class="tb-badge hidden" id="eb2bRelMoreBadge">0</span></button>
@@ -18583,7 +18658,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
             <div class="chip-clear" id="eb2bRelClear">Xóa lọc</div>
             <div class="tb-dropdown"><button class="btn btn-ghost btn-sm tb-btn" data-eb2b-rel-menu="columns" type="button">Columns</button><div class="tb-menu right" id="eb2bRelColumns"><div class="tb-menu-item-label">Hiển thị cột</div>${["release_id","release_name","environment","planned_date","actual_date","status","checklist_golive","release_owner","signoff_by","signoff_date"].map(k=>`<label class="tb-checkbox-row"><input type="checkbox" data-eb2b-rel-col="${k}" ${EB2B.releaseColumns[k]?"checked":""}> ${eEsc({release_id:"Release ID",release_name:"Tên Release / Version",environment:"Môi trường",planned_date:"Ngày dự kiến",actual_date:"Ngày thực tế",status:"Trạng thái",checklist_golive:"Go-live Checklist",release_owner:"Release Owner",signoff_by:"Sign-off by",signoff_date:"Ngày sign-off"}[k])}</label>`).join("")}</div></div>
             <div class="tb-dropdown"><button class="btn btn-ghost btn-sm tb-btn" data-eb2b-rel-menu="density" type="button">Density</button><div class="tb-menu right" id="eb2bRelDensity"><label class="tb-radio-row"><input type="radio" name="eb2bReleaseDensity" value="compact" ${EB2B.releaseDensity==="compact"?"checked":""}> Compact</label><label class="tb-radio-row"><input type="radio" name="eb2bReleaseDensity" value="comfortable" ${EB2B.releaseDensity==="comfortable"?"checked":""}> Comfortable</label><label class="tb-radio-row"><input type="radio" name="eb2bReleaseDensity" value="spacious" ${EB2B.releaseDensity==="spacious"?"checked":""}> Spacious</label></div></div>
-            <button class="btn btn-ghost btn-sm tb-btn" id="eb2bRelFocus" type="button" title="Chế độ toàn màn hình">⛶ Focus</button><button class="btn btn-primary btn-sm" data-eb2b-new="release" type="button">＋ Thêm Release</button>
+            <button class="btn btn-ghost btn-sm tb-btn" id="eb2bRelFocus" type="button" title="Chế độ toàn màn hình"><mi-icon name="maximize" size="14" stroke-width="2.2"></mi-icon> Focus</button><button class="btn btn-primary btn-sm" data-eb2b-new="release" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Release</button>
           </div>
         </div>
         <div class="bulk-bar hidden"><span><b>0</b> đã chọn</span></div>
@@ -18615,7 +18690,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bRenderBrd(){
     const c=$e("#eb2bContent"), rows=EB2B.rows.brd;
-    c.innerHTML=`<div class="brd-workspace"><div class="brd-toolbar"><div class="brd-toolbar-copy"><div class="brd-toolbar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div><div><div class="brd-toolbar-title">Danh sách Business Requirement Document</div><div class="brd-toolbar-note">Quản lý tài liệu yêu cầu nghiệp vụ và xuất file Word theo mẫu chuẩn</div></div></div><div class="brd-count"><b>${rows.length}</b> BRD đã tạo</div></div><div class="brd-grid">${rows.length?rows.map(v=>`<article class="brd-card" data-eb2b-brd="${eEsc(v.id)}"><div class="brd-card-head"><div class="brd-card-docicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div><div class="brd-card-copy"><div class="brd-card-title">${eEsc(v.brd_title||"(Chưa đặt tên)")}</div><div class="brd-card-sub">Hệ thống: ${eEsc(v.system_name||"—")}</div></div></div><div class="brd-card-meta">${v.cr_id?`<span><b>CR</b> ${eEsc(v.cr_id)}</span>`:""}<span><b>Phiên bản</b> ${Array.isArray(v.version_rows)?v.version_rows.length:(v.version||"—")}</span><span><b>Cập nhật</b> ${eEsc(v.updated_at||"—")}</span></div><div class="brd-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-brd-act="edit">Sửa</button><button class="btn btn-ghost btn-sm brd-delete-btn" data-eb2b-brd-act="del">Xóa</button></div></article>`).join(""):`<div class="brd-empty"><div class="brd-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`}</div></div>`;
+    c.innerHTML=`<div class="brd-workspace"><div class="brd-toolbar"><div class="brd-toolbar-copy"><div class="brd-toolbar-icon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div><div><div class="brd-toolbar-title">Danh sách Business Requirement Document</div><div class="brd-toolbar-note">Quản lý tài liệu yêu cầu nghiệp vụ và xuất file Word theo mẫu chuẩn</div></div></div><div class="brd-count"><b>${rows.length}</b> BRD đã tạo</div></div><div class="brd-grid">${rows.length?rows.map(v=>`<article class="brd-card" data-eb2b-brd="${eEsc(v.id)}"><div class="brd-card-head"><div class="brd-card-docicon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div><div class="brd-card-copy"><div class="brd-card-title">${eEsc(v.brd_title||"(Chưa đặt tên)")}</div><div class="brd-card-sub">Hệ thống: ${eEsc(v.system_name||"—")}</div></div></div><div class="brd-card-meta">${v.cr_id?`<span><b>CR</b> ${eEsc(v.cr_id)}</span>`:""}<span><b>Phiên bản</b> ${Array.isArray(v.version_rows)?v.version_rows.length:(v.version||"—")}</span><span><b>Cập nhật</b> ${eEsc(v.updated_at||"—")}</span></div><div class="brd-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-brd-act="edit">Sửa</button><button class="btn btn-ghost btn-sm brd-delete-btn" data-eb2b-brd-act="del">Xóa</button></div></article>`).join(""):`<div class="brd-empty"><div class="brd-empty-icon"><mi-icon name="file-plus" stroke-width="2"></mi-icon></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`}</div></div>`;
     $e('[data-eb2b-new="brd"]',c)?.remove();
     $all(".brd-card-actions",c).forEach(actions=>actions.querySelector('[data-eb2b-brd-act="del"]')?.insertAdjacentHTML("beforebegin",`<button class="btn btn-ghost btn-sm" data-eb2b-brd-act="word">Xuất Word</button>`));
     $all("[data-eb2b-brd-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.brd.find(x=>String(x.id)===String(btn.closest("[data-eb2b-brd]")?.dataset.eb2bBrd));if(!row)return;if(btn.dataset.eb2bBrdAct==="edit")eb2bOpenModal("brd",row);else if(btn.dataset.eb2bBrdAct==="word")eb2bExportBrdWord(row);else eb2bDelete("brd",row);}));
@@ -18623,7 +18698,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bRenderWeeklyMom(){
     const c=$e("#eb2bContent"), rows=EB2B.rows.weekly_mom;
-    c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg></div><div><div class="weekly-mom-title">Biên bản Weekly với Vendor</div><div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]===true;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
+    c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><mi-icon name="calendar-days" stroke-width="2"></mi-icon></div><div><div class="weekly-mom-title">Biên bản Weekly với Vendor</div><div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]===true;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><mi-icon name="chevron-down" stroke-width="2.2"></mi-icon></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
     $e('[data-eb2b-new="weekly_mom"]',c)?.remove();
     $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),state=EB2B.weeklyMomSort[String(card?.dataset.eb2bWeekly||"")];if(!state||!Number.isInteger(state.index)||!table.tBodies[0])return;const bodyRows=Array.from(table.tBodies[0].rows);bodyRows.sort((a,b)=>String(a.cells[state.index]?.textContent||"").localeCompare(String(b.cells[state.index]?.textContent||""),"vi",{numeric:true})*(state.direction==="desc"?-1:1));bodyRows.forEach(row=>table.tBodies[0].appendChild(row));});
     $all("[data-eb2b-weekly-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.weekly_mom.find(x=>String(x.id)===String(btn.closest("[data-eb2b-weekly]")?.dataset.eb2bWeekly));if(!row)return;btn.dataset.eb2bWeeklyAct==="edit"?eb2bOpenModal("weekly_mom",row):eb2bDelete("weekly_mom",row);}));
@@ -18646,7 +18721,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     c.innerHTML = `
       <div class="eb2b-toolbar">
         <div class="eb2b-toolbar-left"><input id="eb2bSearch" placeholder="Tìm trong ${eEsc(meta[0])}..." value="${eEsc(EB2B.search)}"><span class="eb2b-muted">${rows.length} / ${EB2B.rows[key].length} mục</span></div>
-        <button type="button" class="btn btn-primary btn-sm" data-eb2b-new="${key}">＋ ${meta[2]}</button>
+        <button type="button" class="btn btn-primary btn-sm" data-eb2b-new="${key}"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> ${meta[2]}</button>
       </div>
       <div class="eb2b-panel">
         <div class="eb2b-panel-head"><h3>${meta[0]}</h3><span class="eb2b-muted">Dữ liệu riêng: <code>eb2b_${key==="cr"?"cr_log":key==="uat"?"uat_testcase":key==="release"?"release_prd":key==="brd"?"brd_records":"weekly_mom"}</code></span></div>
@@ -18833,7 +18908,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const heading = key==="cr" ? (row ? "Sửa Change Request" : "Tạo Change Request mới") : `${title}${labels[key]}`;
     const subtitle = key==="cr" ? (row ? eText(row.cr_id||"") : "Điền thông tin CR — tương ứng dữ liệu EB2B CR Log") : `Dữ liệu được lưu vào bảng ${EB2B_TABLES[key]}.`;
      overlay.innerHTML = `<div class="eb2b-modal ${key==="cr"?"eb2b-cr-form-modal":""}" role="dialog" aria-modal="true">
-      <div class="eb2b-modal-head"><div><h3>${heading}</h3><p>${eEsc(subtitle)}</p></div><button type="button" class="modal-close" data-eb2b-close>✕</button></div>
+      <div class="eb2b-modal-head"><div><h3>${heading}</h3><p>${eEsc(subtitle)}</p></div><button type="button" class="modal-close" data-eb2b-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></div>
       <div class="eb2b-modal-body"><div class="eb2b-form-grid">${defs.map(d=>eb2bField(d,row||{})).join("")}</div></div>
       <div class="eb2b-modal-foot"><button type="button" class="btn btn-ghost" data-eb2b-close>Hủy</button><button type="button" class="btn btn-primary" id="eb2bSaveRecord">${row?"Lưu thay đổi":key==="cr"?"Tạo CR":"Lưu"}</button></div>
     </div>`;
