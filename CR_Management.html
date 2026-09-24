@@ -1543,27 +1543,100 @@ td.cell-id .id-chip{
   .export-selection-modal .modal-foot .btn{ width:auto; }
 }
 /* ---- Modal sắp xếp ảnh evidence trước khi tải báo cáo -------------------- */
-.evidence-arrange-modal{ max-width:940px; }
-.evidence-arrange-modal .modal-body{ padding:18px 24px 20px; }
+.evidence-arrange-modal{ max-width:1060px; }
+.evidence-arrange-modal .modal-head{ align-items:flex-start; padding:20px 24px 16px; background:linear-gradient(180deg,#ffffff,#f6fbfb); }
+.evidence-arrange-modal .modal-body{ padding:18px 24px 22px; background:#eef5f6; }
 .evidence-arrange-loading{ padding:38px 12px; text-align:center; color:var(--text-muted); font-size:12.5px; font-weight:600; }
 .evidence-arrange-empty{ padding:30px 12px; text-align:center; color:var(--text-muted); font-size:12.5px; }
-.evidence-arrange-group{ margin-bottom:20px; }
-.evidence-arrange-group:last-child{ margin-bottom:4px; }
-.evidence-arrange-group-title{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; font-size:12.5px; font-weight:750; color:#18364f; margin-bottom:9px; }
-.evidence-arrange-group-title .tc-id{ color:#0e9a94; font-weight:800; }
-.evidence-arrange-group-title .tc-scenario{ color:#6e8798; font-weight:600; font-size:11.5px; }
-.evidence-arrange-items{ display:flex; gap:10px; flex-wrap:wrap; }
-.evidence-arrange-item{ width:136px; border:1px solid var(--border); border-radius:10px; background:#fff; padding:8px; cursor:grab; position:relative; transition:box-shadow .15s ease, opacity .15s ease, border-color .15s ease; user-select:none; }
-.evidence-arrange-item:hover{ border-color:#49c6bf; }
-.evidence-arrange-item.dragging{ opacity:.4; cursor:grabbing; }
-.evidence-arrange-item.excluded{ opacity:.45; }
-.evidence-arrange-item.excluded img{ filter:grayscale(.9); }
-.evidence-arrange-item img{ width:100%; height:80px; object-fit:cover; border-radius:7px; background:#eef4f7; display:block; pointer-events:none; }
-.evidence-arrange-order{ position:absolute; top:4px; left:4px; min-width:22px; height:22px; padding:0 5px; border-radius:7px; background:#0e9a94; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(10,30,51,.25); }
-.evidence-arrange-item.excluded .evidence-arrange-order{ background:#9db4c0; text-decoration:line-through; }
-.evidence-arrange-name{ display:block; margin-top:6px; font-size:10.5px; font-weight:600; color:#41586b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.evidence-arrange-include{ display:flex; align-items:center; gap:5px; margin-top:6px; font-size:10.5px; font-weight:650; color:#18364f; cursor:pointer; }
-.evidence-arrange-include input{ accent-color:#0e9a94; }
+
+/* 3 bước hướng dẫn ngay dưới tiêu đề */
+.ea-hints{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.ea-hint{ display:inline-flex; align-items:center; gap:8px; padding:5px 12px 5px 6px; border-radius:999px; background:#e8f6f5; border:1px solid #c5e8e6; color:#16404f; font-size:12px; font-weight:650; }
+.ea-hint b{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:#0e9a94; color:#fff; font-size:11px; font-weight:800; }
+
+/* Mỗi Test Case là một thẻ riêng, tách bạch với thẻ khác */
+.ea-group{ background:#fff; border:1px solid #d3e2e6; border-left:5px solid #0e9a94; border-radius:14px; box-shadow:0 1px 2px rgba(13,40,64,.05), 0 6px 18px -10px rgba(13,40,64,.18); margin-bottom:18px; padding:0 16px 16px; }
+.ea-group:last-child{ margin-bottom:0; }
+.ea-group-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; position:sticky; top:0; z-index:3; background:#fff; padding:13px 0 12px; margin-bottom:12px; border-bottom:1px solid #e3edf0; border-radius:14px 14px 0 0; }
+.ea-tc-id{ font-family:var(--font-mono, ui-monospace, monospace); font-size:13px; font-weight:800; color:#fff; background:#0e9a94; padding:4px 11px; border-radius:8px; letter-spacing:.2px; }
+.ea-tc-scenario{ flex:1 1 200px; min-width:0; font-size:13px; font-weight:650; color:#18364f; }
+.ea-group-count{ font-size:12px; font-weight:750; color:#0b756f; background:#e6f6f5; border:1px solid #c5e8e6; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+.ea-group-count.is-partial{ color:#9a5b00; background:#fff4de; border-color:#f3d9a4; }
+.ea-group-tools{ display:flex; gap:6px; }
+.ea-link-btn{ font-size:12px; font-weight:700; color:#0b756f; background:#fff; border:1px solid #c5dde0; border-radius:8px; padding:4px 10px; cursor:pointer; transition:background .15s, border-color .15s; }
+.ea-link-btn:hover{ background:#e6f6f5; border-color:#49c6bf; }
+
+.ea-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(188px, 1fr)); gap:14px; }
+.ea-item{ position:relative; display:flex; flex-direction:column; background:#fff; border:2px solid #0e9a94; border-radius:12px; padding:8px; cursor:grab; user-select:none; box-shadow:0 0 0 3px rgba(14,154,148,.10); transition:box-shadow .15s, border-color .15s, transform .15s, opacity .15s; }
+.ea-item:hover{ box-shadow:0 0 0 3px rgba(14,154,148,.22), 0 8px 20px -10px rgba(13,40,64,.35); }
+.ea-item.dragging{ opacity:.55; cursor:grabbing; transform:scale(1.03) rotate(-1deg); box-shadow:0 14px 30px -10px rgba(13,40,64,.5); }
+.ea-item.ea-flash{ animation:eaFlash .7s ease; }
+@keyframes eaFlash{ 0%{ box-shadow:0 0 0 0 rgba(14,154,148,.7); } 100%{ box-shadow:0 0 0 12px rgba(14,154,148,0); } }
+
+.ea-thumb{ position:relative; height:132px; border-radius:8px; overflow:hidden; background:#eef4f7; border:1px solid #e0eaee; }
+.ea-thumb:not(.is-ready){ background:linear-gradient(100deg,#eef4f7 30%,#f8fbfc 50%,#eef4f7 70%); background-size:200% 100%; animation:eaShimmer 1.2s linear infinite; }
+@keyframes eaShimmer{ to{ background-position:-200% 0; } }
+.ea-thumb img{ width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:#fff; }
+.ea-thumb-err{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; text-align:center; font-size:11.5px; font-weight:600; color:#8496a8; padding:8px; }
+.ea-thumb.is-error .ea-thumb-err{ display:flex; }
+
+/* Số thứ tự: to, rõ, luôn nằm góc trái ảnh */
+.ea-order{ position:absolute; top:6px; left:6px; z-index:2; min-width:30px; height:30px; padding:0 8px; border-radius:9px; background:#0e9a94; color:#fff; border:2px solid #fff; box-shadow:0 2px 6px rgba(13,40,64,.35); font-size:15px; font-weight:800; display:flex; align-items:center; justify-content:center; line-height:1; }
+.ea-grip{ position:absolute; top:6px; right:44px; z-index:2; height:28px; padding:0 7px; border-radius:8px; background:rgba(255,255,255,.92); color:#5b7385; border:1px solid #d3e2e6; display:flex; align-items:center; }
+.ea-zoom{ position:absolute; top:6px; right:6px; z-index:2; width:32px; height:28px; border-radius:8px; background:rgba(255,255,255,.95); color:#0b756f; border:1px solid #cfe3e5; display:flex; align-items:center; justify-content:center; cursor:zoom-in; transition:background .15s, color .15s; }
+.ea-zoom:hover{ background:#0e9a94; color:#fff; border-color:#0e9a94; }
+.ea-excluded-tag{ position:absolute; left:0; right:0; bottom:0; z-index:2; display:none; text-align:center; padding:5px 6px; font-size:11.5px; font-weight:800; color:#b42318; background:rgba(254,228,226,.96); border-top:1px solid #f7c5c0; }
+
+.ea-name{ margin-top:8px; font-size:12px; font-weight:650; line-height:1.35; color:#23405a; word-break:break-all; min-height:32px; }
+
+.ea-bar{ display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid #e6eef1; }
+.ea-include{ position:relative; display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; font-weight:750; color:#0b756f; min-width:0; white-space:nowrap; }
+.ea-include input{ position:absolute; opacity:0; width:0; height:0; }
+.ea-check{ flex:0 0 22px; width:22px; height:22px; border-radius:7px; background:#0e9a94; border:2px solid #0e9a94; display:flex; align-items:center; justify-content:center; transition:background .15s, border-color .15s; }
+.ea-check::after{ content:""; width:5px; height:10px; border:solid #fff; border-width:0 2.5px 2.5px 0; transform:rotate(45deg) translate(-1px,-1px); }
+.ea-include input:focus-visible + .ea-check{ outline:3px solid rgba(14,154,148,.35); outline-offset:1px; }
+.ea-include .ea-off{ display:none; }
+.ea-move{ display:flex; gap:4px; flex-shrink:0; }
+.ea-move button{ width:26px; height:26px; border-radius:7px; border:1px solid #cfe0e4; background:#f6fafb; color:#35566b; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .15s, border-color .15s; }
+.ea-move button:hover:not(:disabled){ background:#e6f6f5; border-color:#49c6bf; color:#0b756f; }
+.ea-move button:disabled{ opacity:.35; cursor:not-allowed; }
+
+/* Ảnh bị loại: khác hẳn — viền nét đứt, ảnh xám mờ, nhãn đỏ "Không đưa vào báo cáo" */
+.ea-item.excluded{ border:2px dashed #c3cfd6; background:#f6f8f9; box-shadow:none; }
+.ea-item.excluded .ea-thumb img{ filter:grayscale(1); opacity:.4; }
+.ea-item.excluded .ea-order{ background:#9db0bc; }
+.ea-item.excluded .ea-name{ color:#8496a8; text-decoration:line-through; text-decoration-color:#c3cfd6; }
+.ea-item.excluded .ea-excluded-tag{ display:block; }
+.ea-item.excluded .ea-check{ background:#fff; border-color:#b6c4cc; }
+.ea-item.excluded .ea-check::after{ display:none; }
+.ea-item.excluded .ea-include{ color:#b42318; }
+.ea-item.excluded .ea-on{ display:none; }
+.ea-item.excluded .ea-include .ea-off{ display:inline; }
+
+/* Thanh dưới: số ảnh + nút chính nổi bật */
+.evidence-arrange-modal .ea-foot{ justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap; background:#fff; box-shadow:0 -8px 20px -14px rgba(13,40,64,.35); }
+.ea-count{ font-size:13px; font-weight:650; color:#41586b; }
+.ea-count-num{ font-size:24px; font-weight:800; color:#0e9a94; line-height:1; vertical-align:-2px; }
+.ea-count-drop{ display:inline-block; margin-left:10px; padding:3px 10px; border-radius:999px; background:#fee4e2; color:#b42318; font-size:12px; font-weight:750; }
+.ea-count.is-zero .ea-count-num{ color:#b42318; }
+.ea-actions{ display:flex; gap:10px; align-items:center; }
+.ea-actions .btn-primary{ padding-left:22px; padding-right:22px; font-weight:800; box-shadow:0 8px 18px -8px rgba(14,154,148,.75); }
+
+/* Xem ảnh lớn */
+.ea-lightbox{ position:absolute; inset:0; z-index:5; display:flex; align-items:center; justify-content:center; padding:clamp(12px,4vw,40px); background:rgba(6,18,30,.82); backdrop-filter:blur(3px); }
+.ea-lb-card{ position:relative; display:flex; flex-direction:column; max-width:min(1100px,100%); max-height:100%; background:#fff; border-radius:14px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.5); }
+.ea-lb-stage{ flex:1 1 auto; min-height:0; overflow:auto; background:#f3f7f9; display:flex; align-items:center; justify-content:center; }
+.ea-lb-stage img{ display:block; max-width:100%; max-height:72vh; object-fit:contain; }
+.ea-lb-cap{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 16px; border-top:1px solid #e3edf0; font-size:12.5px; color:#23405a; }
+.ea-lb-cap b{ color:#fff; background:#0e9a94; padding:2px 9px; border-radius:7px; font-family:var(--font-mono, monospace); font-size:12px; }
+.ea-lb-cap .ea-lb-pos{ margin-left:auto; font-weight:800; color:#0b756f; }
+.ea-lb-close{ position:absolute; top:10px; right:10px; z-index:2; width:34px; height:34px; border-radius:50%; border:none; background:rgba(13,40,64,.75); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.ea-lb-close:hover{ background:#0e9a94; }
+@media(max-width:640px){
+  .ea-grid{ grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+  .ea-thumb{ height:108px; }
+  .ea-hint{ font-size:11.5px; }
+}
 .modal-head{ display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border); flex-shrink:0; }
 .modal-head h3{ font-size:16.5px; }
 .modal-head .sub{ font-size: var(--text-caption-size); color: var(--text-muted); font-weight:500; margin-top:2px; }
@@ -10220,23 +10293,35 @@ function openExportSelectionModal(mode){
      - null  -> giữ thứ tự mặc định (sortEvidenceFiles)
      - Map<testcaseId, string[]> -> thứ tự ID ảnh do người dùng chọn
 -------------------------------------------------------------------------- */
+const EA_ICON = {
+  grip: `<svg viewBox="0 0 12 16" width="10" height="14" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.3"/><circle cx="9" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="9" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="9" cy="13" r="1.3"/></g></svg>`,
+  zoom: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>`,
+  left: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>`,
+  right: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`
+};
+
 function evidenceArrangeModalTemplate(){
   return `
     <div class="modal modal-lg evidence-arrange-modal">
       <div class="modal-head">
         <div>
           <h3>Sắp xếp ảnh evidence</h3>
-          <div class="sub">Kéo thả để đổi thứ tự ảnh trong báo cáo, bỏ tick để loại ảnh không cần đưa vào.</div>
+          <div class="ea-hints">
+            <span class="ea-hint"><b>1</b>Kéo thả hoặc bấm ◀ ▶ để đổi thứ tự</span>
+            <span class="ea-hint"><b>2</b>Bỏ chọn để loại ảnh khỏi báo cáo</span>
+            <span class="ea-hint"><b>3</b>Bấm biểu tượng kính lúp để xem ảnh lớn</span>
+          </div>
         </div>
         <button class="modal-close" id="evidenceArrangeClose" type="button" aria-label="Đóng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
       </div>
       <div class="modal-body" id="evidenceArrangeBody">
         <div class="evidence-arrange-loading">Đang tải danh sách ảnh evidence...</div>
       </div>
-      <div class="modal-foot">
-        <span class="export-selection-selected" id="evidenceArrangeCount"></span>
-        <div style="display:flex; gap:10px;">
-          <button class="btn btn-ghost" id="evidenceArrangeDefault" type="button">Giữ thứ tự mặc định</button>
+      <div class="modal-foot ea-foot">
+        <div class="ea-count" id="evidenceArrangeCount"></div>
+        <div class="ea-actions">
+          <button class="btn btn-ghost" id="evidenceArrangeDefault" type="button" title="Bỏ qua bước sắp xếp: tạo báo cáo ngay với toàn bộ ảnh theo thứ tự mặc định">Dùng thứ tự mặc định</button>
           <button class="btn btn-primary" id="evidenceArrangeConfirm" type="button">Tạo báo cáo</button>
         </div>
       </div>
@@ -10249,7 +10334,9 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
   overlay.innerHTML = evidenceArrangeModalTemplate();
   overlay.classList.add("show");
 
+  let lightbox = null; // khai báo sớm: close() có thể chạy trước khi dựng xong modal
   const close = ()=>{
+    closeLightbox();
     overlay.classList.remove("show");
     overlay.innerHTML = "";
     overlay.onclick = null;
@@ -10277,77 +10364,184 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
   }
 
   body.innerHTML = groups.map((group, gi)=>`
-    <div class="evidence-arrange-group" data-group="${gi}">
-      <div class="evidence-arrange-group-title">
-        <span class="tc-id">${esc(group.testcase.test_case_id || "Test Case")}</span>
-        <span class="tc-scenario">${esc(group.testcase.scenario || "")}</span>
-      </div>
-      <div class="evidence-arrange-items">
+    <section class="ea-group" data-group="${gi}">
+      <header class="ea-group-head">
+        <span class="ea-tc-id">${esc(group.testcase.test_case_id || "Test Case")}</span>
+        <span class="ea-tc-scenario">${esc(group.testcase.scenario || "")}</span>
+        <span class="ea-group-count" data-group-count></span>
+        <span class="ea-group-tools">
+          <button type="button" class="ea-link-btn" data-group-all="1">Chọn tất cả</button>
+          <button type="button" class="ea-link-btn" data-group-all="0">Bỏ chọn tất cả</button>
+        </span>
+      </header>
+      <div class="ea-grid">
         ${group.images.map(file=>`
-          <div class="evidence-arrange-item" draggable="true" data-file-id="${esc(String(file.id))}">
-            <span class="evidence-arrange-order"></span>
-            <img data-thumb-for="${esc(String(file.id))}" alt="${esc(file.file_name || "evidence")}" loading="lazy">
-            <span class="evidence-arrange-name" title="${esc(file.file_name || "")}">${esc(file.file_name || "evidence")}</span>
-            <label class="evidence-arrange-include">
-              <input type="checkbox" checked data-include="${esc(String(file.id))}">
-              Đưa vào báo cáo
-            </label>
+          <div class="ea-item" draggable="true" data-file-id="${esc(String(file.id))}">
+            <div class="ea-thumb">
+              <span class="ea-order"></span>
+              <span class="ea-grip" title="Kéo để đổi vị trí">${EA_ICON.grip}</span>
+              <button type="button" class="ea-zoom" data-zoom title="Xem ảnh lớn" aria-label="Xem ảnh lớn">${EA_ICON.zoom}</button>
+              <img data-thumb-for="${esc(String(file.id))}" alt="${esc(file.file_name || "evidence")}" loading="lazy" draggable="false">
+              <span class="ea-thumb-err">Không tải được ảnh</span>
+              <span class="ea-excluded-tag">Không đưa vào báo cáo</span>
+            </div>
+            <div class="ea-name" title="${esc(file.file_name || "")}">${esc(file.file_name || "evidence")}</div>
+            <div class="ea-bar">
+              <label class="ea-include">
+                <input type="checkbox" checked data-include="${esc(String(file.id))}">
+                <span class="ea-check" aria-hidden="true"></span>
+                <span class="ea-on">Đưa vào báo cáo</span><span class="ea-off">Đã loại</span>
+              </label>
+              <span class="ea-move">
+                <button type="button" data-move="-1" title="Chuyển lên trước" aria-label="Chuyển lên trước">${EA_ICON.left}</button>
+                <button type="button" data-move="1" title="Chuyển ra sau" aria-label="Chuyển ra sau">${EA_ICON.right}</button>
+              </span>
+            </div>
           </div>`).join("")}
       </div>
-    </div>`).join("");
+    </section>`).join("");
 
   // Tải thumbnail bằng signed URL — lỗi từng ảnh không chặn các ảnh khác.
   groups.forEach(group=>{
     group.images.forEach(file=>{
       const img = body.querySelector(`img[data-thumb-for="${String(file.id)}"]`);
       if(!img) return;
+      const thumb = img.closest(".ea-thumb");
+      img.addEventListener("load", ()=>thumb.classList.add("is-ready"));
+      img.addEventListener("error", ()=>{ thumb.classList.add("is-ready", "is-error"); });
       getSignedUrl(file.file_path).then(url=>{
-        if(url && url !== "#") img.src = url;
-      }).catch(()=>{});
+        if(url && url !== "#") img.src = url; else thumb.classList.add("is-ready", "is-error");
+      }).catch(()=>{ thumb.classList.add("is-ready", "is-error"); });
     });
   });
 
   const updateCount = ()=>{
-    const items = Array.from(body.querySelectorAll(".evidence-arrange-item"));
+    const items = Array.from(body.querySelectorAll(".ea-item"));
     const included = items.filter(el=>!el.classList.contains("excluded")).length;
-    countEl.textContent = `${included} / ${items.length} ảnh sẽ đưa vào báo cáo`;
+    const dropped = items.length - included;
+    countEl.classList.toggle("is-zero", included === 0);
+    countEl.innerHTML = included === 0
+      ? `<span class="ea-count-num">0</span> ảnh — chưa chọn ảnh nào để đưa vào báo cáo`
+      : `<span class="ea-count-num">${included}</span> / ${items.length} ảnh sẽ đưa vào báo cáo`
+        + (dropped ? `<span class="ea-count-drop">${dropped} ảnh bị loại</span>` : "");
+    confirmBtn.textContent = included ? `Tạo báo cáo · ${included} ảnh` : "Tạo báo cáo";
     items.forEach(el=>{
-      const badge = $(".evidence-arrange-order", el);
+      const badge = $(".ea-order", el);
+      const siblings = Array.from(el.parentElement.children).filter(x=>x.classList.contains("ea-item"));
+      const prev = $('[data-move="-1"]', el), next = $('[data-move="1"]', el);
+      if(prev) prev.disabled = siblings.indexOf(el) === 0;
+      if(next) next.disabled = siblings.indexOf(el) === siblings.length - 1;
       if(!badge) return;
-      if(el.classList.contains("excluded")){ badge.textContent = "–"; return; }
-      const siblings = Array.from(el.parentElement.children).filter(x=>x.classList.contains("evidence-arrange-item") && !x.classList.contains("excluded"));
-      badge.textContent = String(siblings.indexOf(el) + 1);
+      if(el.classList.contains("excluded")){ badge.textContent = "—"; return; }
+      const active = siblings.filter(x=>!x.classList.contains("excluded"));
+      badge.textContent = String(active.indexOf(el) + 1);
     });
+    body.querySelectorAll(".ea-group").forEach(g=>{
+      const gi = Array.from(g.querySelectorAll(".ea-item"));
+      const gOn = gi.filter(el=>!el.classList.contains("excluded")).length;
+      const badge = $("[data-group-count]", g);
+      if(badge){
+        badge.textContent = `${gOn}/${gi.length} ảnh`;
+        badge.classList.toggle("is-partial", gOn !== gi.length);
+      }
+    });
+  };
+  const flash = el=>{
+    el.classList.remove("ea-flash"); void el.offsetWidth; el.classList.add("ea-flash");
+    setTimeout(()=>el.classList.remove("ea-flash"), 750);
   };
 
   // Tick / bỏ tick "Đưa vào báo cáo"
   body.addEventListener("change", event=>{
     const checkbox = event.target.closest("[data-include]");
     if(!checkbox) return;
-    checkbox.closest(".evidence-arrange-item").classList.toggle("excluded", !checkbox.checked);
+    checkbox.closest(".ea-item").classList.toggle("excluded", !checkbox.checked);
     updateCount();
   });
 
-  // Kéo-thả sắp xếp trong phạm vi từng Test Case
+  // Nút ◀ ▶, kính lúp, chọn / bỏ chọn cả nhóm
+  body.addEventListener("click", event=>{
+    const mv = event.target.closest("[data-move]");
+    if(mv){
+      const item = mv.closest(".ea-item");
+      const dir = Number(mv.dataset.move);
+      const sib = dir < 0 ? item.previousElementSibling : item.nextElementSibling;
+      if(sib){
+        if(dir < 0) item.parentElement.insertBefore(item, sib);
+        else item.parentElement.insertBefore(sib, item);
+        flash(item);
+        updateCount();
+      }
+      return;
+    }
+    const zoom = event.target.closest("[data-zoom]");
+    if(zoom){ openLightbox(zoom.closest(".ea-item")); return; }
+    const all = event.target.closest("[data-group-all]");
+    if(all){
+      const on = all.dataset.groupAll === "1";
+      all.closest(".ea-group").querySelectorAll(".ea-item").forEach(el=>{
+        el.classList.toggle("excluded", !on);
+        const cb = $("[data-include]", el); if(cb) cb.checked = on;
+      });
+      updateCount();
+    }
+  });
+
+  // Xem ảnh lớn (Esc để đóng — chỉ đóng phần xem ảnh, không đóng cả modal)
+  const onLightboxKey = event=>{
+    if(event.key === "Escape" && lightbox){ event.stopImmediatePropagation(); closeLightbox(); }
+  };
+  function closeLightbox(){
+    if(lightbox){ lightbox.remove(); lightbox = null; }
+    document.removeEventListener("keydown", onLightboxKey, true);
+  }
+  function openLightbox(item){
+    const thumbImg = item && $("img", item);
+    if(!thumbImg || !thumbImg.getAttribute("src")) return;
+    closeLightbox();
+    const group = item.closest(".ea-group");
+    const badge = $(".ea-order", item);
+    lightbox = document.createElement("div");
+    lightbox.className = "ea-lightbox";
+    lightbox.innerHTML = `
+      <div class="ea-lb-card">
+        <button type="button" class="ea-lb-close" aria-label="Đóng">${EA_ICON.close}</button>
+        <div class="ea-lb-stage"><img alt=""></div>
+        <div class="ea-lb-cap"><b></b><span class="ea-lb-name"></span><span class="ea-lb-pos"></span></div>
+      </div>`;
+    $(".ea-lb-stage img", lightbox).src = thumbImg.src;
+    $(".ea-lb-cap b", lightbox).textContent = $(".ea-tc-id", group)?.textContent || "";
+    $(".ea-lb-name", lightbox).textContent = $(".ea-name", item)?.textContent || "";
+    $(".ea-lb-pos", lightbox).textContent = item.classList.contains("excluded")
+      ? "Không đưa vào báo cáo" : `Vị trí trong báo cáo: ${badge ? badge.textContent : ""}`;
+    lightbox.addEventListener("click", e=>{
+      if(e.target === lightbox || e.target.closest(".ea-lb-close")) closeLightbox();
+    });
+    overlay.appendChild(lightbox);
+    document.addEventListener("keydown", onLightboxKey, true);
+  }
+
+  // Kéo-thả sắp xếp trong phạm vi từng Test Case (số thứ tự cập nhật ngay khi kéo)
   let draggingEl = null;
   body.addEventListener("dragstart", event=>{
-    draggingEl = event.target.closest(".evidence-arrange-item");
+    draggingEl = event.target.closest(".ea-item");
     if(!draggingEl) return;
     event.dataTransfer.effectAllowed = "move";
     requestAnimationFrame(()=>draggingEl && draggingEl.classList.add("dragging"));
   });
   body.addEventListener("dragover", event=>{
     if(!draggingEl) return;
-    const over = event.target.closest(".evidence-arrange-item");
+    const over = event.target.closest(".ea-item");
     if(!over || over === draggingEl || over.parentElement !== draggingEl.parentElement) return;
     event.preventDefault();
     const rect = over.getBoundingClientRect();
     const before = event.clientX < rect.left + rect.width / 2;
     over.parentElement.insertBefore(draggingEl, before ? over : over.nextSibling);
+    updateCount();
   });
   body.addEventListener("drop", event=>{ if(draggingEl) event.preventDefault(); });
   body.addEventListener("dragend", ()=>{
-    if(draggingEl) draggingEl.classList.remove("dragging");
+    if(draggingEl){ draggingEl.classList.remove("dragging"); flash(draggingEl); }
     draggingEl = null;
     updateCount();
   });
@@ -10359,9 +10553,9 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
   confirmBtn.addEventListener("click", ()=>{
     const plan = new Map();
     groups.forEach((group, gi)=>{
-      const container = body.querySelector(`.evidence-arrange-group[data-group="${gi}"] .evidence-arrange-items`);
+      const container = body.querySelector(`.ea-group[data-group="${gi}"] .ea-grid`);
       if(!container) return;
-      const orderedIds = Array.from(container.querySelectorAll(".evidence-arrange-item"))
+      const orderedIds = Array.from(container.querySelectorAll(".ea-item"))
         .filter(el=>!el.classList.contains("excluded"))
         .map(el=>el.dataset.fileId);
       plan.set(String(group.testcase.id), orderedIds);
