@@ -615,6 +615,9 @@ body.focus-mode .view#view-release .rel-kpis{ display:none; }
 .cr-filter-option:hover{ background:#f0f8f8; }
 .cr-filter-option input{ width:15px; height:15px; margin:0; accent-color:#16999a; }
 .cr-filter-option.is-all{ margin-bottom:4px; color:#173f52; font-weight:850; border-bottom:1px solid #e8f0f2; border-radius:8px 8px 5px 5px; }
+.cr-filter-option-text{ flex:1; }
+.cr-filter-count-badge{ color:#8aa0aa; font-weight:650; font-size:11px; font-variant-numeric:tabular-nums; }
+.cr-filter-option.is-all .cr-filter-count-badge{ margin-left:auto; }
 .cr-filter-empty{ padding:15px 10px; color:#8aa0aa; font-size:11.5px; text-align:center; }
 .cr-filter-legacy{ position:absolute!important; width:1px!important; height:1px!important; overflow:hidden!important; clip:rect(0 0 0 0)!important; white-space:nowrap!important; }
 @keyframes crFilterMenuIn{ from{opacity:0; transform:translateY(-4px)} to{opacity:1; transform:translateY(0)} }
@@ -8735,8 +8738,8 @@ function initShell(){
   syncCrFilterControls();
   updateMoreFiltersBadge();
 
-  $("#filterRequester").addEventListener("change", e=>{ STATE.filters.requester = e.target.value; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrTable(); });
-  $("#filterOverdueOnly").addEventListener("change", e=>{ STATE.filters.overdueOnly = e.target.checked; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrTable(); });
+  $("#filterRequester").addEventListener("change", e=>{ STATE.filters.requester = e.target.value; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrMultiFilterOptions(); renderCrTable(); });
+  $("#filterOverdueOnly").addEventListener("change", e=>{ STATE.filters.overdueOnly = e.target.checked; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrMultiFilterOptions(); renderCrTable(); });
   $("#clearFilters").addEventListener("click", ()=>{
     STATE.filters = { status:[], priority:[], category:[], sub_status:[], requester:"", overdueOnly:false, search: STATE.filters.search };
     syncCrFilterControls();
@@ -8748,6 +8751,7 @@ function initShell(){
   $("#crSearchInput").addEventListener("input", debounce(e=>{
     STATE.filters.search = e.target.value.trim().toLowerCase();
     saveCrFilterPrefs();
+    renderCrMultiFilterOptions();
     renderCrTable();
   }, 220));
 
@@ -8763,12 +8767,13 @@ function initShell(){
   initTcSelection();
   initUatFocusMode();
 
-  $("#filterTcCr").addEventListener("change", e=>{ STATE.tcFilters.cr = e.target.value; renderTcTable(); });
-  $("#filterTcResult").addEventListener("change", e=>{ STATE.tcFilters.result = e.target.value; updateTcMoreFiltersBadge(); renderTcTable(); });
-  $("#filterTcTestor").addEventListener("change", e=>{ STATE.tcFilters.testor = e.target.value; updateTcMoreFiltersBadge(); renderTcTable(); });
-  $("#filterTcOwner").addEventListener("change", e=>{ STATE.tcFilters.owner = e.target.value; updateTcMoreFiltersBadge(); renderTcTable(); });
+  $("#filterTcCr").addEventListener("change", e=>{ STATE.tcFilters.cr = e.target.value; renderTcFilterOptions(); renderTcTable(); });
+  $("#filterTcResult").addEventListener("change", e=>{ STATE.tcFilters.result = e.target.value; updateTcMoreFiltersBadge(); renderTcFilterOptions(); renderTcTable(); });
+  $("#filterTcTestor").addEventListener("change", e=>{ STATE.tcFilters.testor = e.target.value; updateTcMoreFiltersBadge(); renderTcFilterOptions(); renderTcTable(); });
+  $("#filterTcOwner").addEventListener("change", e=>{ STATE.tcFilters.owner = e.target.value; updateTcMoreFiltersBadge(); renderTcFilterOptions(); renderTcTable(); });
   $("#tcSearchInput").addEventListener("input", debounce(e=>{
     STATE.tcFilters.search = e.target.value.trim().toLowerCase();
+    renderTcFilterOptions();
     renderTcTable();
   }, 220));
   $("#clearTcFilters").addEventListener("click", ()=>{
@@ -8777,6 +8782,7 @@ function initShell(){
     $("#filterTcCr").value=""; $("#filterTcResult").value="";
     $("#filterTcTestor").value=""; $("#filterTcOwner").value="";
     updateTcMoreFiltersBadge();
+    renderTcFilterOptions();
     renderTcTable();
   });
 
@@ -8786,12 +8792,13 @@ function initShell(){
   initRelSelection();
   initReleaseFocusMode();
 
-  $("#filterRelCr").addEventListener("change", e=>{ STATE.relFilters.cr = e.target.value; renderRelTable(); });
-  $("#filterRelStatus").addEventListener("change", e=>{ STATE.relFilters.status = e.target.value; updateRelMoreFiltersBadge(); renderRelTable(); });
-  $("#filterRelEnvironment").addEventListener("change", e=>{ STATE.relFilters.environment = e.target.value; updateRelMoreFiltersBadge(); renderRelTable(); });
-  $("#filterRelOwner").addEventListener("change", e=>{ STATE.relFilters.owner = e.target.value; updateRelMoreFiltersBadge(); renderRelTable(); });
+  $("#filterRelCr").addEventListener("change", e=>{ STATE.relFilters.cr = e.target.value; renderRelFilterOptions(); renderRelTable(); });
+  $("#filterRelStatus").addEventListener("change", e=>{ STATE.relFilters.status = e.target.value; updateRelMoreFiltersBadge(); renderRelFilterOptions(); renderRelTable(); });
+  $("#filterRelEnvironment").addEventListener("change", e=>{ STATE.relFilters.environment = e.target.value; updateRelMoreFiltersBadge(); renderRelFilterOptions(); renderRelTable(); });
+  $("#filterRelOwner").addEventListener("change", e=>{ STATE.relFilters.owner = e.target.value; updateRelMoreFiltersBadge(); renderRelFilterOptions(); renderRelTable(); });
   $("#relSearchInput").addEventListener("input", debounce(e=>{
     STATE.relFilters.search = e.target.value.trim().toLowerCase();
+    renderRelFilterOptions();
     renderRelTable();
   }, 220));
   $("#clearRelFilters").addEventListener("click", ()=>{
@@ -8913,17 +8920,45 @@ function closeAllCrFilterMenus(){
     group.querySelector(".cr-filter-trigger")?.setAttribute("aria-expanded", "false");
   });
 }
+// Trả về các CR đã áp toàn bộ filter hiện tại NGOẠI TRỪ filter đang tính (excludeKey)
+// — dùng để cross-filter: khi đã chọn Status = In Review, menu Sub-status / Priority /
+// Category chỉ nên đếm & hiển thị theo tập CR đó, không phải theo toàn bộ dữ liệu gốc.
+function crRowsForFacet(excludeKey){
+  const f = STATE.filters;
+  return (STATE.crList || []).filter(c=>{
+    if(excludeKey !== "status" && !filterHasValue(f.status, c.status)) return false;
+    if(excludeKey !== "priority" && !filterHasValue(f.priority, c.priority)) return false;
+    if(excludeKey !== "category" && !filterHasValue(f.category, c.category)) return false;
+    if(excludeKey !== "sub_status" && !filterHasValue(f.sub_status, c.sub_status)) return false;
+    if(f.requester && c.requester !== f.requester) return false;
+    if(f.overdueOnly && !isOverdue(c)) return false;
+    if(f.search){
+      const hay = [c.cr_id, c.old_name, c.rename_folder, c.app, c.requester, c.department, c.owner, c.status, c.sub_status].join(" ").toLowerCase();
+      if(!hay.includes(f.search)) return false;
+    }
+    return true;
+  });
+}
 function renderCrMultiFilterOptions(){
   CR_MULTI_FILTERS.forEach(config=>{
     const menu = document.getElementById(config.menuId);
     if(!menu) return;
-    const values = Array.isArray(CR_LISTS[config.listKey]) ? CR_LISTS[config.listKey].filter(Boolean) : [];
-    const validValues = new Set(values.map(String));
+    const catalogValues = Array.isArray(CR_LISTS[config.listKey]) ? CR_LISTS[config.listKey].filter(Boolean) : [];
+    // Đếm số CR theo từng giá trị, tính trên tập dữ liệu ĐÃ áp các filter khác
+    // (cross-filter) — không tính trên toàn bộ danh sách gốc.
+    const facetRows = crRowsForFacet(config.key);
+    const counts = {};
+    facetRows.forEach(c=>{ const v = c[config.key]; if(v) counts[String(v)] = (counts[String(v)]||0) + 1; });
     const savedValues = normalizeCrFilterValue(STATE.filters[config.key]);
+    // Filter chỉ hiển thị những giá trị đang thực sự tồn tại trong tập dữ liệu
+    // đã cross-filter. Giá trị đang được chọn thì vẫn giữ (kể cả count = 0 do
+    // kết hợp với filter khác) để người dùng không mất ngữ cảnh đang lọc gì.
+    const values = catalogValues.filter(value => counts[String(value)] > 0 || savedValues.includes(String(value)));
+    const validValues = new Set(values.map(String));
     // Sub-Status được tải bất đồng bộ từ Supabase. Khi initShell() chạy trước
     // lần fetch đầu tiên, danh sách có thể đang rỗng; không được xóa lựa chọn
     // đã lưu chỉ vì options chưa về.
-    const selectedValues = values.length
+    const selectedValues = (Array.isArray(CR_LISTS[config.listKey]) && CR_LISTS[config.listKey].length)
       ? savedValues.filter(value=>validValues.has(String(value)))
       : savedValues;
     STATE.filters[config.key] = selectedValues;
@@ -8934,14 +8969,14 @@ function renderCrMultiFilterOptions(){
         <button type="button" class="cr-filter-reset" data-filter-reset="${config.key}">Đặt lại</button>
       </div>
       <div class="cr-filter-options">
-        <label class="cr-filter-option is-all"><input type="checkbox" data-filter-all="${config.key}" ${selected.size === 0 ? "checked" : ""}> Tất cả</label>
+        <label class="cr-filter-option is-all"><input type="checkbox" data-filter-all="${config.key}" ${selected.size === 0 ? "checked" : ""}> Tất cả <span class="cr-filter-count-badge">(${facetRows.length})</span></label>
         ${values.length ? values.map(value=>`
-          <label class="cr-filter-option"><input type="checkbox" data-filter-value="${esc(value)}" data-filter-key="${config.key}" ${selected.has(String(value)) ? "checked" : ""}> ${esc(value)}</label>
+          <label class="cr-filter-option"><input type="checkbox" data-filter-value="${esc(value)}" data-filter-key="${config.key}" ${selected.has(String(value)) ? "checked" : ""}> <span class="cr-filter-option-text">${esc(value)}</span> <span class="cr-filter-count-badge">(${counts[String(value)]||0})</span></label>
         `).join("") : `<div class="cr-filter-empty">Chưa có danh mục</div>`}
       </div>`;
     const legacy = document.getElementById("filter" + (config.key === "sub_status" ? "SubStatus" : config.key.charAt(0).toUpperCase()+config.key.slice(1)));
     if(legacy){
-      legacy.innerHTML = `<option value="">Tất cả</option>` + values.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join("");
+      legacy.innerHTML = `<option value="">Tất cả</option>` + values.map(value=>`<option value="${esc(value)}">${esc(value)} (${counts[String(value)]||0})</option>`).join("");
       legacy.value = selected.values().next().value || "";
     }
   });
@@ -8969,7 +9004,7 @@ function syncCrFilterControls(){
 function setCrMultiFilter(key, values){
   STATE.filters[key] = normalizeCrFilterValue(values);
   saveCrFilterPrefs();
-  syncCrFilterControls();
+  renderCrMultiFilterOptions();
   renderCrTable();
 }
 function initCrMultiFilters(){
@@ -10655,12 +10690,6 @@ function renderNavCounts(){
 }
 
 function populateCrDropdowns(){
-  const ids = STATE.crList.map(c=>c.cr_id).filter(Boolean);
-  [$("#filterTcCr"), $("#filterRelCr")].forEach(sel=>{
-    const cur = sel.value;
-    populateSelect(sel, ids);
-    sel.value = cur;
-  });
   const reqSel = $("#filterRequester");
   if(reqSel){
     const requesters = [...new Set(STATE.crList.map(c=>c.requester).filter(Boolean))].sort();
@@ -10670,31 +10699,12 @@ function populateCrDropdowns(){
     reqSel.value = cur;
     saveCrFilterPrefs();
   }
-  const fillTcPeople = (selector, key)=>{
-    const sel = $(selector);
-    if(!sel) return;
-    const cur = sel.value;
-    const values = [...new Set(STATE.tcList.map(t=>String(t[key]||"").trim()).filter(Boolean))].sort();
-    populateSelect(sel, values);
-    sel.value = cur;
-  };
-  fillTcPeople("#filterTcTestor", "testor");
-  fillTcPeople("#filterTcOwner", "owner_scenario");
-  const fillRelPeople = (selector, key)=>{
-    const sel = $(selector);
-    if(!sel) return;
-    const cur = sel.value;
-    const values = [...new Set(STATE.relList.map(r=>String(r[key]||"").trim()).filter(Boolean))].sort();
-    populateSelect(sel, values);
-    sel.value = cur;
-  };
-  const relEnvironment = $("#filterRelEnvironment");
-  if(relEnvironment){
-    const cur = relEnvironment.value;
-    populateSelect(relEnvironment, [...new Set(STATE.relList.map(r=>String(r.environment||"").trim()).filter(Boolean))].sort());
-    relEnvironment.value = cur;
-  }
-  fillRelPeople("#filterRelOwner", "release_owner");
+  // Toàn bộ dropdown filter của tab UAT Test Case và Release/PRD (CR ID, Kết
+  // quả/Trạng thái, Testor/Môi trường, Owner) được dựng lại bởi hai hàm này:
+  // chỉ hiển thị giá trị thực sự đang có bản ghi khớp (kèm số lượng), có
+  // cross-filter theo các filter khác đang chọn trong cùng tab.
+  renderTcFilterOptions();
+  renderRelFilterOptions();
 }
 
 /* ---------------------------------------------------------------------------
@@ -13784,6 +13794,69 @@ function closeLightbox(){
 /* ---------------------------------------------------------------------------
    10. UAT TEST CASE TABLE + MODAL
 --------------------------------------------------------------------------- */
+// Trợ giúp dùng chung: dựng option cho <select>, mỗi option kèm số lượng
+// bản ghi thực tế đang khớp (n), tính trên tập dữ liệu đã cross-filter.
+function facetSelectOptionsHtml(current, entries){
+  return `<option value="">Tất cả</option>` + entries.map(([v,c])=>
+    `<option value="${esc(v)}" ${v===current?"selected":""}>${esc(v)} (${c})</option>`
+  ).join("");
+}
+// Trả về các Test Case đã áp toàn bộ filter UAT hiện tại NGOẠI TRỪ filter
+// đang tính (excludeKey) — dùng để cross-filter các dropdown filter UAT.
+function tcRowsForFacet(excludeKey){
+  const f = STATE.tcFilters;
+  return STATE.tcList.filter(t=>{
+    if(excludeKey !== "cr" && f.cr && t.cr_id !== f.cr) return false;
+    if(excludeKey !== "result" && f.result && t.pass_fail !== f.result) return false;
+    if(excludeKey !== "testor" && f.testor && t.testor !== f.testor) return false;
+    if(excludeKey !== "owner" && f.owner && t.owner_scenario !== f.owner) return false;
+    if(f.search){
+      const hay = [
+        t.cr_id, t.test_case_id, t.scenario, t.description, t.expectation,
+        t.step_by_step, t.data_test, t.actual_result, t.owner_scenario,
+        t.testor, t.owner_confirm, t.note
+      ].join(" ").toLowerCase();
+      if(!hay.includes(f.search)) return false;
+    }
+    return true;
+  });
+}
+// Dựng lại các dropdown filter của tab UAT Test Case: CR ID, Kết quả, Testor,
+// Owner — chỉ hiển thị giá trị thực sự có Test Case đang khớp (đã áp các
+// filter khác), kèm số lượng.
+function renderTcFilterOptions(){
+  const f = STATE.tcFilters;
+  {
+    const rows = tcRowsForFacet("cr");
+    const counts = {}; rows.forEach(t=>{ if(t.cr_id) counts[t.cr_id] = (counts[t.cr_id]||0)+1; });
+    const ids = [...new Set(STATE.tcList.map(t=>t.cr_id).filter(Boolean))].sort();
+    const values = ids.filter(id=> counts[id] > 0 || f.cr === id);
+    const sel = $("#filterTcCr");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.cr, values.map(v=>[v, counts[v]||0]));
+  }
+  {
+    const rows = tcRowsForFacet("result");
+    const counts = {}; rows.forEach(t=>{ if(t.pass_fail) counts[t.pass_fail] = (counts[t.pass_fail]||0)+1; });
+    const catalog = (Array.isArray(CR_LISTS.uatResult) && CR_LISTS.uatResult.length) ? CR_LISTS.uatResult : ["Not Started","Pass","Fail","Blocked"];
+    const values = catalog.filter(v=> counts[v] > 0 || f.result === v);
+    const sel = $("#filterTcResult");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.result, values.map(v=>[v, counts[v]||0]));
+  }
+  {
+    const rows = tcRowsForFacet("testor");
+    const counts = {}; rows.forEach(t=>{ const v=String(t.testor||"").trim(); if(v) counts[v]=(counts[v]||0)+1; });
+    const values = [...new Set(STATE.tcList.map(t=>String(t.testor||"").trim()).filter(Boolean))].sort().filter(v=> counts[v] > 0 || f.testor === v);
+    const sel = $("#filterTcTestor");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.testor, values.map(v=>[v, counts[v]||0]));
+  }
+  {
+    const rows = tcRowsForFacet("owner");
+    const counts = {}; rows.forEach(t=>{ const v=String(t.owner_scenario||"").trim(); if(v) counts[v]=(counts[v]||0)+1; });
+    const values = [...new Set(STATE.tcList.map(t=>String(t.owner_scenario||"").trim()).filter(Boolean))].sort().filter(v=> counts[v] > 0 || f.owner === v);
+    const sel = $("#filterTcOwner");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.owner, values.map(v=>[v, counts[v]||0]));
+  }
+}
 function filteredTcList(){
   const f = STATE.tcFilters;
   return STATE.tcList.filter(t=>{
@@ -14394,6 +14467,62 @@ async function renderEvidenceGrid(testcase_id, opts){
 /* ---------------------------------------------------------------------------
    11. RELEASE / PRD TABLE + MODAL
 --------------------------------------------------------------------------- */
+// Trả về các Release đã áp toàn bộ filter hiện tại NGOẠI TRỪ filter đang
+// tính (excludeKey) — dùng để cross-filter các dropdown filter Release/PRD.
+function relRowsForFacet(excludeKey){
+  const f = STATE.relFilters;
+  return STATE.relList.filter(r=>{
+    if(excludeKey !== "cr" && f.cr && r.cr_id !== f.cr) return false;
+    if(excludeKey !== "status" && f.status && r.status !== f.status) return false;
+    if(excludeKey !== "environment" && f.environment && r.environment !== f.environment) return false;
+    if(excludeKey !== "owner" && f.owner && r.release_owner !== f.owner) return false;
+    if(f.search){
+      const hay = [
+        r.cr_id, r.release_id, r.release_name, r.environment, r.status,
+        r.checklist_golive, r.release_owner, r.signoff_by, r.features,
+        r.deploy_plan, r.rollback_plan, r.note
+      ].join(" ").toLowerCase();
+      if(!hay.includes(f.search)) return false;
+    }
+    return true;
+  });
+}
+// Dựng lại các dropdown filter của tab Release/PRD: CR ID, Trạng thái, Môi
+// trường, Release Owner — chỉ hiển thị giá trị thực sự có Release đang khớp
+// (đã áp các filter khác), kèm số lượng.
+function renderRelFilterOptions(){
+  const f = STATE.relFilters;
+  {
+    const rows = relRowsForFacet("cr");
+    const counts = {}; rows.forEach(r=>{ if(r.cr_id) counts[r.cr_id] = (counts[r.cr_id]||0)+1; });
+    const ids = [...new Set(STATE.relList.map(r=>r.cr_id).filter(Boolean))].sort();
+    const values = ids.filter(id=> counts[id] > 0 || f.cr === id);
+    const sel = $("#filterRelCr");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.cr, values.map(v=>[v, counts[v]||0]));
+  }
+  {
+    const rows = relRowsForFacet("status");
+    const counts = {}; rows.forEach(r=>{ if(r.status) counts[r.status] = (counts[r.status]||0)+1; });
+    const catalog = (Array.isArray(CR_LISTS.releaseStatus) && CR_LISTS.releaseStatus.length) ? CR_LISTS.releaseStatus : ["Planned","In Progress","Released","Rolled Back"];
+    const values = catalog.filter(v=> counts[v] > 0 || f.status === v);
+    const sel = $("#filterRelStatus");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.status, values.map(v=>[v, counts[v]||0]));
+  }
+  {
+    const rows = relRowsForFacet("environment");
+    const counts = {}; rows.forEach(r=>{ const v=String(r.environment||"").trim(); if(v) counts[v]=(counts[v]||0)+1; });
+    const values = [...new Set(STATE.relList.map(r=>String(r.environment||"").trim()).filter(Boolean))].sort().filter(v=> counts[v] > 0 || f.environment === v);
+    const sel = $("#filterRelEnvironment");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.environment, values.map(v=>[v, counts[v]||0]));
+  }
+  {
+    const rows = relRowsForFacet("owner");
+    const counts = {}; rows.forEach(r=>{ const v=String(r.release_owner||"").trim(); if(v) counts[v]=(counts[v]||0)+1; });
+    const values = [...new Set(STATE.relList.map(r=>String(r.release_owner||"").trim()).filter(Boolean))].sort().filter(v=> counts[v] > 0 || f.owner === v);
+    const sel = $("#filterRelOwner");
+    if(sel) sel.innerHTML = facetSelectOptionsHtml(f.owner, values.map(v=>[v, counts[v]||0]));
+  }
+}
 function filteredRelList(){
   const f = STATE.relFilters;
   return STATE.relList.filter(r=>{
@@ -18041,7 +18170,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       .eb2b-cr-shell .cr-filter-trigger{display:flex;align-items:center;gap:7px;min-height:36px;padding:6px 9px;border:1px solid #dbe5e9;border-radius:9px;background:#fff;color:#26455d;cursor:pointer;font:inherit;text-align:left}
       .eb2b-cr-shell .cr-filter-trigger:hover,.eb2b-cr-shell .cr-filter-trigger.is-active{border-color:#58c8c1;background:#f1fbfa}
       .eb2b-cr-shell .cr-filter-copy{display:grid;line-height:1.15;min-width:72px}.eb2b-cr-shell .cr-filter-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#8da0ac;font-weight:800}.eb2b-cr-shell .cr-filter-value{font-size:11px;white-space:nowrap;max-width:112px;overflow:hidden;text-overflow:ellipsis}.eb2b-cr-shell .cr-filter-glyph{color:#2daaa4;font-weight:900}.eb2b-cr-shell .cr-filter-chevron{color:#8da0ac}.eb2b-cr-shell .cr-filter-count{font-size:10px;background:#d9f4f1;color:#13837f;border-radius:10px;padding:2px 5px;font-weight:800}
-      .eb2b-cr-shell .cr-filter-menu{display:none;position:absolute;z-index:40;top:calc(100% + 7px);left:0;width:250px;padding:11px;border:1px solid #dce8eb;border-radius:12px;background:#fff;box-shadow:0 16px 35px -20px rgba(15,42,68,.65)}.eb2b-cr-shell .cr-filter-group.is-open .cr-filter-menu{display:block}.eb2b-cr-shell .cr-filter-menu-head{display:flex;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid #edf2f4}.eb2b-cr-shell .cr-filter-menu-title{font-size:12px;font-weight:800;color:#163b56}.eb2b-cr-shell .cr-filter-menu-hint{font-size:10px;color:#8ba0ab}.eb2b-cr-shell .cr-filter-reset{border:0;background:none;color:#229c96;font-size:10px;font-weight:800;cursor:pointer}.eb2b-cr-shell .cr-filter-options{display:grid;gap:4px;max-height:230px;overflow:auto;padding-top:8px}.eb2b-cr-shell .cr-filter-option{display:flex;align-items:center;gap:7px;padding:6px 5px;border-radius:7px;color:#436078;font-size:11px;cursor:pointer}.eb2b-cr-shell .cr-filter-option:hover{background:#f2f8f8}.eb2b-cr-shell .cr-filter-option input{accent-color:#27aaa4}.eb2b-cr-shell .cr-filter-option.is-all{border-bottom:1px solid #edf2f4;padding-bottom:8px;font-weight:800;color:#23465c}.eb2b-cr-shell .cr-filter-empty{padding:12px;color:#8ca0ac;font-size:11px}
+      .eb2b-cr-shell .cr-filter-menu{display:none;position:absolute;z-index:40;top:calc(100% + 7px);left:0;width:250px;padding:11px;border:1px solid #dce8eb;border-radius:12px;background:#fff;box-shadow:0 16px 35px -20px rgba(15,42,68,.65)}.eb2b-cr-shell .cr-filter-group.is-open .cr-filter-menu{display:block}.eb2b-cr-shell .cr-filter-menu-head{display:flex;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid #edf2f4}.eb2b-cr-shell .cr-filter-menu-title{font-size:12px;font-weight:800;color:#163b56}.eb2b-cr-shell .cr-filter-menu-hint{font-size:10px;color:#8ba0ab}.eb2b-cr-shell .cr-filter-reset{border:0;background:none;color:#229c96;font-size:10px;font-weight:800;cursor:pointer}.eb2b-cr-shell .cr-filter-options{display:grid;gap:4px;max-height:230px;overflow:auto;padding-top:8px}.eb2b-cr-shell .cr-filter-option{display:flex;align-items:center;gap:7px;padding:6px 5px;border-radius:7px;color:#436078;font-size:11px;cursor:pointer}.eb2b-cr-shell .cr-filter-option:hover{background:#f2f8f8}.eb2b-cr-shell .cr-filter-option input{accent-color:#27aaa4}.eb2b-cr-shell .cr-filter-option.is-all{border-bottom:1px solid #edf2f4;padding-bottom:8px;font-weight:800;color:#23465c}.eb2b-cr-shell .cr-filter-empty{padding:12px;color:#8ca0ac;font-size:11px}.eb2b-cr-shell .cr-filter-option-text{flex:1}.eb2b-cr-shell .cr-filter-count-badge{color:#8ba0ab;font-size:10px;font-weight:750;font-variant-numeric:tabular-nums}.eb2b-cr-shell .cr-filter-option.is-all .cr-filter-count-badge{margin-left:auto}
       .eb2b-cr-view-tools{display:flex;gap:5px;margin-left:auto}.eb2b-cr-shell .table-tool-btn{border:1px solid #dbe5e9;background:#fff;color:#36566b;border-radius:8px;padding:8px 10px;font-size:10px;font-weight:800;cursor:pointer}.eb2b-cr-shell .table-tool-btn:hover{border-color:#50c6bf;color:#118983}.eb2b-cr-tool-popover{display:none;position:absolute;z-index:50;right:14px;top:82px;min-width:190px;padding:11px;border:1px solid #dce8eb;border-radius:12px;background:#fff;box-shadow:0 16px 35px -20px rgba(15,42,68,.7)}.eb2b-cr-tool-popover.is-open{display:grid;gap:7px}.eb2b-cr-tool-popover b{font-size:11px;color:#173d58}.eb2b-cr-tool-popover label{display:flex;gap:7px;font-size:11px;color:#496579}.eb2b-cr-tool-popover input{accent-color:#27aaa4}
       .eb2b-cr-shell .eb2b-cr-table-wrap{position:relative;scrollbar-width:none}.eb2b-cr-shell .eb2b-cr-table-wrap::-webkit-scrollbar{display:none}.eb2b-cr-shell table th,.eb2b-cr-shell table td{white-space:nowrap}.eb2b-cr-shell th.sticky-cr-id,.eb2b-cr-shell td.sticky-cr-id{position:sticky;left:44px;z-index:4;background:#fff}.eb2b-cr-shell thead th.sticky-cr-id{z-index:7}.eb2b-cr-shell tbody tr.is-selected td{background:#eefaf8}.eb2b-cr-shell tbody tr.is-selected td.sticky-cr-id{background:#eefaf8}.eb2b-cr-shell .col-check{position:sticky;left:0;z-index:5;background:#fff}.eb2b-cr-shell thead .col-check{z-index:8}.eb2b-cr-shell .inline-edit-cell{padding:5px 8px}.eb2b-cr-shell .cr-dropdown-trigger{display:inline-flex;align-items:center;gap:5px;max-width:170px;border:1px solid transparent;border-radius:7px;padding:5px 7px;background:#f4f7f8;color:#567084;cursor:pointer;font:inherit;font-size:11px;font-weight:750}.eb2b-cr-shell .cr-dropdown-trigger:hover,.eb2b-cr-shell .cr-dropdown-trigger.is-open{filter:brightness(.97);box-shadow:0 0 0 2px rgba(56,190,183,.16)}.eb2b-cr-shell .cr-dropdown-label{overflow:hidden;text-overflow:ellipsis}.eb2b-cr-shell .cr-dropdown-caret{width:12px;height:12px;margin-left:2px;opacity:.7}.eb2b-cr-shell .cr-dropdown-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}.eb2b-cr-dropdown-menu{position:fixed;z-index:10000;max-height:280px;overflow:auto;padding:5px;border:1px solid #d8e6e9;border-radius:10px;background:#fff;box-shadow:0 18px 38px -18px rgba(15,42,68,.75)}.eb2b-cr-dropdown-menu .cr-dropdown-option{display:flex;justify-content:space-between;gap:18px;padding:8px 10px;border-radius:7px;color:#35556a;font-size:11px;cursor:pointer}.eb2b-cr-dropdown-menu .cr-dropdown-option:hover,.eb2b-cr-dropdown-menu .cr-dropdown-option.is-selected{background:#edf9f8;color:#148d87}.eb2b-cr-dropdown-menu .cr-dropdown-check{font-weight:900}.eb2b-cr-shell .hscroll-bar{display:none;height:13px;padding:3px 8px;background:#f4f8f9;border-top:1px solid #e1ecee}.eb2b-cr-shell .hscroll-bar.is-active{display:block}.eb2b-cr-shell .hscroll-track{position:relative;height:7px;border-radius:10px;background:#dce8eb}.eb2b-cr-shell .hscroll-thumb{position:absolute;top:0;height:7px;min-width:42px;border-radius:10px;background:#62c9c4;cursor:grab}.eb2b-cr-shell .hscroll-thumb:active{cursor:grabbing}.eb2b-cr-shell .hscroll-fade{position:absolute;top:0;bottom:13px;width:28px;z-index:3;pointer-events:none;opacity:0;transition:opacity .2s}.eb2b-cr-shell .hscroll-fade.is-visible{opacity:1}.eb2b-cr-shell .hscroll-fade-left{left:0;background:linear-gradient(90deg,rgba(255,255,255,.9),transparent)}.eb2b-cr-shell .hscroll-fade-right{right:0;background:linear-gradient(270deg,rgba(255,255,255,.9),transparent)}.eb2b-cr-shell .density-compact td,.eb2b-cr-shell .density-compact th{padding-top:6px;padding-bottom:6px}.eb2b-cr-shell .density-spacious td,.eb2b-cr-shell .density-spacious th{padding-top:14px;padding-bottom:14px}.eb2b-cr-shell .cr-card-inline{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.eb2b-cr-shell .cr-card-actions{display:flex;gap:6px;margin-top:10px}.eb2b-cr-shell .cr-card-select{margin-right:5px}.eb2b-cr-shell .eb2b-cr-focus{position:fixed!important;z-index:900;inset:0;background:#f7fbfb;padding:18px;overflow:auto}.eb2b-cr-focus .eb2b-shell{max-width:none}.eb2b-cr-focus .eb2b-cr-shell{min-height:calc(100vh - 36px)}
       .eb2b-cr-status-select{min-width:118px;border:1px solid currentColor;border-radius:999px;padding:5px 26px 5px 10px;font:inherit;font-size:11px;font-weight:700;background-color:var(--surface,#fff)}
@@ -18650,12 +18779,39 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(!row.deadline || ["Released","Closed"].includes(row.status)) return false;
     return String(row.deadline).slice(0,10) < todayISO();
   }
+  // Danh mục ĐẦY ĐỦ — dùng cho form Thêm/Sửa CR (người dùng cần chọn được mọi
+  // giá trị hợp lệ trong danh mục, kể cả giá trị chưa CR nào dùng tới).
   function eb2bCrCatalog(field){
     const config = field==="status" ? EB2B.rows.statuses : field==="sub_status" ? EB2B.rows.sub_statuses : [];
     if(config.length) return config.filter(x=>x.is_active!==false).map(x=>x.name).filter(Boolean);
     if(field==="priority") return ["Critical","High","Medium","Low"];
     if(field==="category") return Array.from(new Set(EB2B.rows.cr.map(x=>x.category).filter(Boolean))).sort();
     return Array.from(new Set(EB2B.rows.cr.map(x=>x[field]).filter(Boolean))).sort();
+  }
+  // Trả về các CR e-B2B đã áp toàn bộ filter hiện tại NGOẠI TRỪ field đang
+  // tính (excludeField) — dùng để cross-filter các menu Filter với nhau.
+  function eb2bCrRowsForFacet(excludeField){
+    const f=EB2B.crFilters, q=EB2B.search.trim().toLowerCase();
+    return EB2B.rows.cr.filter(r=>{
+      if(excludeField!=="status" && !eb2bFilterMatches(r.status,f.status)) return false;
+      if(excludeField!=="sub_status" && !eb2bFilterMatches(r.sub_status,f.sub_status)) return false;
+      if(excludeField!=="priority" && !eb2bFilterMatches(r.priority,f.priority)) return false;
+      if(excludeField!=="category" && !eb2bFilterMatches(r.category,f.category)) return false;
+      if(f.requester&&r.requester!==f.requester) return false;
+      if(f.overdue&&!eb2bCrOverdue(r)) return false;
+      return !q||[r.cr_id,r.old_name,r.rename_folder,r.app,r.requester,r.department,r.owner,r.status,r.sub_status,r.note].some(v=>String(v||"").toLowerCase().includes(q));
+    });
+  }
+  // Danh mục dùng RIÊNG cho các menu Filter: chỉ hiển thị giá trị đang thực sự
+  // tồn tại trong tập CR đã cross-filter theo các filter khác, kèm số đếm.
+  function eb2bCrFilterCatalog(field){
+    const facetRows = eb2bCrRowsForFacet(field);
+    const counts = {};
+    facetRows.forEach(r=>{ const v=r[field]; if(v) counts[String(v)]=(counts[String(v)]||0)+1; });
+    const catalog = eb2bCrCatalog(field);
+    const selected = Array.isArray(EB2B.crFilters[field]) ? EB2B.crFilters[field].map(String) : [];
+    const values = catalog.filter(v=> counts[String(v)]>0 || selected.includes(String(v)));
+    return { values, counts, total: facetRows.length };
   }
   function eb2bCrColor(field,value){
     if(field==="status" || field==="sub_status"){
@@ -18707,10 +18863,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bCrKpi(label,value,foot,cls=""){
     return `<div class="kpi-card ${cls}"><div class="kpi-top"><div class="kpi-label">${eEsc(label)}</div></div><div class="kpi-value">${value}</div>${foot?`<div class="kpi-foot">${eEsc(foot)}</div>`:""}</div>`;
   }
-  function eb2bCrFilterMenu(key,label,glyph,values){
+  function eb2bCrFilterMenu(key,label,glyph,facet){
+    const {values,counts,total}=facet;
     const selected=Array.isArray(EB2B.crFilters[key])?EB2B.crFilters[key]:[];
     const allMode=!selected.length;
-    const options=values.map(value=>`<label class="cr-filter-option"><input type="checkbox" data-eb2b-cr-multi="${key}" value="${eEsc(value)}" ${allMode||selected.includes(String(value))?"checked":""}> ${eEsc(value)}</label>`).join("");
+    const options=values.map(value=>`<label class="cr-filter-option"><input type="checkbox" data-eb2b-cr-multi="${key}" value="${eEsc(value)}" ${allMode||selected.includes(String(value))?"checked":""}> <span class="cr-filter-option-text">${eEsc(value)}</span> <span class="cr-filter-count-badge">(${counts[String(value)]||0})</span></label>`).join("");
     const summary=selected.length===0?"Tất cả":selected.length===1?selected[0]:`${selected[0]} +${selected.length-1}`;
     return `<div class="cr-filter-group" data-eb2b-cr-filter-group="${key}">
       <button class="cr-filter-trigger ${selected.length?"is-active":""}" type="button" data-eb2b-cr-filter-trigger="${key}" aria-haspopup="true" aria-expanded="false">
@@ -18718,7 +18875,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       </button>
       <div class="cr-filter-menu" data-eb2b-cr-filter-menu="${key}">
         <div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${label}</div><span class="cr-filter-menu-hint">Chọn một hoặc nhiều giá trị</span></div><button type="button" class="cr-filter-reset" data-eb2b-cr-filter-reset="${key}">Đặt lại</button></div>
-        <div class="cr-filter-options"><label class="cr-filter-option is-all"><input type="checkbox" data-eb2b-cr-all="${key}" ${allMode?"checked":""}> Tất cả</label>${options||`<div class="cr-filter-empty">Chưa có danh mục</div>`}</div>
+        <div class="cr-filter-options"><label class="cr-filter-option is-all"><input type="checkbox" data-eb2b-cr-all="${key}" ${allMode?"checked":""}> Tất cả <span class="cr-filter-count-badge">(${total})</span></label>${options||`<div class="cr-filter-empty">Chưa có danh mục</div>`}</div>
       </div>
     </div>`;
   }
@@ -18808,7 +18965,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       return `<tr class="eb2b-cr-row ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-row="${eEsc(r.id)}"><td class="col-check"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""} aria-label="Chọn ${eEsc(r.cr_id)}"></td><td class="cell-id sticky-cr-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td>${visible.map(col=>eb2bCrCellHtml(col.key,r,overdueRow,canEdit)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${eEsc(r.id)}" title="Xem chi tiết"><mi-icon name="eye" stroke-width="2"></mi-icon></button><button class="icon-btn" data-eb2b-cr-edit="${eEsc(r.id)}" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-cr-delete="${eEsc(r.id)}" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></td></tr>`;
     };
     const mobileHtml=r=>`<article class="cr-card eb2b-cr-card ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-view="${eEsc(r.id)}"><div class="cr-card-top"><label class="cr-card-select" onclick="event.stopPropagation()"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""}></label><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}${eb2bCrOverdue(r)?`<span class="badge badge-danger">Trễ hạn</span>`:""}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(r.deadline?eDate(r.deadline):"—")}</span></div><div class="cr-card-inline">${eb2bCrInlineHtml("status",r)}${eb2bCrInlineHtml("priority",r)}</div><div class="cr-card-actions"><button class="btn btn-secondary btn-sm" data-eb2b-cr-edit="${eEsc(r.id)}">Sửa</button><button class="btn btn-secondary btn-sm danger" data-eb2b-cr-delete="${eEsc(r.id)}">Xóa</button></div></article>`;
-    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrCatalog("category"))}<div class="filter-chip eb2b-requester-filter"><span>Requester</span><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
+    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrFilterCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrFilterCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrFilterCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrFilterCatalog("category"))}<div class="filter-chip eb2b-requester-filter"><span>Requester</span><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
     const bulk=document.createElement("div");bulk.className=`bulk-bar ${EB2B.crSelection.size?"":"hidden"}`;bulk.innerHTML=`<span><b>${EB2B.crSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-cr-selection-clear>Bỏ chọn</button><button class="btn btn-danger btn-sm bulk-delete-btn" type="button" data-eb2b-cr-bulk-delete><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button></div>`;const crWrap=$e("#eb2bCrTableWrap");crWrap?.parentElement?.insertBefore(bulk,crWrap);
     bulk.querySelector("[data-eb2b-cr-selection-clear]")?.addEventListener("click",()=>{EB2B.crSelection.clear();eb2bRenderCrLog();});
     bulk.querySelector("[data-eb2b-cr-bulk-delete]")?.addEventListener("click",()=>eb2bBulkDelete("cr",EB2B.crSelection));
