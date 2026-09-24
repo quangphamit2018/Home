@@ -8377,7 +8377,8 @@ function subscribeRealtime(){
     .on("postgres_changes", { event:"*", schema:"public", table:"cr_attachment_categories" }, debouncedConfigRefresh)
     .subscribe();
   STATE.sb.channel("realtime-cr_attachments")
-    .on("postgres_changes", { event:"*", schema:"public", table:"cr_attachments" }, async ()=>{
+    .on("postgres_changes", { event:"*", schema:"public", table:"cr_attachments" }, async (payload)=>{
+      liveRefreshEvidenceGrid(payload);
       await fetchCrDocumentStatus();
       renderCrTable();
       if(STATE.drawerCrId){
@@ -14110,17 +14111,52 @@ async function saveTc(overlay, isEdit){
   }
 }
 
-async function renderEvidenceGrid(testcase_id){
+/* Realtime: khi người khác thêm / xoá / đổi thứ tự ảnh evidence của test case
+   đang mở, tự vẽ lại tab Evidence (không nhấp nháy). Nếu bạn đang gõ dở ô
+   "Thứ tự trong báo cáo" thì chờ bạn gõ xong mới cập nhật để không bị đè. */
+let _evLiveTimer = null, _evLivePending = false;
+function liveRefreshEvidenceGrid(payload){
+  const tcId = STATE.editingTcId;
+  const grid = document.getElementById("evidenceGrid");
+  if(!tcId || !grid || !grid.isConnected) return;
+  const n = (payload && payload.new) || {}, o = (payload && payload.old) || {};
+  const ids = [n.testcase_id, o.testcase_id].filter(v=> v != null).map(String);
+  // Có testcase_id mà không khớp test case đang mở -> bỏ qua
+  if(ids.length && !ids.includes(String(tcId))) return;
+  clearTimeout(_evLiveTimer);
+  _evLiveTimer = setTimeout(()=>{
+    const g = document.getElementById("evidenceGrid");
+    if(!g || STATE.editingTcId !== tcId) return;
+    const act = document.activeElement;
+    if(act && act.matches && act.matches("[data-ev-order]") && g.contains(act)){
+      if(!_evLivePending){
+        _evLivePending = true;
+        act.addEventListener("blur", ()=>{ _evLivePending = false; setTimeout(()=>liveRefreshEvidenceGrid(payload), 300); }, { once:true });
+      }
+      return;
+    }
+    renderEvidenceGrid(tcId, { silent:true });
+  }, 400);
+}
+
+let _evRenderSeq = 0;
+async function renderEvidenceGrid(testcase_id, opts){
   const grid = $("#evidenceGrid");
   if(!grid) return;
+  const silent = !!(opts && opts.silent);
+  const seq = ++_evRenderSeq;
   const count = $("#evidenceCount");
-  if(count) count.textContent = "Đang tải...";
-  grid.innerHTML = Array.from({length:4}).map(()=> `<div class="skeleton skeleton-thumb"></div>`).join("");
+  if(!silent){
+    if(count) count.textContent = "Đang tải...";
+    grid.innerHTML = Array.from({length:4}).map(()=> `<div class="skeleton skeleton-thumb"></div>`).join("");
+  }
   const files = await fetchTcAttachments(testcase_id);
+  if(seq !== _evRenderSeq || !grid.isConnected) return; // đã có lần vẽ mới hơn
   if(count) count.textContent = `${files.length} tệp`;
   if(!files.length){ grid.innerHTML = emptyRow("Chưa có ảnh evidence nào cho test case này"); return; }
   const urlMap = {};
   await Promise.all(files.map(async f=>{ urlMap[f.id] = await getSignedUrl(f.file_path); }));
+  if(seq !== _evRenderSeq || !grid.isConnected) return;
   const posMap = {};
   files.forEach((f,i)=>{ posMap[f.id] = i+1; });
   const groups = {};
