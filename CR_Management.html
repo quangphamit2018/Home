@@ -8718,6 +8718,10 @@ function setView(view){
   if(view === "recycle" && !isSuperAdmin()) view = "dashboard";
   STATE.currentView = view;
   try{ localStorage.setItem(VIEW_STORAGE_KEY, view); }catch(_){}
+  // Was e-B2B the active workspace right before this call? Captured before
+  // __eb2bLeave() clears the "eb2b-active" class, so we can tell a real
+  // cross-workspace switch (e-B2B -> DMS) apart from a plain DMS tab click.
+  const wasEb2bActive = document.body.classList.contains("eb2b-active");
   // Leaving e-B2B (if we were in it): un-highlight its tabs, close its forms.
   if(typeof window.__eb2bLeave === "function") window.__eb2bLeave();
   closeDmsOverlays();
@@ -8729,9 +8733,22 @@ function setView(view){
     $("#navDmsWorkspace")?.classList.remove("is-context");
   }
   $all(".view").forEach(v=> v.classList.add("hidden"));
-  $("#view-"+view).classList.remove("hidden");
+  const enteringView = $("#view-"+view);
+  enteringView.classList.remove("hidden");
   $("#topbarTitle").textContent = VIEW_META[view].title;
   $("#topbarSub").textContent = VIEW_META[view].sub;
+  // Coming back from e-B2B: mirror its own reveal animation on the way in,
+  // so the workspace switch feels the same in both directions. Only fires
+  // on this one edge — switching between DMS tabs stays instant, matching
+  // how eb2bShow() only animates the first entry into e-B2B, not every tab.
+  if(wasEb2bActive){
+    enteringView.classList.remove("ws-workspace-enter");
+    void enteringView.offsetWidth;
+    enteringView.classList.add("ws-workspace-enter");
+    const headerTitle = $("#topbarTitle");
+    headerTitle?.classList.remove("ws-header-swap");
+    if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("ws-header-swap"); }
+  }
   $all(".view-action").forEach(b=> {
     const views = String(b.dataset.for || "").split(",").map(item=>item.trim());
     b.classList.toggle("hidden", !views.includes(view));
@@ -16671,11 +16688,18 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        body.eb2b-active #topbarTitle.eb2b-header-swap{animation:eb2bHeaderSwap var(--duration-base) var(--ease-decel) both}
        @keyframes eb2bViewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
        @keyframes eb2bHeaderSwap{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+       /* Mirror of the e-B2B entrance above, played on the DMS side only when
+          the DMS workspace is being entered FROM e-B2B (setView() in the main
+          script adds/removes these two classes). Tab-to-tab switching within
+          DMS stays instant on purpose, same rule e-B2B already follows for
+          its own tabs, to avoid the flicker that was fixed once already. */
+       .view.ws-workspace-enter{animation:eb2bViewIn var(--duration-slow) var(--ease-decel) both}
+       #topbarTitle.ws-header-swap{animation:eb2bHeaderSwap var(--duration-base) var(--ease-decel) both}
        @media(max-width:768px){#eb2bViewRoot{padding-bottom:48px}}
        @media(max-width:640px){#eb2bViewRoot{padding:14px var(--mobile-gutter,12px) calc(34px + env(safe-area-inset-bottom,0px));overflow-x:hidden}}
        @media(max-width:390px){#eb2bViewRoot{padding-left:10px;padding-right:10px}}
        @media(max-width:480px){#eb2bViewRoot{padding-bottom:34px}}
-       @media(prefers-reduced-motion:reduce){#eb2bViewRoot.eb2b-view-enter,body.eb2b-active #topbarTitle.eb2b-header-swap,#eb2bViewRoot .cr-filter-menu,#eb2bViewRoot .eb2b-cr-tool-popover,#eb2bViewRoot .tb-menu{animation:none!important}#eb2bViewRoot button,#eb2bModalOverlay button,#eb2bUatModalOverlay button{transition:none!important}}
+       @media(prefers-reduced-motion:reduce){#eb2bViewRoot.eb2b-view-enter,body.eb2b-active #topbarTitle.eb2b-header-swap,.view.ws-workspace-enter,#topbarTitle.ws-header-swap,#eb2bViewRoot .cr-filter-menu,#eb2bViewRoot .eb2b-cr-tool-popover,#eb2bViewRoot .tb-menu{animation:none!important}#eb2bViewRoot button,#eb2bModalOverlay button,#eb2bUatModalOverlay button{transition:none!important}}
         @media(max-width:640px){#eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap table{display:none}#eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:flex}#eb2bUatModalOverlay .eb2b-uat-summary{grid-template-columns:1fr;padding:14px}#eb2bUatModalOverlay .eb2b-uat-group{padding:14px}#eb2bUatModalOverlay .eb2b-uat-field-grid{grid-template-columns:1fr!important}#eb2bUatModalOverlay .eb2b-uat-modal-head{padding:16px}}
       @media(max-width:760px){.eb2b-kpis,.eb2b-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eb2b-form-grid{grid-template-columns:1fr}.eb2b-field.span-2{grid-column:auto}}
 
