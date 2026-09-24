@@ -260,13 +260,6 @@ body.role-no-manage-users #adminUsersPanel,
 body.role-no-manage-users #adminAccessRequestsPanel,
 body.role-no-manage-users #supabaseTablesPanel{ display:none !important; }
 
-.role-readonly-banner{
-  display:flex; align-items:center; gap:8px;
-  padding:8px 14px; margin:0 0 12px; border-radius:10px;
-  background: var(--warning-dim); color: var(--warning);
-  font-size:12.5px; font-weight:600;
-}
-body:not(.role-no-edit) .role-readonly-banner{ display:none; }
 
 /* ==========================================================================
    CONFIG SCREEN
@@ -329,12 +322,7 @@ body:not(.role-no-edit) .role-readonly-banner{ display:none; }
 .btn-danger{ background: var(--danger-dim); color: var(--danger); border:1px solid rgba(238,107,116,0.3); }
 .btn-danger:hover{ background: rgba(238,107,116,0.25); }
 .btn-sm{ padding:7px 12px; font-size:12.5px; }
-.btn-icon{ padding:9px; }
 .btn:disabled{ opacity:0.5; cursor:not-allowed; }
-.config-status{ margin-top:16px; font-size:13px; padding:10px 12px; border-radius: var(--radius-sm); display:none; }
-.config-status.show{ display:block; }
-.config-status.ok{ background: var(--success-dim); color: var(--success); }
-.config-status.err{ background: var(--danger-dim); color: var(--danger); }
 
 /* ==========================================================================
    APP SHELL
@@ -492,10 +480,6 @@ body.sidebar-hidden .drawer{ left:0; }
 /* Every workspace view scrolls independently within the fixed sidebar/topbar frame */
 .view{ padding:28px 32px 60px; flex:1; min-width:0; min-height:0; overflow-y:auto;
   background: linear-gradient(165deg, #ffffff 0%, #f1f6f9 52%, #e9f3f4 100%); color:#22394e; }
-.view-head{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
-.view-head.view-head-end{ justify-content:flex-end; }
-.view-head h2{ font-size: var(--text-page-title-size); font-weight: var(--text-page-title-weight); }
-.view-head p{ color: var(--text-muted); font-size: var(--text-meta-size); margin-top:4px; }
 
 /* ==========================================================================
    FOCUS MODE — hides chrome so the active workspace (CR Log) fills the screen
@@ -690,7 +674,6 @@ body.focus-mode .view#view-release .rel-kpis{ display:none; }
 .cr-dropdown-option:last-child{ margin-bottom:0; }
 .cr-dropdown-option:hover{ filter:brightness(.95); background:var(--opt-bg,#f2fbfb); }
 .cr-dropdown-option.is-selected{ box-shadow:inset 0 0 0 2px rgba(0,0,0,.14); font-weight:800; }
-.cr-dropdown-option-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
 /* Không cắt/ẩn bớt chữ nữa — tên Status/Sub-Status dài sẽ tự xuống dòng
    thay vì mất chữ phía sau (trước đây dùng nowrap + ellipsis nên bị cắt). */
 .cr-dropdown-option span{ flex:1; min-width:0; white-space:normal; overflow-wrap:break-word; line-height:1.35; }
@@ -841,15 +824,6 @@ tbody tr.detail-selected td.cell-actions{ background:#163a4a; }
   padding:4px 10px; border-radius:20px; white-space:nowrap;
 }
 .badge .dot{ width:6px; height:6px; border-radius:50%; }
-.sub-status-color-swatch{
-  display:inline-flex; align-items:center; gap:7px; color:var(--text-secondary);
-  font-family:var(--font-mono); font-size:11px; white-space:nowrap;
-}
-.sub-status-color-swatch i{
-  width:18px; height:18px; display:inline-block; border-radius:6px;
-  background:var(--sub-status-color); border:1px solid rgba(13,40,64,0.2);
-  box-shadow:0 1px 2px rgba(13,40,64,0.12);
-}
 .admin-color-token{
   display:inline-flex; align-items:center; gap:6px;
   font-family:var(--font-mono); font-size:11px; color:var(--text-secondary);
@@ -934,7 +908,6 @@ tbody tr.detail-selected td.cell-actions{ background:#163a4a; }
 .view .tb-menu select{ background:#f2f6f8; border-color:#dde7ec; color:#0a1e33; }
 .view .tb-menu-item-label{ color:#8498ad; }
 .view .tb-menu-divider{ background:#e4ebf0; }
-.view .tb-menu-foot{ color:#8498ad; }
 .view .tb-checkbox-row, .view .tb-radio-row{ color:#43586e; }
 .view .tb-checkbox-row:hover, .view .tb-radio-row:hover{ background:#f2f6f8; color:#0a1e33; }
 
@@ -1177,7 +1150,6 @@ tbody tr.detail-selected td.cell-actions{ background:#163a4a; }
 .tb-checkbox-row:hover, .tb-radio-row:hover{ background: var(--bg-surface-soft); color: var(--text-primary); }
 .tb-checkbox-row input, .tb-radio-row input{ accent-color: var(--accent); width:14px; height:14px; flex-shrink:0; }
 .tb-menu-divider{ height:1px; background: var(--border); margin:2px 0; }
-.tb-menu-foot{ font-size:11px; color: var(--text-faint); padding-top:2px; }
 
 /* ---- bulk selection bar ---- */
 .bulk-bar{
@@ -1443,8 +1415,6 @@ td.cell-id .id-chip{
 
 
 /* ---- Light-theme bổ sung: dashboard panels, charts, headings ---- */
-.view .view-head h2{ color:#0a1e33; }
-.view .view-head p{ color:#5f7690; }
 .view .panel{ background:#ffffff; border-color:#dde7ec; }
 .view .recent-item{ border-bottom-color:#edf2f5; }
 .view .recent-item .recent-id{ color:#5f7690; background:#f2f6f8; }
@@ -1463,8 +1433,7 @@ td.cell-id .id-chip{
   --border:#e2e9f0; --panel-border:var(--border);
   color:#16283c;
 }
-.modal .detail-block .db-body, .modal .file-card, .modal .file-thumb, .modal .mini-card{ background: rgba(13,40,64,0.04); }
-.modal .mini-card:hover{ background: rgba(13,40,64,0.075); }
+.modal .file-card, .modal .file-thumb{ background: rgba(13,40,64,0.04); }
 .modal-overlay.full{ background:#eef4f7; }
 
 /* ==========================================================================
@@ -1547,7 +1516,6 @@ td.cell-id .id-chip{
 .evidence-arrange-modal .modal-head{ align-items:flex-start; padding:20px 24px 16px; background:linear-gradient(180deg,#ffffff,#f6fbfb); }
 .evidence-arrange-modal .modal-body{ padding:18px 24px 22px; background:#eef5f6; }
 .evidence-arrange-loading{ padding:38px 12px; text-align:center; color:var(--text-muted); font-size:12.5px; font-weight:600; }
-.evidence-arrange-empty{ padding:30px 12px; text-align:center; color:var(--text-muted); font-size:12.5px; }
 
 /* 3 bước hướng dẫn ngay dưới tiêu đề */
 .ea-hints{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
@@ -1742,12 +1710,8 @@ td.cell-id .id-chip{
 .drawer.show{ transform: translateX(0); opacity:1; pointer-events:auto; }
 
 /* Light-theme fixes for hardcoded white-tinted surfaces inside the drawer */
-.drawer .detail-block .db-body,
 .drawer .file-card,
-.drawer .file-thumb,
-.drawer .mini-card{ background: rgba(13,40,64,0.04); }
-.drawer .mini-card:hover{ background: rgba(13,40,64,0.075); }
-.drawer .file-cat-row select{ background:#ffffff; color:var(--text-primary); }
+.drawer .file-thumb{ background: rgba(13,40,64,0.04); }
 .drawer .file-cat-tag{ color:#fff; }
 .drawer .file-del{ color:#fff; }
 
@@ -1764,26 +1728,6 @@ td.cell-id .id-chip{
   .drawer-overlay, .drawer{ left:0 !important; }
 }
 
-.info-section{ margin-bottom:22px; }
-.info-section:last-child{ margin-bottom:0; }
-.info-section-title{ display:flex; align-items:center; gap:10px; font-size: var(--text-section-title-size); text-transform:uppercase; letter-spacing:.06em; color: var(--text-secondary); font-weight: var(--text-section-title-weight); margin-bottom:12px; }
-.info-section-title::after{ content:""; flex:1; height:1px; background: var(--panel-border); }
-.info-card{ background: rgba(255,255,255,0.025); border:1px solid var(--panel-border); border-radius: var(--radius); padding:18px 20px; }
-
-.info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px 28px; margin-bottom:6px; }
-.info-item{ font-size:13px; }
-.info-item .k{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); margin-bottom:5px; font-weight:700; }
-.info-item .v{ color: var(--text); line-height:1.55; word-break:break-word; }
-.info-item .v.empty{ color: var(--text-faint); font-style:italic; }
-.info-item.full{ grid-column:1/-1; }
-.info-item .v pre{ white-space:pre-wrap; font-family:inherit; font-size:13px; line-height:1.65; }
-.info-item.block .v{ background: rgba(255,255,255,0.035); border:1px solid var(--panel-border); border-radius: var(--radius-sm); padding:13px 15px; margin-top:2px; }
-.info-item.block .v.empty{ background:none; border:none; padding:0; margin-top:4px; }
-
-.section-title{ display:flex; align-items:center; justify-content:space-between; margin:26px 0 14px; }
-.section-title h4{ font-size: var(--text-section-title-size); text-transform:uppercase; letter-spacing:.04em; color: var(--text-secondary); font-weight: var(--text-section-title-weight); }
-.divider{ height:1px; background: var(--panel-border); margin:22px 0; }
-
 /* file grid */
 .file-drop{
   border:1.5px dashed var(--panel-border); border-radius: var(--radius); padding:20px;
@@ -1794,8 +1738,6 @@ td.cell-id .id-chip{
 .file-drop p{ font-size:13px; color: var(--text-dim); }
 .file-drop p b{ color: var(--accent); font-weight:600; }
 .file-drop .hint{ font-size:11.5px; color: var(--text-faint); margin-top:4px; }
-.file-cat-row{ display:flex; gap:8px; align-items:center; margin-bottom:12px; }
-.file-cat-row select{ background: rgba(255,255,255,0.04); border:1px solid var(--panel-border); color: var(--text); border-radius:8px; padding:8px 10px; font-size:12.5px; flex:1; }
 
 .file-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)); gap:12px; }
 .file-card{
@@ -1818,14 +1760,6 @@ td.cell-id .id-chip{
 .file-card a.file-open{ position:absolute; inset:0; z-index:1; }
 
 .mini-list{ display:flex; flex-direction:column; gap:8px; }
-.mini-card{
-  background: rgba(255,255,255,0.03); border:1px solid var(--panel-border); border-radius: var(--radius-sm);
-  padding:12px 14px; display:flex; align-items:center; gap:12px; cursor:pointer;
-}
-.mini-card:hover{ background: rgba(255,255,255,0.06); }
-.mini-card .mc-main{ flex:1; min-width:0; }
-.mini-card .mc-title{ font-size:12.8px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mini-card .mc-sub{ font-size: var(--text-caption-size); color: var(--text-muted); margin-top:2px; }
 
 /* evidence groups */
 .evidence-group{ margin-bottom:18px; }
@@ -1996,7 +1930,6 @@ td.cell-id .id-chip{
 @media(max-width:900px){
   .view{ padding:22px 16px 60px; }
   .topbar{ padding:16px; }
-  .info-grid{ grid-template-columns:1fr; }
 
   .mobile-nav-toggle{ display:flex; }
 
@@ -2034,12 +1967,10 @@ td.cell-id .id-chip{
 .mobile-nav-toggle:hover{ background:#effafa; transform:translateY(-1px); }
 .mobile-nav-toggle:active{ transform:translateY(0) scale(0.94); }
 .mobile-nav-toggle svg{ width:18px; height:18px; }
-.mobile-nav-toggle-label{ display:none; }
 
 body.sidebar-hidden .mobile-nav-toggle{ left:20px; }
 @media(max-width:900px){
   .mobile-nav-toggle{ top:14px; left:14px; }
-  body.sidebar-collapsed .mobile-nav-toggle,
   body.sidebar-hidden .mobile-nav-toggle{ left:14px; }
 }
 
@@ -2064,12 +1995,6 @@ body.detail-nav-visible .mobile-nav-toggle:hover{
   background:#086b68;
   border-color:#086b68;
   color:#ffffff;
-}
-body.detail-nav-visible .mobile-nav-toggle-label{
-  display:inline;
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:.01em;
 }
 body.mobile-nav-open .mobile-nav-toggle{
   background:#ffffff;
@@ -2096,7 +2021,7 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
    Here we add a very soft top-to-bottom gradient overlay so panels read
    as gently curved glass/metal rather than flat fills. */
 .kpi-card, .panel, .list-panel, .modal, .drawer, .tb-menu, .gsearch-panel,
-.file-card, .mini-card, .info-card, .crlog-kpis .kpi-card, .config-card{
+.file-card, .crlog-kpis .kpi-card, .config-card{
   background-image: var(--surface-gradient);
   background-repeat: no-repeat;
   background-position: top left;
@@ -2136,7 +2061,7 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
 .btn-primary{ box-shadow: var(--shadow-sm); }
 .btn-primary:hover:not(:disabled){ box-shadow: 0 6px 18px -6px rgba(63,208,201,0.5), var(--shadow-sm); }
 .icon-btn:focus-visible, .modal-close:focus-visible, .drawer-close:focus-visible,
-.sidebar-toggle:focus-visible, .tb-btn:focus-visible, .nav-item:focus-visible{
+.tb-btn:focus-visible, .nav-item:focus-visible{
   outline:none; box-shadow: var(--focus-ring);
 }
 .field input:focus-visible, .field textarea:focus-visible, .field select:focus-visible{
@@ -2144,9 +2069,8 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
 }
 
 /* ---- 4. Cards / rows / nav — micro elevation & indicators --------------- */
-.file-card, .mini-card{ transition: var(--transition-hover), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
+.file-card{ transition: var(--transition-hover), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard); }
 .file-card:hover{ box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--border-light); }
-.mini-card:hover{ box-shadow: var(--shadow-sm); }
 .cr-card{ transition: var(--transition-hover), box-shadow var(--duration-base) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
 .cr-card:hover{ box-shadow: var(--shadow-sm); border-color: var(--border-light); }
 
@@ -2160,7 +2084,7 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
 
 /* ---- 5. Micro-interactions: icons, badges, tooltips --------------------- */
 .badge{ transition: background var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
-.icon-btn svg, .nav-item svg, .sidebar-toggle svg, .tb-btn svg{ transition: transform var(--duration-fast) var(--ease-standard); }
+.icon-btn svg, .nav-item svg, .tb-btn svg{ transition: transform var(--duration-fast) var(--ease-standard); }
 .icon-btn:hover svg{ transform: scale(1.08); }
 .tb-badge{ transition: transform var(--duration-fast) var(--ease-standard); }
 .tb-btn:hover .tb-badge{ transform: scale(1.1); }
@@ -2186,7 +2110,7 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
 .skeleton-kpi{ height:88px; border-radius: var(--radius-md); }
 .skeleton-kpi.sm{ height:70px; }
 .skeleton-line{ height:12px; margin-bottom:8px; }
-.skeleton-line.w-60{ width:60%; } .skeleton-line.w-40{ width:40%; } .skeleton-line.w-80{ width:80%; }
+.skeleton-line.w-80{ width:80%; }
 .skeleton-row td{ padding:14px 20px; }
 .skeleton-chip{ height:20px; width:64px; border-radius:20px; display:inline-block; }
 .skeleton-thumb{ aspect-ratio:1/1; border-radius: var(--radius-sm); }
@@ -2233,7 +2157,6 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
   .search-box{ order:3; max-width:none; width:100%; margin-left:0; flex-basis:100%; }
   .topbar-actions{ margin-left:0; }
   .view{ padding:18px 14px 48px; }
-  .view-head{ align-items:flex-start; }
   .kpi-grid, .crlog-kpis{ grid-template-columns:repeat(2,1fr); }
   .list-panel-head{ flex-wrap:wrap; }
   .table-toolbar{ width:100%; }
@@ -2248,7 +2171,7 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
   .topbar h1{ font-size:16.5px; }
   .btn{ padding:10px 14px; font-size:13px; }
   .modal-head, .modal-body, .modal-foot{ padding-left:16px; padding-right:16px; }
-  .drawer-head, .drawer-body, .drawer-foot{ padding-left:16px !important; padding-right:16px !important; }
+  .drawer-head, .drawer-body{ padding-left:16px !important; padding-right:16px !important; }
   .config-card{ padding:22px 18px; }
   .file-grid{ grid-template-columns:repeat(auto-fill, minmax(105px,1fr)); }
   .bulk-actions{ flex-wrap:wrap; }
@@ -2392,8 +2315,6 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
   color: var(--text-secondary); font-weight: var(--text-section-title-weight); white-space:nowrap;
 }
 .dsec-head::after{ content:""; flex:1; height:1px; background: var(--panel-border); }
-.dsec-head .dsec-action{ font-size:11.5px; font-weight:700; color: var(--accent); cursor:pointer; white-space:nowrap; }
-.dsec-head .dsec-action:hover{ color: var(--accent-hover); }
 
 /* ---- Summary: quick-scan key/value strip -------------------------------- */
 .summary-grid{ display:grid; grid-template-columns:repeat(3, 1fr); gap:16px 24px; }
@@ -2452,28 +2373,6 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
   .progress-step{ min-width:64px; }
 }
 
-/* ---- Detail: description / business impact / technical info ------------- */
-.detail-block{ margin-bottom:16px; }
-.detail-block:last-child{ margin-bottom:0; }
-.detail-block .db-label{ font-size:11.5px; font-weight:700; color: var(--text-secondary); margin-bottom:7px; display:flex; align-items:center; gap:7px; }
-.detail-block .db-label svg{ width:14px; height:14px; opacity:.85; }
-.detail-block .db-body{
-  font-size:13.3px; line-height:1.65; color: var(--text-primary); white-space:pre-wrap;
-  background: rgba(255,255,255,0.03); border:1px solid var(--panel-border); border-radius: var(--radius-sm);
-  padding:12px 14px;
-}
-.detail-block .db-body.empty{ color: var(--text-faint); font-style:italic; background:none; border-style:dashed; }
-.detail-links{ display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
-.detail-link{
-  display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color: var(--text-secondary);
-  background: var(--bg-surface-soft); border:1px solid var(--border); border-radius:20px; padding:6px 12px;
-  transition: var(--transition-hover);
-}
-.detail-link:hover{ color: var(--accent); border-color: rgba(63,208,201,0.3); background: var(--accent-soft); }
-.detail-link svg{ width:12px; height:12px; }
-.detail-link.is-empty{ color: var(--text-faint); cursor:default; }
-.detail-link.is-empty:hover{ color: var(--text-faint); border-color: var(--border); background: var(--bg-surface-soft); }
-
 /* ---- Related preview (UAT + Release) inside the Info tab ----------------- */
 .related-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 @media(max-width:640px){ .related-grid{ grid-template-columns:1fr; } }
@@ -2488,7 +2387,6 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
 }
 .activity-item:last-child::before{ display:none; }
 .activity-dot{ width:11px; height:11px; border-radius:50%; margin-top:4px; flex-shrink:0; background: var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
-.activity-item.is-muted .activity-dot{ background: var(--text-faint); box-shadow:0 0 0 3px rgba(255,255,255,0.05); }
 .activity-body .a-title{ font-size:13px; font-weight:600; color: var(--text-primary); }
 .activity-body .a-time{ font-size:11.5px; color: var(--text-faint); margin-top:2px; }
 
@@ -2858,9 +2756,6 @@ tbody tr.detail-selected:hover{ background:
 .summary-item{ min-height:68px; padding:12px 13px; border:1px solid #e3ecef; border-radius:12px; background:#f8fbfc; }
 .summary-item .k{ color:#8095a4; font-size:9.5px; }
 .summary-item .v{ color:#18364f; font-size:13px; }
-.detail-block .db-body{ background:#f7fafb; border-color:#e0eaee; border-radius:11px; color:#29465d; }
-.mini-card{ border-color:#dfeaec; background:#f8fbfc; border-radius:11px; }
-.mini-card:hover{ border-color:#91d9d5; background:#effafa; }
 
 @media(max-width:900px){
   .topbar{ padding-left:66px; }
@@ -2913,7 +2808,6 @@ tbody tr.detail-selected:hover{ background:
   margin:0 auto;
 }
 .drawer-body > .tab-panel.active .dsec,
-.drawer-body > .tab-panel.active .section-title,
 .drawer-body > .tab-panel.active .file-drop,
 .drawer-body > .tab-panel.active .file-grid,
 .drawer-body > .tab-panel.active .mini-list{
@@ -4227,10 +4121,6 @@ tbody tr.detail-selected:hover{ background:
    as the topbar button in every state: no "Menu" pill, no shifting title,
    and no detail header text hidden underneath it.
    ========================================================================== */
-.mobile-nav-toggle-label{
-  display:none !important;
-}
-
 body.detail-nav-visible .mobile-nav-toggle{
   top:16px;
   width:38px;
@@ -5137,9 +5027,6 @@ body.detail-nav-visible .modal-overlay.full .modal-head{
   font-size:11.5px; color:#93a7b5; font-style:italic;
   min-height:16px; transition:opacity .3s ease;
 }
-.dlprog-cancel{
-  display:none; /* dự phòng cho tương lai nếu cần nút hủy; hiện chưa dùng để không đổi hành vi tải */
-}
 @media (max-width:480px){
   .dlprog-card{ padding:22px 18px 18px; border-radius:16px; }
 }
@@ -5269,12 +5156,6 @@ html{
     overflow-y:auto;
     overflow-x:hidden;
   }
-  .view-head{
-    margin-bottom:14px;
-    gap:9px;
-  }
-  .view-head h2{ font-size:19px; line-height:1.25; }
-  .view-head p{ font-size:11.5px; line-height:1.45; }
 
   /* Dashboard: two compact columns are easier to scan than one oversized stack. */
   .kpi-grid,
@@ -5565,9 +5446,7 @@ html{
     padding:12px 10px;
     font-size:11.5px;
   }
-  .info-grid,
   .crlog-field-grid{ grid-template-columns:1fr; gap:10px; }
-  .info-card,
   .crlog-field-group{ padding:13px; }
   .file-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
 
@@ -18722,10 +18601,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     });
   }
 
-   function eb2bRenderTabs(){
-     // Navigation is owned by the e-B2B module and is not derived from another workspace.
-   }
-
   function eb2bRender(){
     if(!$e("#eb2bContent")) return;
     const renderers = {
@@ -18901,22 +18776,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const rect=trigger.getBoundingClientRect(); menu.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-menu.offsetWidth-8))+"px"; menu.style.top=Math.min(window.innerHeight-menu.offsetHeight-8,rect.bottom+6)+"px"; menu.style.minWidth=Math.max(170,rect.width)+"px";
     trigger.setAttribute("aria-expanded","true");trigger.classList.add("is-open");eb2bActiveCrInline={trigger,menu};
     $$e("[data-eb2b-cr-value]",menu).forEach(option=>option.addEventListener("click",()=>{const value=option.dataset.eb2bCrValue;eb2bCloseCrInline();eb2bUpdateCrInline(row.id,field,value,trigger);}));
-  }
-  function eb2bRenderCrLogLegacy(){
-    const c=$e("#eb2bContent"),all=EB2B.rows.cr,rows=eb2bFilteredCr();
-    const overdue=all.filter(eb2bCrOverdue).length,inProgress=all.filter(r=>["In Progress","In Review","UAT"].includes(r.status)).length,critical=all.filter(r=>r.priority==="Critical").length;
-    const requesters=Array.from(new Set(all.map(x=>x.requester).filter(Boolean))).sort();
-    const sortTh=(key,label)=>`<th data-eb2b-cr-sort="${key}" style="cursor:pointer">${label}${EB2B.crSort.key===key?(EB2B.crSort.dir==="asc"?" ↑":" ↓"):""}</th>`;
-    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell">
-      <div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div>
-      <div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div>
-      <div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>
-      ${eb2bCrFilter("Status","status",eb2bCrCatalog("status"))}${eb2bCrFilter("Sub-status","sub_status",eb2bCrCatalog("sub_status"))}${eb2bCrFilter("Priority","priority",eb2bCrCatalog("priority"))}${eb2bCrFilter("Category","category",eb2bCrCatalog("category"))}${eb2bCrFilter("Requester","requester",requesters)}
-      <label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div></div></div>
-      <div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap"><table class="density-comfortable"><thead><tr>${sortTh("cr_id","CR ID")}${sortTh("rename_folder","Tiêu đề")}${sortTh("requester","Requester")}<th>Category</th><th>Priority</th><th>Status</th><th>Sub-status</th><th>Owner</th>${sortTh("deadline","Deadline")}<th>Thao tác</th></tr></thead><tbody>
-      ${rows.length?rows.map(r=>`<tr class="eb2b-cr-row" data-eb2b-cr-row="${r.id}"><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td><td class="cell-title" title="${eEsc(eb2bCrTitle(r))}">${eEsc(eb2bCrTitle(r))}</td><td class="cell-dim">${eEsc(r.requester||"—")}</td><td>${eb2bCrBadge("category",r.category)}</td><td>${eb2bCrBadge("priority",r.priority)}</td><td>${eb2bCrBadge("status",r.status)}</td><td>${eb2bCrBadge("sub_status",r.sub_status)}</td><td class="cell-dim">${eEsc(r.owner||"—")}</td><td class="cell-dim">${r.deadline?(eb2bCrOverdue(r)?`<span class="deadline-overdue"><span class="dl-warn">!</span>${eEsc(eDate(r.deadline))}</span>`:eEsc(eDate(r.deadline))):"—"}</td><td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${r.id}" title="Xem chi tiết"><mi-icon name="eye" stroke-width="2"></mi-icon></button><button class="icon-btn" data-eb2b-cr-edit="${r.id}" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-cr-delete="${r.id}" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></td></tr>`).join(""):`<tr><td colspan="10"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div>
-      <div class="cr-mobile-list eb2b-cr-mobile">${rows.map(r=>`<div class="cr-card" data-eb2b-cr-view="${r.id}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(eDate(r.deadline)||"—")}</span></div></div>`).join("")}</div>
-      <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span></div></div></div>`;
   }
   const EB2B_CR_SCROLL_WIRED={};
   function eb2bWireCrHScroll(){
