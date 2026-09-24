@@ -9906,24 +9906,45 @@ function evidenceStepSortRank(stepName){
   const found = (STATE.evidenceStepList || []).find(s=> String(s.name || "").trim() === key);
   return found ? Number(found.sort_order ?? 0) : Number.MAX_SAFE_INTEGER - 1;
 }
+/* Thứ tự ảnh evidence được LƯU TRÊN DATABASE: cột cr_attachments.report_order
+   (duy nhất theo từng testcase_id). Không còn phụ thuộc localStorage nên
+   clear cache / đổi máy / đổi trình duyệt vẫn giữ nguyên thứ tự. */
 function evOrderKey(tcId){ return "evOrder:" + String(tcId); }
-function getEvidenceOrder(tcId){
+function getLegacyEvidenceOrder(tcId){
   try{ return JSON.parse(localStorage.getItem(evOrderKey(tcId)) || "null") || null; }catch(e){ return null; }
 }
-function setEvidenceOrder(tcId, ids){
-  try{ localStorage.setItem(evOrderKey(tcId), JSON.stringify(ids.map(String))); }catch(e){}
+async function setEvidenceOrder(tcId, ids){
+  const { error } = await STATE.sb.rpc("set_evidence_order", {
+    p_testcase_id: String(tcId),
+    p_ids: ids.map(String),
+  });
+  if(error){ toast("Lỗi lưu thứ tự ảnh: " + error.message, "err"); return false; }
+  try{ localStorage.removeItem(evOrderKey(tcId)); }catch(e){}
+  return true;
 }
 function sortEvidenceFiles(files){
   const base = defaultSortEvidenceFiles(files);
+  const hasDbOrder = base.some(f=> f.report_order != null);
+  if(hasDbOrder){
+    // Ảnh đã có report_order xếp theo số đó; ảnh mới (chưa có) nối xuống cuối theo thứ tự mặc định
+    return base.map((f,i)=>({f,i})).sort((a,b)=>{
+      const ra = a.f.report_order != null ? Number(a.f.report_order) : 1e9 + a.i;
+      const rb = b.f.report_order != null ? Number(b.f.report_order) : 1e9 + b.i;
+      return ra - rb;
+    }).map(x=>x.f);
+  }
+  // Tương thích ngược: nếu máy này còn thứ tự cũ trong localStorage thì dùng và đẩy lên DB 1 lần
   const tcId = base[0] && base[0].testcase_id;
-  const saved = tcId != null ? getEvidenceOrder(tcId) : null;
+  const saved = tcId != null ? getLegacyEvidenceOrder(tcId) : null;
   if(!saved || !saved.length) return base;
   const rank = new Map(saved.map((id,i)=>[String(id), i]));
-  return base.map((f,i)=>({f,i})).sort((a,b)=>{
+  const sorted = base.map((f,i)=>({f,i})).sort((a,b)=>{
     const ra = rank.has(String(a.f.id)) ? rank.get(String(a.f.id)) : 1e9 + a.i;
     const rb = rank.has(String(b.f.id)) ? rank.get(String(b.f.id)) : 1e9 + b.i;
     return ra - rb;
   }).map(x=>x.f);
+  setEvidenceOrder(tcId, sorted.map(f=>f.id));
+  return sorted;
 }
 function defaultSortEvidenceFiles(files){
   return [...files].sort((a, b)=>{
@@ -14120,14 +14141,15 @@ async function renderEvidenceGrid(testcase_id){
   bindFileCardEvents(grid, null, testcase_id);
   grid.querySelectorAll("[data-ev-order]").forEach(inp=>{
     ["click","mousedown","keydown"].forEach(ev=>inp.addEventListener(ev, e=>e.stopPropagation()));
-    inp.addEventListener("change", ()=>{
+    inp.addEventListener("change", async ()=>{
       let n = Math.round(Number(inp.value));
       if(!Number.isFinite(n)) return;
       n = Math.max(1, Math.min(files.length, n));
       const ids = files.map(f=>String(f.id)).filter(id=>id !== inp.dataset.evOrder);
       ids.splice(n-1, 0, inp.dataset.evOrder);
-      setEvidenceOrder(testcase_id, ids);
-      toast(`Đã đặt ảnh ở vị trí ${n} trong báo cáo`, "ok");
+      inp.disabled = true;
+      const ok = await setEvidenceOrder(testcase_id, ids);
+      if(ok) toast(`Đã đặt ảnh ở vị trí ${n} trong báo cáo`, "ok");
       renderEvidenceGrid(testcase_id);
     });
   });
