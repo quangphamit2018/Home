@@ -16313,9 +16313,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     modalId: "eb2bModalOverlay",
     activeTab: "dashboard",
     search: "",
+    crFilters: {status:"",sub_status:"",priority:"",category:"",requester:"",overdue:false},
+    crSort: {key:"created_at",dir:"desc"},
     rows: {
       cr: [], uat: [], release: [], brd: [], weekly_mom: [],
-      statuses: [], sub_statuses: [], evidence_steps: [], attachment_categories: []
+      statuses: [], sub_statuses: [], evidence_steps: [], attachment_categories: [], attachments: []
     },
     loading: false,
     ready: false
@@ -16330,7 +16332,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     statuses: "eb2b_statuses",
     sub_statuses: "eb2b_sub_statuses",
     evidence_steps: "eb2b_evidence_steps",
-    attachment_categories: "eb2b_attachment_categories"
+    attachment_categories: "eb2b_attachment_categories",
+    attachments: "eb2b_attachments"
   };
   const EB2B_META = {
     dashboard: ["EB2B Dashboard", "Tổng quan workspace EB2B"],
@@ -16380,7 +16383,23 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       body.eb2b-active .view{display:none!important}
       body.eb2b-active #eb2bViewRoot{display:block!important}
       body.eb2b-active .view-action{display:none!important}
+      body.eb2b-active.eb2b-cr-active #eb2bAddCrTop{display:inline-flex!important}
       .eb2b-shell{display:grid;gap:16px}
+      .eb2b-cr-shell{height:100%;min-height:0;display:flex;flex-direction:column;gap:14px}
+      .eb2b-cr-shell .crlog-kpis{flex:0 0 auto}
+      .eb2b-cr-shell .crlog-panel{flex:1 1 auto;min-height:0}
+      .eb2b-cr-shell .eb2b-cr-table-wrap{overflow:auto;flex:1 1 auto}
+      .eb2b-cr-shell table{min-width:1360px}
+      .eb2b-cr-shell .filter-chip select{max-width:126px}
+      .eb2b-cr-status-select{min-width:118px;border:1px solid currentColor;border-radius:999px;padding:5px 26px 5px 10px;font:inherit;font-size:11px;font-weight:700;background-color:var(--surface,#fff)}
+      .eb2b-cr-row{cursor:pointer}
+      .eb2b-cr-row.detail-selected td{background:var(--accent-dim,#e8f7f6)!important}
+      .eb2b-cr-drawer{z-index:1002}
+      .eb2b-cr-drawer .drawer-body{overflow:auto}
+      .eb2b-files{display:grid;gap:8px}
+      .eb2b-file-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line,#d5dbe3);border-radius:8px;background:var(--surface,#fff)}
+      .eb2b-file-meta{min-width:0}.eb2b-file-name{font-weight:700;overflow-wrap:anywhere}.eb2b-file-sub{font-size:11px;color:var(--text-dim,#6b7280);margin-top:3px}
+      @media(max-width:760px){.eb2b-cr-shell{height:auto}.eb2b-cr-shell .list-panel-head{display:block}.eb2b-cr-shell .table-toolbar{margin-top:10px}.eb2b-cr-table-wrap{display:none}.eb2b-cr-mobile{display:grid!important;gap:8px;padding:10px}}
       .eb2b-toolbar{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap}
       .eb2b-toolbar-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
       .eb2b-toolbar input,.eb2b-toolbar select{min-height:34px;border:1px solid var(--line,#d5dbe3);border-radius:7px;padding:7px 9px;background:var(--surface,#fff);color:var(--text,#1f2937)}
@@ -16408,6 +16427,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       .eb2b-config-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line,#edf0f2);font-size:12px}
       .eb2b-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.46);z-index:1000;display:none;align-items:center;justify-content:center;padding:18px}
       .eb2b-modal-overlay.show{display:flex}
+      .eb2b-modal-overlay.full{align-items:stretch;padding:0}
+      .eb2b-modal-overlay.full .eb2b-modal{width:100%;height:100vh;max-height:none;border-radius:0}
       .eb2b-modal{width:min(920px,100%);max-height:92vh;overflow:auto;background:var(--surface,#fff);border-radius:13px;box-shadow:0 22px 70px rgba(15,23,42,.25)}
       .eb2b-modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:17px 20px;border-bottom:1px solid var(--line,#e5e7eb)}
       .eb2b-modal-head h3{margin:0;font-size:17px}.eb2b-modal-head p{margin:4px 0 0;color:var(--text-dim,#6b7280);font-size:12px}
@@ -16434,7 +16455,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         </section>`);
     }
     if(!$e("#eb2bModalOverlay")){
-      document.body.insertAdjacentHTML("beforeend", `<div class="eb2b-modal-overlay" id="eb2bModalOverlay"></div>`);
+      document.body.insertAdjacentHTML("beforeend", `<div class="eb2b-modal-overlay" id="eb2bModalOverlay"></div><div class="drawer-overlay" id="eb2bDrawerOverlay"></div><div class="drawer eb2b-cr-drawer" id="eb2bCrDrawer"></div>`);
+    }
+    if(!$e("#eb2bAddCrTop")){
+      const actions=$e("#topbarActions");
+      actions?.insertAdjacentHTML("beforeend", `<button class="btn btn-primary hidden" id="eb2bAddCrTop" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Tạo CR mới</button>`);
     }
     const dms = $e(".workspace-nav[data-workspace='dms']");
     const dmsChildren = $e("#navDmsChildren");
@@ -16502,6 +16527,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(!EB2B.ready && !eb2bBuildShell()) return;
     EB2B.activeTab = tab;
     document.body.classList.add("eb2b-active");
+    document.body.classList.toggle("eb2b-cr-active", tab === "cr");
     eb2bSetHeader(tab);
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
     $e("#navEb2bWorkspace")?.classList.add("is-context");
@@ -16512,7 +16538,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bHide(){
-    document.body.classList.remove("eb2b-active");
+    document.body.classList.remove("eb2b-active", "eb2b-cr-active");
+    eb2bCloseCrDrawer();
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
     $e("#navEb2bWorkspace")?.classList.remove("is-context");
   }
@@ -16573,7 +16600,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bRender(){
     if(!$e("#eb2bContent")) return;
     const renderers = {
-      dashboard: eb2bRenderDashboard, cr: ()=>eb2bRenderDataTable("cr"),
+      dashboard: eb2bRenderDashboard, cr: eb2bRenderCrLog,
       uat: ()=>eb2bRenderDataTable("uat"), release: ()=>eb2bRenderDataTable("release"),
       brd: ()=>eb2bRenderDataTable("brd"), weekly_mom: ()=>eb2bRenderDataTable("weekly_mom"),
       admin: eb2bRenderAdmin, recycle: eb2bRenderRecycle
@@ -16612,6 +16639,80 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const q = EB2B.search.trim().toLowerCase();
     if(!q) return EB2B.rows[key];
     return EB2B.rows[key].filter(row=>Object.values(row).some(v=>String(v ?? "").toLowerCase().includes(q)));
+  }
+
+  function eb2bCrTitle(row){ return row.rename_folder || row.old_name || row.app || "—"; }
+  function eb2bCrOverdue(row){
+    if(!row.deadline || ["Released","Closed"].includes(row.status)) return false;
+    return new Date(String(row.deadline).slice(0,10)+"T23:59:59") < new Date();
+  }
+  function eb2bCrCatalog(field){
+    const config = field==="status" ? EB2B.rows.statuses : field==="sub_status" ? EB2B.rows.sub_statuses : [];
+    if(config.length) return config.filter(x=>x.is_active!==false).map(x=>x.name).filter(Boolean);
+    if(field==="priority") return ["Critical","High","Medium","Low"];
+    if(field==="category") return Array.from(new Set(EB2B.rows.cr.map(x=>x.category).filter(Boolean))).sort();
+    return Array.from(new Set(EB2B.rows.cr.map(x=>x[field]).filter(Boolean))).sort();
+  }
+  function eb2bCrColor(field,value){
+    if(field==="status" || field==="sub_status"){
+      const rows=field==="status"?EB2B.rows.statuses:EB2B.rows.sub_statuses;
+      return rows.find(x=>x.name===value)?.color || "#64748b";
+    }
+    const map={Critical:"#dc2626",High:"#ea580c",Medium:"#ca8a04",Low:"#0284c7"};
+    return map[value] || "#64748b";
+  }
+  function eb2bCrBadge(field,value){
+    if(!value) return `<span class="cell-dim">—</span>`;
+    const color=eb2bCrColor(field,value);
+    return `<span class="badge" style="color:${color};background:${typeof hexToRgba==="function"?hexToRgba(color,.14):"#eef2f7"};border-color:${typeof hexToRgba==="function"?hexToRgba(color,.28):"#d7dee7"}"><span class="dot" style="background:${color}"></span>${eEsc(value)}</span>`;
+  }
+  function eb2bFilteredCr(){
+    const f=EB2B.crFilters,q=EB2B.search.trim().toLowerCase();
+    let rows=EB2B.rows.cr.filter(r=>{
+      if(f.status&&r.status!==f.status||f.sub_status&&r.sub_status!==f.sub_status||f.priority&&r.priority!==f.priority||f.category&&r.category!==f.category||f.requester&&r.requester!==f.requester)return false;
+      if(f.overdue&&!eb2bCrOverdue(r))return false;
+      return !q||[r.cr_id,r.old_name,r.rename_folder,r.app,r.requester,r.department,r.owner,r.status,r.sub_status].some(v=>String(v||"").toLowerCase().includes(q));
+    });
+    const {key,dir}=EB2B.crSort;
+    return rows.sort((a,b)=>String(a[key]??"").localeCompare(String(b[key]??""),"vi",{numeric:true})*(dir==="asc"?1:-1));
+  }
+  function eb2bCrKpi(label,value,foot,cls=""){
+    return `<div class="kpi-card ${cls}"><div class="kpi-top"><div class="kpi-label">${eEsc(label)}</div></div><div class="kpi-value">${value}</div>${foot?`<div class="kpi-foot">${eEsc(foot)}</div>`:""}</div>`;
+  }
+  function eb2bCrFilter(label,key,values){
+    return `<div class="filter-chip"><span>${label}</span><select data-eb2b-cr-filter="${key}"><option value="">Tất cả</option>${values.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters[key]===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div>`;
+  }
+  function eb2bRenderCrLog(){
+    const c=$e("#eb2bContent"),all=EB2B.rows.cr,rows=eb2bFilteredCr();
+    const overdue=all.filter(eb2bCrOverdue).length,inProgress=all.filter(r=>["In Progress","In Review","UAT"].includes(r.status)).length,critical=all.filter(r=>r.priority==="Critical").length;
+    const requesters=Array.from(new Set(all.map(x=>x.requester).filter(Boolean))).sort();
+    const sortTh=(key,label)=>`<th data-eb2b-cr-sort="${key}" style="cursor:pointer">${label}${EB2B.crSort.key===key?(EB2B.crSort.dir==="asc"?" ↑":" ↓"):""}</th>`;
+    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell">
+      <div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div>
+      <div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div>
+      <div class="table-toolbar"><div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>
+      ${eb2bCrFilter("Status","status",eb2bCrCatalog("status"))}${eb2bCrFilter("Sub-status","sub_status",eb2bCrCatalog("sub_status"))}${eb2bCrFilter("Priority","priority",eb2bCrCatalog("priority"))}${eb2bCrFilter("Category","category",eb2bCrCatalog("category"))}${eb2bCrFilter("Requester","requester",requesters)}
+      <label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div></div></div>
+      <div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap"><table class="density-comfortable"><thead><tr>${sortTh("cr_id","CR ID")}${sortTh("rename_folder","Tiêu đề")}${sortTh("requester","Requester")}<th>Category</th><th>Priority</th><th>Status</th><th>Sub-status</th><th>Owner</th>${sortTh("deadline","Deadline")}<th>Thao tác</th></tr></thead><tbody>
+      ${rows.length?rows.map(r=>`<tr class="eb2b-cr-row" data-eb2b-cr-row="${r.id}"><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td><td class="cell-title" title="${eEsc(eb2bCrTitle(r))}">${eEsc(eb2bCrTitle(r))}</td><td class="cell-dim">${eEsc(r.requester||"—")}</td><td>${eb2bCrBadge("category",r.category)}</td><td>${eb2bCrBadge("priority",r.priority)}</td><td>${eb2bCrBadge("status",r.status)}</td><td>${eb2bCrBadge("sub_status",r.sub_status)}</td><td class="cell-dim">${eEsc(r.owner||"—")}</td><td class="cell-dim">${r.deadline?(eb2bCrOverdue(r)?`<span class="deadline-overdue"><span class="dl-warn">!</span>${eEsc(eDate(r.deadline))}</span>`:eEsc(eDate(r.deadline))):"—"}</td><td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${r.id}" title="Xem chi tiết"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="icon-btn" data-eb2b-cr-edit="${r.id}" title="Sửa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="icon-btn danger" data-eb2b-cr-delete="${r.id}" title="Xóa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button></div></td></tr>`).join(""):`<tr><td colspan="10"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div>
+      <div class="cr-mobile-list eb2b-cr-mobile">${rows.map(r=>`<div class="cr-card" data-eb2b-cr-view="${r.id}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(eDate(r.deadline)||"—")}</span></div></div>`).join("")}</div>
+      <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span></div></div></div>`;
+  }
+  function eb2bCloseCrDrawer(){
+    $e("#eb2bDrawerOverlay")?.classList.remove("show");$e("#eb2bCrDrawer")?.classList.remove("show");
+  }
+  function eb2bOpenCrDrawer(row){
+    if(!row)return;const drawer=$e("#eb2bCrDrawer"),overlay=$e("#eb2bDrawerOverlay");
+    const files=EB2B.rows.attachments.filter(x=>x.cr_id===row.cr_id&&!x.deleted_at),tests=EB2B.rows.uat.filter(x=>x.cr_id===row.cr_id),rels=EB2B.rows.release.filter(x=>x.cr_id===row.cr_id);
+    const field=(l,v)=>`<div class="crlog-field"><div class="crlog-field-label">${eEsc(l)}</div><div class="crlog-field-value ${v?"":"empty"}">${v?eEsc(v):"Chưa có dữ liệu"}</div></div>`;
+    drawer.innerHTML=`<div class="drawer-head"><div class="drawer-head-top"><div><h2>${eEsc(row.cr_id)}</h2><div class="drawer-app">${eEsc(eb2bCrTitle(row))}</div><div class="drawer-head-context"><span><b>App</b> ${eEsc(row.app||"—")}</span><span><b>Requester</b> ${eEsc(row.requester||"—")}</span><span><b>Request Date</b> ${eEsc(eDate(row.request_date)||"—")}</span></div></div><div class="drawer-head-actions"><button class="icon-btn" data-eb2b-cr-edit="${row.id}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="drawer-close" data-eb2b-drawer-close>✕</button></div></div><div class="drawer-badges">${eb2bCrBadge("status",row.status)}${eb2bCrBadge("priority",row.priority)}${eb2bCrBadge("category",row.category)}${eb2bCrOverdue(row)?`<span class="badge" style="background:var(--danger-dim);color:var(--danger)">Trễ hạn</span>`:""}</div></div>
+    <div class="tabs"><button class="tab-btn active" data-eb2b-drawer-tab="info">Thông tin</button><button class="tab-btn" data-eb2b-drawer-tab="files">Tệp đính kèm <span class="tab-count">${files.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="uat">Test Case UAT <span class="tab-count">${tests.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="release">Release / PRD <span class="tab-count">${rels.length}</span></button></div>
+    <div class="drawer-body"><div class="tab-panel active" data-eb2b-panel="info"><div class="dsec"><div class="dsec-head"><span class="dsec-title">Tóm tắt</span></div><div class="summary-grid">${field("Requester",row.requester)}${field("Department",row.department)}${field("Owner",row.owner)}${field("Request Date",eDate(row.request_date))}${field("Deadline",eDate(row.deadline))}${field("App",row.app)}${field("Approved Status",row.approved_status)}${field("Approved Date",eDate(row.approved_date))}</div></div><div class="crlog-detail-groups"><div class="crlog-field-group"><div class="crlog-field-group-title">Nội dung & cập nhật</div><div class="crlog-field-grid">${field("Old Name From InterK",row.old_name)}${field("Rename Folder",row.rename_folder)}${field("Description BRD",row.description_brd)}${field("Description FSD",row.description_fsd)}${field("Progress",row.progress)}${field("Note",row.note)}</div></div></div></div>
+    <div class="tab-panel" data-eb2b-panel="files"><div class="dsec"><div class="dsec-head"><span class="dsec-title">Tệp đính kèm</span></div><div class="eb2b-files">${files.map(f=>`<div class="eb2b-file-row"><div class="eb2b-file-meta"><div class="eb2b-file-name">${eEsc(f.file_name)}</div><div class="eb2b-file-sub">${eEsc(f.category||"Tài liệu")} · ${eEsc(f.uploaded_by||"—")}</div></div></div>`).join("")||`<div class="empty-state"><p>Chưa có tệp đính kèm.</p></div>`}</div></div></div>
+    <div class="tab-panel" data-eb2b-panel="uat">${tests.map(t=>`<div class="workflow-record"><div class="workflow-record-index">TC</div><div class="workflow-record-main"><div class="workflow-record-id">${eEsc(t.test_case_id)}</div><div class="workflow-record-title">${eEsc(t.scenario||"(Chưa có scenario)")}</div></div><div class="workflow-record-status">${eb2bCrBadge("status",t.pass_fail)}</div></div>`).join("")||`<div class="empty-state"><p>Chưa có Test Case UAT.</p></div>`}</div>
+    <div class="tab-panel" data-eb2b-panel="release">${rels.map(r=>`<div class="workflow-record"><div class="workflow-record-index">REL</div><div class="workflow-record-main"><div class="workflow-record-id">${eEsc(r.release_id||"RELEASE")}</div><div class="workflow-record-title">${eEsc(r.release_name||"(Chưa đặt tên release)")}</div></div><div class="workflow-record-status">${eb2bCrBadge("status",r.status)}</div></div>`).join("")||`<div class="empty-state"><p>Chưa có Release / PRD.</p></div>`}</div></div>`;
+    overlay.classList.add("show");
+    overlay.classList.toggle("full", key === "cr");drawer.classList.add("show");
   }
 
   function eb2bTableDefinition(key){
@@ -16744,7 +16845,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const title = row ? "Sửa " : "Tạo ";
     const labels = {cr:"CR Log",uat:"UAT Test Case",release:"Release / PRD",brd:"BRD",weekly_mom:"Weekly MoM"};
     const defs = eb2bFormDefs(key, row || {});
-    overlay.innerHTML = `<div class="eb2b-modal" role="dialog" aria-modal="true">
+    overlay.innerHTML = `<div class="eb2b-modal ${key==="cr"?"modal modal-lg":""}" role="dialog" aria-modal="true">
       <div class="eb2b-modal-head"><div><h3>${title}${labels[key]}</h3><p>Dữ liệu được lưu vào bảng ${EB2B_TABLES[key]}.</p></div><button type="button" class="modal-close" data-eb2b-close>✕</button></div>
       <div class="eb2b-modal-body"><div class="eb2b-form-grid">${defs.map(d=>eb2bField(d,row||{})).join("")}</div></div>
       <div class="eb2b-modal-foot"><button type="button" class="btn btn-ghost" data-eb2b-close>Hủy</button><button type="button" class="btn btn-primary" id="eb2bSaveRecord">Lưu</button></div>
@@ -16859,6 +16960,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(tab){ ev.preventDefault(); eb2bShow(tab.dataset.eb2bTab); return; }
       const dmsNav = ev.target.closest(".nav-item[data-view]");
       if(dmsNav){ eb2bHide(); return; }
+      if(ev.target.closest("#eb2bAddCrTop")){eb2bOpenModal("cr",null);return;}
+      const clear=ev.target.closest("[data-eb2b-cr-clear]");if(clear){EB2B.search="";EB2B.crFilters={status:"",sub_status:"",priority:"",category:"",requester:"",overdue:false};eb2bRenderCrLog();return;}
+      const sort=ev.target.closest("[data-eb2b-cr-sort]");if(sort){const k=sort.dataset.eb2bCrSort;EB2B.crSort={key:k,dir:EB2B.crSort.key===k&&EB2B.crSort.dir==="asc"?"desc":"asc"};eb2bRenderCrLog();return;}
+      const closeDrawer=ev.target.closest("[data-eb2b-drawer-close]");if(closeDrawer){eb2bCloseCrDrawer();return;}
+      const drawerTab=ev.target.closest("[data-eb2b-drawer-tab]");if(drawerTab){const root=$e("#eb2bCrDrawer");$$e("[data-eb2b-drawer-tab]",root).forEach(x=>x.classList.toggle("active",x===drawerTab));$$e("[data-eb2b-panel]",root).forEach(x=>x.classList.toggle("active",x.dataset.eb2bPanel===drawerTab.dataset.eb2bDrawerTab));return;}
+      const crEdit=ev.target.closest("[data-eb2b-cr-edit]");if(crEdit){ev.stopPropagation();const row=EB2B.rows.cr.find(x=>String(x.id)===String(crEdit.dataset.eb2bCrEdit));eb2bOpenModal("cr",row);return;}
+      const crDelete=ev.target.closest("[data-eb2b-cr-delete]");if(crDelete){ev.stopPropagation();const row=EB2B.rows.cr.find(x=>String(x.id)===String(crDelete.dataset.eb2bCrDelete));eb2bDelete("cr",row);return;}
+      const crView=ev.target.closest("[data-eb2b-cr-view], [data-eb2b-cr-row]");if(crView){const id=crView.dataset.eb2bCrView||crView.dataset.eb2bCrRow;eb2bOpenCrDrawer(EB2B.rows.cr.find(x=>String(x.id)===String(id)));return;}
       const create=ev.target.closest("[data-eb2b-new]");
       if(create){ eb2bOpenModal(create.dataset.eb2bNew,null); return; }
       const action=ev.target.closest("[data-eb2b-act]");
@@ -16879,8 +16988,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const purge=ev.target.closest("[data-eb2b-purge]");
       if(purge){eb2bPurge(purge.dataset.eb2bPurge,purge.dataset.eb2bId);return;}
     });
+    document.addEventListener("input",ev=>{if(ev.target.id==="eb2bCrSearch"){EB2B.search=ev.target.value;eb2bRenderCrLog();const n=$e("#eb2bCrSearch");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}});
+    document.addEventListener("change",ev=>{const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();}});
+    $e("#eb2bDrawerOverlay")?.addEventListener("click",eb2bCloseCrDrawer);
     document.addEventListener("keydown", ev=>{
-      if(ev.key==="Escape") $e("#eb2bModalOverlay")?.classList.remove("show");
+      if(ev.key==="Escape"){$e("#eb2bModalOverlay")?.classList.remove("show");eb2bCloseCrDrawer();}
     });
   }
 
