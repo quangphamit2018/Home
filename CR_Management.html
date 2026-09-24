@@ -16364,6 +16364,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const savedCrColumns = JSON.parse(localStorage.getItem("eb2bCrColumns") || "null");
     if(savedCrColumns && typeof savedCrColumns === "object") Object.assign(EB2B.crColumns, savedCrColumns);
   }catch(_){}
+  try{
+    const savedUatColumns = JSON.parse(localStorage.getItem("eb2bUatColumns") || "null");
+    if(savedUatColumns && typeof savedUatColumns === "object") Object.assign(EB2B.uatColumns, savedUatColumns);
+    const savedReleaseColumns = JSON.parse(localStorage.getItem("eb2bReleaseColumns") || "null");
+    if(savedReleaseColumns && typeof savedReleaseColumns === "object") Object.assign(EB2B.releaseColumns, savedReleaseColumns);
+  }catch(_){}
   const EB2B_META = {
     dashboard: ["EB2B Dashboard", "Tổng quan workspace EB2B"],
     cr: ["EB2B · CR Log", "Sổ đăng ký Change Request riêng cho EB2B"],
@@ -16411,6 +16417,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       body.eb2b-active .view-action{display:none!important}
       .eb2b-cr-top-actions{display:none;align-items:center;gap:7px}
       body.eb2b-active.eb2b-cr-active .eb2b-cr-top-actions{display:flex}
+      .eb2b-context-actions{display:none;align-items:center;gap:7px}
+      body.eb2b-active.eb2b-uat-active .eb2b-uat-top-actions,
+      body.eb2b-active.eb2b-release-active .eb2b-release-top-actions,
+      body.eb2b-active.eb2b-brd-active .eb2b-brd-top-actions,
+      body.eb2b-active.eb2b-weekly-active .eb2b-weekly-top-actions{display:flex}
       .eb2b-shell{display:grid;gap:16px}
       .eb2b-cr-shell{height:100%;min-height:0;display:flex;flex-direction:column;gap:14px}
       .eb2b-cr-shell .crlog-kpis{flex:0 0 auto}
@@ -16550,6 +16561,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const actions=$e("#topbarActions");
       actions?.insertAdjacentHTML("beforeend", `<div class="eb2b-cr-top-actions" id="eb2bCrTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bRefreshCrTop" type="button" title="Làm mới dữ liệu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>Làm mới</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bCrTemplateTop" type="button" title="Tải file Excel mẫu"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3M7 10l5 5 5-5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>Tải template</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bCrImportTop" type="button" title="Nhập nhiều CR từ Excel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12M7 10l5-5 5 5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>Nhập Excel</button><input id="eb2bCrImportFile" type="file" accept=".xlsx,.xls,.csv" hidden><button class="btn btn-primary" id="eb2bAddCrTop" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Tạo CR mới</button></div>`);
     }
+     if(!$e("#eb2bAddTcTop")){
+       const actions=$e("#topbarActions");
+       actions?.insertAdjacentHTML("beforeend", `
+         <div class="eb2b-context-actions eb2b-uat-top-actions" id="eb2bUatTopActions"><button class="btn btn-primary" id="eb2bAddTcTop" type="button">＋ Thêm Test Case</button></div>
+         <div class="eb2b-context-actions eb2b-release-top-actions" id="eb2bReleaseTopActions"><button class="btn btn-primary" id="eb2bAddRelTop" type="button">＋ Thêm Release</button></div>
+         <div class="eb2b-context-actions eb2b-brd-top-actions" id="eb2bBrdTopActions"><button class="btn btn-primary" id="eb2bAddBrdTop" type="button">＋ Tạo BRD</button></div>
+         <div class="eb2b-context-actions eb2b-weekly-top-actions" id="eb2bWeeklyTopActions"><button class="btn btn-primary" id="eb2bAddWeeklyTop" type="button">＋ Tạo biên bản Weekly</button><button class="btn btn-ghost" id="eb2bWeeklyImportTop" type="button">Nhập Excel</button><button class="btn btn-ghost" id="eb2bWeeklyDownloadTop" type="button">Tải Excel</button><input id="eb2bWeeklyImportFile" type="file" accept=".xlsx,.xls,.csv" hidden></div>`);
+     }
      const sidebar = $e("#sidebar");
      const sidebarFoot = $e(".sidebar-foot", sidebar);
      const eb2bMount = $e("#eb2bNavMount", sidebar);
@@ -16618,6 +16637,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.activeTab = tab;
     document.body.classList.add("eb2b-active");
     document.body.classList.toggle("eb2b-cr-active", tab === "cr");
+    ["uat","release","brd","weekly"].forEach(name=>document.body.classList.toggle(`eb2b-${name}-active`, tab === (name === "weekly" ? "weekly_mom" : name)));
     eb2bSetHeader(tab);
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
     $e("#navEb2bWorkspace")?.classList.add("is-context");
@@ -16628,7 +16648,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bHide(){
-    document.body.classList.remove("eb2b-active", "eb2b-cr-active");
+    document.body.classList.remove("eb2b-active", "eb2b-cr-active", "eb2b-uat-active", "eb2b-release-active", "eb2b-brd-active", "eb2b-weekly-active");
     $e("#eb2bViewRoot")?.classList.remove("eb2b-uat-focus");
     eb2bCloseCrDrawer();
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
@@ -17015,10 +17035,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      const pending = rows.filter(row=>["Not Started","Blocked"].includes(row.pass_fail || "Not Started")).length;
      const pct = value => total ? Math.round(value / total * 100) : 0;
      return `
-       ${kpiCard("Tổng số Test Case", total, "Toàn bộ kịch bản UAT đã ghi nhận", "")}
-       ${kpiCard("Pass", pass, "Đã đạt kiểm thử", "success", "", pct(pass))}
-       ${kpiCard("Fail", fail, "Cần xử lý / kiểm thử lại", "danger", "", pct(fail))}
-       ${kpiCard("Chưa hoàn tất", pending, "Not Started / Blocked", "warn", "", pct(pending))}
+       ${eb2bKpiCard("Tổng số Test Case", total, "Toàn bộ kịch bản UAT đã ghi nhận", "")}
+       ${eb2bKpiCard("Pass", pass, "Đã đạt kiểm thử", "success", pct(pass))}
+       ${eb2bKpiCard("Fail", fail, "Cần xử lý / kiểm thử lại", "danger", pct(fail))}
+       ${eb2bKpiCard("Chưa hoàn tất", pending, "Not Started / Blocked", "warn", pct(pending))}
      `;
    }
 
@@ -17278,6 +17298,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        </div>
      </div>`;
 
+     $e('[data-eb2b-new="uat"]',c)?.remove();
      eb2bWireUatHScroll();
      const root = $e("#eb2bContent");
      $e("#eb2bUatSearch",root)?.addEventListener("input",event=>{
@@ -17299,6 +17320,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        const visible=Object.values(EB2B.uatColumns).filter(Boolean).length;
        if(!event.target.checked && visible<=1){event.target.checked=true;return;}
        EB2B.uatColumns[event.target.dataset.eb2bUatCol]=event.target.checked;
+       localStorage.setItem("eb2bUatColumns",JSON.stringify(EB2B.uatColumns));
        eb2bRenderUat();
      }));
      $$e('input[name="eb2bUatDensity"]',root).forEach(radio=>radio.addEventListener("change",event=>{EB2B.uatDensity=event.target.value;localStorage.setItem("eb2bUatDensity",EB2B.uatDensity);eb2bRenderUat();}));
@@ -17442,6 +17464,16 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Release</span></div>
       </div>
     </div>`;
+    const relRows=$all("#eb2bRelTable tbody tr[data-eb2b-rel]",c);
+    const relSelectAll=$e("#eb2bRelTable thead .col-check",c);
+    if(relSelectAll) relSelectAll.innerHTML=`<input type="checkbox" id="eb2bRelSelectAll" ${relRows.length&&relRows.every(tr=>EB2B.releaseSelection.has(String(tr.dataset.eb2bRel)))?"checked":""} title="Chọn tất cả">`;
+    relRows.forEach(tr=>{const id=String(tr.dataset.eb2bRel),cell=tr.querySelector(".cell-check");if(cell)cell.innerHTML=`<input type="checkbox" class="row-check" data-eb2b-rel-check="${eEsc(id)}" ${EB2B.releaseSelection.has(id)?"checked":""}>`;});
+    const relBulk=$e(".bulk-bar",c);
+    if(relBulk){relBulk.classList.toggle("hidden",EB2B.releaseSelection.size===0);relBulk.innerHTML=`<span><b>${EB2B.releaseSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" id="eb2bRelBulkClear">Bỏ chọn</button></div>`;}
+    $e("#eb2bRelSelectAll",c)?.addEventListener("change",ev=>{relRows.forEach(tr=>ev.target.checked?EB2B.releaseSelection.add(String(tr.dataset.eb2bRel)):EB2B.releaseSelection.delete(String(tr.dataset.eb2bRel)));eb2bRenderRelease();});
+    $all("[data-eb2b-rel-check]",c).forEach(box=>box.addEventListener("change",()=>{const id=String(box.dataset.eb2bRelCheck);box.checked?EB2B.releaseSelection.add(id):EB2B.releaseSelection.delete(id);eb2bRenderRelease();}));
+    $e("#eb2bRelBulkClear",c)?.addEventListener("click",()=>{EB2B.releaseSelection.clear();eb2bRenderRelease();});
+    $e('[data-eb2b-new="release"]',c)?.remove();
     const rerender = ()=>eb2bRenderRelease();
     $e("#eb2bRelSearch")?.addEventListener("input", ev=>{EB2B.releaseFilters.search=ev.target.value.trim().toLowerCase();rerender();});
     [["eb2bRelFilterCr","cr"],["eb2bRelFilterStatus","status"],["eb2bRelFilterEnvironment","environment"],["eb2bRelFilterOwner","owner"]].forEach(([id,key])=>$e("#"+id)?.addEventListener("change",ev=>{EB2B.releaseFilters[key]=ev.target.value;rerender();}));
@@ -17457,15 +17489,18 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bRenderBrd(){
     const c=$e("#eb2bContent"), rows=EB2B.rows.brd;
     c.innerHTML=`<div class="brd-workspace"><div class="brd-toolbar"><div class="brd-toolbar-copy"><div class="brd-toolbar-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div><div><div class="brd-toolbar-title">Danh sách Business Requirement Document</div><div class="brd-toolbar-note">Quản lý tài liệu yêu cầu nghiệp vụ và xuất file Word theo mẫu chuẩn</div></div></div><div class="brd-count"><b>${rows.length}</b> BRD đã tạo</div></div><div class="brd-grid">${rows.length?rows.map(v=>`<article class="brd-card" data-eb2b-brd="${eEsc(v.id)}"><div class="brd-card-head"><div class="brd-card-docicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></div><div class="brd-card-copy"><div class="brd-card-title">${eEsc(v.brd_title||"(Chưa đặt tên)")}</div><div class="brd-card-sub">Hệ thống: ${eEsc(v.system_name||"—")}</div></div></div><div class="brd-card-meta">${v.cr_id?`<span><b>CR</b> ${eEsc(v.cr_id)}</span>`:""}<span><b>Phiên bản</b> ${Array.isArray(v.version_rows)?v.version_rows.length:(v.version||"—")}</span><span><b>Cập nhật</b> ${eEsc(v.updated_at||"—")}</span></div><div class="brd-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-brd-act="edit">Sửa</button><button class="btn btn-ghost btn-sm brd-delete-btn" data-eb2b-brd-act="del">Xóa</button></div></article>`).join(""):`<div class="brd-empty"><div class="brd-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/></svg></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`}</div></div>`;
-    $e(".brd-toolbar .brd-count",c)?.insertAdjacentHTML("afterend",`<button class="btn btn-primary btn-sm" data-eb2b-new="brd" type="button">＋ Tạo BRD mới</button>`);
-    $all("[data-eb2b-brd-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.brd.find(x=>String(x.id)===String(btn.closest("[data-eb2b-brd]")?.dataset.eb2bBrd));if(!row)return;btn.dataset.eb2bBrdAct==="edit"?eb2bOpenModal("brd",row):eb2bDelete("brd",row);}));
+    $e('[data-eb2b-new="brd"]',c)?.remove();
+    $all(".brd-card-actions",c).forEach(actions=>actions.querySelector('[data-eb2b-brd-act="del"]')?.insertAdjacentHTML("beforebegin",`<button class="btn btn-ghost btn-sm" data-eb2b-brd-act="word">Xuất Word</button>`));
+    $all("[data-eb2b-brd-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.brd.find(x=>String(x.id)===String(btn.closest("[data-eb2b-brd]")?.dataset.eb2bBrd));if(!row)return;if(btn.dataset.eb2bBrdAct==="edit")eb2bOpenModal("brd",row);else if(btn.dataset.eb2bBrdAct==="word")eb2bExportBrdWord(row);else eb2bDelete("brd",row);}));
   }
 
   function eb2bRenderWeeklyMom(){
     const c=$e("#eb2bContent"), rows=EB2B.rows.weekly_mom;
     c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg></div><div><div class="weekly-mom-title">Biên bản Weekly với Vendor</div><div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]!==false;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
-    $e(".weekly-mom-intro .weekly-mom-total",c)?.insertAdjacentHTML("afterend",`<button class="btn btn-primary btn-sm" data-eb2b-new="weekly_mom" type="button">＋ Tạo biên bản</button>`);
+    $e('[data-eb2b-new="weekly_mom"]',c)?.remove();
+    $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),state=EB2B.weeklyMomSort[String(card?.dataset.eb2bWeekly||"")];if(!state||!Number.isInteger(state.index)||!table.tBodies[0])return;const bodyRows=Array.from(table.tBodies[0].rows);bodyRows.sort((a,b)=>String(a.cells[state.index]?.textContent||"").localeCompare(String(b.cells[state.index]?.textContent||""),"vi",{numeric:true})*(state.direction==="desc"?-1:1));bodyRows.forEach(row=>table.tBodies[0].appendChild(row));});
     $all("[data-eb2b-weekly-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.weekly_mom.find(x=>String(x.id)===String(btn.closest("[data-eb2b-weekly]")?.dataset.eb2bWeekly));if(!row)return;btn.dataset.eb2bWeeklyAct==="edit"?eb2bOpenModal("weekly_mom",row):eb2bDelete("weekly_mom",row);}));
+    $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),key=String(card?.dataset.eb2bWeekly||""),state=EB2B.weeklyMomSort[key]||{index:null,direction:"asc"};Array.from(table.tHead?.rows[0]?.cells||[]).forEach((th,index)=>{const label=th.textContent.trim(),active=Number(state.index)===index;th.innerHTML=`<button class="weekly-mom-sort-button${active?" is-active":""}" type="button"><span>${eEsc(label)}</span><span class="weekly-mom-sort-icon">${active?(state.direction==="desc"?"↓":"↑"):"↕"}</span></button>`;th.querySelector("button")?.addEventListener("click",()=>{EB2B.weeklyMomSort[key]=active?{index,direction:state.direction==="asc"?"desc":"asc"}:{index,direction:"asc"};eb2bRenderWeeklyMom();});});});
     $all("[data-eb2b-weekly-toggle]",c).forEach(btn=>btn.addEventListener("click",()=>{const card=btn.closest("[data-eb2b-weekly]"),key=card.dataset.eb2bWeekly;EB2B.weeklyMomExpanded[key]=EB2B.weeklyMomExpanded[key]===false;eb2bRenderWeeklyMom();}));
   }
 
@@ -17610,6 +17645,58 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(result.error){eToast("Nhập CR EB2B thất bại: "+result.error.message,"err");return;}
     eToast(`Đã nhập ${payloads.length} CR vào EB2B.`,"ok");await eb2bLoad();
   }
+
+  function eb2bWeeklyItems(record){
+    return Array.isArray(record?.cr_items) ? record.cr_items : [];
+  }
+
+  function eb2bDownloadWeeklyLatest(){
+    const records = [...EB2B.rows.weekly_mom].sort((a,b)=>String(b.meeting_date||"").localeCompare(String(a.meeting_date||"")));
+    const record = records[0];
+    if(!record){eToast("Chưa có biên bản Weekly để tải.","warn");return;}
+    if(typeof XLSX === "undefined"){eToast("Không tìm thấy bộ tạo Excel.","err");return;}
+    const headers=["Meeting Date","Vendor","Meeting Title","Participants","Overall Summary","CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"];
+    const items=eb2bWeeklyItems(record);
+    const data=items.length?items.map(item=>[record.meeting_date||"",record.vendor||"",record.meeting_title||"",record.participants||"",record.overall_summary||"",item.cr_id||"",item.description||"",item.priority||"",item.status||"",item.sub_status||"",item.brd||"",item.fsd||"",item.eta||"",item.loop_mail_header||"",item.progress||item.current_update||"",item.note||""]):[[record.meeting_date||"",record.vendor||"",record.meeting_title||"",record.participants||"",record.overall_summary||"","","","","","","","","","",""]];
+    const sheet=XLSX.utils.aoa_to_sheet([headers,...data]),book=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book,sheet,"Weekly MoM");
+    XLSX.writeFile(book,`EB2B_Weekly_MoM_${record.meeting_date||"latest"}.xlsx`);
+    eToast("Đã tải biên bản Weekly EB2B.","ok");
+  }
+
+  async function eb2bImportWeeklyFile(file){
+    if(!file)return;
+    if(typeof XLSX === "undefined"){eToast("Không tìm thấy bộ đọc Excel.","err");return;}
+    try{
+      const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
+      const source=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
+      const headerMap={"Meeting Date":"meeting_date","Vendor":"vendor","Meeting Title":"meeting_title","Participants":"participants","Overall Summary":"overall_summary","CR ID":"cr_id","Description":"description","Priority":"priority","Status":"status","Sub-Status":"sub_status","BRD":"brd","FSD":"fsd","ETA":"eta","Loop Mail Header":"loop_mail_header","Progress":"progress","Current Update":"current_update","Note":"note"};
+      const grouped=new Map();
+      source.forEach(raw=>{
+        const row={};Object.entries(raw).forEach(([header,value])=>{const key=headerMap[String(header).trim()];if(key)row[key]=value===""?null:value;});
+        const groupKey=[row.meeting_date||"",row.vendor||"",row.meeting_title||""].join("¦");
+        if(!grouped.has(groupKey)) grouped.set(groupKey,{meeting_date:row.meeting_date||null,vendor:row.vendor||null,meeting_title:row.meeting_title||null,participants:row.participants||null,overall_summary:row.overall_summary||null,cr_items:[]});
+        const target=grouped.get(groupKey);
+        if(row.cr_id || row.description || row.status) target.cr_items.push({cr_id:row.cr_id||null,description:row.description||null,priority:row.priority||null,status:row.status||null,sub_status:row.sub_status||null,brd:row.brd||null,fsd:row.fsd||null,eta:row.eta||null,loop_mail_header:row.loop_mail_header||null,progress:row.progress||row.current_update||null,note:row.note||null});
+        ["participants","overall_summary"].forEach(key=>{if(row[key] && !target[key])target[key]=row[key];});
+      });
+      const payloads=[...grouped.values()].filter(row=>row.meeting_date&&row.vendor).map(row=>({...row,created_by:eUser(),updated_by:eUser(),updated_at:eNow()}));
+      if(!payloads.length){eToast("File không có dòng Weekly hợp lệ (cần Meeting Date và Vendor).","err");return;}
+      const result=await activeDb().from(EB2B_TABLES.weekly_mom).insert(payloads);
+      if(result.error){eToast("Nhập Weekly EB2B thất bại: "+result.error.message,"err");return;}
+      eToast(`Đã nhập ${payloads.length} biên bản Weekly EB2B.`,"ok");await eb2bLoad();
+    }catch(error){eToast("Không đọc được file Weekly: "+error.message,"err");}
+  }
+
+  function eb2bExportBrdWord(row){
+    if(!row)return;
+    const esc=v=>eEsc(v||"—").replace(/\n/g,"<br>");
+    const sections=[["Business Objective",row.business_objective],["Current Situation",row.current_situation],["Business Requirement",row.business_requirement],["Scope In",row.scope_in],["Scope Out",row.scope_out],["Functional Requirement",row.functional_requirement],["Non-functional Requirement",row.non_functional_requirement],["Acceptance Criteria",row.acceptance_criteria],["Stakeholders",row.stakeholders],["Risks",row.risks]].filter(([,value])=>value);
+    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;color:#16344e}h1{font-size:22px}h2{font-size:14px;color:#087d82;border-bottom:1px solid #cfe1e6;padding-bottom:5px}p{font-size:11pt;line-height:1.55;white-space:normal}</style></head><body><h1>${esc(row.brd_title)}</h1><p><b>System:</b> ${esc(row.system_name)} &nbsp; <b>CR:</b> ${esc(row.cr_id)} &nbsp; <b>Version:</b> ${esc(row.version)}</p>${sections.map(([title,value])=>`<h2>${title}</h2><p>${esc(value)}</p>`).join("")}</body></html>`;
+    const blob=new Blob(["\ufeff",html],{type:"application/msword;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=`${String(row.brd_title||"EB2B_BRD").replace(/[^\w\-]+/g,"_")}.doc`;a.click();URL.revokeObjectURL(url);eToast("Đã xuất BRD EB2B.","ok");
+  }
+
   function eb2bOpenModal(key, row){
     const overlay = $e("#eb2bModalOverlay");
     const title = row ? "Sửa " : "Tạo ";
@@ -17739,6 +17826,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(ev.target.closest("#eb2bRefreshCrTop")){eb2bLoad();return;}
       if(ev.target.closest("#eb2bCrTemplateTop")){eb2bDownloadCrTemplate();return;}
       if(ev.target.closest("#eb2bCrImportTop")){$e("#eb2bCrImportFile")?.click();return;}
+      if(ev.target.closest("#eb2bAddTcTop")){eb2bUatOpenModal(null);return;}
+      if(ev.target.closest("#eb2bAddRelTop")){eb2bOpenModal("release",null);return;}
+      if(ev.target.closest("#eb2bAddBrdTop")){eb2bOpenModal("brd",null);return;}
+      if(ev.target.closest("#eb2bAddWeeklyTop")){eb2bOpenModal("weekly_mom",null);return;}
+      if(ev.target.closest("#eb2bWeeklyImportTop")){$e("#eb2bWeeklyImportFile")?.click();return;}
+      if(ev.target.closest("#eb2bWeeklyDownloadTop")){eb2bDownloadWeeklyLatest();return;}
       const clear=ev.target.closest("[data-eb2b-cr-clear]");if(clear){EB2B.search="";EB2B.crFilters={status:[],sub_status:[],priority:[],category:[],requester:"",overdue:false};eb2bRenderCrLog();return;}
       const sort=ev.target.closest("[data-eb2b-cr-sort]");if(sort){const k=sort.dataset.eb2bCrSort;EB2B.crSort={key:k,dir:EB2B.crSort.key===k&&EB2B.crSort.dir==="asc"?"desc":"asc"};eb2bRenderCrLog();return;}
       const closeDrawer=ev.target.closest("[data-eb2b-drawer-close]");if(closeDrawer){eb2bCloseCrDrawer();return;}
@@ -17772,7 +17865,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(purge){eb2bPurge(purge.dataset.eb2bPurge,purge.dataset.eb2bId);return;}
     });
     document.addEventListener("input",ev=>{if(ev.target.id==="eb2bCrSearch"){EB2B.search=ev.target.value;eb2bRenderCrLog();const n=$e("#eb2bCrSearch");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}});
-    document.addEventListener("change",ev=>{if(ev.target.id==="eb2bCrImportFile"){eb2bImportCrFile(ev.target.files?.[0]);ev.target.value="";return;}const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();}});
+    document.addEventListener("change",ev=>{if(ev.target.id==="eb2bCrImportFile"){eb2bImportCrFile(ev.target.files?.[0]);ev.target.value="";return;}if(ev.target.id==="eb2bWeeklyImportFile"){eb2bImportWeeklyFile(ev.target.files?.[0]);ev.target.value="";return;}const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();}});
     $e("#eb2bDrawerOverlay")?.addEventListener("click",eb2bCloseCrDrawer);
     document.addEventListener("keydown", ev=>{
        if(ev.key==="Escape"){eb2bCloseModal();eb2bUatCloseModal();eb2bCloseCrDrawer();}
