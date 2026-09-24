@@ -1342,6 +1342,22 @@ td.cell-id .id-chip{
 }
 @keyframes spin{ to{ transform: rotate(360deg); } }
 
+/* ---- Workspace-switch loading bar --------------------------------------
+   A slim top progress bar, shown only for a real DMS <-> e-B2B workspace
+   switch (never for a plain tab click inside one workspace). Mirrors the
+   ws-workspace-enter / eb2b-view-enter reveal so the sequence reads as
+   "loading -> reveal" instead of an abrupt content swap. */
+#wsLoadingBar{
+  position:fixed; top:0; left:0; right:0; height:2.5px; z-index:4000;
+  background:linear-gradient(90deg, var(--accent), #7ee6df);
+  box-shadow:0 0 10px rgba(63,208,201,.55);
+  transform:scaleX(0); transform-origin:0 50%; opacity:0;
+  pointer-events:none;
+  transition:transform var(--duration-slow) var(--ease-decel), opacity var(--duration-fast) var(--ease-standard);
+}
+#wsLoadingBar.is-active{ opacity:1; }
+@media(prefers-reduced-motion:reduce){ #wsLoadingBar{ transition:opacity var(--duration-fast) linear; } }
+
 /* ---- Light-theme bổ sung: dashboard panels, charts, headings ---- */
 .view .view-head h2{ color:#0a1e33; }
 .view .view-head p{ color:#5f7690; }
@@ -5453,6 +5469,11 @@ html{
 </head>
 <body>
 
+<!-- Slim top progress bar shown only while switching between the DMS and
+     e-B2B workspaces (see wsLoadingStart/wsLoadingDone). Not used for
+     in-workspace tab clicks, same rule the workspace-enter animation uses. -->
+<div id="wsLoadingBar" aria-hidden="true"></div>
+
 <!-- ============================== LOGIN SCREEN ============================== -->
 <div id="loginScreen">
   <div class="auth-orb auth-orb-one"></div>
@@ -8695,6 +8716,41 @@ function initAutoGrow(root){
    next tab is shown. Both setView() (DMS side) and eb2bShow() (e-B2B side)
    go through these two helpers, so the behaviour cannot drift apart again.
 --------------------------------------------------------------------------- */
+/* Slim top progress bar for a real DMS <-> e-B2B workspace switch (see
+   #wsLoadingBar CSS). wsLoadingStart() jumps the bar to ~72% right away;
+   wsLoadingDone() completes it to 100% and fades it out, with a small
+   minimum-visible floor so a very fast switch doesn't just flash. Safe to
+   call from either script block (setView on the DMS side, eb2bShow on the
+   e-B2B side) since both are plain top-level functions on window. */
+let wsLoadingShownAt = 0;
+let wsLoadingHideTimer = null;
+function wsLoadingStart(){
+  const bar = document.getElementById("wsLoadingBar");
+  if(!bar) return;
+  clearTimeout(wsLoadingHideTimer);
+  bar.style.transition = "none";
+  bar.style.transform = "scaleX(0)";
+  bar.classList.add("is-active");
+  void bar.offsetWidth;
+  bar.style.transition = "";
+  requestAnimationFrame(()=>{ bar.style.transform = "scaleX(.72)"; });
+  wsLoadingShownAt = Date.now();
+}
+function wsLoadingDone(){
+  const bar = document.getElementById("wsLoadingBar");
+  if(!bar) return;
+  const minVisibleMs = 220;
+  const wait = Math.max(0, minVisibleMs - (Date.now() - wsLoadingShownAt));
+  clearTimeout(wsLoadingHideTimer);
+  wsLoadingHideTimer = setTimeout(()=>{
+    bar.style.transform = "scaleX(1)";
+    wsLoadingHideTimer = setTimeout(()=>{
+      bar.classList.remove("is-active");
+      bar.style.transform = "scaleX(0)";
+    }, 180);
+  }, wait);
+}
+
 function closeDmsOverlays(){
   try{ closeDrawer(); }catch(_){}
   const tc = $("#tcModalOverlay"), rel = $("#relModalOverlay");
@@ -8722,6 +8778,7 @@ function setView(view){
   // __eb2bLeave() clears the "eb2b-active" class, so we can tell a real
   // cross-workspace switch (e-B2B -> DMS) apart from a plain DMS tab click.
   const wasEb2bActive = document.body.classList.contains("eb2b-active");
+  if(wasEb2bActive) wsLoadingStart();
   // Leaving e-B2B (if we were in it): un-highlight its tabs, close its forms.
   if(typeof window.__eb2bLeave === "function") window.__eb2bLeave();
   closeDmsOverlays();
@@ -8748,6 +8805,7 @@ function setView(view){
     const headerTitle = $("#topbarTitle");
     headerTitle?.classList.remove("ws-header-swap");
     if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("ws-header-swap"); }
+    wsLoadingDone();
   }
   $all(".view-action").forEach(b=> {
     const views = String(b.dataset.for || "").split(",").map(item=>item.trim());
@@ -16949,8 +17007,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     // DMS) gets the reveal animation; re-playing it on every tab click is what
     // was causing the "chớp chớp" flicker.
     const wasEb2bActive = document.body.classList.contains("eb2b-active");
+    if(!wasEb2bActive && typeof wsLoadingStart === "function") wsLoadingStart();
     if(typeof closeDmsOverlays === "function") closeDmsOverlays();
     if(typeof clearDmsNavState === "function") clearDmsNavState();
+    // Accordion behaviour: only one workspace's child list stays expanded at
+    // a time, same as DMS collapsing e-B2B's list on the way back (eb2bHide
+    // below). Without this, "Quản Lý DMS" stayed open forever after the
+    // first visit to e-B2B, so the gap to "Quản Lý e-B2B" no longer matched
+    // the tight, constant gap used for Quản Trị Dữ Liệu / Recycle Bin.
+    if(typeof setDmsWorkspaceNavOpen === "function") setDmsWorkspaceNavOpen(false, false);
     eb2bCloseOverlays();
     if(typeof closeMobileNav === "function") closeMobileNav();
     EB2B.activeTab = tab;
@@ -16972,6 +17037,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("eb2b-header-swap"); }
     }
     eb2bRender();
+    if(!wasEb2bActive && typeof wsLoadingDone === "function") wsLoadingDone();
   }
 
   function eb2bHide(){
@@ -16979,6 +17045,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     eb2bCloseOverlays();
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
     $e("#navEb2bWorkspace")?.classList.remove("is-context");
+    // Mirror of the DMS-side collapse in eb2bShow(): fold e-B2B's own child
+    // list back up when its workspace is left, so only one workspace list
+    // is ever expanded at once and the header-to-header gap stays the same
+    // tight distance every time, matching Quản Trị Dữ Liệu / Recycle Bin.
+    $e("#navEb2bChildren")?.classList.add("is-collapsed");
+    $e("#navEb2bWorkspace")?.classList.remove("is-open");
+    $e("#navEb2bWorkspace")?.setAttribute("aria-expanded", "false");
   }
   // Exposed so the DMS-side setView() can reset e-B2B from ANY entry point
   // (sidebar click, dashboard tile, global search, programmatic navigation).
