@@ -16919,6 +16919,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     // Entering e-B2B: DMS must go fully dark (no active leaf, no context parent,
     // no open CR form / drawer / modal left behind) and any e-B2B form from the
     // previous tab must be closed too.
+    // Was e-B2B already the active workspace? If so this is just a tab switch
+    // WITHIN e-B2B — mirror DMS's setView(), which swaps views instantly with
+    // no enter animation. Only the very first entry into e-B2B (coming from
+    // DMS) gets the reveal animation; re-playing it on every tab click is what
+    // was causing the "chớp chớp" flicker.
+    const wasEb2bActive = document.body.classList.contains("eb2b-active");
     if(typeof closeDmsOverlays === "function") closeDmsOverlays();
     if(typeof clearDmsNavState === "function") clearDmsNavState();
     eb2bCloseOverlays();
@@ -16933,12 +16939,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $e("#navEb2bChildren")?.classList.remove("is-collapsed");
     $e("#navEb2bWorkspace")?.classList.add("is-open");
     $e("#navEb2bWorkspace")?.setAttribute("aria-expanded", "true");
-    const root=$e("#eb2bViewRoot");
-    root?.classList.remove("eb2b-view-enter");
-    if(root){ void root.offsetWidth; root.classList.add("eb2b-view-enter"); }
-    const headerTitle=$e("#topbarTitle");
-    headerTitle?.classList.remove("eb2b-header-swap");
-    if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("eb2b-header-swap"); }
+    if(!wasEb2bActive){
+      const root=$e("#eb2bViewRoot");
+      root?.classList.remove("eb2b-view-enter");
+      if(root){ void root.offsetWidth; root.classList.add("eb2b-view-enter"); }
+      const headerTitle=$e("#topbarTitle");
+      headerTitle?.classList.remove("eb2b-header-swap");
+      if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("eb2b-header-swap"); }
+    }
     eb2bRender();
   }
 
