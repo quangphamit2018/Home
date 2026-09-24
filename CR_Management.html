@@ -406,8 +406,7 @@ body.sidebar-hidden .drawer{ left:0; }
    continue to work unchanged. This makes it safe to add EB2B as a sibling
    workspace later without rewriting the DMS modules. */
 .workspace-nav{ margin:0 0 4px; }
-.workspace-nav > .workspace-parent,
-.workspace-siblings .workspace-sibling{ margin-bottom:0; }
+.workspace-nav > .workspace-parent{ margin-bottom:0; }
 .workspace-children + .workspace-nav{ margin-top:4px; }
 .workspace-parent{
   position:relative;
@@ -443,26 +442,28 @@ body.sidebar-hidden .drawer{ left:0; }
   font-size:12.8px;
 }
 .workspace-children .nav-item svg{ width:16px; height:16px; }
-.workspace-siblings{
+.global-nav-tools{
   display:grid;
   gap:4px;
-  margin-top:0;
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px solid var(--border);
 }
-.workspace-sibling{
+.global-nav-item{
   background:linear-gradient(135deg, rgba(63,208,201,.12), rgba(255,255,255,.025));
   border-color:rgba(63,208,201,.18);
 }
-.workspace-sibling:hover{
+.global-nav-item:hover{
   background:linear-gradient(135deg, rgba(63,208,201,.18), rgba(255,255,255,.04));
 }
-.workspace-sibling.active{
+.global-nav-item.active{
   color:var(--accent);
   border-color:rgba(63,208,201,.34);
 }
 @media(max-width:900px){
   .workspace-children{ margin-left:8px; padding-left:8px; }
   .workspace-children .nav-item{ padding:12px 10px; }
-  .workspace-sibling{ padding:12px; }
+  .global-nav-item{ padding:12px; }
 }
 
 .main{ flex:1; min-width:0; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
@@ -5644,17 +5645,21 @@ html{
           <span class="count" id="navCountWeeklyMom">0</span>
         </div>
       </div>
-      <div class="workspace-siblings" aria-label="Công cụ quản trị workspace">
-        <div class="nav-item workspace-sibling hidden" data-view="admin" id="navAdmin" title="Quản Trị Dữ Liệu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a2 2 0 00-2 2v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          <span class="nav-label">Quản Trị Dữ Liệu</span>
-          <span class="count hidden" id="navAdminRequestBadge" title="Yêu cầu cấp quyền đang chờ duyệt" style="background:var(--warning-dim); color:var(--warning);">0</span>
-        </div>
-        <div class="nav-item workspace-sibling hidden" data-view="recycle" id="navRecycleBin" title="Recycle Bin">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
-          <span class="nav-label">Recycle Bin</span>
-          <span class="count" id="navCountRecycle">0</span>
-        </div>
+    </div>
+
+    <!-- e-B2B is mounted here at runtime; global tools stay below all workspaces. -->
+    <div id="eb2bNavMount" aria-hidden="true"></div>
+
+    <div class="global-nav-tools" aria-label="Công cụ dùng chung">
+      <div class="nav-item global-nav-item hidden" data-view="admin" id="navAdmin" title="Quản Trị Dữ Liệu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a2 2 0 00-2 2v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span class="nav-label">Quản Trị Dữ Liệu</span>
+        <span class="count hidden" id="navAdminRequestBadge" title="Yêu cầu cấp quyền đang chờ duyệt" style="background:var(--warning-dim); color:var(--warning);">0</span>
+      </div>
+      <div class="nav-item global-nav-item hidden" data-view="recycle" id="navRecycleBin" title="Recycle Bin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+        <span class="nav-label">Recycle Bin</span>
+        <span class="count" id="navCountRecycle">0</span>
       </div>
     </div>
 
@@ -16541,7 +16546,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     }
      const sidebar = $e("#sidebar");
      const sidebarFoot = $e(".sidebar-foot", sidebar);
-     if(sidebar && sidebarFoot && !$e("#eb2bNav")){
+     const eb2bMount = $e("#eb2bNavMount", sidebar);
+     if(sidebar && (eb2bMount || sidebarFoot) && !$e("#eb2bNav")){
       const icons = {
         dashboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>`,
         cr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>`,
@@ -16550,7 +16556,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         brd: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6M9 9h1"/></svg>`,
         weekly_mom: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg>`
       };
-       sidebarFoot.insertAdjacentHTML("beforebegin", `
+       (eb2bMount || sidebarFoot).insertAdjacentHTML("beforebegin", `
         <div class="workspace-nav" data-workspace="eb2b" id="eb2bNav">
           <div class="nav-item workspace-parent" id="navEb2bWorkspace"
                title="Mở / thu gọn Quản Lý e-B2B" role="button" tabindex="0"
