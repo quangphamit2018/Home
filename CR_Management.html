@@ -16313,8 +16313,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     modalId: "eb2bModalOverlay",
     activeTab: "dashboard",
     search: "",
-    crFilters: {status:"",sub_status:"",priority:"",category:"",requester:"",overdue:false},
+    crFilters: {status:[],sub_status:[],priority:[],category:[],requester:"",overdue:false},
     crSort: {key:"created_at",dir:"desc"},
+    crColumns: {
+      title:true, requester:true, category:true, priority:true, status:true,
+      sub_status:true, brd:true, fsd:true, deadline:true, note:true
+    },
+    crDensity: localStorage.getItem("eb2bCrDensity") || "comfortable",
+    crSelection: new Set(),
     rows: {
       cr: [], uat: [], release: [], brd: [], weekly_mom: [],
       statuses: [], sub_statuses: [], evidence_steps: [], attachment_categories: [], attachments: []
@@ -16344,6 +16350,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     attachment_categories: "eb2b_attachment_categories",
     attachments: "eb2b_attachments"
   };
+  try{
+    const savedCrColumns = JSON.parse(localStorage.getItem("eb2bCrColumns") || "null");
+    if(savedCrColumns && typeof savedCrColumns === "object") Object.assign(EB2B.crColumns, savedCrColumns);
+  }catch(_){}
   const EB2B_META = {
     dashboard: ["EB2B Dashboard", "Tổng quan workspace EB2B"],
     cr: ["EB2B · CR Log", "Sổ đăng ký Change Request riêng cho EB2B"],
@@ -16400,6 +16410,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       .eb2b-cr-shell .eb2b-cr-table-wrap{overflow:auto;flex:1 1 auto}
       .eb2b-cr-shell table{min-width:1360px}
       .eb2b-cr-shell .filter-chip select{max-width:126px}
+      .eb2b-uat-hscroll{display:none;height:13px;padding:3px 8px;background:#f4f8f9;border-top:1px solid #e1ecee}.eb2b-uat-hscroll.is-active{display:block}.eb2b-uat-hscroll .hscroll-track{position:relative;height:7px;border-radius:10px;background:#dce8eb}.eb2b-uat-hscroll .hscroll-thumb{position:absolute;top:0;height:7px;min-width:42px;border-radius:10px;background:#62c9c4;cursor:grab}
+      .eb2b-cr-shell .table-toolbar{position:relative;align-items:center}
+      .eb2b-cr-shell .cr-filter-group{position:relative}
+      .eb2b-cr-shell .cr-filter-trigger{display:flex;align-items:center;gap:7px;min-height:36px;padding:6px 9px;border:1px solid #dbe5e9;border-radius:9px;background:#fff;color:#26455d;cursor:pointer;font:inherit;text-align:left}
+      .eb2b-cr-shell .cr-filter-trigger:hover,.eb2b-cr-shell .cr-filter-trigger.is-active{border-color:#58c8c1;background:#f1fbfa}
+      .eb2b-cr-shell .cr-filter-copy{display:grid;line-height:1.15;min-width:72px}.eb2b-cr-shell .cr-filter-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#8da0ac;font-weight:800}.eb2b-cr-shell .cr-filter-value{font-size:11px;white-space:nowrap;max-width:112px;overflow:hidden;text-overflow:ellipsis}.eb2b-cr-shell .cr-filter-glyph{color:#2daaa4;font-weight:900}.eb2b-cr-shell .cr-filter-chevron{color:#8da0ac}.eb2b-cr-shell .cr-filter-count{font-size:10px;background:#d9f4f1;color:#13837f;border-radius:10px;padding:2px 5px;font-weight:800}
+      .eb2b-cr-shell .cr-filter-menu{display:none;position:absolute;z-index:40;top:calc(100% + 7px);left:0;width:250px;padding:11px;border:1px solid #dce8eb;border-radius:12px;background:#fff;box-shadow:0 16px 35px -20px rgba(15,42,68,.65)}.eb2b-cr-shell .cr-filter-group.is-open .cr-filter-menu{display:block}.eb2b-cr-shell .cr-filter-menu-head{display:flex;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid #edf2f4}.eb2b-cr-shell .cr-filter-menu-title{font-size:12px;font-weight:800;color:#163b56}.eb2b-cr-shell .cr-filter-menu-hint{font-size:10px;color:#8ba0ab}.eb2b-cr-shell .cr-filter-reset{border:0;background:none;color:#229c96;font-size:10px;font-weight:800;cursor:pointer}.eb2b-cr-shell .cr-filter-options{display:grid;gap:4px;max-height:230px;overflow:auto;padding-top:8px}.eb2b-cr-shell .cr-filter-option{display:flex;align-items:center;gap:7px;padding:6px 5px;border-radius:7px;color:#436078;font-size:11px;cursor:pointer}.eb2b-cr-shell .cr-filter-option:hover{background:#f2f8f8}.eb2b-cr-shell .cr-filter-option input{accent-color:#27aaa4}.eb2b-cr-shell .cr-filter-option.is-all{border-bottom:1px solid #edf2f4;padding-bottom:8px;font-weight:800;color:#23465c}.eb2b-cr-shell .cr-filter-empty{padding:12px;color:#8ca0ac;font-size:11px}
+      .eb2b-cr-view-tools{display:flex;gap:5px;margin-left:auto}.eb2b-cr-shell .table-tool-btn{border:1px solid #dbe5e9;background:#fff;color:#36566b;border-radius:8px;padding:8px 10px;font-size:10px;font-weight:800;cursor:pointer}.eb2b-cr-shell .table-tool-btn:hover{border-color:#50c6bf;color:#118983}.eb2b-cr-tool-popover{display:none;position:absolute;z-index:50;right:14px;top:82px;min-width:190px;padding:11px;border:1px solid #dce8eb;border-radius:12px;background:#fff;box-shadow:0 16px 35px -20px rgba(15,42,68,.7)}.eb2b-cr-tool-popover.is-open{display:grid;gap:7px}.eb2b-cr-tool-popover b{font-size:11px;color:#173d58}.eb2b-cr-tool-popover label{display:flex;gap:7px;font-size:11px;color:#496579}.eb2b-cr-tool-popover input{accent-color:#27aaa4}
+      .eb2b-cr-shell .eb2b-cr-table-wrap{position:relative;scrollbar-width:none}.eb2b-cr-shell .eb2b-cr-table-wrap::-webkit-scrollbar{display:none}.eb2b-cr-shell table th,.eb2b-cr-shell table td{white-space:nowrap}.eb2b-cr-shell th.sticky-cr-id,.eb2b-cr-shell td.sticky-cr-id{position:sticky;left:44px;z-index:4;background:#fff}.eb2b-cr-shell thead th.sticky-cr-id{z-index:7}.eb2b-cr-shell tbody tr.is-selected td{background:#eefaf8}.eb2b-cr-shell tbody tr.is-selected td.sticky-cr-id{background:#eefaf8}.eb2b-cr-shell .col-check{position:sticky;left:0;z-index:5;background:#fff}.eb2b-cr-shell thead .col-check{z-index:8}.eb2b-cr-shell .inline-edit-cell{padding:5px 8px}.eb2b-cr-shell .cr-dropdown-trigger{display:inline-flex;align-items:center;gap:5px;max-width:170px;border:1px solid transparent;border-radius:7px;padding:5px 7px;background:#f4f7f8;color:#567084;cursor:pointer;font:inherit;font-size:11px;font-weight:750}.eb2b-cr-shell .cr-dropdown-trigger:hover,.eb2b-cr-shell .cr-dropdown-trigger.is-open{filter:brightness(.97);box-shadow:0 0 0 2px rgba(56,190,183,.16)}.eb2b-cr-shell .cr-dropdown-label{overflow:hidden;text-overflow:ellipsis}.eb2b-cr-shell .cr-dropdown-caret{width:12px;height:12px;margin-left:2px;opacity:.7}.eb2b-cr-shell .cr-dropdown-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}.eb2b-cr-dropdown-menu{position:fixed;z-index:10000;max-height:280px;overflow:auto;padding:5px;border:1px solid #d8e6e9;border-radius:10px;background:#fff;box-shadow:0 18px 38px -18px rgba(15,42,68,.75)}.eb2b-cr-dropdown-menu .cr-dropdown-option{display:flex;justify-content:space-between;gap:18px;padding:8px 10px;border-radius:7px;color:#35556a;font-size:11px;cursor:pointer}.eb2b-cr-dropdown-menu .cr-dropdown-option:hover,.eb2b-cr-dropdown-menu .cr-dropdown-option.is-selected{background:#edf9f8;color:#148d87}.eb2b-cr-dropdown-menu .cr-dropdown-check{font-weight:900}.eb2b-cr-shell .hscroll-bar{display:none;height:13px;padding:3px 8px;background:#f4f8f9;border-top:1px solid #e1ecee}.eb2b-cr-shell .hscroll-bar.is-active{display:block}.eb2b-cr-shell .hscroll-track{position:relative;height:7px;border-radius:10px;background:#dce8eb}.eb2b-cr-shell .hscroll-thumb{position:absolute;top:0;height:7px;min-width:42px;border-radius:10px;background:#62c9c4;cursor:grab}.eb2b-cr-shell .hscroll-thumb:active{cursor:grabbing}.eb2b-cr-shell .hscroll-fade{position:absolute;top:0;bottom:13px;width:28px;z-index:3;pointer-events:none;opacity:0;transition:opacity .2s}.eb2b-cr-shell .hscroll-fade.is-visible{opacity:1}.eb2b-cr-shell .hscroll-fade-left{left:0;background:linear-gradient(90deg,rgba(255,255,255,.9),transparent)}.eb2b-cr-shell .hscroll-fade-right{right:0;background:linear-gradient(270deg,rgba(255,255,255,.9),transparent)}.eb2b-cr-shell .density-compact td,.eb2b-cr-shell .density-compact th{padding-top:6px;padding-bottom:6px}.eb2b-cr-shell .density-spacious td,.eb2b-cr-shell .density-spacious th{padding-top:14px;padding-bottom:14px}.eb2b-cr-shell .cr-card-inline{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.eb2b-cr-shell .cr-card-actions{display:flex;gap:6px;margin-top:10px}.eb2b-cr-shell .cr-card-select{margin-right:5px}.eb2b-cr-shell .eb2b-cr-focus{position:fixed!important;z-index:900;inset:0;background:#f7fbfb;padding:18px;overflow:auto}.eb2b-cr-focus .eb2b-shell{max-width:none}.eb2b-cr-focus .eb2b-cr-shell{min-height:calc(100vh - 36px)}
       .eb2b-cr-status-select{min-width:118px;border:1px solid currentColor;border-radius:999px;padding:5px 26px 5px 10px;font:inherit;font-size:11px;font-weight:700;background-color:var(--surface,#fff)}
       .eb2b-cr-row{cursor:pointer}
       .eb2b-cr-row.detail-selected td{background:var(--accent-dim,#e8f7f6)!important}
@@ -16725,23 +16744,114 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const color=eb2bCrColor(field,value);
     return `<span class="badge" style="color:${color};background:${typeof hexToRgba==="function"?hexToRgba(color,.14):"#eef2f7"};border-color:${typeof hexToRgba==="function"?hexToRgba(color,.28):"#d7dee7"}"><span class="dot" style="background:${color}"></span>${eEsc(value)}</span>`;
   }
+  const EB2B_CR_COLUMNS = [
+    {key:"title",label:"Tiêu đề / App"},
+    {key:"requester",label:"Requester"},
+    {key:"category",label:"Category"},
+    {key:"priority",label:"Priority"},
+    {key:"status",label:"Status"},
+    {key:"sub_status",label:"Sub-Status"},
+    {key:"brd",label:"BRD"},
+    {key:"fsd",label:"FSD"},
+    {key:"deadline",label:"Deadline"},
+    {key:"note",label:"Note"}
+  ];
+
+  function eb2bFilterMatches(value, selected){
+    const list = Array.isArray(selected) ? selected : (selected ? [selected] : []);
+    return !list.length || list.includes(String(value || ""));
+  }
   function eb2bFilteredCr(){
     const f=EB2B.crFilters,q=EB2B.search.trim().toLowerCase();
     let rows=EB2B.rows.cr.filter(r=>{
-      if(f.status&&r.status!==f.status||f.sub_status&&r.sub_status!==f.sub_status||f.priority&&r.priority!==f.priority||f.category&&r.category!==f.category||f.requester&&r.requester!==f.requester)return false;
+      if(!eb2bFilterMatches(r.status,f.status)||!eb2bFilterMatches(r.sub_status,f.sub_status)||!eb2bFilterMatches(r.priority,f.priority)||!eb2bFilterMatches(r.category,f.category)) return false;
+      if(f.requester&&r.requester!==f.requester)return false;
       if(f.overdue&&!eb2bCrOverdue(r))return false;
-      return !q||[r.cr_id,r.old_name,r.rename_folder,r.app,r.requester,r.department,r.owner,r.status,r.sub_status].some(v=>String(v||"").toLowerCase().includes(q));
+      return !q||[r.cr_id,r.old_name,r.rename_folder,r.app,r.requester,r.department,r.owner,r.status,r.sub_status,r.note].some(v=>String(v||"").toLowerCase().includes(q));
     });
     const {key,dir}=EB2B.crSort;
-    return rows.sort((a,b)=>String(a[key]??"").localeCompare(String(b[key]??""),"vi",{numeric:true})*(dir==="asc"?1:-1));
+    return rows.sort((a,b)=>{
+      const av=a[key],bv=b[key];
+      if(["deadline","created_at","updated_at"].includes(key)){
+        return ((av?new Date(av).getTime():0)-(bv?new Date(bv).getTime():0))*(dir==="asc"?1:-1);
+      }
+      return String(av??"").localeCompare(String(bv??""),"vi",{numeric:true})*(dir==="asc"?1:-1);
+    });
   }
   function eb2bCrKpi(label,value,foot,cls=""){
     return `<div class="kpi-card ${cls}"><div class="kpi-top"><div class="kpi-label">${eEsc(label)}</div></div><div class="kpi-value">${value}</div>${foot?`<div class="kpi-foot">${eEsc(foot)}</div>`:""}</div>`;
   }
-  function eb2bCrFilter(label,key,values){
-    return `<div class="filter-chip"><span>${label}</span><select data-eb2b-cr-filter="${key}"><option value="">Tất cả</option>${values.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters[key]===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div>`;
+  function eb2bCrFilterMenu(key,label,glyph,values){
+    const selected=Array.isArray(EB2B.crFilters[key])?EB2B.crFilters[key]:[];
+    const allMode=!selected.length;
+    const options=values.map(value=>`<label class="cr-filter-option"><input type="checkbox" data-eb2b-cr-multi="${key}" value="${eEsc(value)}" ${allMode||selected.includes(String(value))?"checked":""}> ${eEsc(value)}</label>`).join("");
+    const summary=selected.length===0?"Tất cả":selected.length===1?selected[0]:`${selected[0]} +${selected.length-1}`;
+    return `<div class="cr-filter-group" data-eb2b-cr-filter-group="${key}">
+      <button class="cr-filter-trigger ${selected.length?"is-active":""}" type="button" data-eb2b-cr-filter-trigger="${key}" aria-haspopup="true" aria-expanded="false">
+        <span class="cr-filter-glyph">${glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${label}</span><strong class="cr-filter-value">${eEsc(summary)}</strong></span><span class="cr-filter-count">${selected.length>1?selected.length:""}</span><span class="cr-filter-chevron">⌄</span>
+      </button>
+      <div class="cr-filter-menu" data-eb2b-cr-filter-menu="${key}">
+        <div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${label}</div><span class="cr-filter-menu-hint">Chọn một hoặc nhiều giá trị</span></div><button type="button" class="cr-filter-reset" data-eb2b-cr-filter-reset="${key}">Đặt lại</button></div>
+        <div class="cr-filter-options"><label class="cr-filter-option is-all"><input type="checkbox" data-eb2b-cr-all="${key}" ${allMode?"checked":""}> Tất cả</label>${options||`<div class="cr-filter-empty">Chưa có danh mục</div>`}</div>
+      </div>
+    </div>`;
   }
-  function eb2bRenderCrLog(){
+  function eb2bCrDocumentPresent(row,type){
+    const link=type==="BRD"?row.brd_link:row.fsd_link;
+    if(link) return true;
+    return EB2B.rows.attachments.some(file=>String(file.cr_id||"")===String(row.cr_id||"")&&!file.testcase_id&&(
+      String(file.category||"").toLowerCase().includes(type.toLowerCase()) ||
+      String(file.file_name||"").toLowerCase().includes(type.toLowerCase())
+    ));
+  }
+  function eb2bCrDocumentHtml(row,type){
+    const present=eb2bCrDocumentPresent(row,type);
+    return `<td class="doc-status-cell" title="${type} ${present?"đã được đính kèm":"chưa được đính kèm"}"><span class="doc-status ${present?"is-present":"is-missing"}"><span class="doc-status-icon">${present?"✓":"—"}</span><span>${present?"Có file":"Chưa có"}</span></span></td>`;
+  }
+  function eb2bCrInlineHtml(field,row){
+    const value=row[field]||"";
+    const color=eb2bCrColor(field,value);
+    return `<button type="button" class="cr-dropdown-trigger" style="${value?`background:${typeof hexToRgba==="function"?hexToRgba(color,.14):"#eef2f7"};color:${color};border-color:${typeof hexToRgba==="function"?hexToRgba(color,.35):"#d7dee7"};`:""}" data-eb2b-cr-inline="${field}" data-eb2b-cr-id="${eEsc(row.id)}" aria-haspopup="listbox" aria-expanded="false">${value?`<span class="cr-dropdown-dot" style="background:${color}"></span>`:""}<span class="cr-dropdown-label">${eEsc(value||"— Chọn —")}</span><svg class="cr-dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></button>`;
+  }
+  function eb2bCrCellHtml(key,row,overdue,canEdit){
+    if(key==="title") return `<td class="cell-title" title="${eEsc(eb2bCrTitle(row))}">${eEsc(eb2bCrTitle(row))}</td>`;
+    if(key==="requester") return `<td class="cell-dim">${eEsc(row.requester||"—")}</td>`;
+    if(["category","priority","status","sub_status"].includes(key)) return `<td class="inline-edit-cell">${canEdit?eb2bCrInlineHtml(key,row):eb2bCrBadge(key,row[key])}</td>`;
+    if(key==="brd"||key==="fsd") return eb2bCrDocumentHtml(row,key.toUpperCase());
+    if(key==="deadline") return `<td class="cell-dim">${row.deadline?(overdue?`<span class="deadline-overdue"><span class="dl-warn">!</span>${eEsc(eDate(row.deadline))}</span>`:eEsc(eDate(row.deadline))):"—"}</td>`;
+    if(key==="note") return `<td class="cell-note" title="${eEsc(row.note||"")}"><span class="note-clamp">${eEsc(row.note||"—")}</span></td>`;
+    return `<td class="cell-dim">${eEsc(row[key]||"—")}</td>`;
+  }
+  let eb2bActiveCrInline=null;
+  function eb2bCloseCrInline(){
+    if(!eb2bActiveCrInline)return;
+    eb2bActiveCrInline.menu.remove();eb2bActiveCrInline.trigger.setAttribute("aria-expanded","false");eb2bActiveCrInline.trigger.classList.remove("is-open");eb2bActiveCrInline=null;
+  }
+  async function eb2bUpdateCrInline(id,field,value,trigger){
+    const row=EB2B.rows.cr.find(item=>String(item.id)===String(id)); if(!row)return;
+    if(field==="status"&&!value){eToast("Status không được để trống.","err");return;}
+    if(String(row[field]||"")===String(value||""))return;
+    trigger?.classList.add("is-saving");
+    const result=await activeDb().from(EB2B_TABLES.cr).update({[field]:value||null,updated_at:eNow(),updated_by:eUser()}).eq("id",row.id);
+    if(result.error){eToast(`Cập nhật ${field} thất bại: ${result.error.message}`,"err");eb2bRenderCrLog();return;}
+    row[field]=value||null; eToast(`Đã cập nhật ${field==="sub_status"?"Sub-Status":field}`,"ok"); eb2bRenderCrLog();
+  }
+  function eb2bOpenCrInline(trigger){
+    eb2bCloseCrInline();
+    const field=trigger.dataset.eb2bCrInline,row=EB2B.rows.cr.find(item=>String(item.id)===String(trigger.dataset.eb2bCrId)); if(!row)return;
+    const listKey=field==="sub_status"?"sub_statuses":field+"s";
+    let values=[];
+    if(field==="status") values=EB2B.rows.statuses.map(item=>item.name);
+    else if(field==="sub_status") values=EB2B.rows.sub_statuses.map(item=>item.name);
+    else values=eb2bCrCatalog(field);
+    values=Array.from(new Set([row[field],...values].filter(Boolean)));
+    const menu=document.createElement("div"); menu.className="eb2b-cr-dropdown-menu"; menu.innerHTML=values.map(value=>`<div class="cr-dropdown-option ${String(value)===String(row[field]||"")?"is-selected":""}" data-eb2b-cr-value="${eEsc(value)}">${eEsc(value)}${String(value)===String(row[field]||"")?`<span class="cr-dropdown-check">✓</span>`:""}</div>`).join("");
+    document.body.appendChild(menu);
+    const rect=trigger.getBoundingClientRect(); menu.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-menu.offsetWidth-8))+"px"; menu.style.top=Math.min(window.innerHeight-menu.offsetHeight-8,rect.bottom+6)+"px"; menu.style.minWidth=Math.max(170,rect.width)+"px";
+    trigger.setAttribute("aria-expanded","true");trigger.classList.add("is-open");eb2bActiveCrInline={trigger,menu};
+    $$e("[data-eb2b-cr-value]",menu).forEach(option=>option.addEventListener("click",()=>{const value=option.dataset.eb2bCrValue;eb2bCloseCrInline();eb2bUpdateCrInline(row.id,field,value,trigger);}));
+  }
+  function eb2bRenderCrLogLegacy(){
     const c=$e("#eb2bContent"),all=EB2B.rows.cr,rows=eb2bFilteredCr();
     const overdue=all.filter(eb2bCrOverdue).length,inProgress=all.filter(r=>["In Progress","In Review","UAT"].includes(r.status)).length,critical=all.filter(r=>r.priority==="Critical").length;
     const requesters=Array.from(new Set(all.map(x=>x.requester).filter(Boolean))).sort();
@@ -16757,6 +16867,54 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       <div class="cr-mobile-list eb2b-cr-mobile">${rows.map(r=>`<div class="cr-card" data-eb2b-cr-view="${r.id}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(eDate(r.deadline)||"—")}</span></div></div>`).join("")}</div>
       <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span></div></div></div>`;
   }
+  const EB2B_CR_SCROLL_WIRED={};
+  function eb2bWireCrHScroll(){
+    const wrap=$e("#eb2bCrTableWrap"),track=$e("#eb2bCrHscrollTrack"),thumb=$e("#eb2bCrHscrollThumb");
+    if(!wrap||!track||!thumb)return;
+    const refresh=()=>{
+      const max=Math.max(0,wrap.scrollWidth-wrap.clientWidth),bar=$e("#eb2bCrHscrollBar"),fadeL=$e("#eb2bCrHscrollFadeL"),fadeR=$e("#eb2bCrHscrollFadeR");
+      if(!bar)return; const active=max>2;bar.classList.toggle("is-active",active);
+      fadeL?.classList.toggle("is-visible",active&&wrap.scrollLeft>2);fadeR?.classList.toggle("is-visible",active&&wrap.scrollLeft<max-2);
+      if(!active)return;const tw=track.clientWidth,th=Math.min(tw,Math.max(42,wrap.clientWidth/wrap.scrollWidth*tw));thumb.style.width=th+"px";thumb.style.left=(max?(wrap.scrollLeft/max)*(tw-th):0)+"px";
+    };
+    if(EB2B_CR_SCROLL_WIRED.wrap!==wrap){
+      EB2B_CR_SCROLL_WIRED.wrap=wrap;wrap.addEventListener("scroll",refresh,{passive:true});
+      thumb.addEventListener("pointerdown",ev=>{ev.preventDefault();thumb.setPointerCapture?.(ev.pointerId);const sx=ev.clientX,ss=wrap.scrollLeft;const move=e=>{const max=Math.max(0,wrap.scrollWidth-wrap.clientWidth),tw=track.clientWidth-thmb();wrap.scrollLeft=Math.max(0,Math.min(max,ss+(e.clientX-sx)/Math.max(1,tw)*max));};const up=()=>{thumb.removeEventListener("pointermove",move);thumb.removeEventListener("pointerup",up);};thumb.addEventListener("pointermove",move);thumb.addEventListener("pointerup",up);});
+      track.addEventListener("pointerdown",ev=>{if(ev.target===thumb)return;const r=track.getBoundingClientRect(),max=Math.max(0,wrap.scrollWidth-wrap.clientWidth);wrap.scrollLeft=Math.max(0,Math.min(max,(ev.clientX-r.left)/r.width*wrap.scrollWidth-wrap.clientWidth/2));});
+      window.addEventListener("resize",refresh);
+    }
+    function thmb(){return thumb.getBoundingClientRect().width;}
+    refresh();
+  }
+
+  function eb2bRenderCrLog(){
+    const c=$e("#eb2bContent"),all=EB2B.rows.cr,rows=eb2bFilteredCr();
+    const overdue=all.filter(eb2bCrOverdue).length,inProgress=all.filter(r=>["In Progress","In Review","UAT"].includes(r.status)).length,critical=all.filter(r=>r.priority==="Critical").length;
+    const requesters=Array.from(new Set(all.map(x=>x.requester).filter(Boolean))).sort();
+    const visible=EB2B_CR_COLUMNS.filter(col=>EB2B.crColumns[col.key]);
+    const sortTh=(key,label)=>`<th class="sortable-th ${EB2B.crSort.key===key?"is-sorted":""}" data-eb2b-cr-sort="${key}">${eEsc(label)}<span class="sort-marker">${EB2B.crSort.key===key?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>`;
+    const rowHtml=r=>{
+      const overdueRow=eb2bCrOverdue(r),canEdit=typeof canEditData!=="function"||canEditData();
+      return `<tr class="eb2b-cr-row ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-row="${eEsc(r.id)}"><td class="col-check"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""} aria-label="Chọn ${eEsc(r.cr_id)}"></td><td class="cell-id sticky-cr-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td>${visible.map(col=>eb2bCrCellHtml(col.key,r,overdueRow,canEdit)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${eEsc(r.id)}" title="Xem chi tiết"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="icon-btn" data-eb2b-cr-edit="${eEsc(r.id)}" title="Sửa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="icon-btn danger" data-eb2b-cr-delete="${eEsc(r.id)}" title="Xóa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v14a2 2 0 01-2 2H7V6h14z"/></svg></button></div></td></tr>`;
+    };
+    const mobileHtml=r=>`<article class="cr-card eb2b-cr-card ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-view="${eEsc(r.id)}"><div class="cr-card-top"><label class="cr-card-select" onclick="event.stopPropagation()"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""}></label><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}${eb2bCrOverdue(r)?`<span class="badge badge-danger">Trễ hạn</span>`:""}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(r.deadline?eDate(r.deadline):"—")}</span></div><div class="cr-card-inline">${eb2bCrInlineHtml("status",r)}${eb2bCrInlineHtml("priority",r)}</div><div class="cr-card-actions"><button class="btn btn-secondary btn-sm" data-eb2b-cr-edit="${eEsc(r.id)}">Sửa</button><button class="btn btn-secondary btn-sm danger" data-eb2b-cr-delete="${eEsc(r.id)}">Xóa</button></div></article>`;
+    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrCatalog("category"))}<div class="filter-chip eb2b-requester-filter"><span>Requester</span><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Quá hạn</label><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
+    const bulk=document.createElement("div");bulk.className=`bulk-bar ${EB2B.crSelection.size?"":"hidden"}`;bulk.innerHTML=`<span><b>${EB2B.crSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-cr-selection-clear>Bỏ chọn</button></div>`;const crWrap=$e("#eb2bCrTableWrap");crWrap?.parentElement?.insertBefore(bulk,crWrap);
+    bulk.querySelector("[data-eb2b-cr-selection-clear]")?.addEventListener("click",()=>{EB2B.crSelection.clear();eb2bRenderCrLog();});
+    eb2bWireCrHScroll();
+    $e("#eb2bCrSearch")?.addEventListener("input",ev=>{EB2B.search=ev.target.value;eb2bRenderCrLog();});
+    $all("[data-eb2b-cr-filter-trigger]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const group=btn.closest(".cr-filter-group"),open=group.classList.contains("is-open");$all(".cr-filter-group.is-open",c).forEach(item=>{item.classList.remove("is-open");item.querySelector("[data-eb2b-cr-filter-trigger]")?.setAttribute("aria-expanded","false");});if(!open){group.classList.add("is-open");btn.setAttribute("aria-expanded","true");}}));
+    $all("[data-eb2b-cr-multi]",c).forEach(box=>box.addEventListener("change",()=>{const key=box.dataset.eb2bCrMulti;EB2B.crFilters[key]=Array.from(c.querySelectorAll(`[data-eb2b-cr-multi="${key}"]:checked`)).map(x=>x.value);eb2bRenderCrLog();}));
+    $all("[data-eb2b-cr-all]",c).forEach(box=>box.addEventListener("change",()=>{EB2B.crFilters[box.dataset.eb2bCrAll]=[];eb2bRenderCrLog();}));
+    $all("[data-eb2b-cr-filter-reset]",c).forEach(btn=>btn.addEventListener("click",()=>{EB2B.crFilters[btn.dataset.eb2bCrFilterReset]=[];eb2bRenderCrLog();}));
+    $e("[data-eb2b-cr-requester]",c)?.addEventListener("change",ev=>{EB2B.crFilters.requester=ev.target.value;eb2bRenderCrLog();});$e("[data-eb2b-cr-overdue]",c)?.addEventListener("change",ev=>{EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();});
+    $all("[data-eb2b-cr-select]",c).forEach(box=>box.addEventListener("click",ev=>{ev.stopPropagation();const id=String(box.dataset.eb2bCrSelect);box.checked?EB2B.crSelection.add(id):EB2B.crSelection.delete(id);eb2bRenderCrLog();}));
+    $e("[data-eb2b-cr-select-all]",c)?.addEventListener("click",ev=>{ev.stopPropagation();rows.forEach(r=>ev.target.checked?EB2B.crSelection.add(String(r.id)):EB2B.crSelection.delete(String(r.id)));eb2bRenderCrLog();});
+    $all("[data-eb2b-cr-inline]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();eb2bOpenCrInline(btn);}));
+    $e("[data-eb2b-cr-columns]",c)?.addEventListener("click",()=>{$e("[data-eb2b-cr-columns-menu]",c)?.classList.toggle("is-open");});$all("[data-eb2b-cr-column]",c).forEach(box=>box.addEventListener("change",()=>{EB2B.crColumns[box.dataset.eb2bCrColumn]=box.checked;localStorage.setItem("eb2bCrColumns",JSON.stringify(EB2B.crColumns));eb2bRenderCrLog();}));
+    $e("[data-eb2b-cr-density]",c)?.addEventListener("click",()=>{EB2B.crDensity=EB2B.crDensity==="comfortable"?"compact":EB2B.crDensity==="compact"?"spacious":"comfortable";localStorage.setItem("eb2bCrDensity",EB2B.crDensity);eb2bRenderCrLog();});$e("[data-eb2b-cr-focus]",c)?.addEventListener("click",()=>{$e("#eb2bViewRoot")?.classList.toggle("eb2b-cr-focus");});
+  }
+
   function eb2bCloseCrDrawer(){
     $e("#eb2bDrawerOverlay")?.classList.remove("show");$e("#eb2bCrDrawer")?.classList.remove("show");
   }
@@ -16771,7 +16929,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     <div class="tab-panel" data-eb2b-panel="uat">${tests.map(t=>`<div class="workflow-record"><div class="workflow-record-index">TC</div><div class="workflow-record-main"><div class="workflow-record-id">${eEsc(t.test_case_id)}</div><div class="workflow-record-title">${eEsc(t.scenario||"(Chưa có scenario)")}</div></div><div class="workflow-record-status">${eb2bCrBadge("status",t.pass_fail)}</div></div>`).join("")||`<div class="empty-state"><p>Chưa có Test Case UAT.</p></div>`}</div>
     <div class="tab-panel" data-eb2b-panel="release">${rels.map(r=>`<div class="workflow-record"><div class="workflow-record-index">REL</div><div class="workflow-record-main"><div class="workflow-record-id">${eEsc(r.release_id||"RELEASE")}</div><div class="workflow-record-title">${eEsc(r.release_name||"(Chưa đặt tên release)")}</div></div><div class="workflow-record-status">${eb2bCrBadge("status",r.status)}</div></div>`).join("")||`<div class="empty-state"><p>Chưa có Release / PRD.</p></div>`}</div></div>`;
     overlay.classList.add("show");
-    overlay.classList.toggle("full", key === "cr");drawer.classList.add("show");
+    overlay.classList.remove("full");
+    drawer.classList.add("show");
   }
 
    const EB2B_UAT_COLUMNS = [
@@ -17043,6 +17202,17 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      await eb2bLoad();
    }
 
+   const EB2B_UAT_SCROLL={};
+   function eb2bWireUatHScroll(){
+     const wrap=$e("#eb2bUatTableWrap"); if(!wrap)return;
+     let bar=$e("#eb2bUatHscrollBar");
+     if(!bar){wrap.insertAdjacentHTML("afterend",`<div class="hscroll-bar eb2b-uat-hscroll" id="eb2bUatHscrollBar"><div class="hscroll-track" id="eb2bUatHscrollTrack"><div class="hscroll-thumb" id="eb2bUatHscrollThumb"></div></div></div>`);bar=$e("#eb2bUatHscrollBar");}
+     const track=$e("#eb2bUatHscrollTrack"),thumb=$e("#eb2bUatHscrollThumb");if(!track||!thumb)return;
+     const refresh=()=>{const max=Math.max(0,wrap.scrollWidth-wrap.clientWidth),active=max>2;bar.classList.toggle("is-active",active);if(!active)return;const tw=track.clientWidth,th=Math.min(tw,Math.max(42,wrap.clientWidth/wrap.scrollWidth*tw));thumb.style.width=th+"px";thumb.style.left=(max?wrap.scrollLeft/max*(tw-th):0)+"px";};
+     if(EB2B_UAT_SCROLL.wrap!==wrap){EB2B_UAT_SCROLL.wrap=wrap;wrap.addEventListener("scroll",refresh,{passive:true});window.addEventListener("resize",refresh);}
+     refresh();
+   }
+
    function eb2bRenderUat(){
      const c = $e("#eb2bContent");
      const rows = eb2bUatFiltered();
@@ -17096,6 +17266,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        </div>
      </div>`;
 
+     eb2bWireUatHScroll();
      const root = $e("#eb2bContent");
      $e("#eb2bUatSearch",root)?.addEventListener("input",event=>{
        EB2B.uatFilters.search = event.target.value;
@@ -17387,7 +17558,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const dmsNav = ev.target.closest(".nav-item[data-view]");
       if(dmsNav){ eb2bHide(); return; }
       if(ev.target.closest("#eb2bAddCrTop")){eb2bOpenModal("cr",null);return;}
-      const clear=ev.target.closest("[data-eb2b-cr-clear]");if(clear){EB2B.search="";EB2B.crFilters={status:"",sub_status:"",priority:"",category:"",requester:"",overdue:false};eb2bRenderCrLog();return;}
+      const clear=ev.target.closest("[data-eb2b-cr-clear]");if(clear){EB2B.search="";EB2B.crFilters={status:[],sub_status:[],priority:[],category:[],requester:"",overdue:false};eb2bRenderCrLog();return;}
       const sort=ev.target.closest("[data-eb2b-cr-sort]");if(sort){const k=sort.dataset.eb2bCrSort;EB2B.crSort={key:k,dir:EB2B.crSort.key===k&&EB2B.crSort.dir==="asc"?"desc":"asc"};eb2bRenderCrLog();return;}
       const closeDrawer=ev.target.closest("[data-eb2b-drawer-close]");if(closeDrawer){eb2bCloseCrDrawer();return;}
       const drawerTab=ev.target.closest("[data-eb2b-drawer-tab]");if(drawerTab){const root=$e("#eb2bCrDrawer");$$e("[data-eb2b-drawer-tab]",root).forEach(x=>x.classList.toggle("active",x===drawerTab));$$e("[data-eb2b-panel]",root).forEach(x=>x.classList.toggle("active",x.dataset.eb2bPanel===drawerTab.dataset.eb2bDrawerTab));return;}
