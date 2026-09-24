@@ -236,6 +236,7 @@ body.role-no-edit #btnAddTc,
 body.role-no-edit #btnAddRel,
 body.role-no-edit #btnAddBrd,
 body.role-no-edit #btnCrImport,
+body.role-no-edit #btnUatImport,
 body.role-no-edit #drawerAddTc,
 body.role-no-edit #drawerAddRel,
 body.role-no-edit #drawerEditBtn,
@@ -5849,6 +5850,14 @@ html{
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Tạo CR mới
         </button>
+        <button class="btn btn-ghost btn-sm view-action hidden" data-for="uat" id="btnUatTemplate" type="button" title="Tải file Excel mẫu để điền Test Case UAT">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 15V3M7 10l5 5 5-5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+          Tải Template
+        </button>
+        <button class="btn btn-ghost btn-sm view-action hidden" data-for="uat" id="btnUatImport" type="button" title="Nhập nhiều Test Case cùng lúc từ file Excel">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12M7 10l5-5 5 5"/><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/></svg>
+          Nhập Excel
+        </button>
         <button class="btn btn-primary view-action hidden" data-for="uat" id="btnAddTc">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Thêm Test Case
@@ -8343,6 +8352,8 @@ function initShell(){
   $("#btnCrTemplate").addEventListener("click", downloadCrTemplate);
   $("#btnCrImport").addEventListener("click", openImportModal);
   $("#btnAddTc").addEventListener("click", ()=> openTcModal(null));
+  $("#btnUatTemplate").addEventListener("click", downloadUatTemplate);
+  $("#btnUatImport").addEventListener("click", openUatImportModal);
   $("#btnAddRel").addEventListener("click", ()=> openRelModal(null));
   $("#btnAddBrd").addEventListener("click", ()=> openBrdModal(null));
   $("#btnAddWeeklyMom").addEventListener("click", ()=> openWeeklyMomModal(null));
@@ -11644,6 +11655,335 @@ async function executeImport(overlay, annotated){
   overlay.classList.remove("show");
   await refreshAll();
 }
+
+/* ============================================================================
+   8c. UAT TEST CASE — tải template & nhập hàng loạt từ Excel (DMS)
+   Chỉ thêm mới; không đổi saveTc()/openTcModal().
+   - Test Case ID để trống  => tự cấp UAT_{CR_ID}_{số nhỏ nhất còn trống} (giống form tay)
+   - Test Case ID nhập "03" => hiểu là hậu tố, ghép thành UAT_{CR_ID}_03
+   - Test Case ID nhập đầy đủ "UAT_CR_012_03" => dùng nguyên
+   ========================================================================== */
+const UAT_IMPORT_SHEET_NAME = "UAT_Testcase";
+const UAT_IMPORT_LISTS_SHEET_NAME = "Danh_sach_hop_le";
+const UAT_IMPORT_GUIDE_SHEET_NAME = "Huong_dan";
+const UAT_IMPORT_COLUMNS = [
+  { header: "CR ID*",                          key: "cr_id",          required: true },
+  { header: "Test Case ID (để trống = tự cấp)", key: "test_case_id" },
+  { header: "Scenario*",                       key: "scenario",       required: true },
+  { header: "Description",                     key: "description" },
+  { header: "Expectation",                     key: "expectation" },
+  { header: "Step by Step",                    key: "step_by_step" },
+  { header: "Data test",                       key: "data_test" },
+  { header: "Actual Result",                   key: "actual_result" },
+  { header: "Pass/Fail",                       key: "pass_fail",      choices: () => CR_LISTS.uatResult },
+  { header: "Owner Scenario",                  key: "owner_scenario" },
+  { header: "Testor",                          key: "testor" },
+  { header: "Testing Date (yyyy-mm-dd)",       key: "testing_date",   type: "date" },
+  { header: "Owner Confirm",                   key: "owner_confirm" },
+  { header: "Confirmed Date (yyyy-mm-dd)",     key: "confirmed_date", type: "date" },
+  { header: "Note",                            key: "note" },
+];
+
+async function downloadUatTemplate(){
+  if(typeof ExcelJS === "undefined"){
+    toast("Không tải được thư viện Excel (ExcelJS). Kiểm tra kết nối mạng rồi thử lại.", "err");
+    return;
+  }
+  const btn = $("#btnUatTemplate");
+  if(btn) btn.disabled = true;
+  DLProgress.open("Đang tạo file Template UAT");
+  DLProgress.setIndeterminate("Đang dựng sheet & danh mục hợp lệ...");
+  try{
+    const crIds = [...new Set((STATE.crList||[]).map(c=>c.cr_id).filter(Boolean))]
+      .sort((a,b)=> String(a).localeCompare(String(b), undefined, {numeric:true}));
+    const results = CR_LISTS.uatResult || ["Not Started","Pass","Fail","Blocked"];
+
+    const wb = new ExcelJS.Workbook();
+
+    // Sheet danh sách hợp lệ (tạo trước để sheet chính tham chiếu)
+    const wsLists = wb.addWorksheet(UAT_IMPORT_LISTS_SHEET_NAME);
+    wsLists.addRow(["CR ID hợp lệ", "Pass/Fail hợp lệ"]);
+    wsLists.columns = [{width:18},{width:20}];
+    const maxLen = Math.max(crIds.length, results.length, 1);
+    for(let i=0;i<maxLen;i++) wsLists.addRow([crIds[i] || "", results[i] || ""]);
+    wsLists.getRow(1).font = { bold:true };
+
+    // Sheet dữ liệu chính
+    const ws = wb.addWorksheet(UAT_IMPORT_SHEET_NAME);
+    ws.columns = UAT_IMPORT_COLUMNS.map(c=>({ width: Math.max(18, Math.min(34, c.header.length + 2)) }));
+    ws.addRow(UAT_IMPORT_COLUMNS.map(c=>c.header));
+    ws.getRow(1).font = { bold:true };
+    ws.views = [{ state:"frozen", ySplit:1 }];
+
+    const colLetter = (n)=>{ let t=""; while(n>0){ const r=(n-1)%26; t=String.fromCharCode(65+r)+t; n=Math.floor((n-1)/26); } return t; };
+    const MAX_DATA_ROWS = 500;
+    const validations = [
+      { key:"cr_id",     listCol:"A", last: crIds.length + 1, enabled: crIds.length > 0 },
+      { key:"pass_fail", listCol:"B", last: results.length + 1, enabled: true },
+    ];
+    validations.forEach(v=>{
+      if(!v.enabled) return;
+      const idx = UAT_IMPORT_COLUMNS.findIndex(c=>c.key===v.key);
+      const letter = colLetter(idx+1);
+      const formula = `'${UAT_IMPORT_LISTS_SHEET_NAME}'!$${v.listCol}$2:$${v.listCol}$${v.last}`;
+      for(let r=2; r<=MAX_DATA_ROWS; r++){
+        ws.getCell(`${letter}${r}`).dataValidation = {
+          type:"list", allowBlank:true, showErrorMessage:true, errorStyle:"stop",
+          error:`Giá trị không có trong danh sách hợp lệ ở sheet "${UAT_IMPORT_LISTS_SHEET_NAME}".`,
+          formulae:[formula],
+        };
+      }
+    });
+
+    // Sheet hướng dẫn
+    const wsGuide = wb.addWorksheet(UAT_IMPORT_GUIDE_SHEET_NAME);
+    wsGuide.columns = [{ width: 110 }];
+    [
+      "HƯỚNG DẪN NHẬP TEST CASE UAT",
+      "1. Điền dữ liệu vào sheet \"" + UAT_IMPORT_SHEET_NAME + "\", mỗi dòng là 1 Test Case. Không đổi tên cột, không thêm dòng ví dụ.",
+      "2. Bắt buộc: CR ID (chọn từ dropdown, phải là CR đã có trên hệ thống) và Scenario.",
+      "3. Test Case ID: để trống → hệ thống tự cấp UAT_{CR ID}_01, _02, ... Nhập \"03\" → thành UAT_{CR ID}_03. Nhập đầy đủ UAT_... → dùng nguyên. ID không được trùng với Test Case đã có.",
+      "4. Pass/Fail: chọn Not Started / Pass / Fail / Blocked. Để trống = Not Started.",
+      "5. Ngày: định dạng yyyy-mm-dd (hoặc dd/mm/yyyy nếu là ô ngày của Excel).",
+      "6. Ảnh evidence không nhập qua Excel — đính kèm sau trong form sửa Test Case.",
+    ].forEach((line,i)=>{ const row = wsGuide.addRow([line]); row.alignment = { wrapText:true, vertical:"top" }; if(i===0) row.font = { bold:true }; });
+
+    DLProgress.setIndeterminate("Đang đóng gói file Excel...");
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "UAT_Testcase_Template.xlsx";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    DLProgress.setProgress(100, "Hoàn tất!");
+    toast("Đã tải template UAT. Điền vào sheet \"" + UAT_IMPORT_SHEET_NAME + "\" rồi nhập lại qua nút \"Nhập Excel\".", "ok");
+  }catch(err){
+    toast("Tạo file template thất bại: " + err.message, "err");
+  }finally{
+    if(btn) btn.disabled = false;
+    DLProgress.close();
+  }
+}
+
+function uatImportModalTemplate(){
+  return `
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div><h3>Nhập Test Case UAT từ Excel</h3>
+        <div class="sub">Dùng đúng file template đã tải — hệ thống sẽ đọc sheet "${esc(UAT_IMPORT_SHEET_NAME)}"</div></div>
+      <button class="modal-close" id="uatImportModalClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="file-drop" id="uatImportFileDrop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+        <p><b>Bấm để chọn file Excel</b> hoặc kéo thả vào đây</p>
+        <div class="hint">Chỉ nhận file .xlsx / .xls theo đúng cấu trúc template</div>
+        <input type="file" id="uatImportFileInput" accept=".xlsx,.xls" hidden>
+      </div>
+      <div id="uatImportPreviewHost"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="uatImportModalCancel">Đóng</button>
+      <button class="btn btn-primary hidden" id="uatImportConfirmBtn" disabled>Xác nhận nhập</button>
+    </div>
+  </div>`;
+}
+
+function openUatImportModal(){
+  const overlay = $("#importModalOverlay");
+  overlay.innerHTML = uatImportModalTemplate();
+  overlay.classList.add("show", "full");
+  $("#uatImportModalClose").addEventListener("click", ()=> overlay.classList.remove("show"));
+  $("#uatImportModalCancel").addEventListener("click", ()=> overlay.classList.remove("show"));
+  if(!overlay.dataset.dismissBound){
+    overlay.dataset.dismissBound = "1";
+    overlay.addEventListener("click", e=>{ if(e.target===overlay) overlay.classList.remove("show"); });
+  }
+  const drop = $("#uatImportFileDrop");
+  const input = $("#uatImportFileInput");
+  drop.addEventListener("click", ()=> input.click());
+  input.addEventListener("change", ()=>{ if(input.files[0]) handleUatImportFile(overlay, input.files[0]); });
+  ["dragenter","dragover"].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev=> drop.addEventListener(ev, e=>{ e.preventDefault(); drop.classList.remove("drag"); }));
+  drop.addEventListener("drop", e=>{
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(f) handleUatImportFile(overlay, f);
+  });
+}
+
+function handleUatImportFile(overlay, file){
+  if(typeof XLSX === "undefined"){
+    toast("Không tải được thư viện Excel (XLSX). Kiểm tra kết nối mạng rồi thử lại.", "err");
+    return;
+  }
+  const host = $("#uatImportPreviewHost");
+  host.innerHTML = `<div class="loading-row" style="padding:24px 0;"><div class="spinner"></div>Đang đọc file "${esc(file.name)}"...</div>`;
+  const reader = new FileReader();
+  reader.onerror = ()=>{ host.innerHTML = ""; toast("Không đọc được file. Vui lòng thử lại.", "err"); };
+  reader.onload = (e)=>{
+    let wb;
+    try{
+      wb = XLSX.read(new Uint8Array(e.target.result), { type:"array", cellDates:true });
+    }catch(err){
+      host.innerHTML = "";
+      toast("File không đúng định dạng Excel: " + err.message, "err");
+      return;
+    }
+    const sheetName = wb.SheetNames.includes(UAT_IMPORT_SHEET_NAME) ? UAT_IMPORT_SHEET_NAME : wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const objRows = XLSX.utils.sheet_to_json(ws, { defval:"", raw:false, dateNF:"yyyy-mm-dd" });
+    const objRowsRaw = XLSX.utils.sheet_to_json(ws, { defval:"" });
+    if(!objRows.length){
+      host.innerHTML = `<div class="empty-state" style="padding:30px 0;"><p>File không có dữ liệu nào ở sheet "${esc(sheetName)}". Hãy dùng đúng file template đã tải.</p></div>`;
+      return;
+    }
+    const headerKnown = UAT_IMPORT_COLUMNS.some(c=> Object.prototype.hasOwnProperty.call(objRows[0], c.header));
+    if(!headerKnown){
+      host.innerHTML = `<div class="empty-state" style="padding:30px 0;"><p>Không nhận diện được cột nào khớp với template. Vui lòng tải lại template UAT mới nhất và điền đúng vào sheet "${esc(UAT_IMPORT_SHEET_NAME)}", không đổi tên cột.</p></div>`;
+      return;
+    }
+    const parsed = objRows.map((row, idx)=> buildUatImportRow(row, objRowsRaw[idx]));
+    renderUatImportPreview(overlay, validateUatImportRows(parsed));
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function buildUatImportRow(row, rowRaw){
+  const out = {};
+  UAT_IMPORT_COLUMNS.forEach(c=>{
+    let v = row[c.header];
+    if(v === undefined) v = "";
+    if(c.type === "date"){
+      const rawVal = rowRaw ? rowRaw[c.header] : undefined;
+      out[c.key] = excelValueToISODate(rawVal !== undefined && rawVal !== "" ? rawVal : v);
+    } else {
+      out[c.key] = typeof v === "string" ? v.trim() : (v === "" ? "" : String(v));
+    }
+  });
+  return out;
+}
+
+function validateUatImportRows(rows){
+  const crSet = new Set((STATE.crList||[]).map(c=>String(c.cr_id)));
+  // Test Case ID đã có + đã được dùng trong file (để tự cấp không đụng nhau)
+  const usedIds = new Set((STATE.tcList||[]).map(t=>String(t.test_case_id)));
+  const usedSuffix = {}; // cr_id -> Set(số)
+  const markSuffix = (cr, id)=>{
+    const prefix = buildTcPrefix(cr);
+    if(String(id).startsWith(prefix)){
+      const m = /^(\d+)$/.exec(String(id).slice(prefix.length));
+      if(m){ (usedSuffix[cr] = usedSuffix[cr] || new Set()).add(parseInt(m[1],10)); }
+    }
+  };
+  (STATE.tcList||[]).forEach(t=>{ if(t.cr_id) markSuffix(t.cr_id, t.test_case_id||""); });
+
+  const annotated = rows.map((row, i)=>({ rowIndex:i+1, data:row, errors:[] }));
+
+  // Lượt 1: kiểm tra + xử lý các dòng có Test Case ID nhập tay
+  annotated.forEach(r=>{
+    const d = r.data;
+    UAT_IMPORT_COLUMNS.forEach(c=>{
+      const val = d[c.key];
+      if(c.required && !val){ r.errors.push(`Thiếu "${c.header.replace("*","")}"`); return; }
+      if(val && c.choices){
+        const list = c.choices();
+        if(list && list.length && !list.includes(val)) r.errors.push(`"${c.header}" = "${val}" không hợp lệ`);
+      }
+    });
+    if(d.cr_id && !crSet.has(d.cr_id)) r.errors.push(`CR ID "${d.cr_id}" không tồn tại`);
+    if(d.test_case_id && d.cr_id){
+      let id = d.test_case_id;
+      if(!/^UAT_/i.test(id)) id = buildTcPrefix(d.cr_id) + id;
+      d.test_case_id = id;
+      if(usedIds.has(id)) r.errors.push(`Test Case ID "${id}" đã tồn tại`);
+      else { usedIds.add(id); markSuffix(d.cr_id, id); }
+    }
+  });
+
+  // Lượt 2: tự cấp ID cho các dòng để trống
+  annotated.forEach(r=>{
+    const d = r.data;
+    if(d.test_case_id || !d.cr_id || !crSet.has(d.cr_id)) return;
+    const used = usedSuffix[d.cr_id] = usedSuffix[d.cr_id] || new Set();
+    let n = 1; while(used.has(n)) n++;
+    used.add(n);
+    d.test_case_id = buildTcPrefix(d.cr_id) + String(n).padStart(2,"0");
+    d.__auto_id = true;
+    usedIds.add(d.test_case_id);
+  });
+
+  annotated.forEach(r=>{ r.valid = r.errors.length === 0; });
+  return annotated;
+}
+
+function renderUatImportPreview(overlay, annotated){
+  const host = $("#uatImportPreviewHost");
+  const total = annotated.length;
+  const validCount = annotated.filter(r=>r.valid).length;
+  const errorCount = total - validCount;
+  host.innerHTML = `
+    <div class="import-summary">
+      <div class="import-stat"><b>${total}</b><span>Tổng số dòng đọc được</span></div>
+      <div class="import-stat ok"><b>${validCount}</b><span>Hợp lệ (sẽ tạo Test Case mới)</span></div>
+      <div class="import-stat ${errorCount? 'danger':''}"><b>${errorCount}</b><span>Có lỗi (sẽ bỏ qua)</span></div>
+    </div>
+    <p style="font-size:12.5px; color:#7890a2; margin:-6px 0 14px;">
+      Mỗi dòng hợp lệ tạo <b>1 Test Case mới</b>. Test Case ID để trống sẽ được tự cấp theo CR (đánh dấu <i>tự cấp</i> bên dưới).
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>CR ID</th><th>Test Case ID</th><th>Scenario</th><th>Pass/Fail</th><th>Kết quả</th></tr></thead>
+        <tbody>
+          ${annotated.map(r=>`
+            <tr>
+              <td class="cell-dim">${r.rowIndex}</td>
+              <td>${esc(r.data.cr_id||"—")}</td>
+              <td>${esc(r.data.test_case_id||"—")}${r.data.__auto_id ? ' <span class="cell-dim">(tự cấp)</span>' : ''}</td>
+              <td class="cell-title" title="${esc(r.data.scenario||'')}">${esc(r.data.scenario||"—")}</td>
+              <td>${esc(r.data.pass_fail||"Not Started")}</td>
+              <td>${
+                r.valid
+                  ? `<span class="badge" style="background:var(--success-dim); color:var(--success);"><span class="dot" style="background:var(--success)"></span>Hợp lệ</span>`
+                  : `<span class="badge" style="background:var(--danger-dim); color:var(--danger);" title="${esc(r.errors.join('; '))}"><span class="dot" style="background:var(--danger)"></span>${esc(r.errors[0])}</span>`
+              }</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
+  const confirmBtn = $("#uatImportConfirmBtn");
+  confirmBtn.classList.remove("hidden");
+  confirmBtn.disabled = validCount === 0;
+  confirmBtn.textContent = `Xác nhận nhập ${validCount} dòng hợp lệ`;
+  confirmBtn.onclick = ()=> executeUatImport(overlay, annotated);
+}
+
+async function executeUatImport(overlay, annotated){
+  const rowsToImport = annotated.filter(r=>r.valid);
+  if(!rowsToImport.length){ toast("Không có dòng nào hợp lệ để nhập.", "err"); return; }
+  const confirmBtn = $("#uatImportConfirmBtn");
+  confirmBtn.disabled = true;
+  const originalLabel = confirmBtn.textContent;
+  confirmBtn.textContent = "Đang nhập...";
+  const payloadRows = rowsToImport.map(r=>{
+    const p = {};
+    UAT_IMPORT_COLUMNS.forEach(c=>{ p[c.key] = r.data[c.key] || null; });
+    p.pass_fail = p.pass_fail || "Not Started";
+    return p;
+  });
+  const { error } = await STATE.sb.from("uat_testcase").insert(payloadRows);
+  confirmBtn.disabled = false;
+  confirmBtn.textContent = originalLabel;
+  if(error){
+    const dup = String(error.message||"").toLowerCase().includes("duplicate");
+    toast(dup ? "Nhập thất bại: có Test Case ID trùng ở hệ thống. Tải lại trang rồi thử lại." : "Nhập thất bại: " + error.message, "err");
+    return;
+  }
+  toast(`Đã tạo mới thành công ${payloadRows.length} Test Case`, "ok");
+  overlay.classList.remove("show");
+  await refreshAll();
+}
+
 /* ---- CR Drawer presentational helpers (no data/schema changes) ---------- */
 function summaryItem(label, value, flagOverdue){
   const empty = (value===null||value===undefined||value==="");
@@ -13614,7 +13954,7 @@ function renderWeeklyMomList(){
     const summary = weeklyMomText(record.overall_summary);
     const isExcelImport = record.source_type === "excel";
     const isCurrentUploadDay = !record.upload_date || record.upload_date === todayISO();
-    const isExpanded = STATE.weeklyMomExpanded[recordKey] !== false;
+    const isExpanded = STATE.weeklyMomExpanded[recordKey] === true; // mặc định thu lại
     return `<article class="weekly-mom-card${isExpanded ? "" : " is-collapsed"}" data-weekly-id="${esc(String(record.id))}">
       <div class="weekly-mom-card-head">
         <div class="weekly-mom-card-date">${esc(weeklyMomDateLabel(record.meeting_date))}</div>
@@ -13678,7 +14018,7 @@ function renderWeeklyMomList(){
     btn.addEventListener("click", ()=>{
       const key = String(btn.dataset.weeklyToggle);
       const card = btn.closest(".weekly-mom-card");
-      const expanded = STATE.weeklyMomExpanded[key] !== false;
+      const expanded = STATE.weeklyMomExpanded[key] === true;
       STATE.weeklyMomExpanded[key] = !expanded;
       card?.classList.toggle("is-collapsed", expanded);
       const body = card?.querySelector(".weekly-mom-card-body");
@@ -17995,12 +18335,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bRenderWeeklyMom(){
     const c=$e("#eb2bContent"), rows=EB2B.rows.weekly_mom;
-    c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg></div><div><div class="weekly-mom-title">Biên bản Weekly với Vendor</div><div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]!==false;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
+    c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18M8 14h3M8 18h7"/></svg></div><div><div class="weekly-mom-title">Biên bản Weekly với Vendor</div><div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]===true;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
     $e('[data-eb2b-new="weekly_mom"]',c)?.remove();
     $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),state=EB2B.weeklyMomSort[String(card?.dataset.eb2bWeekly||"")];if(!state||!Number.isInteger(state.index)||!table.tBodies[0])return;const bodyRows=Array.from(table.tBodies[0].rows);bodyRows.sort((a,b)=>String(a.cells[state.index]?.textContent||"").localeCompare(String(b.cells[state.index]?.textContent||""),"vi",{numeric:true})*(state.direction==="desc"?-1:1));bodyRows.forEach(row=>table.tBodies[0].appendChild(row));});
     $all("[data-eb2b-weekly-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.weekly_mom.find(x=>String(x.id)===String(btn.closest("[data-eb2b-weekly]")?.dataset.eb2bWeekly));if(!row)return;btn.dataset.eb2bWeeklyAct==="edit"?eb2bOpenModal("weekly_mom",row):eb2bDelete("weekly_mom",row);}));
     $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),key=String(card?.dataset.eb2bWeekly||""),state=EB2B.weeklyMomSort[key]||{index:null,direction:"asc"};Array.from(table.tHead?.rows[0]?.cells||[]).forEach((th,index)=>{const label=th.textContent.trim(),active=Number(state.index)===index;th.innerHTML=`<button class="weekly-mom-sort-button${active?" is-active":""}" type="button"><span>${eEsc(label)}</span><span class="weekly-mom-sort-icon">${active?(state.direction==="desc"?"↓":"↑"):"↕"}</span></button>`;th.querySelector("button")?.addEventListener("click",()=>{EB2B.weeklyMomSort[key]=active?{index,direction:state.direction==="asc"?"desc":"asc"}:{index,direction:"asc"};eb2bRenderWeeklyMom();});});});
-    $all("[data-eb2b-weekly-toggle]",c).forEach(btn=>btn.addEventListener("click",()=>{const card=btn.closest("[data-eb2b-weekly]"),key=card.dataset.eb2bWeekly;EB2B.weeklyMomExpanded[key]=EB2B.weeklyMomExpanded[key]===false;eb2bRenderWeeklyMom();}));
+    $all("[data-eb2b-weekly-toggle]",c).forEach(btn=>btn.addEventListener("click",()=>{const card=btn.closest("[data-eb2b-weekly]"),key=card.dataset.eb2bWeekly;EB2B.weeklyMomExpanded[key]=EB2B.weeklyMomExpanded[key]!==true;eb2bRenderWeeklyMom();}));
   }
 
   function eb2bRenderDataTable(key){
