@@ -8291,6 +8291,16 @@ function subscribeRealtime(){
     const row = payload.new;
     if(!row || row[idField] === undefined) return false;
     const idx = list.findIndex(r=> r[idField] === row[idField]);
+    // Soft-delete (xóa mềm) chỉ là UPDATE set deleted_at, không phải DELETE thật ở DB.
+    // Nếu dòng vừa nhận qua realtime đã có deleted_at, phải LOẠI khỏi danh sách
+    // đang hiển thị (giống DELETE), nếu không dòng vừa xóa sẽ bị chèn/giữ lại
+    // trên bảng cho tới khi người dùng F5 (do refreshAll() và realtime chạy
+    // song song, event realtime có thể tới sau và ghi đè lại dòng đã bị lọc bỏ).
+    if(row.deleted_at){
+      if(idx === -1) return false;
+      list.splice(idx, 1);
+      return true;
+    }
     if(idx === -1) list.unshift(row); else list[idx] = row;
     return true;
   }
