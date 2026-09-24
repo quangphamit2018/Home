@@ -16537,6 +16537,31 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        #eb2bUatModalOverlay .eb2b-uat-evidence-row small{color:#8196a4}
         body.sidebar-hidden #eb2bUatModalOverlay{left:0}
         @media(max-width:900px){#eb2bUatModalOverlay{left:0}}
+       /* EB2B uses the same typography, motion curve and interaction weight as DMS.
+          The selectors stay inside the EB2B mount/overlays so DMS remains untouched. */
+       #eb2bViewRoot,#eb2bModalOverlay,#eb2bUatModalOverlay{font-family:var(--font-body);font-size:var(--text-body-size);color:#22394e;-webkit-font-smoothing:antialiased}
+       #eb2bViewRoot h1,#eb2bViewRoot h2,#eb2bViewRoot h3,#eb2bViewRoot h4,#eb2bModalOverlay h1,#eb2bModalOverlay h2,#eb2bModalOverlay h3,#eb2bModalOverlay h4,#eb2bUatModalOverlay h1,#eb2bUatModalOverlay h2,#eb2bUatModalOverlay h3,#eb2bUatModalOverlay h4{font-family:var(--font-head);letter-spacing:-.01em}
+       #eb2bViewRoot button,#eb2bModalOverlay button,#eb2bUatModalOverlay button{font-family:inherit}
+       #eb2bViewRoot button:not(:disabled),#eb2bModalOverlay button:not(:disabled),#eb2bUatModalOverlay button:not(:disabled){transition:var(--transition-active),background var(--duration-fast) var(--ease-standard),color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard),box-shadow var(--duration-base) var(--ease-standard)}
+       #eb2bViewRoot button:not(:disabled):active,#eb2bModalOverlay button:not(:disabled):active,#eb2bUatModalOverlay button:not(:disabled):active{transform:scale(.97)}
+       #eb2bViewRoot button:focus-visible,#eb2bModalOverlay button:focus-visible,#eb2bUatModalOverlay button:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+       #eb2bViewRoot input,#eb2bViewRoot textarea,#eb2bViewRoot select,#eb2bModalOverlay input,#eb2bModalOverlay textarea,#eb2bModalOverlay select,#eb2bUatModalOverlay input,#eb2bUatModalOverlay textarea,#eb2bUatModalOverlay select{font-family:inherit}
+       #eb2bViewRoot input:focus-visible,#eb2bViewRoot textarea:focus-visible,#eb2bViewRoot select:focus-visible,#eb2bModalOverlay input:focus-visible,#eb2bModalOverlay textarea:focus-visible,#eb2bModalOverlay select:focus-visible,#eb2bUatModalOverlay input:focus-visible,#eb2bUatModalOverlay textarea:focus-visible,#eb2bUatModalOverlay select:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+       #eb2bViewRoot .btn-primary,#eb2bModalOverlay .btn-primary,#eb2bUatModalOverlay .btn-primary{box-shadow:var(--shadow-sm)}
+       #eb2bViewRoot .btn-primary:hover:not(:disabled),#eb2bModalOverlay .btn-primary:hover:not(:disabled),#eb2bUatModalOverlay .btn-primary:hover:not(:disabled){box-shadow:0 6px 18px -6px rgba(63,208,201,.5),var(--shadow-sm)}
+       #eb2bViewRoot .eb2b-shell>*,#eb2bViewRoot .crlog-shell>*,#eb2bViewRoot .brd-card,#eb2bViewRoot .weekly-mom-card{transition:var(--transition-hover),box-shadow var(--duration-base) var(--ease-standard),transform var(--duration-base) var(--ease-standard)}
+       #eb2bViewRoot .brd-card:hover,#eb2bViewRoot .weekly-mom-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+       #eb2bViewRoot tbody tr{transition:background var(--duration-fast) var(--ease-standard),color var(--duration-fast) var(--ease-standard)}
+       #eb2bViewRoot tbody tr:hover{background:var(--accent-soft)}
+       #eb2bViewRoot .cr-filter-menu,#eb2bViewRoot .eb2b-cr-tool-popover,#eb2bViewRoot .tb-menu{animation:crFilterMenuIn var(--duration-base) var(--ease-decel) both}
+       #eb2bViewRoot .cr-filter-reset:hover,#eb2bViewRoot .cr-filter-option:hover,#eb2bViewRoot .table-tool-btn:hover{transition:var(--transition-hover)}
+       #eb2bViewRoot .eb2b-muted,#eb2bViewRoot .eb2b-file-sub,#eb2bViewRoot .weekly-mom-note,#eb2bViewRoot .brd-toolbar-note{color:var(--text-muted)}
+       #eb2bViewRoot .id-chip,#eb2bViewRoot .cell-id{font-family:var(--font-mono)}
+       #eb2bViewRoot.eb2b-view-enter{animation:eb2bViewIn var(--duration-slow) var(--ease-decel) both}
+       body.eb2b-active #topbarTitle.eb2b-header-swap{animation:eb2bHeaderSwap var(--duration-base) var(--ease-decel) both}
+       @keyframes eb2bViewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+       @keyframes eb2bHeaderSwap{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+       @media(prefers-reduced-motion:reduce){#eb2bViewRoot.eb2b-view-enter,body.eb2b-active #topbarTitle.eb2b-header-swap,#eb2bViewRoot .cr-filter-menu,#eb2bViewRoot .eb2b-cr-tool-popover,#eb2bViewRoot .tb-menu{animation:none!important}#eb2bViewRoot button,#eb2bModalOverlay button,#eb2bUatModalOverlay button{transition:none!important}}
         @media(max-width:640px){#eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap table{display:none}#eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:flex}#eb2bUatModalOverlay .eb2b-uat-summary{grid-template-columns:1fr;padding:14px}#eb2bUatModalOverlay .eb2b-uat-group{padding:14px}#eb2bUatModalOverlay .eb2b-uat-field-grid{grid-template-columns:1fr!important}#eb2bUatModalOverlay .eb2b-uat-modal-head{padding:16px}}
       @media(max-width:760px){.eb2b-kpis,.eb2b-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eb2b-form-grid{grid-template-columns:1fr}.eb2b-field.span-2{grid-column:auto}}
     `;
@@ -16648,6 +16673,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $e("#navEb2bChildren")?.classList.remove("is-collapsed");
     $e("#navEb2bWorkspace")?.classList.add("is-open");
     $e("#navEb2bWorkspace")?.setAttribute("aria-expanded", "true");
+    const root=$e("#eb2bViewRoot");
+    root?.classList.remove("eb2b-view-enter");
+    if(root){ void root.offsetWidth; root.classList.add("eb2b-view-enter"); }
+    const headerTitle=$e("#topbarTitle");
+    headerTitle?.classList.remove("eb2b-header-swap");
+    if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("eb2b-header-swap"); }
     eb2bRender();
   }
 
