@@ -16319,6 +16319,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       cr: [], uat: [], release: [], brd: [], weekly_mom: [],
       statuses: [], sub_statuses: [], evidence_steps: [], attachment_categories: [], attachments: []
     },
+     uatFilters: {cr:"", result:"", testor:"", owner:"", search:""},
+     uatColumns: {
+       test_case_id:true, scenario:true, owner_scenario:true, testor:true,
+       testing_date:true, pass_fail:true, owner_confirm:true, confirmed_date:true
+     },
+     uatDensity: localStorage.getItem("eb2bUatDensity") || "comfortable",
+     uatSelection: new Set(),
+     uatSort: {key:"created_at", dir:"desc"},
+     editingUatId: null,
     loading: false,
     ready: false
   };
@@ -16437,6 +16446,52 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       .eb2b-field{display:grid;gap:5px}.eb2b-field.span-2{grid-column:span 2}.eb2b-field label{font-size:11px;font-weight:650;color:var(--text-dim,#64748b)}
       .eb2b-field input,.eb2b-field select,.eb2b-field textarea{width:100%;box-sizing:border-box;border:1px solid var(--line,#d5dbe3);border-radius:7px;padding:8px 9px;background:var(--surface,#fff);color:var(--text,#1f2937);font:inherit}
       .eb2b-field textarea{min-height:76px;resize:vertical}.eb2b-field textarea.tall{min-height:130px}
+       #eb2bViewRoot .eb2b-uat-shell{gap:16px;min-width:0}
+       #eb2bViewRoot .eb2b-uat-shell .crlog-panel{min-width:0}
+       #eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap{flex:1 1 auto;min-width:0;min-height:0;width:100%;max-width:100%;overflow-x:scroll;overflow-y:auto;position:relative;scrollbar-gutter:stable}
+       #eb2bViewRoot .eb2b-uat-shell .uat-kpis .kpi-card{padding:14px 16px}
+       #eb2bViewRoot .eb2b-uat-shell .uat-kpis .kpi-value{font-size:24px}
+       #eb2bViewRoot .eb2b-uat-shell .cell-result{min-width:116px}
+       #eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:none}
+       #eb2bUatTable.density-compact thead th{padding:7px 16px}
+       #eb2bUatTable.density-compact tbody td{padding:7px 16px;font-size:12.5px}
+       #eb2bUatTable.density-comfortable thead th{padding:12px 20px}
+       #eb2bUatTable.density-comfortable tbody td{padding:14px 20px}
+       #eb2bUatTable.density-spacious thead th{padding:16px 22px}
+       #eb2bUatTable.density-spacious tbody td{padding:22px 22px}
+       #eb2bViewRoot.eb2b-uat-focus{position:fixed;inset:0;z-index:950;background:var(--bg-workspace);padding:18px;overflow:auto}
+       #eb2bUatModalOverlay{position:fixed;inset:0;z-index:1100;display:none;background:rgba(15,42,68,.42);align-items:stretch;padding:0}
+       #eb2bUatModalOverlay.show{display:flex}
+       #eb2bUatModalOverlay .eb2b-uat-modal{width:100%;height:100%;overflow:auto;background:#f2f8f9;border-left:1px solid #d7e4e8}
+       #eb2bUatModalOverlay .eb2b-uat-modal-head{position:relative;overflow:hidden;min-height:98px;padding:18px clamp(20px,4vw,52px);background:radial-gradient(circle at 4% -45%,rgba(47,192,185,.16),transparent 34%),linear-gradient(135deg,#fff 0%,#f4fbfb 100%);border-bottom:1px solid #dce8eb;box-shadow:0 6px 20px -22px rgba(15,42,68,.55)}
+       #eb2bUatModalOverlay .eb2b-uat-modal-head:before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:linear-gradient(180deg,#2fc0b9 0%,#0e9a94 100%)}
+       #eb2bUatModalOverlay .eb2b-uat-modal-head h3{color:#153852;font-size:clamp(18px,2vw,23px);line-height:1.2;letter-spacing:-.035em}
+       #eb2bUatModalOverlay .eb2b-uat-modal-sub{margin-top:4px;color:#7890a2;font-size:11.5px}
+       #eb2bUatModalOverlay .eb2b-uat-modal-context{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;color:#6f8797;font-size:10.5px}
+       #eb2bUatModalOverlay .eb2b-uat-modal-context b{color:#547184}
+       #eb2bUatModalOverlay .eb2b-uat-modal-body{padding:clamp(18px,3vw,34px) clamp(20px,4vw,52px);background:linear-gradient(180deg,#f4f9fa 0%,#edf5f6 100%)}
+       #eb2bUatModalOverlay .eb2b-uat-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 22px;padding:18px;border:1px solid #dce8eb;border-radius:14px;background:#fbfdfe;box-shadow:0 9px 22px -23px rgba(15,42,68,.58)}
+       #eb2bUatModalOverlay .eb2b-uat-summary-item{min-width:0;min-height:68px;padding:12px 14px;border:1px solid #e0eaee;border-radius:11px;background:#fff}
+       #eb2bUatModalOverlay .eb2b-uat-summary-label{display:block;margin-bottom:7px;color:#8196a4;font-size:10px;font-weight:800;letter-spacing:.055em;text-transform:uppercase}
+       #eb2bUatModalOverlay .eb2b-uat-summary-value{display:block;overflow:hidden;color:#18364f;font-size:13px;font-weight:700;line-height:1.45;text-overflow:ellipsis;white-space:nowrap}
+       #eb2bUatModalOverlay .eb2b-uat-groups{display:flex;flex-direction:column;gap:20px}
+       #eb2bUatModalOverlay .eb2b-uat-group{padding:18px;border:1px solid #dce8eb;border-radius:14px;background:#fbfdfe;box-shadow:0 9px 22px -23px rgba(15,42,68,.58)}
+       #eb2bUatModalOverlay .eb2b-uat-group-title{display:flex;align-items:center;gap:10px;margin:0 0 13px;color:#3f6478;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+       #eb2bUatModalOverlay .eb2b-uat-group-title:after{content:"";flex:1;height:1px;background:#dce8eb}
+       #eb2bUatModalOverlay .eb2b-uat-field{min-width:0;margin:0;padding:12px 14px 14px;border:1px solid #e0eaee;border-radius:11px;background:#fff;box-shadow:0 5px 14px -16px rgba(15,42,68,.5)}
+       #eb2bUatModalOverlay .eb2b-uat-field label{display:block;margin-bottom:7px;color:#8196a4;font-size:10px;font-weight:800;letter-spacing:.055em;text-transform:uppercase}
+       #eb2bUatModalOverlay .eb2b-uat-field input,#eb2bUatModalOverlay .eb2b-uat-field textarea,#eb2bUatModalOverlay .eb2b-uat-field select{width:100%;min-height:40px;border:1px solid #dbe7eb;border-radius:9px;padding:8px 10px;background:#fbfdfe;color:#18364f;font:inherit;font-size:12.5px}
+       #eb2bUatModalOverlay .eb2b-uat-field textarea{min-height:78px;line-height:1.6;resize:vertical}
+       #eb2bUatModalOverlay .eb2b-uat-field textarea.tall{min-height:138px}
+       #eb2bUatModalOverlay .eb2b-uat-field input:focus,#eb2bUatModalOverlay .eb2b-uat-field textarea:focus,#eb2bUatModalOverlay .eb2b-uat-field select:focus{background:#fff;border-color:#49c6bf;box-shadow:0 0 0 3px rgba(63,208,201,.1);outline:none}
+       #eb2bUatModalOverlay .eb2b-uat-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:13px clamp(20px,4vw,52px);border-top:1px solid #dce8eb;background:rgba(255,255,255,.94);box-shadow:0 -8px 18px -22px rgba(15,42,68,.5)}
+       #eb2bUatModalOverlay .eb2b-uat-evidence{padding:20px 22px;border:1px solid #d9e8eb;border-radius:15px;background:linear-gradient(135deg,#fff 0%,#f2fbfa 100%)}
+       #eb2bUatModalOverlay .eb2b-uat-evidence h4{margin-bottom:6px;color:#153852;font-size:18px}
+       #eb2bUatModalOverlay .eb2b-uat-evidence p{color:#6d8494;font-size:12px;line-height:1.6}
+       #eb2bUatModalOverlay .eb2b-uat-evidence-list{display:grid;gap:8px;margin-top:18px}
+       #eb2bUatModalOverlay .eb2b-uat-evidence-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid #dce8eb;border-radius:10px;background:#fff;font-size:12px}
+       #eb2bUatModalOverlay .eb2b-uat-evidence-row small{color:#8196a4}
+       @media(max-width:640px){#eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap table{display:none}#eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:flex}#eb2bUatModalOverlay .eb2b-uat-summary{grid-template-columns:1fr;padding:14px}#eb2bUatModalOverlay .eb2b-uat-group{padding:14px}#eb2bUatModalOverlay .eb2b-uat-field-grid{grid-template-columns:1fr!important}#eb2bUatModalOverlay .eb2b-uat-modal-head{padding:16px}}
       @media(max-width:760px){.eb2b-kpis,.eb2b-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eb2b-form-grid{grid-template-columns:1fr}.eb2b-field.span-2{grid-column:auto}}
     `;
     document.head.appendChild(style);
@@ -16456,6 +16511,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     }
     if(!$e("#eb2bModalOverlay")){
       document.body.insertAdjacentHTML("beforeend", `<div class="eb2b-modal-overlay" id="eb2bModalOverlay"></div><div class="drawer-overlay" id="eb2bDrawerOverlay"></div><div class="drawer eb2b-cr-drawer" id="eb2bCrDrawer"></div>`);
+    }
+    if(!$e("#eb2bUatModalOverlay")){
+      document.body.insertAdjacentHTML("beforeend", `<div id="eb2bUatModalOverlay" aria-hidden="true"></div>`);
     }
     if(!$e("#eb2bAddCrTop")){
       const actions=$e("#topbarActions");
@@ -16539,6 +16597,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bHide(){
     document.body.classList.remove("eb2b-active", "eb2b-cr-active");
+    $e("#eb2bViewRoot")?.classList.remove("eb2b-uat-focus");
     eb2bCloseCrDrawer();
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
     $e("#navEb2bWorkspace")?.classList.remove("is-context");
@@ -16601,7 +16660,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(!$e("#eb2bContent")) return;
     const renderers = {
       dashboard: eb2bRenderDashboard, cr: eb2bRenderCrLog,
-      uat: ()=>eb2bRenderDataTable("uat"), release: ()=>eb2bRenderDataTable("release"),
+       uat: eb2bRenderUat, release: ()=>eb2bRenderDataTable("release"),
       brd: ()=>eb2bRenderDataTable("brd"), weekly_mom: ()=>eb2bRenderDataTable("weekly_mom"),
       admin: eb2bRenderAdmin, recycle: eb2bRenderRecycle
     };
@@ -16714,6 +16773,373 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     overlay.classList.add("show");
     overlay.classList.toggle("full", key === "cr");drawer.classList.add("show");
   }
+
+   const EB2B_UAT_COLUMNS = [
+     {key:"test_case_id",label:"Test Case ID"},
+     {key:"scenario",label:"Scenario"},
+     {key:"owner_scenario",label:"Owner Scenario"},
+     {key:"testor",label:"Testor"},
+     {key:"testing_date",label:"Ngày test"},
+     {key:"pass_fail",label:"Kết quả"},
+     {key:"owner_confirm",label:"Owner Confirm"},
+     {key:"confirmed_date",label:"Ngày confirm"}
+   ];
+
+   function eb2bUatResultBadge(value){
+     const colors = {
+       "Pass":["#17865f","#e8f8f1"],
+       "Fail":["#d35c68","#fff0f2"],
+       "Blocked":["#c8862b","#fff6e5"],
+       "Not Started":["#7488a0","#eef3f6"]
+     };
+     const pair = colors[value] || colors["Not Started"];
+     return `<span class="badge" style="color:${pair[0]};background:${pair[1]};border-color:${pair[0]}33"><span class="dot" style="background:${pair[0]}"></span>${eEsc(value || "Not Started")}</span>`;
+   }
+
+   function eb2bUatCatalog(key){
+     const values = EB2B.rows.uat.map(row=>row[key]).filter(Boolean);
+     return Array.from(new Set(values.map(String))).sort((a,b)=>a.localeCompare(b,"vi",{numeric:true}));
+   }
+
+   function eb2bUatFiltered(){
+     const f = EB2B.uatFilters;
+     const q = String(f.search || "").trim().toLowerCase();
+     const rows = EB2B.rows.uat.filter(row=>{
+       if(f.cr && String(row.cr_id || "") !== String(f.cr)) return false;
+       if(f.result && String(row.pass_fail || "") !== String(f.result)) return false;
+       if(f.testor && String(row.testor || "") !== String(f.testor)) return false;
+       if(f.owner && String(row.owner_scenario || "") !== String(f.owner)) return false;
+       if(q){
+         const hay = [
+           row.cr_id,row.test_case_id,row.scenario,row.description,row.expectation,
+           row.step_by_step,row.data_test,row.actual_result,row.owner_scenario,
+           row.testor,row.owner_confirm,row.note
+         ].join(" ").toLowerCase();
+         if(!hay.includes(q)) return false;
+       }
+       return true;
+     });
+     const {key,dir} = EB2B.uatSort;
+     return rows.sort((a,b)=>{
+       const av = a[key], bv = b[key];
+       if(key === "testing_date" || key === "confirmed_date" || key === "created_at"){
+         const at = av ? new Date(av).getTime() : 0, bt = bv ? new Date(bv).getTime() : 0;
+         return (at - bt) * (dir === "asc" ? 1 : -1);
+       }
+       return String(av ?? "").localeCompare(String(bv ?? ""), "vi", {numeric:true}) * (dir === "asc" ? 1 : -1);
+     });
+   }
+
+   function eb2bUatSortHeader(key,label){
+     const active = EB2B.uatSort.key === key;
+     const arrow = active ? (EB2B.uatSort.dir === "asc" ? " ↑" : " ↓") : "";
+     return `<th data-eb2b-uat-sort="${key}" style="cursor:pointer" aria-sort="${active ? (EB2B.uatSort.dir === "asc" ? "ascending" : "descending") : "none"}">${label}${arrow}</th>`;
+   }
+
+   function eb2bUatKpis(){
+     const rows = EB2B.rows.uat;
+     const total = rows.length;
+     const pass = rows.filter(row=>row.pass_fail === "Pass").length;
+     const fail = rows.filter(row=>row.pass_fail === "Fail").length;
+     const pending = rows.filter(row=>["Not Started","Blocked"].includes(row.pass_fail || "Not Started")).length;
+     const pct = value => total ? Math.round(value / total * 100) : 0;
+     return `
+       ${kpiCard("Tổng số Test Case", total, "Toàn bộ kịch bản UAT đã ghi nhận", "")}
+       ${kpiCard("Pass", pass, "Đã đạt kiểm thử", "success", "", pct(pass))}
+       ${kpiCard("Fail", fail, "Cần xử lý / kiểm thử lại", "danger", "", pct(fail))}
+       ${kpiCard("Chưa hoàn tất", pending, "Not Started / Blocked", "warn", "", pct(pending))}
+     `;
+   }
+
+   function eb2bUatFilter(label,key,values){
+     const selected = EB2B.uatFilters[key] || "";
+     return `<div class="filter-chip"><span>${label}</span><select data-eb2b-uat-filter="${key}"><option value="">Tất cả</option>${values.map(value=>`<option value="${eEsc(value)}" ${String(value)===String(selected)?"selected":""}>${eEsc(value)}</option>`).join("")}</select></div>`;
+   }
+
+   function eb2bUatColumnMenu(){
+     return `<div class="tb-menu-item-label">Hiển thị cột</div>${EB2B_UAT_COLUMNS.map(col=>`
+       <label class="tb-checkbox-row"><input type="checkbox" data-eb2b-uat-col="${col.key}" ${EB2B.uatColumns[col.key] ? "checked" : ""}> ${eEsc(col.label)}</label>
+     `).join("")}`;
+   }
+
+   function eb2bUatField(key,label,value="",type="text",span=false,tall=false){
+     const id = "eb2bUatField_" + key;
+     const cls = `eb2b-uat-field${span ? " span-2" : ""}`;
+     const safeValue = type === "date" ? eDate(value) : value;
+     if(type === "textarea") return `<div class="${cls}"><label for="${id}">${label}</label><textarea id="${id}" class="${tall ? "tall" : ""}">${eEsc(safeValue)}</textarea></div>`;
+     return `<div class="${cls}"><label for="${id}">${label}</label><input id="${id}" type="${type}" value="${eEsc(safeValue)}"></div>`;
+   }
+
+   function eb2bUatSelectField(key,label,value,options,span=false){
+     const id = "eb2bUatField_" + key;
+     return `<div class="eb2b-uat-field${span ? " span-2" : ""}"><label for="${id}">${label}</label><select id="${id}">${eb2bOptions(options,value)}</select></div>`;
+   }
+
+   function eb2bUatEvidenceHtml(row){
+     if(!row) return `<div class="eb2b-uat-evidence"><h4>Quản lý bằng chứng kiểm thử</h4><p>Lưu Test Case trước, sau đó bạn có thể tải ảnh evidence lên.</p></div>`;
+     const files = EB2B.rows.attachments.filter(file=>String(file.testcase_id || "") === String(row.id) && !file.deleted_at);
+     return `<div class="eb2b-uat-evidence">
+       <div class="tc-modal-kicker">TEST EVIDENCE</div>
+       <h4>Quản lý bằng chứng kiểm thử</h4>
+       <p>Gắn ảnh hoặc tài liệu vào đúng bước kiểm thử để đội ngũ dễ đối chiếu kết quả.</p>
+       <div class="eb2b-uat-evidence-upload"><div class="form-grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:end"><div class="eb2b-uat-field"><label for="eb2bUatEvidenceStep">Bước kiểm thử</label><input id="eb2bUatEvidenceStep" type="text" placeholder="Ví dụ: Step 01 - Tạo đơn hàng"></div><div class="eb2b-uat-field"><label for="eb2bUatEvidenceFiles">Chọn file</label><input id="eb2bUatEvidenceFiles" type="file" multiple></div></div><button class="btn btn-primary btn-sm" type="button" id="eb2bUatUploadEvidence">Tải evidence lên</button></div>
+       <div class="eb2b-uat-evidence-list">
+         ${files.length ? files.map(file=>`<div class="eb2b-uat-evidence-row"><span>${eEsc(file.file_name)}</span><small>${eEsc(file.step_name || file.category || "Evidence")} · ${eEsc(file.uploaded_by || "—")}</small></div>`).join("") : `<div class="empty-state"><p>Chưa có ảnh evidence nào cho test case này.</p></div>`}
+       </div>
+     </div>`;
+   }
+
+   function eb2bUatModalTemplate(row){
+     const value = row || {};
+     const isEdit = !!row;
+     const crIds = EB2B.rows.cr.map(item=>item.cr_id).filter(Boolean);
+     const result = value.pass_fail || "Not Started";
+     return `<div class="eb2b-uat-modal" role="dialog" aria-modal="true">
+       <div class="eb2b-uat-modal-head">
+         <div class="tc-modal-head-copy">
+           <div class="tc-modal-kicker">UAT TEST CASE</div>
+           <h3>${isEdit ? "Sửa Test Case" : "Thêm Test Case UAT"}</h3>
+           <div class="eb2b-uat-modal-sub">${isEdit ? eEsc(value.test_case_id || value.cr_id || "") : "Tương ứng bảng eb2b_uat_testcase"}</div>
+           <div class="eb2b-uat-modal-context"><span><b>CR liên kết</b> ${eEsc(value.cr_id || "Chưa chọn")}</span><span><b>Test Case ID</b> ${eEsc(value.test_case_id || "Chưa đặt mã")}</span><span><b>Kết quả</b> ${eb2bUatResultBadge(result)}</span></div>
+         </div>
+         <button class="modal-close" type="button" data-eb2b-uat-close>✕</button>
+       </div>
+       <div class="tabs">
+         <button class="tab-btn active" type="button" data-eb2b-uat-tab="info">Thông tin</button>
+         <button class="tab-btn" type="button" data-eb2b-uat-tab="evidence" ${isEdit ? "" : 'style="opacity:.4;pointer-events:none;"'}>Evidence ${isEdit ? "" : "(lưu trước)"}</button>
+       </div>
+       <div class="eb2b-uat-modal-body">
+         <div class="eb2b-uat-tab-panel" data-eb2b-uat-panel="info">
+           <div class="eb2b-uat-summary">
+             <div class="eb2b-uat-summary-item"><span class="eb2b-uat-summary-label">CR liên kết</span><strong class="eb2b-uat-summary-value">${eEsc(value.cr_id || "Chưa chọn")}</strong></div>
+             <div class="eb2b-uat-summary-item"><span class="eb2b-uat-summary-label">Test Case ID</span><strong class="eb2b-uat-summary-value">${eEsc(value.test_case_id || "Chưa đặt mã")}</strong></div>
+             <div class="eb2b-uat-summary-item"><span class="eb2b-uat-summary-label">Kết quả</span><strong class="eb2b-uat-summary-value">${eb2bUatResultBadge(result)}</strong></div>
+             <div class="eb2b-uat-summary-item"><span class="eb2b-uat-summary-label">Evidence</span><strong class="eb2b-uat-summary-value">${isEdit ? "Quản lý ở tab Evidence" : "Lưu test case trước"}</strong></div>
+           </div>
+           <div class="eb2b-uat-groups">
+             <section class="eb2b-uat-group"><div class="eb2b-uat-group-title">Định danh & liên kết</div><div class="form-grid eb2b-uat-field-grid">
+               ${eb2bUatSelectField("cr_id","CR ID",value.cr_id,crIds)}
+               ${eb2bUatField("test_case_id","Test Case ID",value.test_case_id || "")}
+             </div></section>
+             <section class="eb2b-uat-group"><div class="eb2b-uat-group-title">Kịch bản kiểm thử</div><div class="form-grid eb2b-uat-field-grid">
+               ${eb2bUatField("scenario","Scenario",value.scenario || "", "text", true)}
+               ${eb2bUatField("description","Description",value.description || "","textarea",true)}
+               ${eb2bUatField("expectation","Expectation",value.expectation || "","textarea",true)}
+               ${eb2bUatField("step_by_step","Step by Step",value.step_by_step || "","textarea",true,true)}
+               ${eb2bUatField("data_test","Data test",value.data_test || "","textarea",true)}
+             </div></section>
+             <section class="eb2b-uat-group"><div class="eb2b-uat-group-title">Kết quả & thực thi</div><div class="form-grid eb2b-uat-field-grid">
+               ${eb2bUatField("actual_result","Actual Result",value.actual_result || "","textarea",true)}
+               ${eb2bUatSelectField("pass_fail","Kết quả (Pass/Fail)",result,["Not Started","Pass","Fail","Blocked"])}
+               ${eb2bUatField("owner_scenario","Owner Scenario",value.owner_scenario || "")}
+               ${eb2bUatField("testor","Testor",value.testor || "")}
+               ${eb2bUatField("testing_date","Testing Date",value.testing_date || "","date")}
+             </div></section>
+             <section class="eb2b-uat-group"><div class="eb2b-uat-group-title">Xác nhận & ghi chú</div><div class="form-grid eb2b-uat-field-grid">
+               ${eb2bUatField("owner_confirm","Owner Confirm (Business)",value.owner_confirm || "")}
+               ${eb2bUatField("confirmed_date","Confirmed Date",value.confirmed_date || "","date")}
+               ${eb2bUatField("note","Note",value.note || "","textarea",true)}
+             </div></section>
+           </div>
+         </div>
+         <div class="eb2b-uat-tab-panel hidden" data-eb2b-uat-panel="evidence">${eb2bUatEvidenceHtml(row)}</div>
+       </div>
+       <div class="eb2b-uat-modal-foot"><button class="btn btn-ghost" type="button" data-eb2b-uat-close>Hủy</button><button class="btn btn-primary" type="button" id="eb2bUatSave">${isEdit ? "Lưu thay đổi" : "Tạo Test Case"}</button></div>
+     </div>`;
+   }
+
+   function eb2bUatOpenModal(row){
+     const overlay = $e("#eb2bUatModalOverlay");
+     if(!overlay) return;
+     EB2B.editingUatId = row ? row.id : null;
+     overlay.innerHTML = eb2bUatModalTemplate(row);
+     overlay.classList.add("show");
+     overlay.setAttribute("aria-hidden","false");
+     $$e("[data-eb2b-uat-close]",overlay).forEach(button=>button.addEventListener("click", eb2bUatCloseModal));
+     $$e("[data-eb2b-uat-tab]",overlay).forEach(button=>button.addEventListener("click", ()=>{
+       $$e("[data-eb2b-uat-tab]",overlay).forEach(item=>item.classList.toggle("active",item===button));
+       $$e("[data-eb2b-uat-panel]",overlay).forEach(panel=>panel.classList.toggle("hidden",panel.dataset.eb2bUatPanel !== button.dataset.eb2bUatTab));
+     }));
+     $e("#eb2bUatSave",overlay)?.addEventListener("click", ()=>eb2bUatSave(row));
+     $e("#eb2bUatUploadEvidence",overlay)?.addEventListener("click", ()=>eb2bUatUploadEvidence(row));
+     if(typeof initAutoGrow === "function") initAutoGrow(overlay);
+   }
+
+   function eb2bUatCloseModal(){
+     const overlay = $e("#eb2bUatModalOverlay");
+     if(!overlay) return;
+     overlay.classList.remove("show");
+     overlay.setAttribute("aria-hidden","true");
+     EB2B.editingUatId = null;
+   }
+
+   async function eb2bUatUploadEvidence(row){
+     if(!row?.id){eToast("Vui lòng lưu Test Case trước khi tải evidence.","err");return;}
+     const overlay=$e("#eb2bUatModalOverlay");
+     const files=Array.from($e("#eb2bUatEvidenceFiles",overlay)?.files || []);
+     const step=($e("#eb2bUatEvidenceStep",overlay)?.value || "").trim();
+     if(!files.length){eToast("Vui lòng chọn ít nhất một file.","err");return;}
+     const button=$e("#eb2bUatUploadEvidence",overlay);
+     if(button){button.disabled=true;button.textContent="Đang tải lên...";}
+     const sb=activeDb();
+     for(const file of files){
+       const safeName=file.name.replace(/[^\w.\-() ]+/g,"_");
+       const path=`uat/${row.cr_id || "no-cr"}/${row.id}/${Date.now()}_${safeName}`;
+       const upload=await sb.storage.from("eb2b-attachments").upload(path,file,{upsert:false});
+       if(upload.error){eToast("Tải file thất bại: "+upload.error.message,"err");if(button){button.disabled=false;button.textContent="Tải evidence lên";}return;}
+       const inserted=await sb.from(EB2B_TABLES.attachments).insert({
+         cr_id:row.cr_id || null,testcase_id:row.id,category:"uat_evidence",
+         step_name:step || null,file_name:file.name,file_path:path,mime_type:file.type || null,
+         file_size:file.size,uploaded_by:eUser()
+       }).select("*").single();
+       if(inserted.error){await sb.storage.from("eb2b-attachments").remove([path]);eToast("Không ghi được metadata evidence: "+inserted.error.message,"err");if(button){button.disabled=false;button.textContent="Tải evidence lên";}return;}
+       if(inserted.data) EB2B.rows.attachments.unshift(inserted.data);
+     }
+     eToast("Đã tải evidence vào bucket EB2B.","ok");
+     const refreshed=EB2B.rows.uat.find(item=>String(item.id)===String(row.id)) || row;
+     eb2bUatOpenModal(refreshed);
+     $e('[data-eb2b-uat-tab="evidence"]', $e("#eb2bUatModalOverlay"))?.click();
+   }
+
+   async function eb2bUatSave(row){
+     const overlay = $e("#eb2bUatModalOverlay");
+     const get = key => $e("#eb2bUatField_"+key,overlay)?.value || "";
+     const payload = {
+       cr_id:get("cr_id").trim(),
+       test_case_id:get("test_case_id").trim(),
+       scenario:get("scenario").trim(),
+       description:get("description"),
+       expectation:get("expectation"),
+       step_by_step:get("step_by_step"),
+       data_test:get("data_test"),
+       actual_result:get("actual_result"),
+       pass_fail:get("pass_fail") || "Not Started",
+       owner_scenario:get("owner_scenario").trim(),
+       testor:get("testor").trim(),
+       testing_date:get("testing_date") || null,
+       owner_confirm:get("owner_confirm").trim(),
+       confirmed_date:get("confirmed_date") || null,
+       note:get("note"),
+       updated_at:eNow(),
+       updated_by:eUser()
+     };
+     if(!payload.cr_id){ eToast("Vui lòng chọn CR ID.", "err"); return; }
+     if(!payload.test_case_id){ eToast("Vui lòng nhập Test Case ID.", "err"); return; }
+     const duplicate = EB2B.rows.uat.some(item=>String(item.test_case_id)===payload.test_case_id && String(item.id)!==String(row?.id || ""));
+     if(duplicate){ eToast(`Test Case ID "${payload.test_case_id}" đã tồn tại.`, "err"); return; }
+     const button = $e("#eb2bUatSave",overlay);
+     if(button){button.disabled=true;button.textContent="Đang lưu...";}
+     const sb = activeDb();
+     const result = row
+       ? await sb.from(EB2B_TABLES.uat).update(payload).eq("id",row.id)
+       : await sb.from(EB2B_TABLES.uat).insert({...payload,created_by:eUser()});
+     if(result.error){
+       if(button){button.disabled=false;button.textContent=row?"Lưu thay đổi":"Tạo Test Case";}
+       eToast("Lưu UAT thất bại: " + result.error.message, "err");
+       return;
+     }
+     eb2bUatCloseModal();
+     eToast(row ? "Đã cập nhật test case EB2B." : "Đã tạo test case EB2B.", "ok");
+     await eb2bLoad();
+   }
+
+   function eb2bRenderUat(){
+     const c = $e("#eb2bContent");
+     const rows = eb2bUatFiltered();
+     const visibleColumns = EB2B_UAT_COLUMNS.filter(column=>EB2B.uatColumns[column.key]);
+     const f = EB2B.uatFilters;
+     const testors = eb2bUatCatalog("testor");
+     const owners = eb2bUatCatalog("owner_scenario");
+     const crIds = eb2bUatCatalog("cr_id");
+     const resultOptions = ["Not Started","Pass","Fail","Blocked"];
+     const selectedCount = EB2B.uatSelection.size;
+     const canEdit = typeof canEditData !== "function" || canEditData();
+     const canDelete = typeof canDeleteData !== "function" || canDeleteData();
+     const colspan = visibleColumns.length + 3;
+     c.innerHTML = `<div class="crlog-shell uat-shell eb2b-uat-shell">
+       <div class="crlog-kpis uat-kpis">${eb2bUatKpis()}</div>
+       <div class="list-panel crlog-panel uat-panel">
+         <div class="list-panel-head">
+           <div class="list-panel-count"><b id="eb2bUatCount">${rows.length}</b> Test Case</div>
+           <div class="table-toolbar" id="eb2bUatToolbar">
+             <div class="tb-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="eb2bUatSearch" type="text" placeholder="Tìm Test Case, scenario, testor..." value="${eEsc(f.search)}"></div>
+             ${eb2bUatFilter("CR ID","cr",crIds)}
+             ${eb2bUatFilter("Kết quả","result",resultOptions)}
+             <div class="tb-dropdown" data-eb2b-uat-menu-root="more"><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-uat-menu="more">Lọc thêm<span class="tb-badge ${f.testor||f.owner?"":"hidden"}" id="eb2bUatMoreBadge">${[f.testor,f.owner].filter(Boolean).length}</span></button><div class="tb-menu" data-eb2b-uat-menu-panel="more"><div class="tb-menu-item-label">Testor</div><select data-eb2b-uat-filter="testor"><option value="">Tất cả</option>${testors.map(value=>`<option value="${eEsc(value)}" ${value===f.testor?"selected":""}>${eEsc(value)}</option>`).join("")}</select><div class="tb-menu-divider"></div><div class="tb-menu-item-label">Owner Scenario</div><select data-eb2b-uat-filter="owner"><option value="">Tất cả</option>${owners.map(value=>`<option value="${eEsc(value)}" ${value===f.owner?"selected":""}>${eEsc(value)}</option>`).join("")}</select></div></div>
+             <div class="chip-clear" data-eb2b-uat-clear>Xóa lọc</div>
+             <div class="tb-dropdown" data-eb2b-uat-menu-root="columns"><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-uat-menu="columns">Columns</button><div class="tb-menu right" data-eb2b-uat-menu-panel="columns">${eb2bUatColumnMenu()}</div></div>
+             <div class="tb-dropdown" data-eb2b-uat-menu-root="density"><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-uat-menu="density">Density</button><div class="tb-menu right" data-eb2b-uat-menu-panel="density"><label class="tb-radio-row"><input type="radio" name="eb2bUatDensity" value="compact" ${EB2B.uatDensity==="compact"?"checked":""}> Compact</label><label class="tb-radio-row"><input type="radio" name="eb2bUatDensity" value="comfortable" ${EB2B.uatDensity==="comfortable"?"checked":""}> Comfortable</label><label class="tb-radio-row"><input type="radio" name="eb2bUatDensity" value="spacious" ${EB2B.uatDensity==="spacious"?"checked":""}> Spacious</label></div></div>
+             <button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatFocus" type="button" title="Chế độ toàn màn hình">⛶ Focus</button>
+             ${canEdit?`<button class="btn btn-primary btn-sm" type="button" data-eb2b-new="uat">＋ Thêm Test Case</button>`:""}
+           </div>
+         </div>
+         <div class="bulk-bar ${selectedCount?"":"hidden"}" id="eb2bUatBulkBar"><span><b>${selectedCount}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-uat-bulk-clear>Bỏ chọn</button></div></div>
+         <div class="crlog-table-outer">
+           <div class="table-wrap crlog-table-wrap" id="eb2bUatTableWrap">
+             <table id="eb2bUatTable" class="density-${eEsc(EB2B.uatDensity)}"><colgroup>${["__check","cr_id",...visibleColumns.map(column=>column.key),"__actions"].map(key=>`<col data-eb2b-uat-col-width="${key}">`).join("")}</colgroup><thead><tr>
+               <th class="col-check"><input type="checkbox" class="select-all-check" id="eb2bUatSelectAll" title="Chọn tất cả"></th>
+               ${eb2bUatSortHeader("cr_id","CR ID")}${visibleColumns.map(column=>eb2bUatSortHeader(column.key,column.label)).join("")}<th class="th-actions">Thao tác</th>
+             </tr></thead><tbody>
+               ${rows.length ? rows.map(row=>`<tr data-eb2b-uat-row="${eEsc(row.id)}"><td class="cell-check"><input type="checkbox" class="row-check" data-eb2b-uat-check="${eEsc(row.id)}" ${EB2B.uatSelection.has(String(row.id))?"checked":""}></td><td class="cell-id"><span class="id-chip">${eEsc(row.cr_id || "—")}</span></td>${visibleColumns.map(column=>{
+                 const value = row[column.key];
+                 if(column.key==="test_case_id") return `<td class="cell-id"><span class="id-chip">${eEsc(value || "—")}</span></td>`;
+                 if(column.key==="scenario") return `<td class="cell-title" title="${eEsc(value || "")}">${eEsc(value || "—")}</td>`;
+                 if(column.key==="pass_fail") return `<td class="cell-result">${eb2bUatResultBadge(value || "Not Started")}</td>`;
+                 if(column.key==="testing_date" || column.key==="confirmed_date") return `<td class="cell-dim">${eEsc(eDate(value) || "—")}</td>`;
+                 return `<td class="cell-dim">${eEsc(value || "—")}</td>`;
+               }).join("")}<td class="cell-actions"><div class="row-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit" title="Sửa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete" title="Xóa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg></button>`:""}</div></td></tr>`).join(""):`<tr><td colspan="${colspan}"><div class="empty-state"><h4>Chưa có Test Case</h4><p>Bấm “Thêm Test Case” để tạo test case UAT đầu tiên.</p></div></td></tr>`}
+             </tbody></table>
+             <div class="cr-mobile-list eb2b-uat-mobile" id="eb2bUatMobile">${rows.map(row=>`<div class="cr-card" data-eb2b-uat-row="${eEsc(row.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(row.cr_id || "—")}</span>${eb2bUatResultBadge(row.pass_fail || "Not Started")}</div><div class="cr-card-title">${eEsc(row.test_case_id || row.scenario || "—")}</div><div class="cr-card-meta"><span>${eEsc(row.scenario || "Chưa có scenario")}</span><span>${eEsc(row.testor || "Chưa có testor")}</span><span>${eEsc(eDate(row.testing_date) || "Chưa test")}</span></div><div class="cr-card-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 002 2v7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4v2m3 0v14a2 2 0 01-2 2H7A2 2 0 015 20V6h14z"/></svg></button>`:""}</div></div>`).join("")}</div>
+           </div>
+         </div>
+         <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${EB2B.rows.uat.length} Test Case</span></div>
+       </div>
+     </div>`;
+
+     const root = $e("#eb2bContent");
+     $e("#eb2bUatSearch",root)?.addEventListener("input",event=>{
+       EB2B.uatFilters.search = event.target.value;
+       eb2bRenderUat();
+       const input = $e("#eb2bUatSearch"); if(input){input.focus();input.setSelectionRange(event.target.selectionStart,event.target.selectionStart);}
+     });
+     $$e("[data-eb2b-uat-filter]",root).forEach(select=>select.addEventListener("change",event=>{EB2B.uatFilters[event.target.dataset.eb2bUatFilter]=event.target.value;eb2bRenderUat();}));
+     $e("[data-eb2b-uat-clear]",root)?.addEventListener("click",()=>{EB2B.uatFilters={cr:"",result:"",testor:"",owner:"",search:""};eb2bRenderUat();});
+     $$e("[data-eb2b-uat-menu]",root).forEach(button=>button.addEventListener("click",event=>{
+       event.stopPropagation();
+       const panel=$e(`[data-eb2b-uat-menu-panel="${button.dataset.eb2bUatMenu}"]`,root);
+       const wasOpen=panel?.classList.contains("show");
+       $$e("[data-eb2b-uat-menu-panel]",root).forEach(item=>item.classList.remove("show"));
+       if(panel && !wasOpen) panel.classList.add("show");
+     }));
+     $$e("[data-eb2b-uat-menu-panel]",root).forEach(panel=>panel.addEventListener("click",event=>event.stopPropagation()));
+     $$e("[data-eb2b-uat-col]",root).forEach(check=>check.addEventListener("change",event=>{
+       const visible=Object.values(EB2B.uatColumns).filter(Boolean).length;
+       if(!event.target.checked && visible<=1){event.target.checked=true;return;}
+       EB2B.uatColumns[event.target.dataset.eb2bUatCol]=event.target.checked;
+       eb2bRenderUat();
+     }));
+     $$e('input[name="eb2bUatDensity"]',root).forEach(radio=>radio.addEventListener("change",event=>{EB2B.uatDensity=event.target.value;localStorage.setItem("eb2bUatDensity",EB2B.uatDensity);eb2bRenderUat();}));
+     $e("#eb2bUatFocus",root)?.addEventListener("click",()=>{$e("#eb2bViewRoot")?.classList.toggle("eb2b-uat-focus");});
+     $e("#eb2bUatSelectAll",root)?.addEventListener("change",event=>{
+       rows.forEach(row=>event.target.checked?EB2B.uatSelection.add(String(row.id)):EB2B.uatSelection.delete(String(row.id)));
+       eb2bRenderUat();
+     });
+     $e("[data-eb2b-uat-bulk-clear]",root)?.addEventListener("click",()=>{EB2B.uatSelection.clear();eb2bRenderUat();});
+     $$e("[data-eb2b-uat-sort]",root).forEach(header=>header.addEventListener("click",()=>{
+       const key=header.dataset.eb2bUatSort;
+       EB2B.uatSort={key,dir:EB2B.uatSort.key===key&&EB2B.uatSort.dir==="asc"?"desc":"asc"};
+       eb2bRenderUat();
+     }));
+     $$e("[data-eb2b-uat-row]",root).forEach(rowEl=>rowEl.addEventListener("click",event=>{
+       if(event.target.closest("input[type=checkbox]")) return;
+       const row=EB2B.rows.uat.find(item=>String(item.id)===String(rowEl.dataset.eb2bUatRow));
+       const action=event.target.closest("[data-eb2b-uat-action]");
+       if(action?.dataset.eb2bUatAction==="edit"){eb2bUatOpenModal(row);return;}
+       if(action?.dataset.eb2bUatAction==="delete"){eb2bDelete("uat",row);return;}
+       eb2bUatOpenModal(row);
+     }));
+     $$e("[data-eb2b-uat-check]",root).forEach(check=>check.addEventListener("change",event=>{const id=event.target.dataset.eb2bUatCheck;if(event.target.checked)EB2B.uatSelection.add(id);else EB2B.uatSelection.delete(id);eb2bRenderUat();}));
+   }
 
   function eb2bTableDefinition(key){
     const common = [
@@ -16968,13 +17394,18 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const crEdit=ev.target.closest("[data-eb2b-cr-edit]");if(crEdit){ev.stopPropagation();const row=EB2B.rows.cr.find(x=>String(x.id)===String(crEdit.dataset.eb2bCrEdit));eb2bOpenModal("cr",row);return;}
       const crDelete=ev.target.closest("[data-eb2b-cr-delete]");if(crDelete){ev.stopPropagation();const row=EB2B.rows.cr.find(x=>String(x.id)===String(crDelete.dataset.eb2bCrDelete));eb2bDelete("cr",row);return;}
       const crView=ev.target.closest("[data-eb2b-cr-view], [data-eb2b-cr-row]");if(crView){const id=crView.dataset.eb2bCrView||crView.dataset.eb2bCrRow;eb2bOpenCrDrawer(EB2B.rows.cr.find(x=>String(x.id)===String(id)));return;}
-      const create=ev.target.closest("[data-eb2b-new]");
-      if(create){ eb2bOpenModal(create.dataset.eb2bNew,null); return; }
+       const create=ev.target.closest("[data-eb2b-new]");
+       if(create){ if(create.dataset.eb2bNew==="uat") eb2bUatOpenModal(null); else eb2bOpenModal(create.dataset.eb2bNew,null); return; }
       const action=ev.target.closest("[data-eb2b-act]");
       if(action){
         const key=action.closest("tr")?.querySelector("[data-eb2b-act]") ? action.dataset.eb2bAct : action.dataset.eb2bAct;
         const map={cr:"cr",uat:"uat",release:"release",brd:"brd",weekly_mom:"weekly_mom"};
         const rowKey=map[EB2B.activeTab]; const row=(EB2B.rows[rowKey]||[]).find(x=>String(x.id)===String(action.dataset.eb2bId));
+         if(EB2B.activeTab==="uat"){
+           if(action.dataset.eb2bAct==="edit" && row) eb2bUatOpenModal(row);
+           if(action.dataset.eb2bAct==="delete" && row) eb2bDelete("uat",row);
+           return;
+         }
         if(action.dataset.eb2bAct==="edit" && row) eb2bOpenModal(rowKey,row);
         if(action.dataset.eb2bAct==="delete" && row) eb2bDelete(rowKey,row);
         return;
@@ -16992,7 +17423,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     document.addEventListener("change",ev=>{const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();}});
     $e("#eb2bDrawerOverlay")?.addEventListener("click",eb2bCloseCrDrawer);
     document.addEventListener("keydown", ev=>{
-      if(ev.key==="Escape"){$e("#eb2bModalOverlay")?.classList.remove("show");eb2bCloseCrDrawer();}
+       if(ev.key==="Escape"){$e("#eb2bModalOverlay")?.classList.remove("show");eb2bUatCloseModal();eb2bCloseCrDrawer();}
     });
   }
 
