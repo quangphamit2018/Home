@@ -16502,7 +16502,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        #eb2bUatTable.density-spacious thead th{padding:16px 22px}
        #eb2bUatTable.density-spacious tbody td{padding:22px 22px}
        #eb2bViewRoot.eb2b-uat-focus{position:fixed;inset:0;z-index:950;background:var(--bg-workspace);padding:18px;overflow:auto}
-       #eb2bUatModalOverlay{position:fixed;inset:0;z-index:1100;display:none;background:rgba(15,42,68,.42);align-items:stretch;padding:0}
+        #eb2bUatModalOverlay{position:fixed;top:0;right:0;bottom:0;left:var(--sidebar-w);z-index:1100;display:none;background:#edf5f7;align-items:stretch;padding:0;transition:opacity var(--duration-base,180ms) var(--ease-standard,ease),left var(--duration-slow,320ms) var(--ease-standard,ease)}
        #eb2bUatModalOverlay.show{display:flex}
        #eb2bUatModalOverlay .eb2b-uat-modal{width:100%;height:100%;overflow:auto;background:#f2f8f9;border-left:1px solid #d7e4e8}
        #eb2bUatModalOverlay .eb2b-uat-modal-head{position:relative;overflow:hidden;min-height:98px;padding:18px clamp(20px,4vw,52px);background:radial-gradient(circle at 4% -45%,rgba(47,192,185,.16),transparent 34%),linear-gradient(135deg,#fff 0%,#f4fbfb 100%);border-bottom:1px solid #dce8eb;box-shadow:0 6px 20px -22px rgba(15,42,68,.55)}
@@ -16533,7 +16533,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        #eb2bUatModalOverlay .eb2b-uat-evidence-list{display:grid;gap:8px;margin-top:18px}
        #eb2bUatModalOverlay .eb2b-uat-evidence-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid #dce8eb;border-radius:10px;background:#fff;font-size:12px}
        #eb2bUatModalOverlay .eb2b-uat-evidence-row small{color:#8196a4}
-       @media(max-width:640px){#eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap table{display:none}#eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:flex}#eb2bUatModalOverlay .eb2b-uat-summary{grid-template-columns:1fr;padding:14px}#eb2bUatModalOverlay .eb2b-uat-group{padding:14px}#eb2bUatModalOverlay .eb2b-uat-field-grid{grid-template-columns:1fr!important}#eb2bUatModalOverlay .eb2b-uat-modal-head{padding:16px}}
+        body.sidebar-hidden #eb2bUatModalOverlay{left:0}
+        @media(max-width:900px){#eb2bUatModalOverlay{left:0}}
+        @media(max-width:640px){#eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap table{display:none}#eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:flex}#eb2bUatModalOverlay .eb2b-uat-summary{grid-template-columns:1fr;padding:14px}#eb2bUatModalOverlay .eb2b-uat-group{padding:14px}#eb2bUatModalOverlay .eb2b-uat-field-grid{grid-template-columns:1fr!important}#eb2bUatModalOverlay .eb2b-uat-modal-head{padding:16px}}
       @media(max-width:760px){.eb2b-kpis,.eb2b-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eb2b-form-grid{grid-template-columns:1fr}.eb2b-field.span-2{grid-column:auto}}
     `;
     document.head.appendChild(style);
