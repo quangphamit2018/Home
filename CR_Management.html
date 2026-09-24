@@ -11088,7 +11088,11 @@ const CR_IMPORT_LISTS_SHEET_NAME = "Danh_sach_hop_le";
 function excelValueToISODate(v){
   if(v === null || v === undefined || v === "") return null;
   if(v instanceof Date && !isNaN(v.getTime())){
-    const y = v.getFullYear(), m = String(v.getMonth()+1).padStart(2,"0"), d = String(v.getDate()).padStart(2,"0");
+    // SheetJS (cellDates:true) tạo Date theo giờ máy; ở múi giờ như Việt Nam (UTC+7) ô ngày 22/09 bị lệch
+    // vài chục giây thành 21/09 23:59:30 → đọc ra ngày 21. Ô ngày thuần không có giờ thật, nên nếu Date rơi
+    // vào giờ 23:xx thì coi là sát nửa đêm của ngày kế tiếp.
+    const base = v.getHours() >= 23 ? new Date(v.getFullYear(), v.getMonth(), v.getDate() + 1) : v;
+    const y = base.getFullYear(), m = String(base.getMonth()+1).padStart(2,"0"), d = String(base.getDate()).padStart(2,"0");
     return `${y}-${m}-${d}`;
   }
   const s = String(v).trim();
@@ -17383,7 +17387,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[c]));
   const eText = value => String(value == null ? "" : value);
-  const eDate = value => value ? String(value).slice(0,10) : "";
+  // Ngày thuần (yyyy-mm-dd) giữ nguyên; mốc thời gian (created_at/updated_at…) đổi sang NGÀY theo giờ Việt Nam (UTC+7),
+  // không cắt chuỗi UTC — tránh 00:00–07:00 sáng bị hiện thành ngày hôm trước.
+  const eDate = value => {
+    if(!value) return "";
+    const s = String(value);
+    if(s.length <= 10 || !/[T ]\d{2}:\d{2}/.test(s)) return s.slice(0,10);
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? s.slice(0,10) : new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+  };
   const eNow = () => new Date().toISOString();
   const eUser = () => (typeof STATE !== "undefined" && (STATE.userEmail || STATE.session?.user?.email)) || null;
   const eToast = (message, type="info") => {
@@ -18041,7 +18053,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bCrTitle(row){ return row.rename_folder || row.old_name || row.app || "—"; }
   function eb2bCrOverdue(row){
     if(!row.deadline || ["Released","Closed"].includes(row.status)) return false;
-    return new Date(String(row.deadline).slice(0,10)+"T23:59:59") < new Date();
+    return String(row.deadline).slice(0,10) < todayISO();
   }
   function eb2bCrCatalog(field){
     const config = field==="status" ? EB2B.rows.statuses : field==="sub_status" ? EB2B.rows.sub_statuses : [];
@@ -18717,7 +18729,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const visible = Object.entries(EB2B.releaseColumns).filter(([,on])=>on).map(([key])=>key);
     const completed = all.filter(r=>["Released","Completed"].includes(r.status)).length;
     const active = all.filter(r=>r.status === "In Progress").length;
-    const overdue = all.filter(r=>r.planned_date && !r.actual_date && !["Released","Completed","Rolled Back"].includes(r.status) && r.planned_date < eNow().slice(0,10)).length;
+    const overdue = all.filter(r=>r.planned_date && !r.actual_date && !["Released","Completed","Rolled Back"].includes(r.status) && r.planned_date < todayISO()).length;
     const pct = n => all.length ? Math.round(n / all.length * 100) : 0;
     const crOptions = [...new Set(all.map(r=>r.cr_id).filter(Boolean))].sort();
     const envOptions = [...new Set(all.map(r=>r.environment).filter(Boolean))].sort();
@@ -19244,7 +19256,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       return r.error?[]:(r.data||[]).map(x=>({...x,__kind:d[0],__table:d[1],__labelField:d[2],__label:d[3]}));
     }));
     const rows=results.flat().sort((a,b)=>new Date(b.deleted_at)-new Date(a.deleted_at));
-    c.innerHTML=`<div class="eb2b-panel"><div class="eb2b-panel-head"><h3>Recycle Bin EB2B</h3><span class="eb2b-muted">${rows.length} mục</span></div><div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>Loại</th><th>Mã / tiêu đề</th><th>Đã xóa lúc</th><th>Người xóa</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${eEsc(r.__label)}</td><td>${eEsc(r[r.__labelField]||r.id)}</td><td>${eEsc(r.deleted_at||"")}</td><td>${eEsc(r.deleted_by||"—")}</td><td><div class="eb2b-actions"><button class="btn btn-ghost btn-sm" data-eb2b-restore="${r.__table}" data-eb2b-id="${r.id}">Khôi phục</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-purge="${r.__table}" data-eb2b-id="${r.id}">Xóa vĩnh viễn</button></div></td></tr>`).join("")||`<tr><td colspan="5" class="eb2b-empty">Recycle Bin EB2B trống.</td></tr>`}</tbody></table></div></div>`;
+    c.innerHTML=`<div class="eb2b-panel"><div class="eb2b-panel-head"><h3>Recycle Bin EB2B</h3><span class="eb2b-muted">${rows.length} mục</span></div><div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>Loại</th><th>Mã / tiêu đề</th><th>Đã xóa lúc</th><th>Người xóa</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${eEsc(r.__label)}</td><td>${eEsc(r[r.__labelField]||r.id)}</td><td>${eEsc(fmtDateTime(r.deleted_at))}</td><td>${eEsc(r.deleted_by||"—")}</td><td><div class="eb2b-actions"><button class="btn btn-ghost btn-sm" data-eb2b-restore="${r.__table}" data-eb2b-id="${r.id}">Khôi phục</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-purge="${r.__table}" data-eb2b-id="${r.id}">Xóa vĩnh viễn</button></div></td></tr>`).join("")||`<tr><td colspan="5" class="eb2b-empty">Recycle Bin EB2B trống.</td></tr>`}</tbody></table></div></div>`;
   }
 
   async function eb2bRestore(table,id){
