@@ -1542,6 +1542,28 @@ td.cell-id .id-chip{
   .export-selection-modal .modal-foot > *{ width:100%; }
   .export-selection-modal .modal-foot .btn{ width:auto; }
 }
+/* ---- Modal sắp xếp ảnh evidence trước khi tải báo cáo -------------------- */
+.evidence-arrange-modal{ max-width:940px; }
+.evidence-arrange-modal .modal-body{ padding:18px 24px 20px; }
+.evidence-arrange-loading{ padding:38px 12px; text-align:center; color:var(--text-muted); font-size:12.5px; font-weight:600; }
+.evidence-arrange-empty{ padding:30px 12px; text-align:center; color:var(--text-muted); font-size:12.5px; }
+.evidence-arrange-group{ margin-bottom:20px; }
+.evidence-arrange-group:last-child{ margin-bottom:4px; }
+.evidence-arrange-group-title{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; font-size:12.5px; font-weight:750; color:#18364f; margin-bottom:9px; }
+.evidence-arrange-group-title .tc-id{ color:#0e9a94; font-weight:800; }
+.evidence-arrange-group-title .tc-scenario{ color:#6e8798; font-weight:600; font-size:11.5px; }
+.evidence-arrange-items{ display:flex; gap:10px; flex-wrap:wrap; }
+.evidence-arrange-item{ width:136px; border:1px solid var(--border); border-radius:10px; background:#fff; padding:8px; cursor:grab; position:relative; transition:box-shadow .15s ease, opacity .15s ease, border-color .15s ease; user-select:none; }
+.evidence-arrange-item:hover{ border-color:#49c6bf; }
+.evidence-arrange-item.dragging{ opacity:.4; cursor:grabbing; }
+.evidence-arrange-item.excluded{ opacity:.45; }
+.evidence-arrange-item.excluded img{ filter:grayscale(.9); }
+.evidence-arrange-item img{ width:100%; height:80px; object-fit:cover; border-radius:7px; background:#eef4f7; display:block; pointer-events:none; }
+.evidence-arrange-order{ position:absolute; top:4px; left:4px; min-width:22px; height:22px; padding:0 5px; border-radius:7px; background:#0e9a94; color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(10,30,51,.25); }
+.evidence-arrange-item.excluded .evidence-arrange-order{ background:#9db4c0; text-decoration:line-through; }
+.evidence-arrange-name{ display:block; margin-top:6px; font-size:10.5px; font-weight:600; color:#41586b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.evidence-arrange-include{ display:flex; align-items:center; gap:5px; margin-top:6px; font-size:10.5px; font-weight:650; color:#18364f; cursor:pointer; }
+.evidence-arrange-include input{ accent-color:#0e9a94; }
 .modal-head{ display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border); flex-shrink:0; }
 .modal-head h3{ font-size:16.5px; }
 .modal-head .sub{ font-size: var(--text-caption-size); color: var(--text-muted); font-weight:500; margin-top:2px; }
@@ -5549,6 +5571,10 @@ html{
   border-color:#70b9bb;
   box-shadow:0 0 0 3px rgba(23,159,160,.09);
 }
+
+.ev-order-wrap{display:flex;flex-direction:column;gap:6px;min-width:0}
+.ev-order-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-dim,#64748b);padding:0 4px}
+.ev-order-input{width:56px;padding:4px 6px;border:1px solid var(--border,#d6e2e0);border-radius:8px;font-weight:700;text-align:center;font-size:12px}
 </style>
 
 <style id="import-modal-polish">
@@ -6893,6 +6919,7 @@ lucide/dist/esm/lucide.mjs:
 <div class="modal-overlay" id="subStatusModalOverlay" role="dialog" aria-modal="true"></div>
 <div class="modal-overlay" id="importModalOverlay" role="dialog" aria-modal="true"></div>
 <div class="modal-overlay" id="exportSelectionOverlay" role="dialog" aria-modal="true"></div>
+<div class="modal-overlay" id="evidenceArrangeOverlay" role="dialog" aria-modal="true"></div>
 
 <div class="drawer-overlay" id="drawerOverlay" role="presentation"></div>
 <div class="drawer" id="crDrawer"></div>
@@ -9879,7 +9906,26 @@ function evidenceStepSortRank(stepName){
   const found = (STATE.evidenceStepList || []).find(s=> String(s.name || "").trim() === key);
   return found ? Number(found.sort_order ?? 0) : Number.MAX_SAFE_INTEGER - 1;
 }
+function evOrderKey(tcId){ return "evOrder:" + String(tcId); }
+function getEvidenceOrder(tcId){
+  try{ return JSON.parse(localStorage.getItem(evOrderKey(tcId)) || "null") || null; }catch(e){ return null; }
+}
+function setEvidenceOrder(tcId, ids){
+  try{ localStorage.setItem(evOrderKey(tcId), JSON.stringify(ids.map(String))); }catch(e){}
+}
 function sortEvidenceFiles(files){
+  const base = defaultSortEvidenceFiles(files);
+  const tcId = base[0] && base[0].testcase_id;
+  const saved = tcId != null ? getEvidenceOrder(tcId) : null;
+  if(!saved || !saved.length) return base;
+  const rank = new Map(saved.map((id,i)=>[String(id), i]));
+  return base.map((f,i)=>({f,i})).sort((a,b)=>{
+    const ra = rank.has(String(a.f.id)) ? rank.get(String(a.f.id)) : 1e9 + a.i;
+    const rb = rank.has(String(b.f.id)) ? rank.get(String(b.f.id)) : 1e9 + b.i;
+    return ra - rb;
+  }).map(x=>x.f);
+}
+function defaultSortEvidenceFiles(files){
   return [...files].sort((a, b)=>{
     const stepRankDiff = evidenceStepSortRank(a.evidence_step) - evidenceStepSortRank(b.evidence_step);
     if(stepRankDiff) return stepRankDiff;
@@ -10078,11 +10124,182 @@ function openExportSelectionModal(mode){
       ? (overlay.querySelector('input[name="exportReportType"]:checked')?.value || "all")
       : null;
     close();
-    if(isReport) downloadProgressReport(selectedCrIds, reportType);
+    if(isReport){
+      // Chỉ mở bước sắp xếp ảnh khi báo cáo có sheet UAT_Testcase (nơi ảnh
+      // evidence được nhúng); các lựa chọn khác giữ nguyên luồng cũ.
+      const wantsUat = (REPORT_SHEET_OPTIONS.find(o=>o.value===reportType)?.sheets || []).includes("uat_testcase");
+      if(wantsUat){
+        const idSet = new Set(selectedCrIds.map(id=>String(id)));
+        const tcForArrange = (STATE.tcList || []).filter(t=>idSet.has(String(t.cr_id)));
+        openEvidenceArrangeModal(tcForArrange, plan=>downloadProgressReport(selectedCrIds, reportType, plan));
+      } else {
+        downloadProgressReport(selectedCrIds, reportType);
+      }
+    }
     else downloadEvidenceImagesZip(selectedCrIds);
   });
   render();
   search.focus();
+}
+
+/* --------------------------------------------------------------------------
+   Modal "Sắp xếp ảnh evidence" — bước trung gian sau khi chọn CR và trước khi
+   tạo báo cáo Excel. Người dùng kéo-thả để đổi thứ tự ảnh trong từng Test
+   Case, hoặc bỏ tick để loại ảnh khỏi báo cáo. Kết quả trả về qua onConfirm:
+     - null  -> giữ thứ tự mặc định (sortEvidenceFiles)
+     - Map<testcaseId, string[]> -> thứ tự ID ảnh do người dùng chọn
+-------------------------------------------------------------------------- */
+function evidenceArrangeModalTemplate(){
+  return `
+    <div class="modal modal-lg evidence-arrange-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Sắp xếp ảnh evidence</h3>
+          <div class="sub">Kéo thả để đổi thứ tự ảnh trong báo cáo, bỏ tick để loại ảnh không cần đưa vào.</div>
+        </div>
+        <button class="modal-close" id="evidenceArrangeClose" type="button" aria-label="Đóng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
+      </div>
+      <div class="modal-body" id="evidenceArrangeBody">
+        <div class="evidence-arrange-loading">Đang tải danh sách ảnh evidence...</div>
+      </div>
+      <div class="modal-foot">
+        <span class="export-selection-selected" id="evidenceArrangeCount"></span>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" id="evidenceArrangeDefault" type="button">Giữ thứ tự mặc định</button>
+          <button class="btn btn-primary" id="evidenceArrangeConfirm" type="button">Tạo báo cáo</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function openEvidenceArrangeModal(selectedTcList, onConfirm){
+  const overlay = $("#evidenceArrangeOverlay");
+  if(!overlay){ onConfirm(null); return; }
+  overlay.innerHTML = evidenceArrangeModalTemplate();
+  overlay.classList.add("show");
+
+  const close = ()=>{
+    overlay.classList.remove("show");
+    overlay.innerHTML = "";
+    overlay.onclick = null;
+  };
+  const body = $("#evidenceArrangeBody", overlay);
+  const countEl = $("#evidenceArrangeCount", overlay);
+  const confirmBtn = $("#evidenceArrangeConfirm", overlay);
+  $("#evidenceArrangeClose", overlay).addEventListener("click", close);
+  overlay.onclick = event=>{ if(event.target === overlay) close(); };
+
+  // Tải metadata evidence của từng Test Case (chỉ lấy ảnh). fetchTcAttachments
+  // đã trả về thứ tự mặc định ổn định, làm thứ tự ban đầu cho modal.
+  const groups = [];
+  for(const testcase of selectedTcList){
+    const files = testcase.id ? await fetchTcAttachments(testcase.id) : [];
+    const images = files.filter(file=>reportIsImageFile(file));
+    if(images.length) groups.push({ testcase, images });
+  }
+
+  if(!groups.length){
+    close();
+    toast("Các Test Case đã chọn chưa có ảnh evidence — tạo báo cáo với dữ liệu hiện có.", "info");
+    onConfirm(null);
+    return;
+  }
+
+  body.innerHTML = groups.map((group, gi)=>`
+    <div class="evidence-arrange-group" data-group="${gi}">
+      <div class="evidence-arrange-group-title">
+        <span class="tc-id">${esc(group.testcase.test_case_id || "Test Case")}</span>
+        <span class="tc-scenario">${esc(group.testcase.scenario || "")}</span>
+      </div>
+      <div class="evidence-arrange-items">
+        ${group.images.map(file=>`
+          <div class="evidence-arrange-item" draggable="true" data-file-id="${esc(String(file.id))}">
+            <span class="evidence-arrange-order"></span>
+            <img data-thumb-for="${esc(String(file.id))}" alt="${esc(file.file_name || "evidence")}" loading="lazy">
+            <span class="evidence-arrange-name" title="${esc(file.file_name || "")}">${esc(file.file_name || "evidence")}</span>
+            <label class="evidence-arrange-include">
+              <input type="checkbox" checked data-include="${esc(String(file.id))}">
+              Đưa vào báo cáo
+            </label>
+          </div>`).join("")}
+      </div>
+    </div>`).join("");
+
+  // Tải thumbnail bằng signed URL — lỗi từng ảnh không chặn các ảnh khác.
+  groups.forEach(group=>{
+    group.images.forEach(file=>{
+      const img = body.querySelector(`img[data-thumb-for="${String(file.id)}"]`);
+      if(!img) return;
+      getSignedUrl(file.file_path).then(url=>{
+        if(url && url !== "#") img.src = url;
+      }).catch(()=>{});
+    });
+  });
+
+  const updateCount = ()=>{
+    const items = Array.from(body.querySelectorAll(".evidence-arrange-item"));
+    const included = items.filter(el=>!el.classList.contains("excluded")).length;
+    countEl.textContent = `${included} / ${items.length} ảnh sẽ đưa vào báo cáo`;
+    items.forEach(el=>{
+      const badge = $(".evidence-arrange-order", el);
+      if(!badge) return;
+      if(el.classList.contains("excluded")){ badge.textContent = "–"; return; }
+      const siblings = Array.from(el.parentElement.children).filter(x=>x.classList.contains("evidence-arrange-item") && !x.classList.contains("excluded"));
+      badge.textContent = String(siblings.indexOf(el) + 1);
+    });
+  };
+
+  // Tick / bỏ tick "Đưa vào báo cáo"
+  body.addEventListener("change", event=>{
+    const checkbox = event.target.closest("[data-include]");
+    if(!checkbox) return;
+    checkbox.closest(".evidence-arrange-item").classList.toggle("excluded", !checkbox.checked);
+    updateCount();
+  });
+
+  // Kéo-thả sắp xếp trong phạm vi từng Test Case
+  let draggingEl = null;
+  body.addEventListener("dragstart", event=>{
+    draggingEl = event.target.closest(".evidence-arrange-item");
+    if(!draggingEl) return;
+    event.dataTransfer.effectAllowed = "move";
+    requestAnimationFrame(()=>draggingEl && draggingEl.classList.add("dragging"));
+  });
+  body.addEventListener("dragover", event=>{
+    if(!draggingEl) return;
+    const over = event.target.closest(".evidence-arrange-item");
+    if(!over || over === draggingEl || over.parentElement !== draggingEl.parentElement) return;
+    event.preventDefault();
+    const rect = over.getBoundingClientRect();
+    const before = event.clientX < rect.left + rect.width / 2;
+    over.parentElement.insertBefore(draggingEl, before ? over : over.nextSibling);
+  });
+  body.addEventListener("drop", event=>{ if(draggingEl) event.preventDefault(); });
+  body.addEventListener("dragend", ()=>{
+    if(draggingEl) draggingEl.classList.remove("dragging");
+    draggingEl = null;
+    updateCount();
+  });
+
+  $("#evidenceArrangeDefault", overlay).addEventListener("click", ()=>{
+    close();
+    onConfirm(null);
+  });
+  confirmBtn.addEventListener("click", ()=>{
+    const plan = new Map();
+    groups.forEach((group, gi)=>{
+      const container = body.querySelector(`.evidence-arrange-group[data-group="${gi}"] .evidence-arrange-items`);
+      if(!container) return;
+      const orderedIds = Array.from(container.querySelectorAll(".evidence-arrange-item"))
+        .filter(el=>!el.classList.contains("excluded"))
+        .map(el=>el.dataset.fileId);
+      plan.set(String(group.testcase.id), orderedIds);
+    });
+    close();
+    onConfirm(plan);
+  });
+
+  updateCount();
 }
 
 async function downloadEvidenceImagesZip(selectedCrIds = null){
@@ -11555,7 +11772,10 @@ function reportWhiteHeaderText(ws, lastColumn){
   });
 }
 
-async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all"){
+async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all", evidencePlan = null){
+  // evidencePlan: Map<testcaseId, string[]> — danh sách ID ảnh evidence THEO
+  // THỨ TỰ người dùng đã sắp xếp ở modal "Sắp xếp ảnh evidence". Ảnh không
+  // nằm trong danh sách bị loại khỏi báo cáo. null = giữ thứ tự mặc định.
   const btn = $("#btnProgressReport");
   if(!btn || btn.disabled) return;
   if(typeof ExcelJS === "undefined"){
@@ -11623,7 +11843,11 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all")
       let evidenceDoneCount = 0;
       DLProgress.setProgress(5, `Đang tải ảnh evidence 0/${selectedTcList.length} Test Case...`);
       await Promise.all(selectedTcList.map(async testcase=>{
-        const files = testcase.id ? await fetchTcAttachments(testcase.id) : [];
+        let files = testcase.id ? await fetchTcAttachments(testcase.id) : [];
+        if(evidencePlan && evidencePlan.has(String(testcase.id))){
+          const order = evidencePlan.get(String(testcase.id));
+          files = order.map(id=>files.find(f=>String(f.id)===id)).filter(Boolean);
+        }
         const images = [];
         for(const file of files){
           if(reportIsImageFile(file)){
@@ -13876,6 +14100,8 @@ async function renderEvidenceGrid(testcase_id){
   if(!files.length){ grid.innerHTML = emptyRow("Chưa có ảnh evidence nào cho test case này"); return; }
   const urlMap = {};
   await Promise.all(files.map(async f=>{ urlMap[f.id] = await getSignedUrl(f.file_path); }));
+  const posMap = {};
+  files.forEach((f,i)=>{ posMap[f.id] = i+1; });
   const groups = {};
   files.forEach(f=>{
     const key = f.evidence_step || "Khác";
@@ -13884,10 +14110,27 @@ async function renderEvidenceGrid(testcase_id){
   grid.innerHTML = Object.keys(groups).map(step=>`
     <div class="evidence-group">
       <div class="evidence-group-title">${esc(step)}<span class="line"></span></div>
-      <div class="file-grid">${groups[step].map(f=>fileCardHtml(f, urlMap[f.id])).join("")}</div>
+      <div class="file-grid">${groups[step].map(f=>`<div class="ev-order-wrap">${fileCardHtml(f, urlMap[f.id])}
+        <label class="ev-order-row" title="Thứ tự ảnh trong báo cáo Excel (Evidence Image 1, 2, 3...)">
+          Thứ tự trong báo cáo
+          <input type="number" class="ev-order-input" min="1" max="${files.length}" value="${posMap[f.id]}" data-ev-order="${f.id}">
+        </label></div>`).join("")}</div>
     </div>
   `).join("");
   bindFileCardEvents(grid, null, testcase_id);
+  grid.querySelectorAll("[data-ev-order]").forEach(inp=>{
+    ["click","mousedown","keydown"].forEach(ev=>inp.addEventListener(ev, e=>e.stopPropagation()));
+    inp.addEventListener("change", ()=>{
+      let n = Math.round(Number(inp.value));
+      if(!Number.isFinite(n)) return;
+      n = Math.max(1, Math.min(files.length, n));
+      const ids = files.map(f=>String(f.id)).filter(id=>id !== inp.dataset.evOrder);
+      ids.splice(n-1, 0, inp.dataset.evOrder);
+      setEvidenceOrder(testcase_id, ids);
+      toast(`Đã đặt ảnh ở vị trí ${n} trong báo cáo`, "ok");
+      renderEvidenceGrid(testcase_id);
+    });
+  });
 }
 
 /* ---------------------------------------------------------------------------
