@@ -8453,7 +8453,10 @@ function initDmsWorkspaceNav(){
   try{
     savedOpen = localStorage.getItem(DMS_NAV_STORAGE_KEY) !== "0";
   }catch(_){}
-  setDmsWorkspaceNavOpen(isDmsView(STATE.currentView) || savedOpen, false);
+  // Tôn trọng lựa chọn đã lưu của người dùng (kể cả khi đang ở một tab thuộc DMS).
+  // Trước đây "isDmsView(...) || savedOpen" luôn ép mở lại sau mỗi lần F5.
+  // Khi thu gọn, nhóm cha vẫn sáng (is-context) để biết đang ở đâu.
+  setDmsWorkspaceNavOpen(savedOpen, false);
   const toggle = ()=>{
     const isOpen = parent.getAttribute("aria-expanded") === "true";
     setDmsWorkspaceNavOpen(!isOpen);
@@ -9247,6 +9250,7 @@ function setView(view){
   if(!VALID_VIEWS.has(view)) view = "dashboard";
   if(view === "admin" && !canViewAdminTab()) view = "dashboard";
   if(view === "recycle" && !isSuperAdmin()) view = "dashboard";
+  const prevView = STATE.currentView;
   STATE.currentView = view;
   try{ localStorage.setItem(VIEW_STORAGE_KEY, view); }catch(_){}
   // Was e-B2B the active workspace right before this call? Captured before
@@ -9259,7 +9263,10 @@ function setView(view){
   closeDmsOverlays();
   $all(".nav-item[data-view]").forEach(i=> i.classList.toggle("active", i.dataset.view===view));
   if(isDmsView(view)){
-    setDmsWorkspaceNavOpen(true);
+    // Chỉ tự mở nhóm khi vừa đi VÀO DMS từ nơi khác (Dashboard, Admin, e-B2B...).
+    // Nếu đã ở trong DMS thì giữ nguyên trạng thái thu gọn/mở người dùng chọn;
+    // trước đây mọi lần setView() đều ép mở lại nên nhìn như bị "kẹt".
+    if(!isDmsView(prevView) || wasEb2bActive) setDmsWorkspaceNavOpen(true);
     $("#navDmsWorkspace")?.classList.add("is-context");
   }else{
     $("#navDmsWorkspace")?.classList.remove("is-context");
