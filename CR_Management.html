@@ -16613,9 +16613,52 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        .eb2b-modal-overlay.full .eb2b-modal-head{min-height:0;padding:22px clamp(20px,4vw,48px)}
        .eb2b-modal-overlay.full .eb2b-modal-head h3{font-size:var(--text-page-title-size)}
        .eb2b-modal-overlay.full .eb2b-modal-head p{font-size:var(--text-caption-size)}
-       .eb2b-modal-overlay.full .eb2b-modal-body{max-width:920px;width:100%;margin:0 auto;padding:26px clamp(20px,4vw,48px) 40px}
-       .eb2b-modal-overlay.full .eb2b-form-grid{max-width:none;margin:0;gap:14px 16px}
-       .eb2b-modal-overlay.full .eb2b-modal-foot{padding:16px clamp(20px,4vw,48px)}
+        /* CR form parity with the DMS editor.
+           This changes presentation only; the form still saves to the
+           e-B2B-specific table through eb2bSaveRecord(). */
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-modal-body{
+          width:100%; max-width:none; margin:0; box-sizing:border-box;
+          padding:clamp(30px,3.4vw,52px) clamp(28px,5vw,84px) 56px;
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-form-grid{
+          width:100%; max-width:1240px; margin:0 auto; gap:14px 16px;
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field{
+          padding:13px 14px 14px; border:1px solid #e0eaee; border-radius:13px;
+          background:#fff; box-shadow:0 5px 14px -16px rgba(15,42,68,.5);
+          transition:border-color 160ms var(--ease-standard),box-shadow 160ms var(--ease-standard);
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field:focus-within{
+          border-color:#83d6d1;
+          box-shadow:0 0 0 3px rgba(63,208,201,.11),0 8px 18px -18px rgba(15,42,68,.55);
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field label{
+          color:#526d80; font-size:10.5px; letter-spacing:.045em; margin-bottom:7px;
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field input,
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field select,
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field textarea{
+          border-color:#dbe7eb; background:#fbfdfe; color:#18364f; border-radius:9px;
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field input:focus,
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field select:focus,
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field textarea:focus{
+          background:#fff; border-color:#49c6bf; box-shadow:0 0 0 3px rgba(63,208,201,.10);
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-field-hint{
+          color:#7890a2; font-size:10.5px; line-height:1.45;
+        }
+        .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-modal-foot{
+          padding:16px clamp(20px,4vw,48px);
+        }
+        @media(max-width:900px){
+          .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-modal-body{
+            padding:22px 16px 34px;
+          }
+          .eb2b-modal-overlay.full .eb2b-cr-form-modal .eb2b-form-grid{
+            max-width:none;
+          }
+        }
        #eb2bViewRoot .eb2b-shell>*,#eb2bViewRoot .crlog-shell>*,#eb2bViewRoot .brd-card,#eb2bViewRoot .weekly-mom-card{transition:var(--transition-hover),box-shadow var(--duration-base) var(--ease-standard),transform var(--duration-base) var(--ease-standard)}
        #eb2bViewRoot .brd-card:hover,#eb2bViewRoot .weekly-mom-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
        #eb2bViewRoot tbody tr{transition:background var(--duration-fast) var(--ease-standard),color var(--duration-fast) var(--ease-standard)}
@@ -17815,8 +17858,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       {key:"rename_folder",label:"Rename Folder"},{key:"requester",label:"Requester"},{key:"department",label:"Department"},
       {key:"request_date",label:"Request Date",type:"date"},{key:"deadline",label:"Deadline",type:"date"},
       {key:"category",label:"Category",type:"select",options:eb2bCrCatalog("category")},{key:"priority",label:"Priority",type:"select",options:eb2bCrCatalog("priority")},{key:"status",label:"Status",type:"select",options:statuses},
-      {key:"sub_status",label:"Sub-status",type:"select",options:subs},{key:"owner",label:"Owner"},
-      {key:"approved_status",label:"Approved Status",type:"select",options:["Pending","Approved","Rejected"]},{key:"approved_date",label:"Approved Date",type:"date"},
+       {key:"sub_status",label:"Sub-status",type:"select",options:subs},
+       {key:"approved_status",label:"Approved Status",type:"select",options:["Pending","Approved","Rejected"]},{key:"owner",label:"Owner"},
+       {key:"approved_date",label:"Approved Date",type:"date"},
       {key:"brd_link",label:"BRD Link",span:true},{key:"fsd_link",label:"FSD Link"},
       {key:"quotation_link",label:"Quotation Link"},{key:"loop_mail_header",label:"Loop Mail Header",type:"textarea",span:true},
       {key:"description_brd",label:"Description BRD",type:"textarea",span:true},
