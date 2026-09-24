@@ -17718,7 +17718,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
          <div class="eb2b-context-actions eb2b-uat-top-actions" id="eb2bUatTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatTemplateTop" type="button" title="Tải file Excel mẫu"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>Tải template</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatImportTop" type="button" title="Nhập nhiều Test Case từ Excel"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Nhập Excel</button><button class="btn btn-primary" id="eb2bAddTcTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Test Case</button></div>
          <div class="eb2b-context-actions eb2b-release-top-actions" id="eb2bReleaseTopActions"><button class="btn btn-primary" id="eb2bAddRelTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Release</button></div>
          <div class="eb2b-context-actions eb2b-brd-top-actions" id="eb2bBrdTopActions"><button class="btn btn-primary" id="eb2bAddBrdTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo BRD</button></div>
-         <div class="eb2b-context-actions eb2b-weekly-top-actions" id="eb2bWeeklyTopActions"><button class="btn btn-primary" id="eb2bAddWeeklyTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo biên bản Weekly</button><button class="btn btn-ghost" id="eb2bWeeklyImportTop" type="button">Nhập Excel</button><button class="btn btn-ghost" id="eb2bWeeklyDownloadTop" type="button">Tải Excel</button><input id="eb2bWeeklyImportFile" type="file" accept=".xlsx,.xls,.csv" hidden></div>`);
+         <div class="eb2b-context-actions eb2b-weekly-top-actions" id="eb2bWeeklyTopActions"><button class="btn btn-primary" id="eb2bAddWeeklyTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo biên bản Weekly</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bWeeklyImportTop" type="button" title="Nhập biên bản Weekly từ Excel"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Nhập Excel</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bWeeklyDownloadTop" type="button" title="Tải Excel biên bản mới nhất"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>Tải Excel</button></div>`);
      }
      const sidebar = $e("#sidebar");
      const sidebarFoot = $e(".sidebar-foot", sidebar);
@@ -18838,6 +18838,28 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
           rows.forEach(d=>{ if(d.cr_id) return; let n=1; while(nums.has(n)) n++; nums.add(n); d.cr_id="CR_"+String(n).padStart(3,"0"); d.__auto=true; });
         }};
     }
+    if(kind==="weekly"){
+      const H = ["meeting_date","vendor","meeting_title","participants","overall_summary"];
+      return {kind, prefix:"eb2bWeeklyImport", label:"biên bản Weekly", title:"Nhập Weekly MoM từ Excel", sheet:"Weekly MoM", file:"EB2B_Weekly_MoM_Template.xlsx", lists:{}, strict:{},
+        okLabel:"Hợp lệ (dòng CR sẽ được nhập)",
+        note:`Các dòng cùng <b>Meeting Date + Vendor + Meeting Title</b> được gộp thành <b>1 biên bản Weekly</b>; mỗi dòng là một CR/action item trong biên bản.`,
+        reqs:[`Dùng file template đã tải hoặc file từ nút <b>Tải Excel</b>, <b>không đổi tên cột</b>.`,`Bắt buộc: <b>Meeting Date</b> và <b>Vendor</b> ở mỗi dòng.`,`Dòng cùng ngày họp + Vendor + tiêu đề <b>gộp thành 1 biên bản</b>.`,`Ngày họp theo định dạng <b>yyyy-mm-dd</b>.`],
+        columns:[C("Meeting Date* (yyyy-mm-dd)","meeting_date",{type:"date",required:true}),C("Vendor*","vendor",{required:true}),C("Meeting Title","meeting_title"),C("Participants","participants"),C("Overall Summary","overall_summary"),
+          C("CR ID","cr_id"),C("Description","description"),C("Priority","priority"),C("Status","status"),C("Sub-Status","sub_status"),C("BRD","brd"),C("FSD","fsd"),C("ETA","eta"),C("Loop Mail Header","loop_mail_header"),C("Progress","progress"),C("Note","note")],
+        preview:[["Meeting Date",d=>d.meeting_date],["Vendor",d=>d.vendor],["CR ID",d=>d.cr_id],["Status",d=>d.status]],
+        extra(){},
+        buildPayload(list){
+          const g = new Map(), n = v => (v===""||v==null) ? null : v;
+          list.forEach(d=>{
+            const key = [d.meeting_date,d.vendor,d.meeting_title].join("¦");
+            if(!g.has(key)) g.set(key,{meeting_date:d.meeting_date,vendor:d.vendor,meeting_title:n(d.meeting_title),participants:null,overall_summary:null,cr_items:[]});
+            const t = g.get(key);
+            ["participants","overall_summary"].forEach(k=>{ if(d[k] && !t[k]) t[k]=d[k]; });
+            if(d.cr_id||d.description||d.status) t.cr_items.push({cr_id:n(d.cr_id),description:n(d.description),priority:n(d.priority),status:n(d.status),sub_status:n(d.sub_status),brd:n(d.brd),fsd:n(d.fsd),eta:n(d.eta),loop_mail_header:n(d.loop_mail_header),progress:n(d.progress),note:n(d.note)});
+          });
+          return [...g.values()];
+        }};
+    }
     const crIds = [...new Set(EB2B.rows.cr.map(c=>c.cr_id).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
     const results = ["Not Started","Pass","Fail","Blocked"];
     return {kind:"uat", prefix:"eb2bUatImport", label:"Test Case", title:"Nhập Test Case UAT từ Excel", sheet:"UAT_Testcase", file:"EB2B_UAT_Testcase_Template.xlsx",
@@ -18869,12 +18891,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(typeof ExcelJS==="undefined"){ eToast("Không tải được thư viện Excel (ExcelJS). Kiểm tra kết nối mạng rồi thử lại.","err"); return; }
     try{
       const keys = Object.keys(cfg.lists).filter(k=>cfg.lists[k].length && cfg.columns.some(c=>c.key===k));
-      const wb = new ExcelJS.Workbook(), wl = wb.addWorksheet(EB2B_IMP_LISTS);
-      wl.addRow(keys.map(k=>eb2bImpLabel(cfg.columns.find(c=>c.key===k).header)+" hợp lệ"));
-      wl.columns = keys.map(()=>({width:24}));
-      const max = Math.max(1,...keys.map(k=>cfg.lists[k].length));
-      for(let i=0;i<max;i++) wl.addRow(keys.map(k=>cfg.lists[k][i]||""));
-      wl.getRow(1).font = {bold:true};
+      const wb = new ExcelJS.Workbook();
+      if(keys.length){
+        const wl = wb.addWorksheet(EB2B_IMP_LISTS);
+        wl.addRow(keys.map(k=>eb2bImpLabel(cfg.columns.find(c=>c.key===k).header)+" hợp lệ"));
+        wl.columns = keys.map(()=>({width:24}));
+        const max = Math.max(1,...keys.map(k=>cfg.lists[k].length));
+        for(let i=0;i<max;i++) wl.addRow(keys.map(k=>cfg.lists[k][i]||""));
+        wl.getRow(1).font = {bold:true};
+      }
       const ws = wb.addWorksheet(cfg.sheet);
       ws.columns = cfg.columns.map(c=>({width:Math.max(18,Math.min(34,c.header.length+2))}));
       ws.addRow(cfg.columns.map(c=>c.header)); ws.getRow(1).font = {bold:true}; ws.views = [{state:"frozen",ySplit:1}];
@@ -18938,10 +18963,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     host.innerHTML = `
       <div class="import-summary">
         <div class="import-stat"><b>${total}</b><span>Tổng số dòng đọc được</span></div>
-        <div class="import-stat ok"><b>${ok}</b><span>Hợp lệ (sẽ tạo ${cfg.label} mới)</span></div>
+        <div class="import-stat ok"><b>${ok}</b><span>${cfg.okLabel||`Hợp lệ (sẽ tạo ${cfg.label} mới)`}</span></div>
         <div class="import-stat ${bad?"danger":""}"><b>${bad}</b><span>Có lỗi (sẽ bỏ qua)</span></div>
       </div>
-      <p style="font-size:12.5px; color:#7890a2; margin:-6px 0 14px;">Mỗi dòng hợp lệ tạo <b>1 ${cfg.label} mới</b>. ID để trống được hệ thống tự cấp (đánh dấu <i>tự cấp</i> bên dưới).</p>
+      <p style="font-size:12.5px; color:#7890a2; margin:-6px 0 14px;">${cfg.note||`Mỗi dòng hợp lệ tạo <b>1 ${cfg.label} mới</b>. ID để trống được hệ thống tự cấp (đánh dấu <i>tự cấp</i> bên dưới).`}</p>
       <div class="table-wrap"><table>
         <thead><tr><th>#</th>${cfg.preview.map(p=>`<th>${p[0]}</th>`).join("")}<th>Kết quả</th></tr></thead>
         <tbody>${ann.map(r=>`<tr><td class="cell-dim">${r.rowIndex}</td>${cfg.preview.map(p=>`<td>${eEsc(p[1](r.data)||"—")}</td>`).join("")}<td>${
@@ -18959,8 +18984,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const sb = activeDb(); if(!sb) return;
     const btn = overlay.querySelector("#"+cfg.prefix+"ConfirmBtn"), label = btn.textContent;
     btn.disabled = true; btn.textContent = "Đang nhập...";
-    const payload = rows.map(r=>{ const p = {}; cfg.columns.forEach(c=>{ p[c.key] = r.data[c.key] || null; });
-      if(cfg.finish) cfg.finish(p); p.created_by = eUser(); p.updated_by = eUser(); p.updated_at = eNow(); return p; });
+    const base = cfg.buildPayload ? cfg.buildPayload(rows.map(r=>r.data))
+      : rows.map(r=>{ const p = {}; cfg.columns.forEach(c=>{ p[c.key] = r.data[c.key] || null; }); if(cfg.finish) cfg.finish(p); return p; });
+    const payload = base.map(p=>Object.assign(p,{created_by:eUser(),updated_by:eUser(),updated_at:eNow()}));
     const res = await sb.from(EB2B_TABLES[cfg.kind]).insert(payload);
     btn.disabled = false; btn.textContent = label;
     if(res.error){ eToast(`Nhập ${cfg.label} EB2B thất bại: `+res.error.message,"err"); return; }
@@ -18984,30 +19010,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     XLSX.utils.book_append_sheet(book,sheet,"Weekly MoM");
     XLSX.writeFile(book,`EB2B_Weekly_MoM_${record.meeting_date||"latest"}.xlsx`);
     eToast("Đã tải biên bản Weekly EB2B.","ok");
-  }
-
-  async function eb2bImportWeeklyFile(file){
-    if(!file)return;
-    if(typeof XLSX === "undefined"){eToast("Không tìm thấy bộ đọc Excel.","err");return;}
-    try{
-      const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
-      const source=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
-      const headerMap={"Meeting Date":"meeting_date","Vendor":"vendor","Meeting Title":"meeting_title","Participants":"participants","Overall Summary":"overall_summary","CR ID":"cr_id","Description":"description","Priority":"priority","Status":"status","Sub-Status":"sub_status","BRD":"brd","FSD":"fsd","ETA":"eta","Loop Mail Header":"loop_mail_header","Progress":"progress","Current Update":"current_update","Note":"note"};
-      const grouped=new Map();
-      source.forEach(raw=>{
-        const row={};Object.entries(raw).forEach(([header,value])=>{const key=headerMap[String(header).trim()];if(key)row[key]=value===""?null:value;});
-        const groupKey=[row.meeting_date||"",row.vendor||"",row.meeting_title||""].join("¦");
-        if(!grouped.has(groupKey)) grouped.set(groupKey,{meeting_date:row.meeting_date||null,vendor:row.vendor||null,meeting_title:row.meeting_title||null,participants:row.participants||null,overall_summary:row.overall_summary||null,cr_items:[]});
-        const target=grouped.get(groupKey);
-        if(row.cr_id || row.description || row.status) target.cr_items.push({cr_id:row.cr_id||null,description:row.description||null,priority:row.priority||null,status:row.status||null,sub_status:row.sub_status||null,brd:row.brd||null,fsd:row.fsd||null,eta:row.eta||null,loop_mail_header:row.loop_mail_header||null,progress:row.progress||row.current_update||null,note:row.note||null});
-        ["participants","overall_summary"].forEach(key=>{if(row[key] && !target[key])target[key]=row[key];});
-      });
-      const payloads=[...grouped.values()].filter(row=>row.meeting_date&&row.vendor).map(row=>({...row,created_by:eUser(),updated_by:eUser(),updated_at:eNow()}));
-      if(!payloads.length){eToast("File không có dòng Weekly hợp lệ (cần Meeting Date và Vendor).","err");return;}
-      const result=await activeDb().from(EB2B_TABLES.weekly_mom).insert(payloads);
-      if(result.error){eToast("Nhập Weekly EB2B thất bại: "+result.error.message,"err");return;}
-      eToast(`Đã nhập ${payloads.length} biên bản Weekly EB2B.`,"ok");await eb2bLoad();
-    }catch(error){eToast("Không đọc được file Weekly: "+error.message,"err");}
   }
 
   function eb2bExportBrdWord(row){
@@ -19154,7 +19156,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(ev.target.closest("#eb2bAddRelTop")){eb2bOpenModal("release",null);return;}
       if(ev.target.closest("#eb2bAddBrdTop")){eb2bOpenModal("brd",null);return;}
       if(ev.target.closest("#eb2bAddWeeklyTop")){eb2bOpenModal("weekly_mom",null);return;}
-      if(ev.target.closest("#eb2bWeeklyImportTop")){$e("#eb2bWeeklyImportFile")?.click();return;}
+      if(ev.target.closest("#eb2bWeeklyImportTop")){eb2bOpenImport("weekly");return;}
       if(ev.target.closest("#eb2bWeeklyDownloadTop")){eb2bDownloadWeeklyLatest();return;}
       const clear=ev.target.closest("[data-eb2b-cr-clear]");if(clear){EB2B.search="";EB2B.crFilters={status:[],sub_status:[],priority:[],category:[],requester:"",overdue:false};eb2bRenderCrLog();return;}
       const sort=ev.target.closest("[data-eb2b-cr-sort]");if(sort){const k=sort.dataset.eb2bCrSort;EB2B.crSort={key:k,dir:EB2B.crSort.key===k&&EB2B.crSort.dir==="asc"?"desc":"asc"};eb2bRenderCrLog();return;}
@@ -19189,7 +19191,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(purge){eb2bPurge(purge.dataset.eb2bPurge,purge.dataset.eb2bId);return;}
     });
     document.addEventListener("input",ev=>{if(ev.target.id==="eb2bCrSearch"){EB2B.search=ev.target.value;eb2bRenderCrLog();const n=$e("#eb2bCrSearch");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}});
-    document.addEventListener("change",ev=>{if(ev.target.id==="eb2bWeeklyImportFile"){eb2bImportWeeklyFile(ev.target.files?.[0]);ev.target.value="";return;}const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();}});
+    document.addEventListener("change",ev=>{const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();}});
     $e("#eb2bDrawerOverlay")?.addEventListener("click",eb2bCloseCrDrawer);
     document.addEventListener("keydown", ev=>{
        if(ev.key==="Escape"){eb2bCloseModal();eb2bUatCloseModal();eb2bCloseCrDrawer();}
