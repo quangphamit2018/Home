@@ -16411,7 +16411,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const style = document.createElement("style");
     style.id = "eb2bStyles";
     style.textContent = `
-      #eb2bViewRoot{display:none;padding-bottom:32px}
+      #eb2bViewRoot{display:none;padding-bottom:60px}
       body.eb2b-active .view{display:none!important}
       body.eb2b-active #eb2bViewRoot{display:block!important}
       body.eb2b-active .view-action{display:none!important}
@@ -16479,11 +16479,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        .eb2b-modal-overlay.full .eb2b-modal{width:100%;height:100%;max-width:none;max-height:none;border:0;border-radius:0;box-shadow:none;transform:none}
         .eb2b-modal-overlay.full.show .eb2b-modal{transform:none!important}
       @media(max-width:900px){.eb2b-modal-overlay.full{left:0}}
-       .eb2b-modal{width:100%;max-width:960px;max-height:88vh;overflow:auto;background:var(--surface,#fff);border:1px solid var(--border,#e2e9f0);border-radius:13px;box-shadow:0 22px 70px rgba(15,23,42,.25);transform:translateY(14px) scale(.98);transition:transform var(--duration-base,180ms) var(--ease-standard,ease)}
+       .eb2b-modal{width:100%;max-width:960px;max-height:88vh;overflow:auto;background:var(--surface,#fff);border:1px solid var(--border,#e2e9f0);border-radius:var(--radius-lg);box-shadow:var(--shadow-floating);transform:translateY(14px) scale(.98);transition:transform var(--duration-base,180ms) var(--ease-standard,ease)}
        .eb2b-modal-overlay.show .eb2b-modal{transform:translateY(0) scale(1)}
-      .eb2b-modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:17px 20px;border-bottom:1px solid var(--line,#e5e7eb)}
+      .eb2b-modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line,#e5e7eb)}
       .eb2b-modal-head h3{margin:0;font-size:17px}.eb2b-modal-head p{margin:4px 0 0;color:var(--text-dim,#6b7280);font-size:12px}
-      .eb2b-modal-body{padding:18px 20px}.eb2b-modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:13px 20px;border-top:1px solid var(--line,#e5e7eb)}
+      .eb2b-modal-body{padding:22px 24px}.eb2b-modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--line,#e5e7eb)}
       .eb2b-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
       .eb2b-field{display:grid;gap:5px}.eb2b-field.span-2{grid-column:span 2}.eb2b-field label{font-size:11px;font-weight:650;color:var(--text-dim,#64748b)}
       .eb2b-field input,.eb2b-field select,.eb2b-field textarea{width:100%;box-sizing:border-box;border:1px solid var(--line,#d5dbe3);border-radius:7px;padding:8px 9px;background:var(--surface,#fff);color:var(--text,#1f2937);font:inherit}
@@ -16539,6 +16539,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         @media(max-width:900px){#eb2bUatModalOverlay{left:0}}
        /* EB2B uses the same typography, motion curve and interaction weight as DMS.
           The selectors stay inside the EB2B mount/overlays so DMS remains untouched. */
+       #eb2bViewRoot .eb2b-shell{width:100%;height:100%;max-width:100%;min-width:0;min-height:0}
+       #eb2bViewRoot #eb2bContent,#eb2bViewRoot .eb2b-cr-shell,#eb2bViewRoot .crlog-shell{width:100%;max-width:100%;min-width:0}
        #eb2bViewRoot,#eb2bModalOverlay,#eb2bUatModalOverlay{font-family:var(--font-body);font-size:var(--text-body-size);color:#22394e;-webkit-font-smoothing:antialiased}
        #eb2bViewRoot h1,#eb2bViewRoot h2,#eb2bViewRoot h3,#eb2bViewRoot h4,#eb2bModalOverlay h1,#eb2bModalOverlay h2,#eb2bModalOverlay h3,#eb2bModalOverlay h4,#eb2bUatModalOverlay h1,#eb2bUatModalOverlay h2,#eb2bUatModalOverlay h3,#eb2bUatModalOverlay h4{font-family:var(--font-head);letter-spacing:-.01em}
        #eb2bViewRoot button,#eb2bModalOverlay button,#eb2bUatModalOverlay button{font-family:inherit}
@@ -16549,6 +16551,24 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        #eb2bViewRoot input:focus-visible,#eb2bViewRoot textarea:focus-visible,#eb2bViewRoot select:focus-visible,#eb2bModalOverlay input:focus-visible,#eb2bModalOverlay textarea:focus-visible,#eb2bModalOverlay select:focus-visible,#eb2bUatModalOverlay input:focus-visible,#eb2bUatModalOverlay textarea:focus-visible,#eb2bUatModalOverlay select:focus-visible{outline:none;box-shadow:var(--focus-ring)}
        #eb2bViewRoot .btn-primary,#eb2bModalOverlay .btn-primary,#eb2bUatModalOverlay .btn-primary{box-shadow:var(--shadow-sm)}
        #eb2bViewRoot .btn-primary:hover:not(:disabled),#eb2bModalOverlay .btn-primary:hover:not(:disabled),#eb2bUatModalOverlay .btn-primary:hover:not(:disabled){box-shadow:0 6px 18px -6px rgba(63,208,201,.5),var(--shadow-sm)}
+       #eb2bViewRoot .eb2b-kpis{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:0}
+       #eb2bViewRoot .eb2b-kpi{padding:19px 20px 18px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm)}
+       #eb2bViewRoot .eb2b-kpi:hover{border-color:#c6d6de;box-shadow:var(--shadow-md);transform:translateY(-1px)}
+       #eb2bViewRoot .eb2b-kpi-label{font-size:var(--text-meta-size);color:#5f7690;font-weight:600}
+       #eb2bViewRoot .eb2b-kpi-value{font-family:var(--font-head);font-size:30px;font-weight:800;line-height:1;color:#0a1e33}
+       #eb2bViewRoot .eb2b-panel{border-radius:var(--radius-lg);border-color:#dde7ec;box-shadow:var(--shadow-sm)}
+       #eb2bViewRoot .eb2b-panel-head{padding:16px 20px;border-bottom-color:#e4ebf0}
+       #eb2bViewRoot .eb2b-panel-head h3{font-size:var(--text-section-title-size);font-weight:var(--text-section-title-weight);color:#0a1e33}
+       #eb2bViewRoot .eb2b-table{min-width:900px;font-size:var(--text-table-cell-size)}
+       #eb2bViewRoot .eb2b-table th{padding:12px 20px;font-size:var(--text-table-head-size);font-weight:var(--text-table-head-weight);color:#5f7690;background:#f6fafb;border-bottom-color:#e4ebf0}
+       #eb2bViewRoot .eb2b-table td{padding:14px 20px;font-size:var(--text-table-cell-size);color:#22394e;border-bottom-color:#edf2f5}
+       #eb2bViewRoot .eb2b-table tbody tr:hover{background:#f0f7f7}
+       .eb2b-modal-overlay.full .eb2b-modal-head{min-height:0;padding:22px clamp(20px,4vw,48px)}
+       .eb2b-modal-overlay.full .eb2b-modal-head h3{font-size:var(--text-page-title-size)}
+       .eb2b-modal-overlay.full .eb2b-modal-head p{font-size:var(--text-caption-size)}
+       .eb2b-modal-overlay.full .eb2b-modal-body{max-width:920px;width:100%;margin:0 auto;padding:26px clamp(20px,4vw,48px) 40px}
+       .eb2b-modal-overlay.full .eb2b-form-grid{max-width:none;margin:0;gap:14px 16px}
+       .eb2b-modal-overlay.full .eb2b-modal-foot{padding:16px clamp(20px,4vw,48px)}
        #eb2bViewRoot .eb2b-shell>*,#eb2bViewRoot .crlog-shell>*,#eb2bViewRoot .brd-card,#eb2bViewRoot .weekly-mom-card{transition:var(--transition-hover),box-shadow var(--duration-base) var(--ease-standard),transform var(--duration-base) var(--ease-standard)}
        #eb2bViewRoot .brd-card:hover,#eb2bViewRoot .weekly-mom-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
        #eb2bViewRoot tbody tr{transition:background var(--duration-fast) var(--ease-standard),color var(--duration-fast) var(--ease-standard)}
@@ -16561,6 +16581,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        body.eb2b-active #topbarTitle.eb2b-header-swap{animation:eb2bHeaderSwap var(--duration-base) var(--ease-decel) both}
        @keyframes eb2bViewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
        @keyframes eb2bHeaderSwap{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+       @media(max-width:768px){#eb2bViewRoot{padding-bottom:48px}}
+       @media(max-width:640px){#eb2bViewRoot{padding:14px var(--mobile-gutter,12px) calc(34px + env(safe-area-inset-bottom,0px));overflow-x:hidden}}
+       @media(max-width:390px){#eb2bViewRoot{padding-left:10px;padding-right:10px}}
+       @media(max-width:480px){#eb2bViewRoot{padding-bottom:34px}}
        @media(prefers-reduced-motion:reduce){#eb2bViewRoot.eb2b-view-enter,body.eb2b-active #topbarTitle.eb2b-header-swap,#eb2bViewRoot .cr-filter-menu,#eb2bViewRoot .eb2b-cr-tool-popover,#eb2bViewRoot .tb-menu{animation:none!important}#eb2bViewRoot button,#eb2bModalOverlay button,#eb2bUatModalOverlay button{transition:none!important}}
         @media(max-width:640px){#eb2bViewRoot .eb2b-uat-shell .crlog-table-wrap table{display:none}#eb2bViewRoot .eb2b-uat-shell .eb2b-uat-mobile{display:flex}#eb2bUatModalOverlay .eb2b-uat-summary{grid-template-columns:1fr;padding:14px}#eb2bUatModalOverlay .eb2b-uat-group{padding:14px}#eb2bUatModalOverlay .eb2b-uat-field-grid{grid-template-columns:1fr!important}#eb2bUatModalOverlay .eb2b-uat-modal-head{padding:16px}}
       @media(max-width:760px){.eb2b-kpis,.eb2b-config-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.eb2b-form-grid{grid-template-columns:1fr}.eb2b-field.span-2{grid-column:auto}}
