@@ -878,6 +878,13 @@
     .upd-legend .lg-old { background: #e6e6e6; }
     .upd-legend .lg-new { background: #d8f0cf; }
     .upd-legend .lg-chg { background: #ffdb8a; }
+    /* ---------- Sắp xếp theo cột (DMS / Central) ---------- */
+    .data-table th.sortable { cursor: pointer; user-select: none; transition: color .15s; }
+    .data-table th.sortable:hover { color: var(--brand); }
+    .data-table th .sort-ind { display: inline-block; margin-left: 6px; font-size: 9px; opacity: .35; transition: opacity .15s; }
+    .data-table th.sortable:hover .sort-ind { opacity: .7; }
+    .data-table th.sorted { color: var(--brand); }
+    .data-table th.sorted .sort-ind { opacity: 1; }
   </style>
 </head>
 <body class="auth">
@@ -962,6 +969,43 @@
     const LICENSE_FILTER_KEY = "masterdata_license_filter";
     const LICENSE_FILTERS_OK = ["used", "all", "unused"];
     const FETCH_CHUNK = 1000;   // số dòng mỗi lần gọi Supabase khi tải toàn bộ bảng
+    // Ghi nhớ sắp xếp + ô tìm kiếm riêng cho từng bảng (DMS / Central) → F5 / tải lại trang vẫn giữ nguyên
+    const SORT_KEY = "masterdata_sort", SEARCH_KEY = "masterdata_search";
+    function loadJson(key) { try { const v = JSON.parse(localStorage.getItem(key)); return v && typeof v === "object" ? v : {}; } catch (_) { return {}; } }
+    function saveJson(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (_) {} }
+    const savedSearch = loadJson(SEARCH_KEY);
+    function setSearch(v) {
+      state.search = v;
+      if (state.tab === "dms" || state.tab === "central") { savedSearch[state.tab] = v; saveJson(SEARCH_KEY, savedSearch); }
+    }
+    let licenseMemo = { src: null, mode: "", out: null };
+    let sortMemo = { src: null, key: "", dir: "", out: null };
+    const sortCollator = new Intl.Collator("vi", { numeric: true, sensitivity: "base" });
+    const isBlankCell = v => v === null || v === undefined || String(v).trim() === "" || String(v).trim().toUpperCase() === "NULL";
+    function currentSort(ds, fields) {
+      const s = state.sort?.[ds];
+      return s && (s.dir === "asc" || s.dir === "desc") && fields.some(([k]) => k === s.key) ? s : null;
+    }
+    // Ô trống / NULL luôn nằm cuối; so sánh hiểu số (10 < 100) và tiếng Việt
+    function sortRows(rows, ds, fields) {
+      const s = currentSort(ds, fields); if (!s) return rows;
+      if (sortMemo.src === rows && sortMemo.key === s.key && sortMemo.dir === s.dir) return sortMemo.out;
+      const k = s.key, m = s.dir === "asc" ? 1 : -1;
+      const out = rows.slice().sort((a, b) => {
+        const x = a[k], y = b[k], bx = isBlankCell(x), by = isBlankCell(y);
+        if (bx || by) return bx === by ? 0 : bx ? 1 : -1;
+        return m * sortCollator.compare(String(x).trim(), String(y).trim());
+      });
+      sortMemo = { src: rows, key: k, dir: s.dir, out };
+      return out;
+    }
+    // Bấm tiêu đề cột: tăng dần → giảm dần → bỏ sắp xếp
+    function toggleSort(key) {
+      const ds = state.tab === "dms" ? "dms" : "central", cur = state.sort[ds];
+      const dir = cur?.key === key ? (cur.dir === "asc" ? "desc" : cur.dir === "desc" ? "" : "asc") : "asc";
+      if (dir) state.sort[ds] = { key, dir }; else delete state.sort[ds];
+      saveJson(SORT_KEY, state.sort); state.page = 1; updateDatasetBody();
+    }
 
     const state = {
       page: 1, pageSize: loadPageSize(), progress: {},
@@ -969,8 +1013,9 @@
       dms: [], central: [], profiles: [], logs: [], counts: { dms: 0, central: 0, pending: 0 },
       settings: { maxLicenses: DEFAULT_MAX_LICENSES }, savingLicense: false,
       licenseFilter: loadKey(LICENSE_FILTER_KEY, LICENSE_FILTERS_OK, "used"),
-      search: "", loading: false, requestSent: false
+      sort: loadJson(SORT_KEY), search: "", loading: false, requestSent: false
     };
+    state.search = String(savedSearch[state.tab] || "");
     let profileChannel = null;
     let adminChannel = null;
     let settingsChannel = null;
@@ -1003,8 +1048,12 @@
     const usesLicense = (r) => hasValue(r?.territory_hierarchy) && hasValue(r?.role_name) && licenseIsActive(r);
     // Áp bộ lọc license lên danh sách Central User list: "used" = đủ điều kiện tính license, "unused" = không đủ, "all" = không lọc.
     function applyLicenseFilter(rows, mode) {
-      if (mode === "used") return rows.filter(usesLicense);
-      if (mode === "unused") return rows.filter(r => !usesLicense(r));
+      if (mode !== "used" && mode !== "unused") return rows;
+      if (licenseMemo.src === rows && licenseMemo.mode === mode) return licenseMemo.out;
+      const out = mode === "used" ? rows.filter(usesLicense) : rows.filter(r => !usesLicense(r));
+      licenseMemo = { src: rows, mode, out };
+      return out;
+      
       return rows;
     }
     function licenseStats() {
@@ -1257,7 +1306,7 @@
       const baseRows = state[isDms ? "dms" : "central"];
       // Bộ lọc license chỉ áp dụng cho Central User list (nơi có TerritoryHierarchy/RoleName/IsActive dùng để tính license)
       const rows = isDms ? baseRows : applyLicenseFilter(baseRows, state.licenseFilter);
-      const filtered = getFilteredRows(rows, fields, state.search);
+      const filtered = sortRows(getFilteredRows(rows, fields, state.search), isDms ? "dms" : "central", fields);
       const total = filtered.length;
       const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
       state.page = Math.min(Math.max(1, Math.floor(state.page) || 1), totalPages);
@@ -1336,7 +1385,8 @@
           : `<div class="empty"><strong>Không tìm thấy dữ liệu</strong>Thử đổi từ khóa tìm kiếm hoặc làm mới bảng.</div>`;
         return `${bn}<div class="table-wrap data-scroll is-empty">${msg}</div>${renderPager(v)}`;
       }
-      const head = `<th class="col-idx">#</th>${fields.map(([, label]) => `<th>${escapeHtml(label)}</th>`).join("")}<th class="col-act">Thao tác</th>`;
+      const s = currentSort(v.isDms ? "dms" : "central", fields);
+      const head = `<th class="col-idx">#</th>${fields.map(([key, label]) => { const on = s?.key === key; return `<th class="sortable${on ? " sorted" : ""}" data-sort="${key}" aria-sort="${on ? (s.dir === "asc" ? "ascending" : "descending") : "none"}" title="Bấm để sắp xếp: tăng dần → giảm dần → bỏ sắp xếp">${escapeHtml(label)}<span class="sort-ind">${on ? (s.dir === "asc" ? "▲" : "▼") : "↕"}</span></th>`; }).join("")}<th class="col-act">Thao tác</th>`;
       const body = pageRows.map((row, i) => `<tr><td class="col-idx">${nf(start + i + 1)}</td>${fields.map(([key]) => `<td>${key === "username" ? `<strong>${cellHtml(row[key])}</strong>` : cellHtml(row[key])}</td>`).join("")}<td class="col-act"><div style="display:flex;gap:4px">${canEdit() ? `<button class="btn btn-plain edit-row" data-key="${escapeHtml(row.username)}" title="Sửa">${ICONS.edit}</button>` : ""}${isAdmin() ? `<button class="btn btn-plain delete-row" data-key="${escapeHtml(row.username)}" title="Xóa" style="color:var(--danger)">${ICONS.trash}</button>` : ""}</div></td></tr>`).join("");
       return `${bn}<div class="table-wrap data-scroll" tabindex="0" aria-label="Bảng dữ liệu, cuộn ngang và dọc để xem đủ các cột"><table class="data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${renderPager(v)}`;
     }
@@ -1419,6 +1469,7 @@
       body.querySelectorAll(".edit-row").forEach(el => el.addEventListener("click", () => openRowModal(el.dataset.key)));
       body.querySelectorAll(".delete-row").forEach(el => el.addEventListener("click", () => deleteRow(el.dataset.key)));
       body.querySelectorAll("[data-page]").forEach(el => el.addEventListener("click", () => goToPage(el.dataset.page)));
+      body.querySelectorAll("th[data-sort]").forEach(el => el.addEventListener("click", () => toggleSort(el.dataset.sort)));
       $("#page-size")?.addEventListener("change", e => { state.pageSize = Number(e.target.value); state.page = 1; savePageSize(state.pageSize); updateDatasetBody(); });
       const jump = $("#page-jump");
       jump?.addEventListener("keydown", e => { if (e.key === "Enter") goToPage(jump.value); });
@@ -1474,7 +1525,7 @@
 
     function bindAppEvents() {
       document.querySelectorAll("[data-tab]").forEach(el => el.addEventListener("click", () => {
-        state.tab = el.dataset.tab; saveKey(TAB_KEY, state.tab); state.search = ""; state.page = 1; $("#sidebar")?.classList.remove("open"); render();
+        state.tab = el.dataset.tab; saveKey(TAB_KEY, state.tab); state.search = String(savedSearch[state.tab] || ""); state.page = 1; $("#sidebar")?.classList.remove("open"); render();
       }));
       $("#mobile-menu")?.addEventListener("click", () => $("#sidebar").classList.toggle("open"));
       $("#logout")?.addEventListener("click", logout);
@@ -1489,12 +1540,12 @@
         searchInput.dispatchEvent(new Event("input"));
       });
       searchInput?.addEventListener("input", e => {
-        state.search = e.target.value; state.page = 1;
+        setSearch(e.target.value); state.page = 1;
         searchWrap?.classList.toggle("has-value", !!e.target.value);
         clearTimeout(searchTimer); searchTimer = setTimeout(updateDatasetBody, 150);
       });
       $("#search-clear")?.addEventListener("click", () => {
-        state.search = ""; state.page = 1;
+        setSearch(""); state.page = 1;
         if (searchInput) searchInput.value = "";
         searchWrap?.classList.remove("has-value");
         searchInput?.focus();
@@ -1505,7 +1556,7 @@
       document.querySelectorAll("[data-license-filter]").forEach(el => el.addEventListener("click", () => {
         const mode = el.dataset.licenseFilter;
         if (mode === state.licenseFilter) return;
-        state.licenseFilter = mode; saveKey(LICENSE_FILTER_KEY, mode); state.search = ""; state.page = 1;
+        state.licenseFilter = mode; saveKey(LICENSE_FILTER_KEY, mode); setSearch(""); state.page = 1;
         render();
       }));
       bindDatasetBody();
@@ -2023,17 +2074,31 @@
       render();
       if (!configured()) return;
       state.supabase = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-      state.supabase.auth.onAuthStateChange(async (_event, session) => {
+      state.supabase.auth.onAuthStateChange((event, session) => {
+        const prevUserId = state.session?.user?.id || null;
         state.session = session;
         // Cửa sổ này chỉ là popup phụ để hoàn tất OAuth Google; khi đã có session thì đóng lại,
         // cửa sổ chính (window.opener) sẽ tự nhận session qua đồng bộ đa-tab của Supabase.
         if (window.opener && session) { setTimeout(() => window.close(), 300); return; }
-        await resolveProfile(); state.booting = false; render();
+        // Chuyển sang tab khác rồi quay lại: Supabase tự làm mới phiên và bắn lại SIGNED_IN / TOKEN_REFRESHED cho CÙNG người dùng.
+        // Trước đây mỗi sự kiện đều tải lại toàn bộ dữ liệu (thường 2 lần liên tiếp). Giờ chỉ cập nhật session, không tải lại.
+        if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED" || (prevUserId === (session?.user?.id || null) && state.profile)) return;
+        setTimeout(async () => { await ensureProfile(); state.booting = false; render(); }, 0);
       });
       try {
         const { data } = await state.supabase.auth.getSession();
-        state.session = data.session; await resolveProfile();
+        state.session = data.session; await ensureProfile();
       } finally { state.booting = false; render(); }
+    }
+
+    // Gộp các lần gọi trùng cho cùng một người dùng (khởi động + sự kiện đăng nhập + popup Google) → chỉ tải dữ liệu 1 lần.
+    let profileTask = null, profileTaskFor;
+    function ensureProfile() {
+      const uid = state.session?.user?.id || null;
+      if (profileTask && profileTaskFor === uid) return profileTask;
+      profileTaskFor = uid;
+      profileTask = resolveProfile().then(() => { if (!state.profile) profileTask = null; });
+      return profileTask;
     }
 
     async function resolveProfile() {
@@ -2215,7 +2280,7 @@
         if (popup.closed) {
           clearInterval(poll); setLoginBusy(false);
           const { data: sd } = await state.supabase.auth.getSession();
-          if (sd.session) { state.session = sd.session; await resolveProfile(); render(); }
+          if (sd.session && sd.session.user.id !== state.profile?.id) { state.session = sd.session; await ensureProfile(); render(); }
         }
       }, 500);
     }
