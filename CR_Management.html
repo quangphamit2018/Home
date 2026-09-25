@@ -19430,6 +19430,99 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     eb2bRenderCrFiles(row);
   };
 
+  /*
+   * The e-B2B drawer used to have a compact "Thông tin" panel while DMS
+   * exposes the complete CR detail workspace.  Keep the e-B2B drawer shell
+   * above, but replace only its information panel with the same hierarchy as
+   * DMS: summary, status progress, CR_Log field groups, related records and
+   * activity.  The related cards still use e-B2B rows and open e-B2B modals.
+   */
+  function eb2bCrInfoPanelHtml(row, tests, rels){
+    const relatedTc = tests.length
+      ? tests.map(test=>`<div class="workflow-record" data-eb2b-related-uat="${eEsc(test.id)}">
+          <div class="workflow-record-index">TC</div>
+          <div class="workflow-record-main">
+            <div class="workflow-record-top"><span class="workflow-record-id">${eEsc(test.test_case_id || "TEST CASE")}</span></div>
+            <div class="workflow-record-title">${eEsc(test.scenario || "(Chưa có scenario)")}</div>
+          </div>
+          <div class="workflow-record-status">${eb2bUatResultBadge(test.pass_fail || "Not Started")}</div>
+        </div>`).join("")
+      : (typeof emptyRow === "function" ? emptyRow("Chưa có Test Case UAT liên quan") : `<div class="empty-state"><p>Chưa có Test Case UAT liên quan.</p></div>`);
+    const relatedRel = rels.length
+      ? rels.map(release=>`<div class="workflow-record" data-eb2b-related-release="${eEsc(release.id)}">
+          <div class="workflow-record-index">REL</div>
+          <div class="workflow-record-main">
+            <div class="workflow-record-top"><span class="workflow-record-id">${eEsc(release.release_id || "RELEASE")}</span></div>
+            <div class="workflow-record-title">${eEsc(release.release_name || "(Chưa đặt tên release)")}</div>
+          </div>
+          <div class="workflow-record-status">${eb2bReleaseBadge(release.status)}</div>
+        </div>`).join("")
+      : (typeof emptyRow === "function" ? emptyRow("Chưa có Release / PRD liên quan") : `<div class="empty-state"><p>Chưa có Release / PRD liên quan.</p></div>`);
+    return `<div class="tab-panel active" data-eb2b-panel="info">
+      <div class="dsec">
+        <div class="dsec-head"><span class="dsec-title">Tóm tắt</span></div>
+        <div class="summary-grid">
+          ${summaryItem("Requester", row.requester)}
+          ${summaryItem("Department", row.department)}
+          ${summaryItem("Owner", row.owner)}
+          ${summaryItem("Request Date", row.request_date ? fmtDate(row.request_date) : "")}
+          ${summaryItem("Deadline", row.deadline ? fmtDate(row.deadline) : "", eb2bCrOverdue(row) && !!row.deadline)}
+          ${summaryItem("App", row.app)}
+          ${summaryItem("Approved Status", row.approved_status)}
+          ${summaryItem("Approved Date", row.approved_date ? fmtDate(row.approved_date) : "")}
+        </div>
+      </div>
+
+      <div class="dsec">
+        <div class="dsec-head"><span class="dsec-title">Tiến trình trạng thái</span></div>
+        ${statusProgressHtml(row.status, row.sub_status)}
+      </div>
+
+      <div class="dsec">
+        <div class="dsec-head"><span class="dsec-title">Chi tiết đầy đủ theo CR Log</span></div>
+        ${crLogFieldGroups(row)}
+      </div>
+
+      <div class="dsec">
+        <div class="dsec-head"><span class="dsec-title">Liên quan</span></div>
+        <div class="related-grid">
+          <div>
+            <div class="related-col-title">Test Case UAT <b>${tests.length}</b></div>
+            <div class="mini-list" id="eb2bCrRelatedTcList">${relatedTc}</div>
+          </div>
+          <div>
+            <div class="related-col-title">Release / PRD <b>${rels.length}</b></div>
+            <div class="mini-list" id="eb2bCrRelatedReleaseList">${relatedRel}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dsec">
+        <div class="dsec-head"><span class="dsec-title">Hoạt động</span></div>
+        <div class="activity-list">${activityHtml(row)}</div>
+      </div>
+    </div>`;
+  }
+
+  const eb2bOpenCrDrawerWithCompactInfo = eb2bOpenCrDrawer;
+  eb2bOpenCrDrawer = function(row){
+    eb2bOpenCrDrawerWithCompactInfo(row);
+    const drawer = $e("#eb2bCrDrawer");
+    if(!drawer) return;
+    const tests = EB2B.rows.uat.filter(item=>String(item.cr_id || "") === String(row.cr_id || ""));
+    const rels = EB2B.rows.release.filter(item=>String(item.cr_id || "") === String(row.cr_id || ""));
+    const currentInfo = $e('[data-eb2b-panel="info"]', drawer);
+    if(currentInfo) currentInfo.outerHTML = eb2bCrInfoPanelHtml(row, tests, rels);
+    $all("[data-eb2b-related-uat]", drawer).forEach(node=>node.addEventListener("click",()=>{
+      const item = tests.find(test=>String(test.id) === String(node.dataset.eb2bRelatedUat));
+      if(item) eb2bUatOpenModal(item);
+    }));
+    $all("[data-eb2b-related-release]", drawer).forEach(node=>node.addEventListener("click",()=>{
+      const item = rels.find(release=>String(release.id) === String(node.dataset.eb2bRelatedRelease));
+      if(item) eb2bOpenModal("release", item);
+    }));
+  };
+
    const EB2B_UAT_COLUMNS = [
      {key:"test_case_id",label:"Test Case ID"},
      {key:"scenario",label:"Scenario"},
