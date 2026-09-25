@@ -1509,6 +1509,8 @@ td.cell-id .id-chip{
 .export-cr-id{ color:#18364f; font-size:12px; font-weight:800; }
 .export-cr-name{ overflow:hidden; color:#7890a2; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
 .export-cr-status{ color:#0e9a94; font-size:10.5px; font-weight:700; }
+.export-cr-option .export-cr-tc{font-size:11px;font-weight:600;color:var(--muted-fg,#6b7280);background:rgba(99,102,241,.12);padding:2px 7px;border-radius:999px;white-space:nowrap;letter-spacing:.2px;flex-shrink:0;}
+.export-cr-option .export-cr-tc.is-zero{color:#b45309;background:rgba(245,158,11,.14);}
 .export-selection-empty{
   grid-column:1/-1; padding:28px 16px; border:1px dashed #d6e5e8; border-radius:11px;
   color:#8498a7; font-size:12px; text-align:center; background:#fbfefe;
@@ -10269,8 +10271,14 @@ function openExportSelectionModal(mode, src = null){
       return [cr.cr_id, cr.rename_folder, cr.old_name, cr.app, cr.status]
         .some(value=>String(value || "").toLowerCase().includes(query));
     });
+    const tcCountMap = visible.length ? (function(){
+      const m = new Map();
+      exTcList().forEach(tc=>{ const k = String(tc.cr_id); m.set(k, (m.get(k)||0)+1); });
+      return m;
+    })() : null;
     list.innerHTML = visible.length ? visible.map(cr=>{
       const crId = String(cr.cr_id);
+      const tcCount = tcCountMap ? (tcCountMap.get(crId) || 0) : 0;
       const displayName = cr.rename_folder || cr.old_name || cr.app || "Chưa có mô tả";
       return `
         <label class="export-cr-option">
@@ -10279,6 +10287,7 @@ function openExportSelectionModal(mode, src = null){
             <span class="export-cr-id">${esc(crId)}</span>
             <span class="export-cr-name" title="${esc(displayName)}">${esc(displayName)}</span>
             <span class="export-cr-status">${esc(cr.status || "Chưa có Status")}</span>
+            <span class="export-cr-tc${tcCount > 0 ? "" : " is-zero"}" title="${tcCount > 0 ? (tcCount + " Test Case") : "Chưa có Test Case / ảnh evidence — sẽ tự bỏ qua bước sắp xếp ảnh"}">${tcCount > 0 ? (tcCount + " TC") : "0 ảnh — tự bỏ qua sắp xếp"}</span>
           </span>
         </label>`;
     }).join("") : `<div class="export-selection-empty">Không tìm thấy CR phù hợp với từ khóa.</div>`;
@@ -10391,26 +10400,37 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
   overlay.innerHTML = evidenceArrangeModalTemplate();
   overlay.classList.add("show");
 
+  let settled = false;
   let lightbox = null; // khai báo sớm: close() có thể chạy trước khi dựng xong modal
   const close = ()=>{
-    closeLightbox();
+    try{ closeLightbox(); }catch(e){}
+    document.removeEventListener("keydown", onModalKey, true);
     overlay.classList.remove("show");
     overlay.innerHTML = "";
     overlay.onclick = null;
   };
+  function onModalKey(event){ if(event.key === "Escape" && !lightbox){ event.preventDefault(); close(); } }
+  document.addEventListener("keydown", onModalKey, true);
   const body = $("#evidenceArrangeBody", overlay);
   const countEl = $("#evidenceArrangeCount", overlay);
   const confirmBtn = $("#evidenceArrangeConfirm", overlay);
-  $("#evidenceArrangeClose", overlay).addEventListener("click", close);
-  overlay.onclick = event=>{ if(event.target === overlay) close(); };
+  const cancel = ()=>{ settled = true; close(); };
+  $("#evidenceArrangeClose", overlay).addEventListener("click", ()=>cancel());
+  overlay.onclick = event=>{ if(event.target === overlay) cancel(); };
 
   // Chống onConfirm/close chạy 2 lần khi người dùng bấm "Dùng thứ tự mặc định"
   // trong lúc đang tải danh sách ảnh.
-  let settled = false;
   const finishDefault = ()=>{ if(settled) return; settled = true; close(); onConfirm(null); };
   // Nút "Dùng thứ tự mặc định" được gắn ngay từ đầu — giúp bỏ qua bước
   // sắp xếp khi chưa có ảnh evidence hoặc khi việc lấy ảnh bị treo/lỗi.
   $("#evidenceArrangeDefault", overlay).addEventListener("click", finishDefault);
+  let arrangeReady = false;
+  confirmBtn.addEventListener("click", ()=>{ if(!arrangeReady) finishDefault(); });
+  if(!(selectedTcList || []).length){
+    finishDefault();
+    toast("CR đã chọn chưa có Test Case / ảnh evidence — tạo báo cáo với dữ liệu hiện có.", "info");
+    return;
+  }
 
   // Tải metadata evidence của từng Test Case (chỉ lấy ảnh). fetchTcAttachments
   // đã trả về thứ tự mặc định ổn định, làm thứ tự ban đầu cho modal.
@@ -10567,9 +10587,9 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
   });
 
   // Xem ảnh lớn (Esc để đóng — chỉ đóng phần xem ảnh, không đóng cả modal)
-  const onLightboxKey = event=>{
+  function onLightboxKey(event){
     if(event.key === "Escape" && lightbox){ event.stopImmediatePropagation(); closeLightbox(); }
-  };
+  }
   function closeLightbox(){
     if(lightbox){ lightbox.remove(); lightbox = null; }
     document.removeEventListener("keydown", onLightboxKey, true);
@@ -10625,7 +10645,11 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
     updateCount();
   });
 
+  if(settled) return;
+  arrangeReady = true;
   confirmBtn.addEventListener("click", ()=>{
+    if(settled) return;
+    settled = true;
     const plan = new Map();
     groups.forEach((group, gi)=>{
       const container = body.querySelector(`.ea-group[data-group="${gi}"] .ea-grid`);
