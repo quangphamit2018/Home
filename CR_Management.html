@@ -20717,15 +20717,23 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const meetingDate = $e("#eb2b_wm_meeting_date", overlay).value;
     const vendor = $e("#eb2b_wm_vendor", overlay).value.trim();
     if(!meetingDate || !vendor){ eToast("Vui lòng nhập Ngày họp và Vendor.", "err"); return; }
-    const crItems = EB2B.weeklyMomFormRows
-      .map(row=>({
+    // Giữ nguyên các trường nhập từ Excel (description, priority, status, sub_status,
+    // brd, fsd, loop_mail_header) của dòng tương ứng; chỉ bỏ progress cũ để form
+    // current_update/next_action hiển thị đúng qua weeklyMomProgressValue.
+    const editedRecord = isEdit ? EB2B.rows.weekly_mom.find(r=>String(r.id)===String(EB2B.editingRec && EB2B.editingRec.id)) : null;
+    const originalItems = weeklyMomRowsOf(editedRecord);
+    const crItems = EB2B.weeklyMomFormRows.map((row, idx)=>{
+      const orig = originalItems[idx] || {};
+      const { progress, ...preserved } = orig;
+      return {
+        ...preserved,
         cr_id: weeklyMomText(row.cr_id),
         current_update: weeklyMomText(row.current_update),
         next_action: weeklyMomText(row.next_action),
         eta: weeklyMomText(row.eta),
         note: weeklyMomText(row.note),
-      }))
-      .filter(row=>Object.values(row).some(Boolean));
+      };
+    }).filter(row=>Object.values(row).some(v=>v!==null && v!==undefined && String(v).trim()!==""));
     const payload = {
       meeting_date: meetingDate,
       vendor,
