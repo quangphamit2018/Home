@@ -2105,8 +2105,8 @@
           fetchAllRows("central_users"),
           isAdmin() ? state.supabase.from("profiles").select("*").order("created_at", { ascending: false }) : Promise.resolve({ data: [], count: 0 }),
           isAdmin() ? state.supabase.from("import_logs").select("*").order("created_at", { ascending: false }).limit(20) : Promise.resolve({ data: [], count: 0 }),
-          // Bảng app_settings có thể chưa được tạo ở Supabase — lỗi ở đây không chặn phần còn lại của app, chỉ giữ Max Licenses mặc định.
-          state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", LICENSE_SETTINGS_KEY).maybeSingle().catch(err => ({ data: null, error: err }))
+          // Bảng app_settings có thể chưa được tạo ở Supabase — nếu lỗi, Promise.all bên dưới vẫn xử lý an toàn nhờ optional chaining, chỉ giữ Max Licenses mặc định.
+          state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", LICENSE_SETTINGS_KEY).maybeSingle()
         ]);
         if (dms.error || central.error) toast(`Không tải được đầy đủ dữ liệu: ${(dms.error || central.error).message}`, "error");
         state.dms = dms.data || []; state.central = central.data || []; state.profiles = profiles.data || []; state.logs = logs.data || [];
