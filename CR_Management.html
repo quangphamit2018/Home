@@ -18201,6 +18201,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       #eb2bViewRoot{display:none;padding-bottom:60px}
       body.eb2b-active .view{display:none!important}
       body.eb2b-active #eb2bViewRoot{display:block!important}
+      /* CR Log tab: match DMS's .view#view-crlog exactly (flex column, own
+         scroll clipped at the view level, tighter 18px bottom padding) so the
+         list-panel fills the same usable height as the DMS CR Log instead of
+         being shortened by the generic 60px .view padding. */
+      body.eb2b-active.eb2b-cr-active #eb2bViewRoot{display:flex!important;flex-direction:column;overflow:hidden;padding-bottom:18px}
+      body.eb2b-active.eb2b-cr-active #eb2bViewRoot #eb2bContent,
+      body.eb2b-active.eb2b-cr-active #eb2bViewRoot .eb2b-shell,
+      body.eb2b-active.eb2b-cr-active #eb2bViewRoot .eb2b-cr-shell{min-height:0;flex:1 1 auto}
       body.eb2b-active .view-action{display:none!important}
       .eb2b-cr-top-actions{display:none;align-items:center;gap:7px}
       body.eb2b-active.eb2b-cr-active .eb2b-cr-top-actions{display:flex}
@@ -18870,8 +18878,16 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const rows=field==="status"?EB2B.rows.statuses:EB2B.rows.sub_statuses;
       return rows.find(x=>x.name===value)?.color || "#64748b";
     }
-    const map={Critical:"#dc2626",High:"#ea580c",Medium:"#ca8a04",Low:"#0284c7"};
-    return map[value] || "#64748b";
+    // Reuse the exact same color maps as DMS (global COLOR.category / COLOR.priority)
+    // so a given category/priority value always renders with the same color in
+    // both DMS and e-B2B, instead of e-B2B falling back to a single gray dot for
+    // every category (its old local map only had priority keys, never category ones).
+    if(typeof COLOR!=="undefined" && COLOR[field] && COLOR[field][value]) return COLOR[field][value];
+    const fallbackPriority={Critical:"#ee6b74",High:"#e08a3c",Medium:"#f2b84b",Low:"#4cc38a"};
+    const fallbackCategory={Enhancement:"#5b8def","Bug Fix":"#ee6b74","New Feature":"#3fd0c9",Compliance:"#b78af0",Infrastructure:"#f2b84b"};
+    if(field==="priority") return fallbackPriority[value] || "#64748b";
+    if(field==="category") return fallbackCategory[value] || "#64748b";
+    return "#64748b";
   }
   function eb2bCrBadge(field,value){
     if(!value) return `<span class="cell-dim">—</span>`;
