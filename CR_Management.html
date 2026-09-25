@@ -381,6 +381,9 @@ body.sidebar-hidden .drawer{ left:0; }
   background: rgba(255,255,255,0.06); padding:1px 7px; border-radius:20px; flex-shrink:0;
 }
 .nav-item.active .count{ background: rgba(63,208,201,0.2); color: var(--accent); }
+#navCountRecycle.has-items{ background: var(--warning-dim, rgba(242,184,75,0.18)); color: var(--warning, #f2b84b); }
+#navCountRecycle.count-bump{ animation: recycleCountBump .7s cubic-bezier(.34,1.56,.64,1); }
+@keyframes recycleCountBump{ 0%{ transform:scale(1); } 35%{ transform:scale(1.45); } 100%{ transform:scale(1); } }
 
 .sidebar-foot{ margin-top:auto; padding-top:14px; border-top:1px solid var(--border); }
 .conn-pill{
@@ -6188,18 +6191,6 @@ button:active mi-icon > svg{ transform:scale(.9); }
       </div>
     </div>
 
-    <!-- Legacy standalone admin/recycle markup intentionally omitted after
-         moving both items into the Workspace navigation above.
-      <mi-icon name="users" stroke-width="2"></mi-icon>
-      <span class="nav-label">Quản Trị Dữ Liệu</span>
-      <span class="count hidden" id="navAdminRequestBadgeLegacy" title="Yêu cầu cấp quyền đang chờ duyệt" style="background:var(--warning-dim); color:var(--warning);">0</span>
-    </div>
-
-    <div class="nav-item hidden" data-view-legacy="recycle" id="navRecycleBinLegacy" title="Recycle Bin">
-      <mi-icon name="trash" stroke-width="2"></mi-icon>
-      <span class="nav-label">Recycle Bin</span>
-      <span class="count" id="navCountRecycleLegacy">0</span>
-    -->
 
     <div class="sidebar-foot">
       <div class="conn-pill" style="flex-direction:column; align-items:flex-start; gap:2px;">
@@ -8304,6 +8295,7 @@ async function handleAuthState(){
   applyRolePermissionsToUI();
   $("#navAdmin").classList.toggle("hidden", !canViewAdminTab());
   $("#navRecycleBin").classList.toggle("hidden", !isSuperAdmin());
+  if(isSuperAdmin()) startRecycleLiveSync();
   if(STATE.currentView === "admin" && !canViewAdminTab()){ setView("dashboard"); }
   if(STATE.currentView === "recycle" && !isSuperAdmin()){ setView("dashboard"); }
 }
@@ -8437,10 +8429,9 @@ function subscribeRealtime(){
     if(rtHiddenAt && Date.now() - rtHiddenAt > 60000) debouncedConfigRefresh();
     rtHiddenAt = 0;
   });
-  // Đang mở Recycle Bin: có ai xóa mềm / khôi phục / xóa vĩnh viễn thì tải lại danh sách.
-  const debouncedRecycleRefresh = debounce(()=>{
-    if(STATE.currentView === "recycle") loadAndRenderRecycleBin();
-  }, 600);
+  // Recycle Bin real-time: có ai xóa mềm / khôi phục / xóa vĩnh viễn thì super_admin thấy ngay
+  // (đang mở Recycle Bin -> tải lại danh sách; đang ở tab khác -> cập nhật số trên menu).
+  const debouncedRecycleRefresh = scheduleRecycleSync;
 
   STATE.sb.channel("realtime-cr_log")
     .on("postgres_changes", { event:"*", schema:"public", table:"cr_log" }, payload=>{
@@ -16614,10 +16605,74 @@ const RECYCLE_TABLES = [
 ];
 const RECYCLE_TYPE_LABEL = { cr:"Change Request", tc:"Test Case", rel:"Release / PRD", brd:"BRD", weekly_mom:"Weekly MoM", eb2b_cr:"CR (e-B2B)", eb2b_uat:"Test Case (e-B2B)", eb2b_rel:"Release / PRD (e-B2B)", eb2b_brd:"BRD (e-B2B)", eb2b_weekly_mom:"Weekly MoM (e-B2B)" };
 
-async function loadAndRenderRecycleBin(){
+/* Recycle Bin real-time
+   - Kênh realtime của mọi bảng dữ liệu (DMS + e-B2B) gọi scheduleRecycleSync().
+   - Không mở Recycle Bin: chỉ đếm (head request, không tải dữ liệu) để cập nhật số trên menu.
+   - Đang mở Recycle Bin: tải lại danh sách ở chế độ im lặng (không nháy "Đang tải...").
+   - Dự phòng 30 giây/lần + khi quay lại tab / có mạng lại, phòng trường hợp websocket rớt
+     hoặc bảng chưa được thêm vào publication supabase_realtime. */
+let recycleSyncTimer = null;
+let recycleLiveTimer = null;
+let recycleLoadSeq = 0;
+let recycleCountSeq = 0;
+
+function scheduleRecycleSync(){
+  clearTimeout(recycleSyncTimer);
+  recycleSyncTimer = setTimeout(()=>{
+    if(!isSuperAdmin()) return;
+    if(STATE.currentView === "recycle") loadAndRenderRecycleBin({ silent:true });
+    else refreshRecycleCount();
+  }, 600);
+}
+window.__recycleLiveRefresh = scheduleRecycleSync;
+
+function startRecycleLiveSync(){
+  if(recycleLiveTimer) return;
+  refreshRecycleCount();
+  recycleLiveTimer = setInterval(()=>{ if(!document.hidden) refreshRecycleCount(); }, 30000);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) refreshRecycleCount(); });
+  window.addEventListener("online", refreshRecycleCount);
+}
+
+async function refreshRecycleCount(){
+  if(!isSuperAdmin() || !STATE.sb) return;
+  const seq = ++recycleCountSeq;
+  const results = await Promise.all(RECYCLE_TABLES.map(t=>
+    STATE.sb.from(t.table).select("id", { count:"exact", head:true }).not("deleted_at", "is", null)
+  ));
+  if(seq !== recycleCountSeq) return;
+  let total = 0;
+  results.forEach(res=>{ if(!res.error) total += res.count || 0; });
+  // Đang mở Recycle Bin mà số lượng lệch -> tải lại danh sách để bảng khớp với số.
+  if(STATE.currentView === "recycle" && total !== STATE.recycleList.length){
+    loadAndRenderRecycleBin({ silent:true });
+    return;
+  }
+  setRecycleNavCount(total);
+}
+
+function setRecycleNavCount(n){
+  const el = $("#navCountRecycle");
+  if(!el) return;
+  const prev = Number(el.dataset.count || 0);
+  el.textContent = n;
+  el.dataset.count = String(n);
+  el.classList.toggle("has-items", n > 0);
+  if(el.dataset.ready === "1" && n > prev){
+    el.classList.remove("count-bump");
+    void el.offsetWidth;
+    el.classList.add("count-bump");
+  }
+  el.dataset.ready = "1";
+}
+
+async function loadAndRenderRecycleBin(opts){
   if(!isSuperAdmin()){ return; }
+  const silent = !!(opts && opts.silent === true);
+  const seq = ++recycleLoadSeq;
+  recycleCountSeq++; // bỏ kết quả đếm cũ đang chạy dở
   const tbody = $("#recycleTableBody");
-  if(tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--text-dim);">Đang tải...</td></tr>`;
+  if(tbody && !silent) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--text-dim);">Đang tải...</td></tr>`;
 
   const results = await Promise.all(RECYCLE_TABLES.map(t=>
     STATE.sb.from(t.table).select("*").not("deleted_at", "is", null).order("deleted_at", { ascending:false })
@@ -16643,6 +16698,7 @@ async function loadAndRenderRecycleBin(){
       });
     });
   });
+  if(seq !== recycleLoadSeq) return; // đã có lần tải mới hơn
   items.sort((a,b)=> new Date(b.deleted_at) - new Date(a.deleted_at));
   STATE.recycleList = items;
   renderRecycleBin();
@@ -16656,7 +16712,7 @@ function renderRecycleBin(){
 
   const countEl = $("#recycleCount"); if(countEl) countEl.textContent = STATE.recycleList.length;
   const footEl = $("#recycleFootCount"); if(footEl) footEl.textContent = `Hiển thị ${rows.length} / ${STATE.recycleList.length} mục`;
-  const navCount = $("#navCountRecycle"); if(navCount) navCount.textContent = STATE.recycleList.length;
+  setRecycleNavCount(STATE.recycleList.length);
 
   if(!rows.length){
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-dim);">Recycle Bin trống.</td></tr>`;
@@ -18354,9 +18410,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     uat: ["EB2B · UAT Test Case", "Test case UAT riêng cho EB2B"],
     release: ["EB2B · Release / PRD", "Theo dõi kế hoạch phát hành EB2B"],
     brd: ["EB2B · Tạo BRD", "Quản lý yêu cầu nghiệp vụ EB2B"],
-    weekly_mom: ["EB2B · Weekly MoM", "Biên bản họp và action item EB2B"],
-    admin: ["EB2B · Quản Trị Dữ Liệu", "Danh mục cấu hình riêng cho EB2B"],
-    recycle: ["EB2B · Recycle Bin", "Dữ liệu EB2B đã soft-delete"]
+    weekly_mom: ["EB2B · Weekly MoM", "Biên bản họp và action item EB2B"]
   };
   const EB2B_TABS = [
     ["dashboard", "Dashboard"], ["cr", "CR Log"], ["uat", "UAT Test Case"],
@@ -19057,8 +19111,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const renderers = {
       dashboard: eb2bRenderDashboard, cr: eb2bRenderCrLog,
        uat: eb2bRenderUat, release: ()=>eb2bRenderDataTable("release"),
-      brd: ()=>eb2bRenderDataTable("brd"), weekly_mom: ()=>eb2bRenderDataTable("weekly_mom"),
-      admin: eb2bRenderAdmin, recycle: eb2bRenderRecycle
+      brd: ()=>eb2bRenderDataTable("brd"), weekly_mom: ()=>eb2bRenderDataTable("weekly_mom")
     };
     (renderers[EB2B.activeTab] || renderers.dashboard)();
   }
@@ -20794,7 +20847,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   /* Xóa nhiều (soft delete) cho CR / UAT / Release của e-B2B — cùng cơ chế eb2bDelete:
-     chuyển vào Recycle Bin EB2B, 1 request .in("id", [...]) cho cả loạt. */
+     chuyển vào Recycle Bin, 1 request .in("id", [...]) cho cả loạt. */
   async function eb2bBulkDelete(key, selection){
     const sb = activeDb(); if(!sb) return;
     if(typeof canDeleteData === "function" && !canDeleteData()){ eToast("Bạn không có quyền xóa dữ liệu.", "err"); return; }
@@ -20805,7 +20858,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const shown = labels.slice(0,5).join(", "), extra = labels.length - 5;
     const preview = extra > 0 ? `${shown} và ${extra} mục khác` : shown;
     const title = `Xóa ${rows.length} ${noun} EB2B?`;
-    const msg = `${rows.length} ${noun} đã chọn (${preview}) sẽ được chuyển vào Recycle Bin EB2B.`;
+    const msg = `${rows.length} ${noun} đã chọn (${preview}) sẽ được chuyển vào Recycle Bin.`;
     const run = async ()=>{
       const result = await sb.from(EB2B_TABLES[key]).update({deleted_at:eNow(),deleted_by:eUser(),updated_at:eNow(),updated_by:eUser()}).in("id", rows.map(r=>r.id));
       if(result.error){ eToast("Xóa EB2B thất bại: " + result.error.message, "err"); return; }
@@ -20825,22 +20878,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(result.error){ eToast("Xóa EB2B thất bại: " + result.error.message, "err"); return; }
       eToast("Đã chuyển dữ liệu EB2B vào Recycle Bin.", "ok"); await eb2bLoad();
     };
-    eb2bConfirm("Xóa dữ liệu EB2B?", `“${label}” sẽ được chuyển vào Recycle Bin EB2B.`, ok);
+    eb2bConfirm("Xóa dữ liệu EB2B?", `“${label}” sẽ được chuyển vào Recycle Bin.`, ok);
   }
 
-  function eb2bRenderAdmin(){
-    const c = $e("#eb2bContent");
-    c.innerHTML = `<div class="eb2b-panel"><div class="eb2b-panel-head"><h3>Cấu hình riêng cho EB2B</h3><span class="eb2b-muted">Chỉ áp dụng cho workspace e-B2B.</span></div>
-      <div style="padding:14px"><div class="eb2b-config-grid" id="eb2bConfigGrid"></div></div></div>`;
-    const grid = $e("#eb2bConfigGrid");
-    Object.entries(EB2B_CONFIG).forEach(([key,def])=>{
-      const rows = EB2B.rows[key] || [];
-      const card = document.createElement("div"); card.className="eb2b-config-card";
-      card.innerHTML = `<h4>${def.label}</h4><div class="eb2b-config-add"><input placeholder="Thêm ${def.label}..." data-eb2b-config-input="${key}"><button class="btn btn-primary btn-sm" data-eb2b-config-add="${key}">Thêm</button></div>
-        <div>${rows.map(r=>`<div class="eb2b-config-row"><span>${eEsc(r.name)}${r.is_active===false?' <span class="eb2b-muted">(ẩn)</span>':''}</span><button class="btn btn-ghost btn-sm" data-eb2b-config-delete="${key}" data-eb2b-id="${r.id}">Ẩn</button></div>`).join("") || `<div class="eb2b-muted">Chưa có danh mục.</div>`}</div>`;
-      grid.appendChild(card);
-    });
-  }
 
   async function eb2bAddConfig(key){
     const input = $e(`[data-eb2b-config-input="${key}"]`), orderInput=$e(`[data-eb2b-config-order-input="${key}"]`), name = input?.value.trim();
@@ -20963,28 +21003,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     await eb2bLoad();
   }
 
-  async function eb2bRenderRecycle(){
-    const c=$e("#eb2bContent"), defs=[
-      ["cr","eb2b_cr_log","cr_id","CR Log"],["uat","eb2b_uat_testcase","test_case_id","UAT"],
-      ["release","eb2b_release_prd","release_id","Release"],["brd","eb2b_brd_records","brd_title","BRD"],
-      ["weekly_mom","eb2b_weekly_mom","meeting_date","Weekly MoM"]
-    ];
-    const results=await Promise.all(defs.map(async d=>{
-      const r=await activeDb().from(d[1]).select("*").not("deleted_at","is",null).order("deleted_at",{ascending:false});
-      return r.error?[]:(r.data||[]).map(x=>({...x,__kind:d[0],__table:d[1],__labelField:d[2],__label:d[3]}));
-    }));
-    const rows=results.flat().sort((a,b)=>new Date(b.deleted_at)-new Date(a.deleted_at));
-    c.innerHTML=`<div class="eb2b-panel"><div class="eb2b-panel-head"><h3>Recycle Bin EB2B</h3><span class="eb2b-muted">${rows.length} mục</span></div><div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>Loại</th><th>Mã / tiêu đề</th><th>Đã xóa lúc</th><th>Người xóa</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr><td>${eEsc(r.__label)}</td><td>${eEsc(r[r.__labelField]||r.id)}</td><td>${eEsc(fmtDateTime(r.deleted_at))}</td><td>${eEsc(r.deleted_by||"—")}</td><td><div class="eb2b-actions"><button class="btn btn-ghost btn-sm" data-eb2b-restore="${r.__table}" data-eb2b-id="${r.id}">Khôi phục</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-purge="${r.__table}" data-eb2b-id="${r.id}">Xóa vĩnh viễn</button></div></td></tr>`).join("")||`<tr><td colspan="5" class="eb2b-empty">Recycle Bin EB2B trống.</td></tr>`}</tbody></table></div></div>`;
-  }
 
-  async function eb2bRestore(table,id){
-    const r=await activeDb().from(table).update({deleted_at:null,deleted_by:null}).eq("id",id);
-    if(r.error){eToast("Khôi phục thất bại: "+r.error.message,"err");return;} eToast("Đã khôi phục dữ liệu EB2B.","ok"); await eb2bLoad(); eb2bRenderRecycle();
-  }
-  async function eb2bPurge(table,id){
-    const ok=async()=>{const r=await activeDb().from(table).delete().eq("id",id);if(r.error){eToast("Xóa vĩnh viễn thất bại: "+r.error.message,"err");return;}eToast("Đã xóa vĩnh viễn dữ liệu EB2B.","ok");eb2bRenderRecycle();};
-    eb2bConfirm("Xóa vĩnh viễn?", "Dữ liệu EB2B sẽ không thể khôi phục.", ok);
-  }
 
   /* Tải báo cáo / Tải ảnh cho e-B2B: dùng chung luồng xuất file của DMS nhưng
      với nguồn dữ liệu riêng của e-B2B (bảng eb2b_*, bucket eb2b-attachments). */
@@ -21065,10 +21084,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(add){eb2bAddConfig(add.dataset.eb2bConfigAdd);return;}
       const hide=ev.target.closest("[data-eb2b-config-delete]");
       if(hide){eb2bHideConfig(hide.dataset.eb2bConfigDelete,hide.dataset.eb2bId,hide.dataset.eb2bActive==="1");return;}
-      const restore=ev.target.closest("[data-eb2b-restore]");
-      if(restore){eb2bRestore(restore.dataset.eb2bRestore,restore.dataset.eb2bId);return;}
-      const purge=ev.target.closest("[data-eb2b-purge]");
-      if(purge){eb2bPurge(purge.dataset.eb2bPurge,purge.dataset.eb2bId);return;}
     });
     document.addEventListener("input",ev=>{if(ev.target.id==="eb2bCrSearch"){EB2B.search=ev.target.value;eb2bRenderCrLog();const n=$e("#eb2bCrSearch");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}});
     document.addEventListener("change",ev=>{
@@ -21129,10 +21144,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bRtOnChange(key, payload){
+    // Recycle Bin (dùng chung DMS + e-B2B): cập nhật số / danh sách cho super_admin.
+    if(typeof window.__recycleLiveRefresh === "function") window.__recycleLiveRefresh();
     // Đang tải toàn bộ: kết quả tải có thể cũ hơn sự kiện này -> tải lại 1 lần sau khi xong.
     if(EB2B.loading){ EB2B.reloadQueued = true; return; }
     const changed = eb2bRtApply(key, payload);
-    if(!changed && EB2B.activeTab !== "recycle") return;
+    if(!changed) return;
     EB2B.rtDirty.add(key);
     const row = payload.new || {}, old = payload.old || {};
     if((row.updated_by || null) !== eUser()){
