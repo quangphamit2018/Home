@@ -478,8 +478,16 @@ body.sidebar-hidden .drawer{ left:0; }
 .search-box input:focus{ background: var(--bg-surface-soft-hover); border-color: var(--accent); }
 .topbar-actions{ margin-left:auto; display:flex; gap:10px; align-items:center; }
 
-/* Every workspace view scrolls independently within the fixed sidebar/topbar frame */
-.view{ padding:28px 32px 60px; flex:1; min-width:0; min-height:0; overflow-y:auto;
+/* Every workspace view scrolls independently within the fixed sidebar/topbar frame.
+   overflow-x MUST be set explicitly (not left as the "visible" default): per the CSS
+   Overflow spec, when overflow-y is anything other than 'visible', a UA is required to
+   turn overflow-x's used value into 'auto' as well if it was left as 'visible'. Without
+   this line, .view silently becomes its OWN horizontal scroll container, and the moment
+   anything inside it is a hair wider than its box (a table cell, a reserved scrollbar
+   gutter, sub-pixel rounding...) the browser paints a second, genuine native horizontal
+   scrollbar for .view itself — on top of the custom .hscroll-bar already drawn for the
+   table. That's the "second bar at the very bottom" bug. */
+.view{ padding:28px 32px 60px; flex:1; min-width:0; min-height:0; overflow-y:auto; overflow-x:hidden;
   background: linear-gradient(165deg, #ffffff 0%, #f1f6f9 52%, #e9f3f4 100%); color:#22394e; }
 
 /* ==========================================================================
