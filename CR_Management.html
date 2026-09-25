@@ -8881,7 +8881,7 @@ function initShell(){
   $("#btnUatImport").addEventListener("click", openUatImportModal);
   $("#btnAddRel").addEventListener("click", ()=> openRelModal(null));
   $("#btnAddBrd").addEventListener("click", ()=>{ window.__brdFromEb2b = false; openBrdModal(null); });
-  $("#btnAddWeeklyMom").addEventListener("click", ()=> openWeeklyMomModal(null));
+  $("#btnAddWeeklyMom").addEventListener("click", ()=>{ window.__weeklyFromEb2b = false; openWeeklyMomModal(null); });
   $("#btnWeeklyMomImport").addEventListener("click", openWeeklyMomExcelImportModal);
   $("#btnWeeklyMomDownload").addEventListener("click", openWeeklyMomDownloadModal);
   $("#btnEvidenceZip").addEventListener("click", ()=> openExportSelectionModal("images"));
@@ -15309,7 +15309,7 @@ function renderWeeklyMomList(){
     const record = STATE.weeklyMomList.find(item=>String(item.id) === String(btn.dataset.id));
     if(!record) return;
     btn.addEventListener("click", ()=>{
-      if(btn.dataset.weeklyAct === "edit") openWeeklyMomModal(record);
+      if(btn.dataset.weeklyAct === "edit"){ window.__weeklyFromEb2b = false; openWeeklyMomModal(record); }
       if(btn.dataset.weeklyAct === "delete"){
         if(!canManageWeeklyMom()) return;
         confirmDelete(
@@ -15486,6 +15486,8 @@ function openWeeklyMomModal(record){
 async function saveWeeklyMom(overlay, isEdit){
   if(!STATE.sb){ toast("Chưa kết nối được cơ sở dữ liệu. Vui lòng tải lại trang rồi thử lại.", "err"); return; }
   if(!canManageWeeklyMom()) return;
+  const fromEb2b = !!window.__weeklyFromEb2b;
+  const wTable = fromEb2b ? "eb2b_weekly_mom" : "weekly_mom";
   const existing = isEdit && STATE.editingWeeklyMomId
     ? STATE.weeklyMomList.find(item=>String(item.id) === String(STATE.editingWeeklyMomId))
     : null;
@@ -15495,7 +15497,7 @@ async function saveWeeklyMom(overlay, isEdit){
     const btn = $("#weeklyMomModalSave");
     btn.disabled = true; btn.textContent = "Đang lưu...";
     try{
-      const { error } = await STATE.sb.from("weekly_mom").update({
+      const { error } = await STATE.sb.from(wTable).update({
         meeting_date: meetingDate,
         updated_at: new Date().toISOString(),
         updated_by: STATE.userEmail || null,
@@ -15545,16 +15547,21 @@ async function saveWeeklyMom(overlay, isEdit){
   try{
     let error;
     if(isEdit){
-      ({ error } = await STATE.sb.from("weekly_mom").update(payload).eq("id", STATE.editingWeeklyMomId));
+      ({ error } = await STATE.sb.from(wTable).update(payload).eq("id", STATE.editingWeeklyMomId));
     }else{
       payload.created_by = STATE.userEmail || null;
-      ({ error } = await STATE.sb.from("weekly_mom").insert(payload));
+      ({ error } = await STATE.sb.from(wTable).insert(payload));
     }
     if(error){ toast("Lưu biên bản Weekly thất bại: " + error.message, "err"); return; }
     toast(isEdit ? "Đã cập nhật biên bản Weekly." : "Đã tạo biên bản Weekly.", "ok");
     overlay.classList.remove("show");
-    await fetchWeeklyMomList();
-    renderWeeklyMomList();
+    window.__weeklyFromEb2b = false;
+    if(fromEb2b && typeof eb2bLoad === "function"){
+      try{ await eb2bLoad(); }catch(_){}
+    } else {
+      await fetchWeeklyMomList();
+      renderWeeklyMomList();
+    }
   }catch(err){
     toast("Lưu biên bản Weekly thất bại: " + (err && err.message ? err.message : "Lỗi không xác định"), "err");
   }finally{
@@ -20935,7 +20942,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(ev.target.closest("#eb2bAddTcTop")){eb2bUatOpenModal(null);return;}
       if(ev.target.closest("#eb2bAddRelTop")){eb2bOpenModal("release",null);return;}
       if(ev.target.closest("#eb2bAddBrdTop")){window.__brdFromEb2b=true;openBrdModal(null);return;}
-      if(ev.target.closest("#eb2bAddWeeklyTop")){eb2bOpenModal("weekly_mom",null);return;}
+      if(ev.target.closest("#eb2bAddWeeklyTop")){window.__weeklyFromEb2b=true;openWeeklyMomModal(null);return;}
       if(ev.target.closest("#eb2bWeeklyImportTop")){eb2bOpenImport("weekly");return;}
       if(ev.target.closest("#eb2bWeeklyDownloadTop")){eb2bDownloadWeeklyLatest();return;}
       if(ev.target.closest("#eb2bProgressReportTop")){eb2bOpenExport("report");return;}
