@@ -391,10 +391,9 @@ body.sidebar-hidden .drawer{ left:0; }
 .conn-dot{ width:7px; height:7px; border-radius:50%; background: var(--success); box-shadow:0 0 0 3px var(--success-dim); flex-shrink:0; }
 
 /* ---- Workspace navigation -------------------------------------------------
-   DMS is a workspace container, not a new data view. The existing child
-   views keep their data-view values so all current routing and permissions
-   continue to work unchanged. This makes it safe to add EB2B as a sibling
-   workspace later without rewriting the DMS modules. */
+   DMS is a workspace container, not a new data view. Its child views keep
+   their existing data-view values so routing and permissions continue to
+   work unchanged. This makes it safe to add EB2B as a sibling workspace. */
 .workspace-nav{ margin:0 0 4px; }
 .workspace-nav > .workspace-parent{ margin-bottom:0; }
 .workspace-children + .workspace-nav{ margin-top:4px; }
@@ -755,7 +754,6 @@ tbody td{ padding:14px 20px; font-size: var(--text-table-cell-size); border-bott
 tbody tr{ transition: background var(--duration-fast) var(--ease-standard); cursor:pointer; }
 tbody tr:hover{ background: var(--bg-surface-soft); }
 tbody tr:last-child td{ border-bottom:none; }
-td.cell-id{ font-family: var(--font-mono); font-weight:700; color: var(--accent); }
 td.cell-title{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 td.cell-dim{ color: var(--text-secondary); }
 
@@ -1768,7 +1766,6 @@ td.cell-id .id-chip{
 .file-cat-tag{ position:absolute; top:6px; left:6px; font-size:9.5px; font-weight:700; padding:2px 6px; border-radius:5px; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
 .file-del{ position:absolute; top:5px; right:5px; width:20px; height:20px; border-radius:6px; background: rgba(0,0,0,0.55); display:flex; align-items:center; justify-content:center; color:var(--text-primary); opacity:0; transition: opacity .12s; }
 .file-card:hover .file-del{ opacity:1; }
-.file-del:hover{ background: var(--danger); }
 .file-card a.file-open{ position:absolute; inset:0; z-index:1; }
 
 .mini-list{ display:flex; flex-direction:column; gap:8px; }
@@ -2320,7 +2317,6 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
 
 /* ---- Generic drawer section shell (reused by Summary/Detail/Related/Activity) */
 .dsec{ margin-bottom:26px; }
-.dsec:last-child{ margin-bottom:0; }
 .dsec-head{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
 .dsec-head .dsec-title{
   font-size: var(--text-section-title-size); text-transform:uppercase; letter-spacing:.06em;
@@ -3284,7 +3280,6 @@ tbody tr.detail-selected:hover{ background:
 }
 @media(max-width:640px){
   .drawer .tabs .tab-btn{ padding-left:12px; padding-right:12px; }
-  .crlog-field-grid{ grid-template-columns:1fr; gap:10px; }
   .crlog-field.is-long{ grid-column:auto; }
 }
 
@@ -5853,11 +5848,6 @@ html{
 .admin-scope-pane[data-admin-pane="dms"]{ --pane-c:var(--scope-dms); }
 .admin-scope-pane[data-admin-pane="eb2b"]{ --pane-c:var(--scope-eb2b); }
 .admin-scope-pane #eb2bAdminConfigHost > .list-panel{ border-top:3px solid var(--scope-eb2b); }
-.eb2b-admin-name-input{ width:100%; min-width:120px; border:1px solid transparent; border-radius:7px; padding:5px 7px; font:inherit; font-size:12.5px; color:#22394e; background:transparent; }
-.eb2b-admin-name-input:hover,.eb2b-admin-name-input:focus{ border-color:#c6d6de; background:#fff; outline:none; }
-.eb2b-admin-order-input{ width:64px; border:1px solid transparent; border-radius:7px; padding:5px 7px; font:inherit; font-size:12.5px; color:#5f7690; background:transparent; }
-.eb2b-admin-order-input:hover,.eb2b-admin-order-input:focus{ border-color:#c6d6de; background:#fff; outline:none; }
-.eb2b-admin-color-input{ width:28px; height:28px; padding:2px; border:1px solid #b8c9d8; border-radius:7px; background:#fff; cursor:pointer; }
 body.role-no-manage-users .admin-scope-tab[data-admin-scope="shared"],
 body.role-no-manage-users #sharedTablesPanel,
 body.role-no-manage-users #eb2bSupabaseTablesPanel{ display:none !important; }
@@ -6106,12 +6096,6 @@ lucide/dist/esm/lucide.mjs:
       </div>
     </div>
 
-    <div class="nav-group-label">Tổng quan</div>
-    <div class="nav-item active" data-view="dashboard" title="Dashboard DMS">
-      <mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>
-      <span class="nav-label">Dashboard</span>
-    </div>
-
     <div class="nav-group-label">Workspace</div>
     <!-- DMS workspace container. Add future workspaces beside this block;
          the child data-view values below intentionally remain unchanged. -->
@@ -6125,6 +6109,10 @@ lucide/dist/esm/lucide.mjs:
       </div>
 
       <div class="workspace-children" id="navDmsChildren" aria-label="Các phân hệ Quản Lý DMS">
+        <div class="nav-item active" data-view="dashboard" title="Dashboard DMS">
+          <mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>
+          <span class="nav-label">Dashboard</span>
+        </div>
         <div class="nav-item" data-view="crlog" title="CR Log">
           <mi-icon name="file-text" stroke-width="2"></mi-icon>
           <span class="nav-label">CR Log</span>
@@ -7026,7 +7014,7 @@ const WORKSPACE_STORAGE_KEY = "crControlWorkspace";
 const EB2B_TAB_STORAGE_KEY = "crControlEb2bTab";
 const VALID_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom", "admin", "recycle"]);
 const DMS_NAV_STORAGE_KEY = "crControlDmsNavOpen";
-const DMS_VIEWS = new Set(["crlog", "uat", "release", "brd", "weekly_mom"]);
+const DMS_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom"]);
 const CR_FILTER_STORAGE_KEY = "crLogFilters";
 
 function normalizeCrFilterValue(value){
@@ -11437,7 +11425,7 @@ function crModalTemplate(cr){
         <div class="field">
           <label>CR ID *</label>
           <div class="field-row-btn">
-            <input id="f_cr_id" type="text" value="${esc(isEdit? (v.cr_id||'') : suggestedCrId)}" placeholder="CR_001" ${isEdit?'':''}>
+            <input id="f_cr_id" type="text" value="${esc(isEdit? (v.cr_id||'') : suggestedCrId)}" placeholder="CR_001">
             ${isEdit? '' : '<button class="btn btn-ghost btn-sm" id="btnSuggestCrId" type="button">Gợi ý</button>'}
           </div>
           ${isEdit? '' : '<div class="hint">Hệ thống tự gợi ý số CR nhỏ nhất còn trống — bạn vẫn có thể sửa tay nếu cần.</div>'}
@@ -11912,7 +11900,7 @@ function reportColumnLetter(number){
 
 function reportCellValue(value){
   if(value === null || value === undefined) return "";
-  return typeof value === "string" ? value : value;
+  return value;
 }
 
 function reportSetCell(cell, value, descriptor){
@@ -13712,7 +13700,7 @@ async function handleFileUpload(cr_id, testcase_id, evidence_step, files, catego
 }
 
 async function deleteAttachment(id, path, cr_id, testcase_id){
-  const { error: rmErr } = await STATE.sb.storage.from(BUCKET).remove([path]);
+  await STATE.sb.storage.from(BUCKET).remove([path]);
   const { error: delErr } = await STATE.sb.from("cr_attachments").delete().eq("id", id);
   if(delErr){ toast("Xóa file thất bại: " + delErr.message, "err"); return; }
   toast("Đã xóa file", "ok");
@@ -16433,13 +16421,12 @@ async function saveBrd(overlay, isEdit){
   if(!payload) return;
 
   const btn = $("#brdModalSave"); btn.disabled = true; btn.textContent = "Đang lưu...";
-  let error, data;
+  let error;
   if(isEdit){
     ({ error } = await STATE.sb.from("brd_records").update(payload).eq("id", STATE.editingBrdId));
-    data = { ...payload, id: STATE.editingBrdId };
   } else {
     payload.created_by = STATE.userEmail || null;
-    ({ data, error } = await STATE.sb.from("brd_records").insert(payload).select().single());
+    ({ error } = await STATE.sb.from("brd_records").insert(payload).select().single());
   }
   btn.disabled = false; btn.textContent = isEdit? "Lưu thay đổi" : "Tạo BRD";
   if(error){ toast("Lưu BRD thất bại: " + error.message, "err"); return; }
@@ -18722,8 +18709,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.activeTab = tab;
     // Lưu lại workspace + tab đang mở để F5 / Refresh khôi phục đúng vị trí.
     try{
-      localStorage.setItem("crControlWorkspace", "eb2b");
-      localStorage.setItem("crControlEb2bTab", tab);
+      localStorage.setItem(WORKSPACE_STORAGE_KEY, "eb2b");
+      localStorage.setItem(EB2B_TAB_STORAGE_KEY, tab);
     }catch(_){}
     document.body.classList.add("eb2b-active");
     document.body.classList.toggle("eb2b-cr-active", tab === "cr");
@@ -18771,8 +18758,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   window.__eb2bRestoreSavedTab = function(attempt){
     let ws = null, tab = null;
     try{
-      ws = localStorage.getItem("crControlWorkspace");
-      tab = localStorage.getItem("crControlEb2bTab");
+      ws = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+      tab = localStorage.getItem(EB2B_TAB_STORAGE_KEY);
     }catch(_){ return false; }
     if(ws !== "eb2b") return false;
     if(!EB2B_RESTORABLE_TABS.has(tab)) tab = "dashboard";
@@ -19057,7 +19044,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bOpenCrInline(trigger){
     eb2bCloseCrInline();
     const field=trigger.dataset.eb2bCrInline,row=EB2B.rows.cr.find(item=>String(item.id)===String(trigger.dataset.eb2bCrId)); if(!row)return;
-    const listKey=field==="sub_status"?"sub_statuses":field+"s";
     let values=[];
     if(field==="status") values=EB2B.rows.statuses.map(item=>item.name);
     else if(field==="sub_status") values=EB2B.rows.sub_statuses.map(item=>item.name);
@@ -19145,21 +19131,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $e("#eb2bDrawerOverlay")?.classList.remove("show");$e("#eb2bCrDrawer")?.classList.remove("show");
     EB2B.drawerCrId=null;
   }
-  function eb2bOpenCrDrawer(row){
-    if(!row)return;EB2B.drawerCrId=row.id;const drawer=$e("#eb2bCrDrawer"),overlay=$e("#eb2bDrawerOverlay");
-    const files=EB2B.rows.attachments.filter(x=>x.cr_id===row.cr_id&&!x.deleted_at),tests=EB2B.rows.uat.filter(x=>x.cr_id===row.cr_id),rels=EB2B.rows.release.filter(x=>x.cr_id===row.cr_id);
-    const field=(l,v)=>`<div class="crlog-field"><div class="crlog-field-label">${eEsc(l)}</div><div class="crlog-field-value ${v?"":"empty"}">${v?eEsc(v):"Chưa có dữ liệu"}</div></div>`;
-    drawer.innerHTML=`<div class="drawer-head"><div class="drawer-head-top"><div><h2>${eEsc(row.cr_id)}</h2><div class="drawer-app">${eEsc(eb2bCrTitle(row))}</div><div class="drawer-head-context"><span><b>App</b> ${eEsc(row.app||"—")}</span><span><b>Requester</b> ${eEsc(row.requester||"—")}</span><span><b>Request Date</b> ${eEsc(eDate(row.request_date)||"—")}</span></div></div><div class="drawer-head-actions"><button class="icon-btn" data-eb2b-cr-edit="${row.id}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="drawer-close" data-eb2b-drawer-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></div></div><div class="drawer-badges">${eb2bCrBadge("status",row.status)}${eb2bCrBadge("priority",row.priority)}${eb2bCrBadge("category",row.category)}${eb2bCrOverdue(row)?`<span class="badge" style="background:var(--danger-dim);color:var(--danger)">Trễ hạn</span>`:""}</div></div>
-    <div class="tabs"><button class="tab-btn active" data-eb2b-drawer-tab="info">Thông tin</button><button class="tab-btn" data-eb2b-drawer-tab="files">Tệp đính kèm <span class="tab-count">${files.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="uat">Test Case UAT <span class="tab-count">${tests.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="release">Release / PRD <span class="tab-count">${rels.length}</span></button></div>
-    <div class="drawer-body"><div class="tab-panel active" data-eb2b-panel="info"><div class="dsec"><div class="dsec-head"><span class="dsec-title">Tóm tắt</span></div><div class="summary-grid">${field("Requester",row.requester)}${field("Department",row.department)}${field("Owner",row.owner)}${field("Request Date",eDate(row.request_date))}${field("Deadline",eDate(row.deadline))}${field("App",row.app)}${field("Approved Status",row.approved_status)}${field("Approved Date",eDate(row.approved_date))}</div></div><div class="crlog-detail-groups"><div class="crlog-field-group"><div class="crlog-field-group-title">Nội dung & cập nhật</div><div class="crlog-field-grid">${field("Old Name From InterK",row.old_name)}${field("Rename Folder",row.rename_folder)}${field("Description BRD",row.description_brd)}${field("Description FSD",row.description_fsd)}${field("Progress",row.progress)}${field("Note",row.note)}</div></div></div></div>
-    <div class="tab-panel" data-eb2b-panel="files"><div class="dsec"><div class="dsec-head"><span class="dsec-title">Tệp đính kèm</span></div><div class="eb2b-files">${files.map(f=>`<div class="eb2b-file-row"><div class="eb2b-file-meta"><div class="eb2b-file-name">${eEsc(f.file_name)}</div><div class="eb2b-file-sub">${eEsc(f.category||"Tài liệu")} · ${eEsc(f.uploaded_by||"—")}</div></div></div>`).join("")||`<div class="empty-state"><p>Chưa có tệp đính kèm.</p></div>`}</div></div></div>
-    <div class="tab-panel" data-eb2b-panel="uat">${tests.map(t=>`<div class="workflow-record"><div class="workflow-record-index">TC</div><div class="workflow-record-main"><div class="workflow-record-id">${eEsc(t.test_case_id)}</div><div class="workflow-record-title">${eEsc(t.scenario||"(Chưa có scenario)")}</div></div><div class="workflow-record-status">${eb2bCrBadge("status",t.pass_fail)}</div></div>`).join("")||`<div class="empty-state"><p>Chưa có Test Case UAT.</p></div>`}</div>
-    <div class="tab-panel" data-eb2b-panel="release">${rels.map(r=>`<div class="workflow-record"><div class="workflow-record-index">REL</div><div class="workflow-record-main"><div class="workflow-record-id">${eEsc(r.release_id||"RELEASE")}</div><div class="workflow-record-title">${eEsc(r.release_name||"(Chưa đặt tên release)")}</div></div><div class="workflow-record-status">${eb2bCrBadge("status",r.status)}</div></div>`).join("")||`<div class="empty-state"><p>Chưa có Release / PRD.</p></div>`}</div></div>`;
-    overlay.classList.add("show");
-    overlay.classList.remove("full");
-    drawer.classList.add("show");
-  }
-
   /*
    * CR detail parity for e-B2B
    * ---------------------------
@@ -19383,7 +19354,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   /* Override the compact drawer renderer above with the DMS-equivalent
      workflow surface.  All callbacks still write to eb2b_* tables/bucket. */
-  eb2bOpenCrDrawer = function(row){
+  function eb2bOpenCrDrawerBase(row){
     if(!row) return;
     EB2B.drawerCrId=row.id;
     const drawer=$e("#eb2bCrDrawer"), overlay=$e("#eb2bDrawerOverlay");
@@ -19428,7 +19399,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $all("[data-eb2b-drawer-uat]",drawer).forEach(node=>node.addEventListener("click",()=>{const item=tests.find(test=>String(test.id)===String(node.dataset.eb2bDrawerUat));if(item)eb2bUatOpenModal(item);}));
     $all("[data-eb2b-drawer-release]",drawer).forEach(node=>node.addEventListener("click",()=>{const item=rels.find(release=>String(release.id)===String(node.dataset.eb2bDrawerRelease));if(item)eb2bOpenModal("release",item);}));
     eb2bRenderCrFiles(row);
-  };
+  }
 
   /*
    * The e-B2B drawer used to have a compact "Thông tin" panel while DMS
@@ -19504,9 +19475,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     </div>`;
   }
 
-  const eb2bOpenCrDrawerWithCompactInfo = eb2bOpenCrDrawer;
-  eb2bOpenCrDrawer = function(row){
-    eb2bOpenCrDrawerWithCompactInfo(row);
+  function eb2bOpenCrDrawer(row){
+    eb2bOpenCrDrawerBase(row);
     const drawer = $e("#eb2bCrDrawer");
     if(!drawer) return;
     const tests = EB2B.rows.uat.filter(item=>String(item.cr_id || "") === String(row.cr_id || ""));
@@ -19521,7 +19491,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const item = rels.find(release=>String(release.id) === String(node.dataset.eb2bRelatedRelease));
       if(item) eb2bOpenModal("release", item);
     }));
-  };
+  }
 
    const EB2B_UAT_COLUMNS = [
      {key:"test_case_id",label:"Test Case ID"},
@@ -20023,7 +19993,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const crOptions = [...new Set(all.map(r=>r.cr_id).filter(Boolean))].sort();
     const envOptions = [...new Set(all.map(r=>r.environment).filter(Boolean))].sort();
     const ownerOptions = [...new Set(all.map(r=>r.release_owner).filter(Boolean))].sort();
-    const option = (value,label="Tất cả")=>`<option value="${eEsc(value)}" ${value===label?"":""}>${eEsc(label)}</option>`;
     c.innerHTML = `<div class="crlog-shell release-shell">
       <div class="crlog-kpis rel-kpis" id="eb2bRelKpis">
         ${eb2bKpiCard("Tổng số Release",all.length,"Toàn bộ release package đã ghi nhận")}
@@ -20243,7 +20212,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         }};
     }
     if(kind==="weekly"){
-      const H = ["meeting_date","vendor","meeting_title","participants","overall_summary"];
       return {kind, prefix:"eb2bWeeklyImport", label:"biên bản Weekly", title:"Nhập Weekly MoM từ Excel", sheet:"Weekly MoM", file:"EB2B_Weekly_MoM_Template.xlsx", lists:{}, strict:{},
         okLabel:"Hợp lệ (dòng CR sẽ được nhập)",
         note:`Các dòng cùng <b>Meeting Date + Vendor + Meeting Title</b> được gộp thành <b>1 biên bản Weekly</b>; mỗi dòng là một CR/action item trong biên bản.`,
@@ -20563,54 +20531,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     await eb2bLoad();
   }
 
-  async function eb2bUpdateConfigField(key,id,field,value){
-    const def = EB2B_CONFIG[key]; if(!def) return;
-    const payload = {[field]:value};
-    if(field==="text_color") payload.color=value; // keep legacy "color" column in sync so any other reader still works
-    const result = await activeDb().from(def.table).update(payload).eq("id",id);
-    if(result.error){ eToast("Không lưu được thay đổi: "+result.error.message,"err"); return; }
-    await eb2bLoad();
-  }
-
-  function eb2bRenderAdminHost(){
-    const host=$e("#eb2bAdminConfigHost"); if(!host) return;
-    const statusBadge=isOff=>`<span class="badge" style="background:${isOff?"var(--danger-dim)":"var(--success-dim)"};color:${isOff?"var(--danger)":"var(--success)"}">${isOff?"Đã ẩn":"Đang dùng"}</span>`;
-    const colorCell=(key,id,field,value,fallback)=>{
-      const hex=typeof normalizeHexColor==="function"?normalizeHexColor(value,fallback):(value||fallback);
-      return `<span class="admin-color-token"><input type="color" class="eb2b-admin-color-input" value="${eEsc(hex)}" data-eb2b-config-color="${key}" data-eb2b-config-id="${id}" data-eb2b-config-field="${field}"><span>${eEsc(hex)}</span></span>`;
-    };
-    host.innerHTML=Object.entries(EB2B_CONFIG).map(([key,def])=>{
-      const rows=[...(EB2B.rows[key]||[])].sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
-      const on=rows.filter(r=>r.is_active!==false).length, colored=key==="statuses"||key==="sub_statuses";
-      const colgroup=colored
-        ?`<th style="width:70px;">Thứ tự</th><th>${eEsc(def.label)}</th><th style="width:150px;">Màu nền</th><th style="width:150px;">Màu chữ</th><th style="width:120px;">Trạng thái</th><th style="width:90px;"></th>`
-        :`<th style="width:70px;">Thứ tự</th><th>${eEsc(def.label)}</th><th style="width:120px;">Trạng thái</th><th style="width:90px;"></th>`;
-      const rowHtml=r=>{
-        const off=r.is_active===false;
-        const nameCell=`<td><input type="text" class="eb2b-admin-name-input" value="${eEsc(r.name)}" data-eb2b-config-name="${key}" data-eb2b-config-id="${r.id}"></td>`;
-        const orderCell=`<td class="cell-dim"><input type="number" class="eb2b-admin-order-input" value="${eEsc(r.sort_order??0)}" data-eb2b-config-order="${key}" data-eb2b-config-id="${r.id}"></td>`;
-        const actionCell=`<td><button class="btn btn-ghost btn-sm" type="button" data-eb2b-config-delete="${key}" data-eb2b-id="${r.id}" data-eb2b-active="${off?1:0}">${off?"Hiện lại":"Ẩn"}</button></td>`;
-        if(colored){
-          return `<tr>${orderCell}${nameCell}<td>${colorCell(key,r.id,"background_color",r.background_color,"#eef4fa")}</td><td>${colorCell(key,r.id,"text_color",r.text_color||r.color,def.defaultColor)}</td><td>${statusBadge(off)}</td>${actionCell}</tr>`;
-        }
-        return `<tr>${orderCell}${nameCell}<td>${statusBadge(off)}</td>${actionCell}</tr>`;
-      };
-      return `<div class="list-panel" style="margin-top:16px;">
-        <div class="list-panel-head">
-          <div class="list-panel-count"><span class="admin-scope-tag is-eb2b">e-B2B</span><b>${on}</b> ${eEsc(def.label)} đang dùng${rows.length>on?` · ${rows.length-on} đang ẩn`:""}</div>
-          <div class="status-create"><input type="text" maxlength="120" placeholder="Thêm ${eEsc(def.label)}..." data-eb2b-config-input="${key}"><button class="btn btn-primary btn-sm" type="button" data-eb2b-config-add="${key}"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>Thêm</button></div>
-        </div>
-        <div class="table-wrap"><table>
-          <thead><tr>${colgroup}</tr></thead>
-          <tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${colored?6:4}" class="cell-dim" style="text-align:center;padding:18px;">Chưa có danh mục.</td></tr>`}</tbody>
-        </table></div>
-        <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${rows.length} ${eEsc(def.label)}</span></div>
-      </div>`;
-    }).join("");
-    host.onkeydown=ev=>{ if(ev.key==="Enter"&&ev.target.dataset?.eb2bConfigInput) host.querySelector(`[data-eb2b-config-add="${ev.target.dataset.eb2bConfigInput}"]`)?.click(); };
-  }
-  window.__eb2bRenderAdminHost = eb2bRenderAdminHost;
-
   /*
    * e-B2B Admin parity
    * -------------------
@@ -20678,7 +20598,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     window.setTimeout(()=>$e("#eb2bConfigModalName",overlay)?.focus(),0);
   }
 
-  eb2bRenderAdminHost=function(){
+  function eb2bRenderAdminHost(){
     const host=$e("#eb2bAdminConfigHost");
     if(!host) return;
     const statusBadge=off=>`<span class="badge" style="background:${off?"var(--danger-dim)":"var(--success-dim)"};color:${off?"var(--danger)":"var(--success)"}"><span class="dot" style="background:${off?"var(--danger)":"var(--success)"}"></span>${off?"Đã ẩn":"Đang dùng"}</span>`;
@@ -20703,7 +20623,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       </div>`;
     }).join("");
     host.onkeydown=event=>{if(event.key==="Enter" && event.target.dataset?.eb2bConfigInput)host.querySelector(`[data-eb2b-config-add="${event.target.dataset.eb2bConfigInput}"]`)?.click();};
-  };
+  }
   window.__eb2bRenderAdminHost=eb2bRenderAdminHost;
 
   async function eb2bHideConfig(key,id,makeActive){
@@ -20764,7 +20684,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        if(create){ if(create.dataset.eb2bNew==="uat") eb2bUatOpenModal(null); else eb2bOpenModal(create.dataset.eb2bNew,null); return; }
       const action=ev.target.closest("[data-eb2b-act]");
       if(action){
-        const key=action.closest("tr")?.querySelector("[data-eb2b-act]") ? action.dataset.eb2bAct : action.dataset.eb2bAct;
         const map={cr:"cr",uat:"uat",release:"release",brd:"brd",weekly_mom:"weekly_mom"};
         const rowKey=map[EB2B.activeTab]; const row=(EB2B.rows[rowKey]||[]).find(x=>String(x.id)===String(action.dataset.eb2bId));
          if(EB2B.activeTab==="uat"){
@@ -20791,22 +20710,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     document.addEventListener("change",ev=>{
       const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}
       if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();return;}
-      const colorInput=ev.target.closest("[data-eb2b-config-color]");
-      if(colorInput){eb2bUpdateConfigField(colorInput.dataset.eb2bConfigColor,colorInput.dataset.eb2bConfigId,colorInput.dataset.eb2bConfigField,colorInput.value);return;}
-      const nameInput=ev.target.closest("[data-eb2b-config-name]");
-      if(nameInput){
-        const value=nameInput.value.trim();
-        if(!value){eToast("Tên không được để trống","err");nameInput.focus();return;}
-        eb2bUpdateConfigField(nameInput.dataset.eb2bConfigName,nameInput.dataset.eb2bConfigId,"name",value);
-        return;
-      }
-      const orderInput=ev.target.closest("[data-eb2b-config-order]");
-      if(orderInput){
-        const value=Number(orderInput.value);
-        if(!Number.isFinite(value)){eToast("Thứ tự phải là số","err");return;}
-        eb2bUpdateConfigField(orderInput.dataset.eb2bConfigOrder,orderInput.dataset.eb2bConfigId,"sort_order",value);
-        return;
-      }
     });
     $e("#eb2bDrawerOverlay")?.addEventListener("click",eb2bCloseCrDrawer);
     document.addEventListener("keydown", ev=>{
@@ -21062,74 +20965,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 })();
 </script>
 
-
-<style id="filterParityStyles">
-/* Shared CR Log filter grammar for UAT and Release / PRD in both workspaces. */
-.filter-parity-group{position:relative}
-.filter-parity-group .cr-filter-trigger{min-width:116px}
-.filter-parity-group .cr-filter-menu{width:250px}
-.filter-parity-group .cr-filter-option input{flex:0 0 auto}
-.filter-parity-group .cr-filter-option.is-selected{background:#e8f7f6;color:#173f52;font-weight:750}
-.filter-parity-group .cr-filter-option.is-selected input{accent-color:#16999a}
-.filter-parity-group .cr-filter-legacy{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
-#eb2bViewRoot .filter-parity-group .cr-filter-trigger{min-width:116px}
-@media(max-width:760px){.filter-parity-group{flex:1 1 140px}.filter-parity-group .cr-filter-trigger{width:100%}}
-</style>
-<script id="filterParityScript">
-(()=>{
-  const FILTERS={
-    filterTcCr:{label:"CR ID",glyph:"CR"},
-    filterTcResult:{label:"Kết quả",glyph:"KQ"},
-    filterRelCr:{label:"CR ID",glyph:"CR"},
-    filterRelStatus:{label:"Trạng thái",glyph:"S"},
-    eb2bRelFilterCr:{label:"CR ID",glyph:"CR"},
-    eb2bRelFilterStatus:{label:"Trạng thái",glyph:"S"}
-  };
-  const dynamicSelector='[data-eb2b-uat-filter="cr"],[data-eb2b-uat-filter="result"]';
-  const metaFor=select=>FILTERS[select.id] || (select.matches('[data-eb2b-uat-filter="cr"]')?{label:"CR ID",glyph:"CR"}:{label:"Kết quả",glyph:"KQ"});
-  const optionParts=text=>{
-    const match=String(text||"").trim().match(/^(.*?)(?:\s*\((\d+)\))?$/);
-    return {label:(match?.[1]||text||"").trim(),count:match?.[2]||""};
-  };
-  function closeOthers(except){
-    document.querySelectorAll('.filter-parity-group.is-open').forEach(group=>{
-      if(group!==except){group.classList.remove('is-open');group.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}
-    });
-  }
-  function render(group,select){
-    const meta=metaFor(select), options=Array.from(select.options), selected=select.value;
-    const chosen=options.find(option=>option.value===selected);
-    const summary=group.querySelector('.cr-filter-value');
-    if(summary) summary.textContent=selected?(optionParts(chosen?.textContent).label||selected):'Tất cả';
-    group.querySelector('.cr-filter-trigger')?.classList.toggle('is-active',Boolean(selected));
-    const menu=group.querySelector('.cr-filter-menu');
-    if(!menu)return;
-    menu.innerHTML=`<div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${meta.label}</div><span class="cr-filter-menu-hint">Chọn một giá trị</span></div><button type="button" class="cr-filter-reset">Đặt lại</button></div><div class="cr-filter-options">${options.map((option,index)=>{const part=optionParts(option.textContent);const active=option.value===selected;return `<label class="cr-filter-option ${index===0?'is-all ':''}${active?'is-selected':''}"><input type="checkbox" data-filter-parity-value="${String(option.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" ${active?'checked':''}><span class="cr-filter-option-text">${part.label}</span>${part.count?`<span class="cr-filter-count-badge">(${part.count})</span>`:''}</label>`}).join('')}</div>`;
-  }
-  function enhance(select){
-    if(!select || select.dataset.filterParity==='1')return;
-    const host=select.closest('.filter-chip');
-    if(!host)return;
-    const meta=metaFor(select);
-    select.dataset.filterParity='1';
-    host.className='cr-filter-group filter-parity-group';
-    const trigger=document.createElement('button');
-    trigger.className='cr-filter-trigger';trigger.type='button';trigger.setAttribute('aria-haspopup','true');trigger.setAttribute('aria-expanded','false');
-    trigger.innerHTML=`<span class="cr-filter-glyph">${meta.glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${meta.label}</span><strong class="cr-filter-value">Tất cả</strong></span><span class="cr-filter-chevron">⌄</span>`;
-    const menu=document.createElement('div');menu.className='cr-filter-menu';
-    host.replaceChildren(trigger,menu,select);select.classList.add('cr-filter-legacy');
-    trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!host.classList.contains('is-open');closeOthers(host);host.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening));});
-    menu.addEventListener('click',event=>{event.stopPropagation();if(event.target.closest('.cr-filter-reset')){select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));return}const input=event.target.closest('[data-filter-parity-value]');if(!input)return;select.value=input.dataset.filterParityValue||'';select.dispatchEvent(new Event('change',{bubbles:true}));host.classList.remove('is-open');trigger.setAttribute('aria-expanded','false')});
-    select.addEventListener('change',()=>render(host,select));
-    new MutationObserver(()=>render(host,select)).observe(select,{childList:true,subtree:true});
-    render(host,select);
-  }
-  function scan(root=document){Object.keys(FILTERS).forEach(id=>enhance(root.querySelector?.('#'+id)));root.querySelectorAll?.(dynamicSelector).forEach(enhance)}
-  document.addEventListener('click',()=>closeOthers());
-  const start=()=>{scan();new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1){scan(node);if(node.matches?.(dynamicSelector))enhance(node)}}))).observe(document.body,{childList:true,subtree:true})};
-  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start):start();
-})();
-</script>
 
 <style id="filterParityStyles">
 /* Shared CR Log filter grammar for UAT and Release / PRD in both workspaces. */
