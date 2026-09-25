@@ -11646,16 +11646,31 @@ async function downloadCrTemplate(){
   DLProgress.setIndeterminate("Đang dựng sheet & danh mục hợp lệ...");
   try{
     const headerRow = CR_IMPORT_COLUMNS.map(c=>c.header);
+    const todayStr = todayISO();
     const exampleRow = CR_IMPORT_COLUMNS.map(c=>{
-      if(c.key === "status") return (CR_LISTS.status && CR_LISTS.status[0]) || "New";
-      if(c.key === "sub_status") return (CR_LISTS.subStatus && CR_LISTS.subStatus[0]) || "";
-      if(c.key === "category") return CR_LISTS.category[0];
-      if(c.key === "priority") return CR_LISTS.priority[0];
-      if(c.key === "approved_status") return "";
-      if(c.type === "date") return "";
+      if(c.key === "old_name") return "CR_Old_Folder_Name_Demo";
+      if(c.key === "rename_folder") return "[CR_0xx] Tên mô tả ngắn gọn cho CR";
       if(c.key === "app") return "DMS";
       if(c.key === "requester") return "SFA Team";
-      if(c.key === "rename_folder") return "[CR_0xx] Tên mô tả ngắn gọn cho CR";
+      if(c.key === "department") return "Sales";
+      if(c.key === "request_date") return todayStr;
+      if(c.key === "category") return CR_LISTS.category[0];
+      if(c.key === "priority") return CR_LISTS.priority[0];
+      if(c.key === "description_brd") return "Mô tả yêu cầu nghiệp vụ (BRD) - ví dụ: Bổ sung báo cáo doanh số theo tuần";
+      if(c.key === "description_fsd") return "Mô tả đặc tả chức năng (FSD) - ví dụ: Thêm màn hình filter theo tuần ở module Report";
+      if(c.key === "status") return (CR_LISTS.status && CR_LISTS.status[0]) || "New";
+      if(c.key === "sub_status") return (CR_LISTS.subStatus && CR_LISTS.subStatus[0]) || "";
+      if(c.key === "brd_link") return "https://example.com/brd/CR_0xx";
+      if(c.key === "fsd_link") return "https://example.com/fsd/CR_0xx";
+      if(c.key === "quotation_link") return "https://example.com/quotation/CR_0xx";
+      if(c.key === "owner") return "Nguyễn Văn A";
+      if(c.key === "approved_date") return todayStr;
+      if(c.key === "approved_status") return (CR_LISTS.approval && CR_LISTS.approval[0]) || "";
+      if(c.key === "deadline") return todayStr;
+      if(c.key === "loop_mail_header") return "[CR_0xx] Tiêu đề email trao đổi";
+      if(c.key === "progress") return "Đang phân tích yêu cầu";
+      if(c.key === "note") return "Ghi chú thêm nếu có";
+      if(c.type === "date") return todayStr;
       return "";
     });
 
@@ -12712,6 +12727,27 @@ async function downloadUatTemplate(){
     const ws = wb.addWorksheet(UAT_IMPORT_SHEET_NAME);
     ws.columns = UAT_IMPORT_COLUMNS.map(c=>({ width: Math.max(18, Math.min(34, c.header.length + 2)) }));
     ws.addRow(UAT_IMPORT_COLUMNS.map(c=>c.header));
+    const uatToday = todayISO();
+    const uatExampleRow = UAT_IMPORT_COLUMNS.map(c=>{
+      if(c.key === "cr_id") return crIds[0] || "CR_001";
+      if(c.key === "test_case_id") return "";
+      if(c.key === "scenario") return "Kiểm tra tạo mới đơn hàng thành công với dữ liệu hợp lệ";
+      if(c.key === "description") return "Mô tả chi tiết kịch bản test - ví dụ: User nhập đầy đủ thông tin đơn hàng và bấm Lưu";
+      if(c.key === "expectation") return "Hệ thống lưu đơn hàng thành công và hiển thị thông báo xác nhận";
+      if(c.key === "step_by_step") return "1. Đăng nhập hệ thống\n2. Vào màn hình Tạo đơn hàng\n3. Nhập dữ liệu hợp lệ\n4. Bấm Lưu";
+      if(c.key === "data_test") return "Mã KH: KH001, SL: 10";
+      if(c.key === "actual_result") return "Đơn hàng được tạo đúng như kỳ vọng";
+      if(c.key === "pass_fail") return (results && results[0]) || "Not Started";
+      if(c.key === "owner_scenario") return "Nguyễn Văn A";
+      if(c.key === "testor") return "Trần Thị B";
+      if(c.key === "testing_date") return uatToday;
+      if(c.key === "owner_confirm") return "Nguyễn Văn A";
+      if(c.key === "confirmed_date") return uatToday;
+      if(c.key === "note") return "Ghi chú thêm nếu có";
+      if(c.type === "date") return uatToday;
+      return "";
+    });
+    ws.addRow(uatExampleRow);
     ws.getRow(1).font = { bold:true };
     ws.views = [{ state:"frozen", ySplit:1 }];
 
@@ -19705,6 +19741,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
           C("Approved Date (yyyy-mm-dd)","approved_date",{type:"date"}),C("Approved Status","approved_status"),C("Deadline (yyyy-mm-dd)","deadline",{type:"date"}),
           C("Loop Mail Header","loop_mail_header"),C("Progress","progress"),C("Note","note")],
         preview:[["CR ID",d=>d.cr_id+(d.__auto?" (tự cấp)":"")],["Tiêu đề",d=>d.rename_folder||d.old_name||d.app],["Priority",d=>d.priority],["Status",d=>d.status]],
+        example:{old_name:"CR_Old_Folder_Name_Demo", rename_folder:"[CR_0xx] Tên mô tả ngắn gọn cho CR", app:"EB2B", requester:"SFA Team", department:"Sales",
+          request_date:todayISO(), category:lists.category[0]||"", priority:lists.priority[0]||"",
+          description_brd:"Mô tả yêu cầu nghiệp vụ (BRD) - ví dụ: Bổ sung báo cáo doanh số theo tuần",
+          description_fsd:"Mô tả đặc tả chức năng (FSD) - ví dụ: Thêm màn hình filter theo tuần ở module Report",
+          status:lists.status[0]||"", sub_status:lists.sub_status[0]||"", brd_link:"https://example.com/brd/CR_0xx", fsd_link:"https://example.com/fsd/CR_0xx",
+          quotation_link:"https://example.com/quotation/CR_0xx", owner:"Nguyễn Văn A", approved_date:todayISO(), approved_status:"Pending", deadline:todayISO(),
+          loop_mail_header:"[CR_0xx] Tiêu đề email trao đổi", progress:"Đang phân tích yêu cầu", note:"Ghi chú thêm nếu có"},
         extra(rows,errs){
           const used = new Set(EB2B.rows.cr.map(r=>String(r.cr_id||"").toLowerCase()));
           const nums = new Set(EB2B.rows.cr.map(r=>/^CR_(\d+)$/i.exec(r.cr_id||"")?.[1]).filter(Boolean).map(Number));
@@ -19723,6 +19766,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         columns:[C("Meeting Date* (yyyy-mm-dd)","meeting_date",{type:"date",required:true}),C("Vendor*","vendor",{required:true}),C("Meeting Title","meeting_title"),C("Participants","participants"),C("Overall Summary","overall_summary"),
           C("CR ID","cr_id"),C("Description","description"),C("Priority","priority"),C("Status","status"),C("Sub-Status","sub_status"),C("BRD","brd"),C("FSD","fsd"),C("ETA","eta"),C("Loop Mail Header","loop_mail_header"),C("Progress","progress"),C("Note","note")],
         preview:[["Meeting Date",d=>d.meeting_date],["Vendor",d=>d.vendor],["CR ID",d=>d.cr_id],["Status",d=>d.status]],
+        example:{meeting_date:todayISO(), vendor:"EB2B Vendor Co.", meeting_title:"Weekly Sync CR & Issues", participants:"Nguyễn Văn A, Trần Thị B",
+          overall_summary:"Tóm tắt nội dung cuộc họp tuần", cr_id:"CR_001", description:"Mô tả CR/action item", priority:"High", status:"In Progress",
+          sub_status:"", brd:"", fsd:"", eta:todayISO(), loop_mail_header:"[CR_001] Tiêu đề email trao đổi", progress:"Đang triển khai", note:"Ghi chú thêm nếu có"},
         extra(){},
         buildPayload(list){
           const g = new Map(), n = v => (v===""||v==null) ? null : v;
@@ -19745,6 +19791,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         C("Step by Step","step_by_step"),C("Data test","data_test"),C("Actual Result","actual_result"),C("Pass/Fail","pass_fail"),C("Owner Scenario","owner_scenario"),C("Testor","testor"),
         C("Testing Date (yyyy-mm-dd)","testing_date",{type:"date"}),C("Owner Confirm","owner_confirm"),C("Confirmed Date (yyyy-mm-dd)","confirmed_date",{type:"date"}),C("Note","note")],
       preview:[["CR ID",d=>d.cr_id],["Test Case ID",d=>d.test_case_id+(d.__auto?" (tự cấp)":"")],["Scenario",d=>d.scenario],["Pass/Fail",d=>d.pass_fail||"Not Started"]],
+      example:{cr_id:crIds[0]||"CR_001", test_case_id:"", scenario:"Kiểm tra tạo mới đơn hàng thành công với dữ liệu hợp lệ",
+        description:"Mô tả chi tiết kịch bản test - ví dụ: User nhập đầy đủ thông tin đơn hàng và bấm Lưu",
+        expectation:"Hệ thống lưu đơn hàng thành công và hiển thị thông báo xác nhận",
+        step_by_step:"1. Đăng nhập hệ thống\n2. Vào màn hình Tạo đơn hàng\n3. Nhập dữ liệu hợp lệ\n4. Bấm Lưu",
+        data_test:"Mã KH: KH001, SL: 10", actual_result:"Đơn hàng được tạo đúng như kỳ vọng", pass_fail:results[0]||"Not Started",
+        owner_scenario:"Nguyễn Văn A", testor:"Trần Thị B", testing_date:todayISO(), owner_confirm:"Nguyễn Văn A", confirmed_date:todayISO(), note:"Ghi chú thêm nếu có"},
       finish(p){ p.pass_fail = p.pass_fail || "Not Started"; },
       extra(rows,errs){
         const crSet = new Set(crIds.map(String)), used = new Set(EB2B.rows.uat.map(t=>String(t.test_case_id))), suf = {};
@@ -19779,6 +19831,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const ws = wb.addWorksheet(cfg.sheet);
       ws.columns = cfg.columns.map(c=>({width:Math.max(18,Math.min(34,c.header.length+2))}));
       ws.addRow(cfg.columns.map(c=>c.header)); ws.getRow(1).font = {bold:true}; ws.views = [{state:"frozen",ySplit:1}];
+      if(cfg.example) ws.addRow(cfg.columns.map(c=> cfg.example[c.key] ?? ""));
       const letter = n=>{ let t=""; while(n>0){ const r=(n-1)%26; t=String.fromCharCode(65+r)+t; n=Math.floor((n-1)/26); } return t; };
       keys.forEach((k,ki)=>{
         const L = letter(cfg.columns.findIndex(c=>c.key===k)+1), f = `'${EB2B_IMP_LISTS}'!$${letter(ki+1)}$2:$${letter(ki+1)}$${cfg.lists[k].length+1}`;
