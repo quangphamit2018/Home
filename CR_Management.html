@@ -7019,6 +7019,11 @@ window.CR_LISTS = {
    0. STATE
 --------------------------------------------------------------------------- */
 const VIEW_STORAGE_KEY = "crControlCurrentView";
+/* Ghi nhớ workspace đang mở (DMS hay e-B2B) và tab e-B2B cuối cùng, để sau khi
+   F5 / Refresh người dùng quay lại đúng chỗ đang làm việc thay vì bị đưa về
+   tab DMS đã lưu trước đó. */
+const WORKSPACE_STORAGE_KEY = "crControlWorkspace";
+const EB2B_TAB_STORAGE_KEY = "crControlEb2bTab";
 const VALID_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom", "admin", "recycle"]);
 const DMS_NAV_STORAGE_KEY = "crControlDmsNavOpen";
 const DMS_VIEWS = new Set(["crlog", "uat", "release", "brd", "weekly_mom"]);
@@ -8914,6 +8919,14 @@ function initShell(){
   // Khôi phục đúng tab cuối cùng sau F5/refresh.
   // Chỉ gọi sau khi các handler và view đã sẵn sàng.
   setView(STATE.currentView);
+  // Nếu phiên trước đang ở workspace e-B2B thì mở lại đúng tab e-B2B đó
+  // (setView() ở trên chỉ khôi phục được các tab của DMS).
+  try{
+    if(localStorage.getItem(WORKSPACE_STORAGE_KEY) === "eb2b" &&
+       typeof window.__eb2bRestoreSavedTab === "function"){
+      window.__eb2bRestoreSavedTab(0);
+    }
+  }catch(_){}
 }
 
 /* ---------------------------------------------------------------------------
@@ -9475,6 +9488,7 @@ function setView(view){
   const prevView = STATE.currentView;
   STATE.currentView = view;
   try{ localStorage.setItem(VIEW_STORAGE_KEY, view); }catch(_){}
+  try{ localStorage.setItem(WORKSPACE_STORAGE_KEY, "dms"); }catch(_){}
   // Was e-B2B the active workspace right before this call? Captured before
   // __eb2bLeave() clears the "eb2b-active" class, so we can tell a real
   // cross-workspace switch (e-B2B -> DMS) apart from a plain DMS tab click.
@@ -18701,6 +18715,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     eb2bCloseOverlays();
     if(typeof closeMobileNav === "function") closeMobileNav();
     EB2B.activeTab = tab;
+    // Lưu lại workspace + tab đang mở để F5 / Refresh khôi phục đúng vị trí.
+    try{
+      localStorage.setItem("crControlWorkspace", "eb2b");
+      localStorage.setItem("crControlEb2bTab", tab);
+    }catch(_){}
     document.body.classList.add("eb2b-active");
     document.body.classList.toggle("eb2b-cr-active", tab === "cr");
     ["uat","release","brd","weekly"].forEach(name=>document.body.classList.toggle(`eb2b-${name}-active`, tab === (name === "weekly" ? "weekly_mom" : name)));
@@ -18738,6 +18757,28 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   // Exposed so the DMS-side setView() can reset e-B2B from ANY entry point
   // (sidebar click, dashboard tile, global search, programmatic navigation).
   window.__eb2bLeave = eb2bHide;
+
+  /* Khôi phục tab e-B2B sau F5 / Refresh.
+     Được DMS (initShell) gọi ngay sau setView(): nếu lần trước người dùng đang
+     ở e-B2B thì mở lại đúng tab đó. Nếu shell e-B2B chưa dựng xong (script
+     chạy trước DOMContentLoaded) thì thử lại vài lần rồi bỏ qua. */
+  const EB2B_RESTORABLE_TABS = new Set(["dashboard","cr","uat","release","brd","weekly_mom"]);
+  window.__eb2bRestoreSavedTab = function(attempt){
+    let ws = null, tab = null;
+    try{
+      ws = localStorage.getItem("crControlWorkspace");
+      tab = localStorage.getItem("crControlEb2bTab");
+    }catch(_){ return false; }
+    if(ws !== "eb2b") return false;
+    if(!EB2B_RESTORABLE_TABS.has(tab)) tab = "dashboard";
+    if(!EB2B.ready && !eb2bBuildShell()){
+      const n = Number(attempt || 0);
+      if(n < 20) window.setTimeout(()=>window.__eb2bRestoreSavedTab(n + 1), 150);
+      return false;
+    }
+    eb2bShow(tab);
+    return true;
+  };
 
   function eb2bOptions(values, selected, empty="— chọn —"){
     const list = Array.from(new Set([selected, ...(values || [])].filter(Boolean)));
