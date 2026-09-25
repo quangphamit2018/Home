@@ -2234,6 +2234,31 @@ body.mobile-nav-open .mobile-nav-toggle:hover{
 }
 .dash-section-head h3 .total{ font-size: var(--text-caption-size); color: var(--text-muted); font-weight:500; }
 .dash-section-hint{ font-size:11.5px; color: var(--text-faint); }
+.dashboard-project-card{
+  display:flex; align-items:center; gap:14px; width:100%; padding:16px 18px; border:1px solid #dbe7ec;
+  border-radius:12px; background:linear-gradient(110deg,#fff 0%,#f4f9fc 100%); color:#16344e;
+  text-align:left; font:inherit; cursor:pointer; transition:border-color .18s,box-shadow .18s,transform .18s;
+}
+.dashboard-project-card:hover{ border-color:#2b7fd6; box-shadow:0 8px 22px rgba(28,91,142,.12); transform:translateY(-1px); }
+.dashboard-project-card:focus-visible{ outline:2px solid #2b7fd6; outline-offset:2px; }
+.dash-project-mark{ display:grid; place-items:center; flex:none; width:42px; height:42px; border-radius:12px; background:#e8f2ff; color:#2b7fd6; }
+.dash-project-mark svg{ width:20px; height:20px; }
+.dash-project-copy{ display:flex; flex:1; min-width:180px; flex-direction:column; gap:3px; }
+.dash-project-eyebrow{ color:#2b7fd6; font-size:9.5px; font-weight:800; letter-spacing:.1em; }
+.dash-project-copy strong{ color:#16344e; font-size:14px; font-weight:800; }
+.dash-project-copy small{ color:#647b8d; font-size:11.5px; line-height:1.4; }
+.dash-project-metrics{ display:flex; align-items:center; gap:22px; margin-left:auto; }
+.dash-project-metric{ display:flex; flex-direction:column; gap:2px; min-width:44px; }
+.dash-project-metric b{ color:#16344e; font-size:16px; line-height:1; font-variant-numeric:tabular-nums; }
+.dash-project-metric small{ color:#718697; font-size:10px; }
+.dash-project-cta{ display:flex; align-items:center; gap:6px; margin-left:10px; color:#2474be; font-size:11.5px; font-weight:800; white-space:nowrap; }
+.dash-project-cta svg{ width:14px; height:14px; }
+@media(max-width:700px){
+  .dashboard-project-card{ flex-wrap:wrap; gap:12px; padding:14px; }
+  .dash-project-copy{ min-width:calc(100% - 60px); }
+  .dash-project-metrics{ order:3; flex:1; margin-left:54px; }
+  .dash-project-cta{ order:2; margin-left:auto; }
+}
 
 .stat-tile-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:12px; }
 .stat-tile{
@@ -6278,6 +6303,27 @@ lucide/dist/esm/lucide.mjs:
     <!-- ============ DASHBOARD VIEW ============ -->
     <section class="view" id="view-dashboard">
       <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="panel panel-pad dash-section" id="dashProjectsSection">
+        <div class="dash-section-head">
+          <h3>Dự án</h3>
+          <span class="dash-section-hint">Mở dashboard của workspace e-B2B</span>
+        </div>
+        <button type="button" class="dashboard-project-card" data-open-eb2b-dashboard aria-label="Mở dashboard workspace e-B2B">
+          <span class="dash-project-mark"><mi-icon name="layout-grid" stroke-width="2"></mi-icon></span>
+          <span class="dash-project-copy">
+            <span class="dash-project-eyebrow">WORKSPACE</span>
+            <strong>Quản lý e-B2B</strong>
+            <small>Change Request, UAT Test Case và Release / PRD</small>
+          </span>
+          <span class="dash-project-metrics" aria-label="Số liệu e-B2B">
+            <span class="dash-project-metric"><b data-dash-eb2b-count="cr">—</b><small>CR</small></span>
+            <span class="dash-project-metric"><b data-dash-eb2b-count="uat">—</b><small>Test Case</small></span>
+            <span class="dash-project-metric"><b data-dash-eb2b-count="release">—</b><small>Release</small></span>
+          </span>
+          <span class="dash-project-cta">Mở Dashboard <mi-icon name="arrow-up-right" stroke-width="2.2"></mi-icon></span>
+        </button>
+      </div>
 
       <div class="panel panel-pad dash-section" id="dashStatusSection">
         <div class="dash-section-head">
@@ -18827,6 +18873,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.loading = false;
     EB2B.ready = true;
     eb2bUpdateNavCounts();
+    eb2bUpdateDashboardProjectCard();
     if(opts && opts.soft){
       // Đồng bộ nền (sau đăng nhập / nối lại mạng): vẽ lại có giữ focus, cuộn, dropdown đang mở.
       Object.keys(EB2B_TABLES).forEach(k=>EB2B.rtDirty.add(k));
@@ -18843,6 +18890,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     Object.entries(pairs).forEach(([key,rowKey])=>{
       const n = $e("#eb2bNavCount" + key);
       if(n) n.textContent = EB2B.rows[rowKey].length || "";
+    });
+  }
+
+  function eb2bUpdateDashboardProjectCard(){
+    const metrics = {cr:EB2B.rows.cr.length, uat:EB2B.rows.uat.length, release:EB2B.rows.release.length};
+    Object.entries(metrics).forEach(([key,value])=>{
+      const node = $e(`[data-dash-eb2b-count="${key}"]`);
+      if(node) node.textContent = EB2B.ready ? String(value) : "—";
     });
   }
 
@@ -20689,7 +20744,10 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       const orderInput=key==="statuses" ? "" : `<input type="number" min="0" step="1" value="0" style="width:86px;" aria-label="Thứ tự ${eEsc(def.label)}" data-eb2b-config-order-input="${key}">`;
       const rowHtml=item=>{
         const off=item.is_active===false;
-        const actions=`<td class="cell-actions"><div class="row-actions" style="opacity:1;"><button class="icon-btn" type="button" title="Chỉnh sửa" data-eb2b-config-edit="${key}" data-eb2b-id="${eEsc(item.id)}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn ${off?"":"danger"}" type="button" title="${off?"Hiện lại":"Ẩn"}" data-eb2b-config-delete="${key}" data-eb2b-id="${eEsc(item.id)}" data-eb2b-active="${off?1:0}"><mi-icon name="${off?"eye":"eye-off"}" stroke-width="2"></mi-icon></button></div></td>`;
+        const toggleIcon=off
+          ? `<mi-icon name="eye" stroke-width="2"></mi-icon>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"></path><path d="M16.68 16.67A10.94 10.94 0 0 1 12 17.5c-5 0-8.73-3.11-10.5-7.5a11.77 11.77 0 0 1 5.17-5.95"></path><path d="M20.94 12a11.77 11.77 0 0 0-3.67-5.5"></path><path d="m2 2 20 20"></path></svg>`;
+        const actions=`<td class="cell-actions"><div class="row-actions" style="opacity:1;"><button class="icon-btn" type="button" title="Chỉnh sửa" data-eb2b-config-edit="${key}" data-eb2b-id="${eEsc(item.id)}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn ${off?"":"danger"}" type="button" title="${off?"Hiện lại":"Ẩn"}" data-eb2b-config-delete="${key}" data-eb2b-id="${eEsc(item.id)}" data-eb2b-active="${off?1:0}">${toggleIcon}</button></div></td>`;
         if(colored) return `<tr><td class="cell-title">${eEsc(item.name)}</td><td>${eb2bAdminColorToken(item.background_color,"#eef4fa")}</td><td>${eb2bAdminColorToken(item.text_color || item.color,def.defaultColor)}</td><td class="cell-dim">${Number(item.sort_order) || 0}</td>${actions}</tr>`;
         return `<tr><td class="cell-title">${eEsc(item.name)}</td><td class="cell-dim">${Number(item.sort_order) || 0}</td><td>${statusBadge(off)}</td>${actions}</tr>`;
       };
@@ -20734,6 +20792,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bEvents(){
     document.addEventListener("click", ev=>{
+      if(ev.target.closest("[data-open-eb2b-dashboard]")){ ev.preventDefault(); eb2bShow("dashboard"); return; }
       const tab=ev.target.closest("[data-eb2b-tab]");
       if(tab){ ev.preventDefault(); eb2bShow(tab.dataset.eb2bTab); return; }
       // DMS nav clicks are handled by setView() -> window.__eb2bLeave().
@@ -20912,6 +20971,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const dirty = new Set(EB2B.rtDirty), foreign = EB2B.rtForeign.splice(0);
     EB2B.rtDirty.clear();
     eb2bUpdateNavCounts();
+    eb2bUpdateDashboardProjectCard();
     const has = (...keys)=>keys.some(k=>dirty.has(k));
 
     // 1) Danh mục cấu hình ở Quản Trị Dữ Liệu (không vẽ đè nếu đang gõ ô "Thêm ...").
