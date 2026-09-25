@@ -9756,6 +9756,13 @@ async function refreshAll(){
   if(initialLoad) showLoadingSkeletons();
   try{
     await Promise.all([fetchStatusList(), fetchSubStatusList(), fetchEvidenceStepList(), fetchAttachCategoryList(), fetchCrList(), fetchCrDocumentStatus(), fetchTcList(), fetchRelList(), fetchBrdList(), fetchWeeklyMomList()]);
+    // Render "chốt" lại menu filter (Status/Sub-status/Priority/Category) SAU KHI toàn bộ
+    // Promise.all ở trên đã xong — không được tin vào lần renderCrMultiFilterOptions() gọi
+    // bên trong fetchSubStatusList(), vì hàm đó có thể hoàn tất TRƯỚC fetchCrList() (bảng
+    // danh mục nhỏ thường tải nhanh hơn bảng cr_log). Nếu chỉ dựa vào lần gọi đó, menu sẽ
+    // được dựng khi STATE.crList còn rỗng → mọi filter ra "Chưa có danh mục" / "Tất cả (0)"
+    // và không tự sửa lại cho tới khi có hành động khác vô tình gọi lại hàm này.
+    renderCrMultiFilterOptions();
     renderNavCounts();
     renderDashboard();
     renderCrTable();
