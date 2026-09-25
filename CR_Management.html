@@ -6930,7 +6930,7 @@ button:active mi-icon > svg{ transform:scale(.9); }
         <div class="list-panel-head">
           <div>
             <div class="list-panel-count"><b id="recycleCount">0</b> mục đã xóa</div>
-            <div class="hint">Dữ liệu bị xóa từ CR Log, Test Case, Release/PRD, BRD và Weekly MoM được lưu tại đây thay vì xóa vĩnh viễn ngay. Chỉ Quản trị viên mới thấy và thao tác được tab này.</div>
+            <div class="hint">Dữ liệu bị xóa từ CR Log, Test Case, Release/PRD, BRD và Weekly MoM — của cả DMS và e-B2B — được lưu tại đây thay vì xóa vĩnh viễn ngay. Chỉ Quản trị viên mới thấy và thao tác được tab này.</div>
           </div>
           <div class="table-toolbar">
             <div class="filter-chip"><span>Loại dữ liệu</span>
@@ -6941,6 +6941,11 @@ button:active mi-icon > svg{ transform:scale(.9); }
                 <option value="rel">Release / PRD</option>
                 <option value="brd">BRD</option>
                 <option value="weekly_mom">Weekly MoM</option>
+                <option value="eb2b_cr">CR (e-B2B)</option>
+                <option value="eb2b_uat">Test Case (e-B2B)</option>
+                <option value="eb2b_rel">Release / PRD (e-B2B)</option>
+                <option value="eb2b_brd">BRD (e-B2B)</option>
+                <option value="eb2b_weekly_mom">Weekly MoM (e-B2B)</option>
               </select>
             </div>
             <div class="chip-clear" id="clearRecycleFilters">Xóa lọc</div>
@@ -9506,15 +9511,6 @@ function setView(view, options){
   if(!VALID_VIEWS.has(view)) view = "dashboard";
   if(view === "admin" && !canViewAdminTab()) view = "dashboard";
   if(view === "recycle" && !isSuperAdmin()) view = "dashboard";
-  // Đang ở workspace e-B2B: nút "Recycle Bin" toàn cầu phải hiện rác e-B2B (eb2b_*),
-  // không phải rác DMS. eb2bShow("recycle") dựng eb2bRenderRecycle() trong #eb2bContent;
-  // bật lại pill #navRecycleBin vì eb2bShow()->clearDmsNavState() gỡ active khỏi mọi .nav-item[data-view].
-  if(view === "recycle" && document.body.classList.contains("eb2b-active") && typeof window.__eb2bShow === "function"){
-    window.__eb2bShow("recycle");
-    const nav = document.getElementById("navRecycleBin");
-    if(nav) nav.classList.add("active");
-    return;
-  }
   const prevView = STATE.currentView;
   STATE.currentView = view;
   try{ localStorage.setItem(VIEW_STORAGE_KEY, view); }catch(_){}
@@ -16609,8 +16605,14 @@ const RECYCLE_TABLES = [
   { key:"rel", table:"release_prd",  labelField:"release_id",    titleField:"release_name" },
   { key:"brd", table:"brd_records",  labelField:"brd_title",     titleField:"" },
   { key:"weekly_mom", table:"weekly_mom", labelField:"meeting_date", titleField:"vendor" },
+  // e-B2B — dùng chung Recycle Bin với DMS (một danh sách duy nhất).
+  { key:"eb2b_cr",  table:"eb2b_cr_log",       labelField:"cr_id",        titleField:"rename_folder", bucket:"eb2b-attachments" },
+  { key:"eb2b_uat", table:"eb2b_uat_testcase", labelField:"test_case_id", titleField:"scenario",       bucket:"eb2b-attachments" },
+  { key:"eb2b_rel", table:"eb2b_release_prd",  labelField:"release_id",   titleField:"release_name" },
+  { key:"eb2b_brd", table:"eb2b_brd_records",  labelField:"brd_title",    titleField:"" },
+  { key:"eb2b_weekly_mom", table:"eb2b_weekly_mom", labelField:"meeting_date", titleField:"vendor" },
 ];
-const RECYCLE_TYPE_LABEL = { cr:"Change Request", tc:"Test Case", rel:"Release / PRD", brd:"BRD", weekly_mom:"Weekly MoM" };
+const RECYCLE_TYPE_LABEL = { cr:"Change Request", tc:"Test Case", rel:"Release / PRD", brd:"BRD", weekly_mom:"Weekly MoM", eb2b_cr:"CR (e-B2B)", eb2b_uat:"Test Case (e-B2B)", eb2b_rel:"Release / PRD (e-B2B)", eb2b_brd:"BRD (e-B2B)", eb2b_weekly_mom:"Weekly MoM (e-B2B)" };
 
 async function loadAndRenderRecycleBin(){
   if(!isSuperAdmin()){ return; }
@@ -16706,6 +16708,8 @@ async function restoreRecycleItem(item){
   await loadAndRenderRecycleBin();
   await refreshAll();
   if(item.type === "brd"){ await fetchBrdList(); renderBrdList(); }
+  // e-B2B: tải lại dữ liệu e-B2B để bảng hiện dòng vừa khôi phục.
+  if(String(item.type).startsWith("eb2b_") && typeof window.__eb2bReload === "function") window.__eb2bReload();
 }
 
 async function purgeRecycleItem(item){
@@ -16717,6 +16721,18 @@ async function purgeRecycleItem(item){
     } else if(item.type === "tc"){
       const files = await fetchTcAttachments(item.id);
       if(files.length) await STATE.sb.storage.from(BUCKET).remove(files.map(f=>f.file_path));
+    } else if(item.type === "eb2b_cr" || item.type === "eb2b_uat"){
+      // e-B2B: dọn file trong bucket "eb2b-attachments" theo cr_id / testcase_id.
+      const def = RECYCLE_TABLES.find(d=> d.key === item.type);
+      const bucket = def && def.bucket;
+      if(bucket){
+        const col = item.type === "eb2b_cr" ? "cr_id" : "testcase_id";
+        const val = item.type === "eb2b_cr" ? (item.raw && item.raw.cr_id) : item.id;
+        if(val){
+          const { data } = await STATE.sb.from("eb2b_attachments").select("file_path").eq(col, val);
+          if(data && data.length) await STATE.sb.storage.from(bucket).remove(data.map(f=>f.file_path));
+        }
+      }
     }
   }catch(e){
     console.warn("Không xóa được file đính kèm trước khi xóa vĩnh viễn:", e);
