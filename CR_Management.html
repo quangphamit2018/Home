@@ -10169,7 +10169,6 @@ function exTcList(){ return (EXPORT_SRC ? EXPORT_SRC.tcList : STATE.tcList) || [
 function exRelList(){ return (EXPORT_SRC ? EXPORT_SRC.relList : STATE.relList) || []; }
 function exFetchTcAttachments(id){ return EXPORT_SRC ? EXPORT_SRC.fetchTcAttachments(id) : fetchTcAttachments(id); }
 function exSignedUrl(path){ return EXPORT_SRC ? EXPORT_SRC.getSignedUrl(path) : getSignedUrl(path); }
-window.openExportSelectionModal = (mode, src)=> openExportSelectionModal(mode, src);
 
 // 5 lựa chọn tải báo cáo — mỗi lựa chọn ứng với đúng 1 hoặc nhiều sheet Excel.
 // "all" giữ đúng hành vi mặc định trước đây (xuất đủ 4 sheet) để không đổi
