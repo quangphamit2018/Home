@@ -336,6 +336,19 @@
     .pager-gap { min-width: 22px; text-align: center; color: #c98c89; }
     .toolbar-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
+    /* ---------- License filter tabs (Central User list) ---------- */
+    .license-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: #fffdfc; }
+    .license-filter-row .lf-label { font-size: 11.5px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+    .license-filter-tabs { display: inline-flex; gap: 6px; padding: 4px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 99px; flex-wrap: wrap; }
+    .filter-tab {
+      border: 0; background: transparent; color: var(--ink-2); font-size: 12px; font-weight: 650; padding: 7px 14px;
+      border-radius: 99px; cursor: pointer; transition: .16s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .filter-tab:hover:not(.active) { background: #fff; color: var(--brand-dark); }
+    .filter-tab.active { background: var(--g-brand); color: #fff; box-shadow: 0 6px 14px rgba(183, 28, 28, .28); }
+    .filter-tab .lf-count { font-variant-numeric: tabular-nums; opacity: .85; font-weight: 700; }
+    .filter-tab.active .lf-count { opacity: 1; }
+
     /* ---------- Badges ---------- */
     .badge { display: inline-flex; align-items: center; border-radius: 99px; padding: 4px 10px; font-size: 10.5px; font-weight: 700; border: 1px solid transparent; }
     .badge-success { background: linear-gradient(135deg, #e9f9f1, #d2f1e2); color: var(--success); border-color: #b6e5cf; }
@@ -944,6 +957,10 @@
     const TABS_OK = ["dashboard", "dms", "central", "tools", "admin"], TOOL_MODES_OK = ["replace", "create", "remove", "update"];
     function loadKey(key, allowed, fallback) { try { const v = localStorage.getItem(key); return allowed.includes(v) ? v : fallback; } catch (_) { return fallback; } }
     function saveKey(key, v) { try { localStorage.setItem(key, v); } catch (_) {} }
+    // Bộ lọc theo điều kiện license ở tab Central User list. Mặc định "used" (đúng logic tính license đang dùng:
+    // TerritoryHierarchy & RoleName có giá trị, và IsActive = 1) để người xem thấy ngay danh sách account đang chiếm license.
+    const LICENSE_FILTER_KEY = "masterdata_license_filter";
+    const LICENSE_FILTERS_OK = ["used", "all", "unused"];
     const FETCH_CHUNK = 1000;   // số dòng mỗi lần gọi Supabase khi tải toàn bộ bảng
 
     const state = {
@@ -951,6 +968,7 @@
       supabase: null, session: null, profile: null, tab: loadKey(TAB_KEY, TABS_OK, "dashboard"), dataset: "dms",
       dms: [], central: [], profiles: [], logs: [], counts: { dms: 0, central: 0, pending: 0 },
       settings: { maxLicenses: DEFAULT_MAX_LICENSES }, savingLicense: false,
+      licenseFilter: loadKey(LICENSE_FILTER_KEY, LICENSE_FILTERS_OK, "used"),
       search: "", loading: false, requestSent: false
     };
     let profileChannel = null;
@@ -983,6 +1001,12 @@
     };
     const licenseIsActive = (r) => ["1", "true", "y", "yes", "active"].includes(String(r?.is_active ?? "").trim().toLowerCase());
     const usesLicense = (r) => hasValue(r?.territory_hierarchy) && hasValue(r?.role_name) && licenseIsActive(r);
+    // Áp bộ lọc license lên danh sách Central User list: "used" = đủ điều kiện tính license, "unused" = không đủ, "all" = không lọc.
+    function applyLicenseFilter(rows, mode) {
+      if (mode === "used") return rows.filter(usesLicense);
+      if (mode === "unused") return rows.filter(r => !usesLicense(r));
+      return rows;
+    }
     function licenseStats() {
       const max = Number(state.settings.maxLicenses) || 0;
       const used = state.central.filter(usesLicense).length;
@@ -1230,13 +1254,15 @@
     function getDatasetView() {
       const isDms = state.tab === "dms";
       const fields = isDms ? DMS_FIELDS : CENTRAL_FIELDS;
-      const rows = state[isDms ? "dms" : "central"];
+      const baseRows = state[isDms ? "dms" : "central"];
+      // Bộ lọc license chỉ áp dụng cho Central User list (nơi có TerritoryHierarchy/RoleName/IsActive dùng để tính license)
+      const rows = isDms ? baseRows : applyLicenseFilter(baseRows, state.licenseFilter);
       const filtered = getFilteredRows(rows, fields, state.search);
       const total = filtered.length;
       const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
       state.page = Math.min(Math.max(1, Math.floor(state.page) || 1), totalPages);
       const start = (state.page - 1) * state.pageSize;
-      return { multi: datasetMulti, isDms, fields, rows, filtered, total, totalPages, start, pageRows: filtered.slice(start, start + state.pageSize) };
+      return { multi: datasetMulti, isDms, fields, rows, baseRows, total, totalPages, start, filtered, pageRows: filtered.slice(start, start + state.pageSize) };
     }
 
     function rowBadgeText(v) {
@@ -1338,11 +1364,32 @@
       </section>`;
     }
 
+    // Hàng nút filter theo điều kiện license, chỉ hiển thị ở tab Central User list. Mặc định chọn "Đủ điều kiện license"
+    // (đúng logic: TerritoryHierarchy & RoleName có giá trị, và IsActive = 1) để thấy ngay danh sách account đang chiếm license.
+    function renderLicenseFilterTabs(v) {
+      const total = v.baseRows.length;
+      const used = v.baseRows.filter(usesLicense).length;
+      const unused = total - used;
+      const tabs = [
+        { key: "used", label: "Đủ điều kiện license", count: used },
+        { key: "unused", label: "Không đủ điều kiện", count: unused },
+        { key: "all", label: "Tất cả", count: total }
+      ];
+      return `<div class="license-filter-row">
+        <span class="lf-label">Lọc theo license:</span>
+        <div class="license-filter-tabs" role="tablist" aria-label="Lọc theo điều kiện license">
+          ${tabs.map(t => `<button type="button" class="filter-tab${state.licenseFilter === t.key ? " active" : ""}" role="tab" aria-selected="${state.licenseFilter === t.key}" data-license-filter="${t.key}">${escapeHtml(t.label)} <span class="lf-count">${nf(t.count)}</span></button>`).join("")}
+        </div>
+      </div>`;
+    }
+
     function renderDataset() {
       const v = getDatasetView();
       return `<div class="header-row"><div><div class="eyebrow">${v.isDms ? "DMS directory" : "Central directory"}</div><h2 class="page-title">${v.isDms ? "DMS Userlist" : "Central User list"}</h2><p class="page-subtitle">${v.isDms ? "Danh sách người dùng DMS theo tenant, vùng và trạng thái." : "Danh sách nhân sự Central và thông tin hoạt động."}</p></div><div class="actions">${canEdit() ? `<button class="btn btn-light" id="new-row">${ICONS.plus} Thêm bản ghi</button>` : ""}</div></div>
         ${!v.isDms ? renderLicenseSummary() : ""}
-        <section class="panel"><div class="toolbar">
+        <section class="panel">
+        ${!v.isDms ? renderLicenseFilterTabs(v) : ""}
+        <div class="toolbar">
           <div class="search${state.search ? " has-value" : ""}"><span class="search-icon">${ICONS.search}</span><input id="table-search" value="${escapeHtml(state.search)}" placeholder="Tìm theo tên, email, tenant… hoặc dán nhiều UserName" autocomplete="off" /><button type="button" class="search-clear" id="search-clear" aria-label="Xóa tìm kiếm" tabindex="-1">${ICONS.close}</button></div>
           <div class="toolbar-right">
             <span class="loading${state.loading ? "" : " hidden"}" data-loading><i class="spinner"></i><span data-loading-text>${loadingText()}</span></span>
@@ -1455,6 +1502,12 @@
       });
       $("#export-excel")?.addEventListener("click", exportExcel);
       $("#new-row")?.addEventListener("click", () => openRowModal());
+      document.querySelectorAll("[data-license-filter]").forEach(el => el.addEventListener("click", () => {
+        const mode = el.dataset.licenseFilter;
+        if (mode === state.licenseFilter) return;
+        state.licenseFilter = mode; saveKey(LICENSE_FILTER_KEY, mode); state.search = ""; state.page = 1;
+        render();
+      }));
       bindDatasetBody();
       bindToolEvents();
       bindUpdateEvents();
