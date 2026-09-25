@@ -15376,7 +15376,7 @@ function weeklyMomDateEditTemplate(record){
 
 function weeklyMomModalTemplate(record){
   const rows = weeklyMomRowsOf(record);
-  const datalist = STATE.crList.map(cr=>`<option value="${esc(String(cr.cr_id || ""))}">${esc(String(cr.title || ""))}</option>`).join("");
+  const datalist = ((window.__weeklyFromEb2b && typeof window.__eb2bCrList === "function") ? window.__eb2bCrList() : STATE.crList).map(cr=>`<option value="${esc(String(cr.cr_id || ""))}">${esc(String(cr.title || ""))}</option>`).join("");
   return `<div class="modal modal-lg brd-modal">
     <div class="modal-head">
       <div><h3>${record ? "Sửa biên bản Weekly" : "Tạo biên bản Weekly"}</h3><div class="hint">Ghi nhận thông tin buổi họp và từng CR được cập nhật.</div></div>
@@ -15489,7 +15489,7 @@ async function saveWeeklyMom(overlay, isEdit){
   const fromEb2b = !!window.__weeklyFromEb2b;
   const wTable = fromEb2b ? "eb2b_weekly_mom" : "weekly_mom";
   const existing = isEdit && STATE.editingWeeklyMomId
-    ? STATE.weeklyMomList.find(item=>String(item.id) === String(STATE.editingWeeklyMomId))
+    ? (fromEb2b ? (window.__eb2bWeeklyRecord || null) : STATE.weeklyMomList.find(item=>String(item.id) === String(STATE.editingWeeklyMomId)))
     : null;
   if(existing?.source_type === "excel"){
     const meetingDate = $("#wm_meeting_date")?.value;
@@ -15504,6 +15504,7 @@ async function saveWeeklyMom(overlay, isEdit){
       }).eq("id", existing.id);
       if(error){ toast("Cập nhật ngày họp thất bại: " + error.message, "err"); return; }
       toast("Đã cập nhật ngày họp. Nội dung Excel vẫn được giữ nguyên.", "ok");
+      if(fromEb2b){ overlay.classList.remove("show"); window.__weeklyFromEb2b = false; if(typeof window.__eb2bReload === "function") await window.__eb2bReload(); return; }
       overlay.classList.remove("show");
       await fetchWeeklyMomList();
       renderWeeklyMomList();
@@ -15525,6 +15526,7 @@ async function saveWeeklyMom(overlay, isEdit){
   if(!meetingDate || !vendor){ toast("Vui lòng nhập Ngày họp và Vendor.", "err"); return; }
   const crItems = STATE.weeklyMomRows
     .map(row=>({
+      ...(fromEb2b ? row : {}),
       cr_id: weeklyMomText(row.cr_id),
       current_update: weeklyMomText(row.current_update),
       next_action: weeklyMomText(row.next_action),
@@ -15556,8 +15558,8 @@ async function saveWeeklyMom(overlay, isEdit){
     toast(isEdit ? "Đã cập nhật biên bản Weekly." : "Đã tạo biên bản Weekly.", "ok");
     overlay.classList.remove("show");
     window.__weeklyFromEb2b = false;
-    if(fromEb2b && typeof eb2bLoad === "function"){
-      try{ await eb2bLoad(); }catch(_){}
+    if(fromEb2b && typeof window.__eb2bReload === "function"){
+      try{ await window.__eb2bReload(); }catch(_){}
     } else {
       await fetchWeeklyMomList();
       renderWeeklyMomList();
@@ -16068,7 +16070,7 @@ function renderBrdVersionRows(){
 
 function brdModalTemplate(v){
   const isEdit = !!v;
-  const crOptions = STATE.crList.map(c=>c.cr_id);
+  const crOptions = (window.__brdFromEb2b && typeof window.__eb2bCrList === "function") ? window.__eb2bCrList().map(c=>c.cr_id) : STATE.crList.map(c=>c.cr_id);
   return `
   <div class="modal modal-lg brd-modal">
     <div class="modal-head">
@@ -16523,6 +16525,22 @@ async function saveBrd(overlay, isEdit){
   const fromEb2b = !!window.__brdFromEb2b;
   let payload = buildBrdPayloadFromForm();
   if(!payload) return;
+  if(fromEb2b){
+    const btnE = $("#brdModalSave"); btnE.disabled = true; btnE.textContent = "Đang lưu...";
+    try{
+      const { error } = await eb2bSaveBrdRecord(payload, isEdit, STATE.editingBrdId);
+      if(error){ toast("Lưu BRD thất bại: " + error.message, "err"); return; }
+      toast(isEdit? "Đã cập nhật BRD" : "Đã tạo BRD mới", "ok");
+      overlay.classList.remove("show");
+      window.__brdFromEb2b = false;
+      if(typeof window.__eb2bReload === "function"){ try{ await window.__eb2bReload(); }catch(_){} }
+    }catch(err){
+      toast("Lưu BRD thất bại: " + (err && err.message ? err.message : "Lỗi không xác định"), "err");
+    }finally{
+      btnE.disabled = false; btnE.textContent = isEdit? "Lưu thay đổi" : "Tạo BRD";
+    }
+    return;
+  }
   let table = "brd_records";
   if(fromEb2b){
     table = "eb2b_brd_records";
@@ -16546,8 +16564,8 @@ async function saveBrd(overlay, isEdit){
     toast(isEdit? "Đã cập nhật BRD" : "Đã tạo BRD mới", "ok");
     overlay.classList.remove("show");
     window.__brdFromEb2b = false;
-    if(fromEb2b && typeof eb2bLoad === "function"){
-      try{ await eb2bLoad(); }catch(_){}
+    if(fromEb2b && typeof window.__eb2bReload === "function"){
+      try{ await window.__eb2bReload(); }catch(_){}
     } else {
       await fetchBrdList();
       renderBrdList();
@@ -16698,6 +16716,53 @@ async function purgeRecycleItem(item){
   if(error){ toast("Xóa vĩnh viễn thất bại: " + error.message, "err"); return; }
   toast(`Đã xóa vĩnh viễn "${item.label}"`, "ok");
   await loadAndRenderRecycleBin();
+}
+
+/* ===== e-B2B BRD bridge: dùng CHUNG form + template Word của DMS nhưng lưu vào eb2b_brd_records ===== */
+const EB2B_BRD_PACK_PREFIX = "__DMS_BRD_JSON_V1__";
+const EB2B_BRD_DMS_FIELDS = ["overview","asis","tobe_intro","tobe_bullets","success_intro","success_bullets","assumptions","reviewer_feedback","bilingual_content","bilingual_lang","version_rows","signoff_heading","signoff_name","signoff_position","signoff_date","signoff_signature"];
+function eb2bBrdIsMissingColumn(error){
+  if(!error) return false;
+  const m = String(error.message || "");
+  return error.code === "PGRST204" || error.code === "42703" || /could not find the .* column|column .* does not exist/i.test(m);
+}
+async function eb2bSaveBrdRecord(payload, isEdit, id){
+  const by = STATE.userEmail || null;
+  const exec = p => isEdit
+    ? STATE.sb.from("eb2b_brd_records").update(p).eq("id", id)
+    : STATE.sb.from("eb2b_brd_records").insert({ ...p, created_by: by });
+  if(!window.__eb2bBrdPackMode){
+    const res = await exec({ ...payload, updated_by: by });
+    if(!res.error || !eb2bBrdIsMissingColumn(res.error)) return res;
+    window.__eb2bBrdPackMode = true; // bảng e-B2B chưa có các cột mới -> lưu dạng đóng gói
+  }
+  const packed = {
+    brd_title: payload.brd_title, cr_id: payload.cr_id, system_name: payload.system_name,
+    updated_at: payload.updated_at, updated_by: by,
+    business_objective: payload.overview || null,
+    current_situation: payload.asis || null,
+    business_requirement: [payload.tobe_intro, payload.tobe_bullets].filter(Boolean).join("\n") || null,
+    acceptance_criteria: [payload.success_intro, payload.success_bullets].filter(Boolean).join("\n") || null,
+    risks: payload.assumptions || null,
+    functional_requirement: EB2B_BRD_PACK_PREFIX + JSON.stringify(Object.fromEntries(EB2B_BRD_DMS_FIELDS.map(k=>[k, payload[k] ?? null])))
+  };
+  return exec(packed);
+}
+function eb2bBrdToDmsRecord(row){
+  if(!row) return row;
+  const rec = { ...row };
+  const raw = row.functional_requirement;
+  if(typeof raw === "string" && raw.startsWith(EB2B_BRD_PACK_PREFIX)){
+    try{ Object.assign(rec, JSON.parse(raw.slice(EB2B_BRD_PACK_PREFIX.length))); }catch(_){}
+    return rec;
+  }
+  const has = v => v != null && String(v).trim() !== "";
+  if(!has(rec.overview)) rec.overview = [row.business_objective].filter(has).join("\n");
+  if(!has(rec.asis)) rec.asis = [row.current_situation].filter(has).join("\n");
+  if(!has(rec.tobe_bullets)) rec.tobe_bullets = [row.business_requirement, row.functional_requirement, row.scope_in].filter(has).join("\n");
+  if(!has(rec.success_bullets)) rec.success_bullets = [row.acceptance_criteria].filter(has).join("\n");
+  if(!has(rec.assumptions)) rec.assumptions = [row.risks, has(row.scope_out) ? "Out of scope: " + row.scope_out : "", row.non_functional_requirement].filter(has).join("\n");
+  return rec;
 }
 
 function brdLinesToArray(text){
@@ -18875,6 +18940,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   // Exposed so the DMS-side setView() can reset e-B2B from ANY entry point
   // (sidebar click, dashboard tile, global search, programmatic navigation).
   window.__eb2bLeave = eb2bHide;
+  window.__eb2bReload = ()=>eb2bLoad();
+  window.__eb2bCrList = ()=>(EB2B.rows.cr || []).filter(r=>r.cr_id).map(r=>({ cr_id:r.cr_id, title:eb2bCrTitle(r) }));
 
   /* Khôi phục tab e-B2B sau F5 / Refresh.
      Được DMS (initShell) gọi ngay sau setView(): nếu lần trước người dùng đang
@@ -20284,7 +20351,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bRenderBrd(){
     const c=$e("#eb2bContent"), rows=EB2B.rows.brd;
-    c.innerHTML=`<div class="brd-workspace"><div class="brd-toolbar"><div class="brd-toolbar-copy"><div class="brd-toolbar-icon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div><div><div class="brd-toolbar-title">Danh sách Business Requirement Document</div><div class="brd-toolbar-note">Quản lý tài liệu yêu cầu nghiệp vụ và xuất file Word theo mẫu chuẩn</div></div></div><div class="brd-count"><b>${rows.length}</b> BRD đã tạo</div></div><div class="brd-grid">${rows.length?rows.map(v=>`<article class="brd-card" data-eb2b-brd="${eEsc(v.id)}"><div class="brd-card-head"><div class="brd-card-docicon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div><div class="brd-card-copy"><div class="brd-card-title">${eEsc(v.brd_title||"(Chưa đặt tên)")}</div><div class="brd-card-sub">Hệ thống: ${eEsc(v.system_name||"—")}</div></div></div><div class="brd-card-meta">${v.cr_id?`<span><b>CR</b> ${eEsc(v.cr_id)}</span>`:""}<span><b>Phiên bản</b> ${Array.isArray(v.version_rows)?v.version_rows.length:(v.version||"—")}</span><span><b>Cập nhật</b> ${eEsc(v.updated_at||"—")}</span></div><div class="brd-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-brd-act="edit">Sửa</button><button class="btn btn-ghost btn-sm brd-delete-btn" data-eb2b-brd-act="del">Xóa</button></div></article>`).join(""):`<div class="brd-empty"><div class="brd-empty-icon"><mi-icon name="file-plus" stroke-width="2"></mi-icon></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`}</div></div>`;
+    c.innerHTML=`<div class="brd-workspace"><div class="brd-toolbar"><div class="brd-toolbar-copy"><div class="brd-toolbar-icon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div><div><div class="brd-toolbar-title">Danh sách Business Requirement Document</div><div class="brd-toolbar-note">Quản lý tài liệu yêu cầu nghiệp vụ và xuất file Word theo mẫu chuẩn</div></div></div><div class="brd-count"><b>${rows.length}</b> BRD đã tạo</div></div><div class="brd-grid">${rows.length?rows.map(v=>`<article class="brd-card" data-eb2b-brd="${eEsc(v.id)}"><div class="brd-card-head"><div class="brd-card-docicon"><mi-icon name="file-text" stroke-width="2"></mi-icon></div><div class="brd-card-copy"><div class="brd-card-title">${eEsc(v.brd_title||"(Chưa đặt tên)")}</div><div class="brd-card-sub">Hệ thống: ${eEsc(v.system_name||"—")}</div></div></div><div class="brd-card-meta">${v.cr_id?`<span><b>CR</b> ${eEsc(v.cr_id)}</span>`:""}<span><b>Phiên bản</b> ${(eb2bBrdToDmsRecord(v).version_rows||[]).length||0}</span><span><b>Cập nhật</b> ${eEsc(v.updated_at||"—")}</span></div><div class="brd-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-brd-act="edit">Sửa</button><button class="btn btn-ghost btn-sm brd-delete-btn" data-eb2b-brd-act="del">Xóa</button></div></article>`).join(""):`<div class="brd-empty"><div class="brd-empty-icon"><mi-icon name="file-plus" stroke-width="2"></mi-icon></div><b>Chưa có BRD nào</b>Bấm “Tạo BRD mới” ở góc trên để bắt đầu.</div>`}</div></div>`;
     $e('[data-eb2b-new="brd"]',c)?.remove();
     $all(".brd-card-actions",c).forEach(actions=>actions.querySelector('[data-eb2b-brd-act="del"]')?.insertAdjacentHTML("beforebegin",`<button class="btn btn-ghost btn-sm" data-eb2b-brd-act="word">Xuất Word</button>`));
     $all("[data-eb2b-brd-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.brd.find(x=>String(x.id)===String(btn.closest("[data-eb2b-brd]")?.dataset.eb2bBrd));if(!row)return;if(btn.dataset.eb2bBrdAct==="edit")eb2bOpenModal("brd",row);else if(btn.dataset.eb2bBrdAct==="word")eb2bExportBrdWord(row);else eb2bDelete("brd",row);}));
@@ -20634,16 +20701,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   function eb2bExportBrdWord(row){
     if(!row)return;
-    const esc=v=>eEsc(v||"—").replace(/\n/g,"<br>");
-    const sections=[["Business Objective",row.business_objective],["Current Situation",row.current_situation],["Business Requirement",row.business_requirement],["Scope In",row.scope_in],["Scope Out",row.scope_out],["Functional Requirement",row.functional_requirement],["Non-functional Requirement",row.non_functional_requirement],["Acceptance Criteria",row.acceptance_criteria],["Stakeholders",row.stakeholders],["Risks",row.risks]].filter(([,value])=>value);
-    const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;color:#16344e}h1{font-size:22px}h2{font-size:14px;color:#087d82;border-bottom:1px solid #cfe1e6;padding-bottom:5px}p{font-size:11pt;line-height:1.55;white-space:normal}</style></head><body><h1>${esc(row.brd_title)}</h1><p><b>System:</b> ${esc(row.system_name)} &nbsp; <b>CR:</b> ${esc(row.cr_id)} &nbsp; <b>Version:</b> ${esc(row.version)}</p>${sections.map(([title,value])=>`<h2>${title}</h2><p>${esc(value)}</p>`).join("")}
-
-</body></html>`;
-    const blob=new Blob(["\ufeff",html],{type:"application/msword;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
-    a.href=url;a.download=`${String(row.brd_title||"EB2B_BRD").replace(/[^\w\-]+/g,"_")}.doc`;a.click();URL.revokeObjectURL(url);eToast("Đã xuất BRD EB2B.","ok");
+    promptBrdExportLang(eb2bBrdToDmsRecord(row));
   }
 
   function eb2bOpenModal(key, row, presetCrId){
+    if(key==="brd"){ window.__brdFromEb2b = true; openBrdModal(row ? eb2bBrdToDmsRecord(row) : null); return; }
+    if(key==="weekly_mom"){ window.__weeklyFromEb2b = true; window.__eb2bWeeklyRecord = row || null; openWeeklyMomModal(row || null); return; }
     EB2B.editingRec = row ? {key, id:row.id} : null;
     const overlay = $e("#eb2bModalOverlay");
     const title = row ? "Sửa " : "Tạo ";
@@ -20942,7 +21005,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(ev.target.closest("#eb2bAddTcTop")){eb2bUatOpenModal(null);return;}
       if(ev.target.closest("#eb2bAddRelTop")){eb2bOpenModal("release",null);return;}
       if(ev.target.closest("#eb2bAddBrdTop")){window.__brdFromEb2b=true;openBrdModal(null);return;}
-      if(ev.target.closest("#eb2bAddWeeklyTop")){window.__weeklyFromEb2b=true;openWeeklyMomModal(null);return;}
+      if(ev.target.closest("#eb2bAddWeeklyTop")){window.__weeklyFromEb2b=true;window.__eb2bWeeklyRecord=null;openWeeklyMomModal(null);return;}
       if(ev.target.closest("#eb2bWeeklyImportTop")){eb2bOpenImport("weekly");return;}
       if(ev.target.closest("#eb2bWeeklyDownloadTop")){eb2bDownloadWeeklyLatest();return;}
       if(ev.target.closest("#eb2bProgressReportTop")){eb2bOpenExport("report");return;}
