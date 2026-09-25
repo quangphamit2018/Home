@@ -1304,8 +1304,8 @@
       return `${bn}<div class="table-wrap data-scroll" tabindex="0" aria-label="Bảng dữ liệu, cuộn ngang và dọc để xem đủ các cột"><table class="data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${renderPager(v)}`;
     }
 
-    // Thẻ tổng hợp License DMS, chỉ hiển thị ở tab DMS Userlist. Max Licenses cấu hình ở "Quản lý dữ liệu",
-    // số đã dùng/còn lại tính theo dữ liệu Central User list (TerritoryHierarchy, RoleName, IsActive).
+    // Thẻ tổng hợp License DMS, chỉ hiển thị ở tab Central User list. Max Licenses cấu hình ở "Quản lý dữ liệu",
+    // số đã dùng/còn lại tính theo chính dữ liệu Central User list (TerritoryHierarchy, RoleName, IsActive).
     function renderLicenseSummary() {
       const { max, used, remaining, over } = licenseStats();
       const pct = max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
@@ -1330,7 +1330,7 @@
     function renderDataset() {
       const v = getDatasetView();
       return `<div class="header-row"><div><div class="eyebrow">${v.isDms ? "DMS directory" : "Central directory"}</div><h2 class="page-title">${v.isDms ? "DMS Userlist" : "Central User list"}</h2><p class="page-subtitle">${v.isDms ? "Danh sách người dùng DMS theo tenant, vùng và trạng thái." : "Danh sách nhân sự Central và thông tin hoạt động."}</p></div><div class="actions">${canEdit() ? `<button class="btn btn-light" id="new-row">${ICONS.plus} Thêm bản ghi</button>` : ""}</div></div>
-        ${v.isDms ? renderLicenseSummary() : ""}
+        ${!v.isDms ? renderLicenseSummary() : ""}
         <section class="panel"><div class="toolbar">
           <div class="search${state.search ? " has-value" : ""}"><span class="search-icon">${ICONS.search}</span><input id="table-search" value="${escapeHtml(state.search)}" placeholder="Tìm theo tên, email, tenant… hoặc dán nhiều UserName" autocomplete="off" /><button type="button" class="search-clear" id="search-clear" aria-label="Xóa tìm kiếm" tabindex="-1">${ICONS.close}</button></div>
           <div class="toolbar-right">
@@ -2008,7 +2008,7 @@
       subscribeProfileChanges(state.session.user.id);
     }
 
-    // Đồng bộ realtime Max Licenses: khi Super-admin đổi cấu hình, mọi phiên đang mở (kể cả trang DMS Userlist) cập nhật ngay.
+    // Đồng bộ realtime Max Licenses: khi Super-admin đổi cấu hình, mọi phiên đang mở (kể cả trang Central User list) cập nhật ngay.
     function subscribeSettingsChanges() {
       if (settingsChannel) { state.supabase.removeChannel(settingsChannel); settingsChannel = null; }
       settingsChannel = state.supabase
