@@ -19953,116 +19953,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const esc=v=>eEsc(v||"—").replace(/\n/g,"<br>");
     const sections=[["Business Objective",row.business_objective],["Current Situation",row.current_situation],["Business Requirement",row.business_requirement],["Scope In",row.scope_in],["Scope Out",row.scope_out],["Functional Requirement",row.functional_requirement],["Non-functional Requirement",row.non_functional_requirement],["Acceptance Criteria",row.acceptance_criteria],["Stakeholders",row.stakeholders],["Risks",row.risks]].filter(([,value])=>value);
     const html=`<html><head><meta charset="utf-8"><style>body{font-family:Arial;color:#16344e}h1{font-size:22px}h2{font-size:14px;color:#087d82;border-bottom:1px solid #cfe1e6;padding-bottom:5px}p{font-size:11pt;line-height:1.55;white-space:normal}</style></head><body><h1>${esc(row.brd_title)}</h1><p><b>System:</b> ${esc(row.system_name)} &nbsp; <b>CR:</b> ${esc(row.cr_id)} &nbsp; <b>Version:</b> ${esc(row.version)}</p>${sections.map(([title,value])=>`<h2>${title}</h2><p>${esc(value)}</p>`).join("")}
-<style id="unified-filter-system">
-/* One filter language for all DMS and e-B2B data tabs. */
-.filter-chip.unified-filter{position:relative;display:block;min-width:137px;height:38px;padding:0;border:0;background:transparent;overflow:visible}
-.filter-chip.unified-filter:hover{border-color:transparent}
-.filter-chip.unified-filter .unified-filter-native{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
-.filter-chip.unified-filter .cr-filter-trigger{width:100%;height:38px}
-.filter-chip.unified-filter.is-open .cr-filter-trigger{border-color:#43b8b8;background:#f4fbfb;box-shadow:0 0 0 3px rgba(22,153,154,.10)}
-.filter-chip.unified-filter.is-open .cr-filter-chevron{transform:rotate(180deg)}
-.filter-chip.unified-filter .cr-filter-menu{display:none;min-width:220px;width:max-content;max-width:300px;padding:7px}
-.filter-chip.unified-filter.is-open .cr-filter-menu{display:block}
-.unified-filter-option{display:flex;width:100%;min-height:34px;align-items:center;gap:9px;padding:7px 9px;border:0;border-radius:6px;background:transparent;color:#315267;font:650 12px/1.25 var(--font-body);text-align:left;cursor:pointer}
-.unified-filter-option:hover{background:#f0f8f8}.unified-filter-option.is-selected{background:#e8f7f6;color:#087d82;font-weight:800}
-.unified-filter-option-mark{display:grid;width:16px;height:16px;place-items:center;border:1px solid #b9ccd3;border-radius:4px;color:transparent;font-size:11px}
-.unified-filter-option.is-selected .unified-filter-option-mark{border-color:#16999a;background:#16999a;color:#fff}
-.tb-dropdown.open>.tb-menu,[data-eb2b-cr-more-root].open>[data-eb2b-cr-more-menu]{display:block}
-#eb2bViewRoot .eb2b-cr-view-tools{display:contents}
-#eb2bViewRoot .table-tool-btn{min-height:34px;padding:7px 10px;border:1px solid #d5e2e7;border-radius:7px;background:#fff;color:#315267;font-size:12px;font-weight:750}
-@media(max-width:700px){.filter-chip.unified-filter{flex:1 1 140px}.filter-chip.unified-filter .cr-filter-menu{position:fixed;top:115px;left:12px;right:12px;width:auto;max-width:none;max-height:52vh;overflow:auto}}
-</style>
-<script id="unified-filter-runtime">
-(()=>{
-  const glyphs={"CR ID":"CR","Kết quả":"KQ","Trạng thái":"S","Vai trò":"VT","Loại dữ liệu":"LD"};
-  const closeAll=except=>document.querySelectorAll('.filter-chip.unified-filter.is-open').forEach(el=>{if(el!==except){el.classList.remove('is-open');el.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}});
-  function enhance(chip){
-    if(!chip||chip.dataset.unifiedFilter==='true')return;
-    const labelEl=chip.querySelector(':scope > span'),select=chip.querySelector(':scope > select');if(!labelEl||!select)return;
-    chip.dataset.unifiedFilter='true';chip.classList.add('unified-filter');select.classList.add('unified-filter-native');
-    const label=(labelEl.textContent||'Bộ lọc').trim();labelEl.hidden=true;
-    const trigger=document.createElement('button');trigger.type='button';trigger.className='cr-filter-trigger';trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
-    trigger.innerHTML=`<span class="cr-filter-glyph">${glyphs[label]||label.slice(0,2).toUpperCase()}</span><span class="cr-filter-copy"><span class="cr-filter-label">${label}</span><strong class="cr-filter-value"></strong></span><span class="cr-filter-chevron">⌄</span>`;
-    const menu=document.createElement('div');menu.className='cr-filter-menu';menu.setAttribute('role','listbox');chip.insertBefore(trigger,select);chip.appendChild(menu);
-    const sync=()=>{const current=select.options[select.selectedIndex];trigger.querySelector('.cr-filter-value').textContent=current?.textContent||'Tất cả';trigger.classList.toggle('is-active',Boolean(select.value));menu.innerHTML=Array.from(select.options).map(option=>`<button type="button" class="unified-filter-option ${option.value===select.value?'is-selected':''}" role="option" aria-selected="${option.value===select.value}" data-filter-value="${encodeURIComponent(option.value)}"><span class="unified-filter-option-mark">✓</span><span>${option.textContent}</span></button>`).join('')};
-    trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!chip.classList.contains('is-open');closeAll(chip);chip.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening))});
-    menu.addEventListener('click',event=>{const option=event.target.closest('[data-filter-value]');if(!option)return;select.value=decodeURIComponent(option.dataset.filterValue||'');chip.classList.remove('is-open');trigger.setAttribute('aria-expanded','false');select.dispatchEvent(new Event('change',{bubbles:true}));sync()});
-    select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{childList:true,subtree:true});sync();
-  }
-  const scan=root=>{if(root.matches?.('.filter-chip'))enhance(root);root.querySelectorAll?.('.filter-chip').forEach(enhance)};
-  document.addEventListener('click',()=>closeAll());new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1)scan(node)}))).observe(document.documentElement,{childList:true,subtree:true});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>scan(document));else scan(document);
-})();
-</script>
-
-
-<style id="filterParityStyles">
-/* Shared CR Log filter grammar for UAT and Release / PRD in both workspaces. */
-.filter-parity-group{position:relative}
-.filter-parity-group .cr-filter-trigger{min-width:116px}
-.filter-parity-group .cr-filter-menu{width:250px}
-.filter-parity-group .cr-filter-option input{flex:0 0 auto}
-.filter-parity-group .cr-filter-option.is-selected{background:#e8f7f6;color:#173f52;font-weight:750}
-.filter-parity-group .cr-filter-option.is-selected input{accent-color:#16999a}
-.filter-parity-group .cr-filter-legacy{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
-#eb2bViewRoot .filter-parity-group .cr-filter-trigger{min-width:116px}
-@media(max-width:760px){.filter-parity-group{flex:1 1 140px}.filter-parity-group .cr-filter-trigger{width:100%}}
-</style>
-<script id="filterParityScript">
-(()=>{
-  const FILTERS={
-    filterTcCr:{label:"CR ID",glyph:"CR"},
-    filterTcResult:{label:"Kết quả",glyph:"KQ"},
-    filterRelCr:{label:"CR ID",glyph:"CR"},
-    filterRelStatus:{label:"Trạng thái",glyph:"S"},
-    eb2bRelFilterCr:{label:"CR ID",glyph:"CR"},
-    eb2bRelFilterStatus:{label:"Trạng thái",glyph:"S"}
-  };
-  const dynamicSelector='[data-eb2b-uat-filter="cr"],[data-eb2b-uat-filter="result"]';
-  const metaFor=select=>FILTERS[select.id] || (select.matches('[data-eb2b-uat-filter="cr"]')?{label:"CR ID",glyph:"CR"}:{label:"Kết quả",glyph:"KQ"});
-  const optionParts=text=>{
-    const match=String(text||"").trim().match(/^(.*?)(?:\s*\((\d+)\))?$/);
-    return {label:(match?.[1]||text||"").trim(),count:match?.[2]||""};
-  };
-  function closeOthers(except){
-    document.querySelectorAll('.filter-parity-group.is-open').forEach(group=>{
-      if(group!==except){group.classList.remove('is-open');group.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}
-    });
-  }
-  function render(group,select){
-    const meta=metaFor(select), options=Array.from(select.options), selected=select.value;
-    const chosen=options.find(option=>option.value===selected);
-    const summary=group.querySelector('.cr-filter-value');
-    if(summary) summary.textContent=selected?(optionParts(chosen?.textContent).label||selected):'Tất cả';
-    group.querySelector('.cr-filter-trigger')?.classList.toggle('is-active',Boolean(selected));
-    const menu=group.querySelector('.cr-filter-menu');
-    if(!menu)return;
-    menu.innerHTML=`<div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${meta.label}</div><span class="cr-filter-menu-hint">Chọn một giá trị</span></div><button type="button" class="cr-filter-reset">Đặt lại</button></div><div class="cr-filter-options">${options.map((option,index)=>{const part=optionParts(option.textContent);const active=option.value===selected;return `<label class="cr-filter-option ${index===0?'is-all ':''}${active?'is-selected':''}"><input type="checkbox" data-filter-parity-value="${String(option.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" ${active?'checked':''}><span class="cr-filter-option-text">${part.label}</span>${part.count?`<span class="cr-filter-count-badge">(${part.count})</span>`:''}</label>`}).join('')}</div>`;
-  }
-  function enhance(select){
-    if(!select || select.dataset.filterParity==='1')return;
-    const host=select.closest('.filter-chip');
-    if(!host)return;
-    const meta=metaFor(select);
-    select.dataset.filterParity='1';
-    host.className='cr-filter-group filter-parity-group';
-    const trigger=document.createElement('button');
-    trigger.className='cr-filter-trigger';trigger.type='button';trigger.setAttribute('aria-haspopup','true');trigger.setAttribute('aria-expanded','false');
-    trigger.innerHTML=`<span class="cr-filter-glyph">${meta.glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${meta.label}</span><strong class="cr-filter-value">Tất cả</strong></span><span class="cr-filter-chevron">⌄</span>`;
-    const menu=document.createElement('div');menu.className='cr-filter-menu';
-    host.replaceChildren(trigger,menu,select);select.classList.add('cr-filter-legacy');
-    trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!host.classList.contains('is-open');closeOthers(host);host.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening));});
-    menu.addEventListener('click',event=>{event.stopPropagation();if(event.target.closest('.cr-filter-reset')){select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));return}const input=event.target.closest('[data-filter-parity-value]');if(!input)return;select.value=input.dataset.filterParityValue||'';select.dispatchEvent(new Event('change',{bubbles:true}));host.classList.remove('is-open');trigger.setAttribute('aria-expanded','false')});
-    select.addEventListener('change',()=>render(host,select));
-    new MutationObserver(()=>render(host,select)).observe(select,{childList:true,subtree:true});
-    render(host,select);
-  }
-  function scan(root=document){Object.keys(FILTERS).forEach(id=>enhance(root.querySelector?.('#'+id)));root.querySelectorAll?.(dynamicSelector).forEach(enhance)}
-  document.addEventListener('click',()=>closeOthers());
-  const start=()=>{scan();new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1){scan(node);if(node.matches?.(dynamicSelector))enhance(node)}}))).observe(document.body,{childList:true,subtree:true})};
-  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start):start();
-})();
-</script>
 
 </body></html>`;
     const blob=new Blob(["\ufeff",html],{type:"application/msword;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
@@ -20496,6 +20386,117 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   document.addEventListener("DOMContentLoaded", eb2bStart);
+})();
+</script>
+
+<style id="unified-filter-system">
+/* One filter language for all DMS and e-B2B data tabs. */
+.filter-chip.unified-filter{position:relative;display:block;min-width:137px;height:38px;padding:0;border:0;background:transparent;overflow:visible}
+.filter-chip.unified-filter:hover{border-color:transparent}
+.filter-chip.unified-filter .unified-filter-native{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+.filter-chip.unified-filter .cr-filter-trigger{width:100%;height:38px}
+.filter-chip.unified-filter.is-open .cr-filter-trigger{border-color:#43b8b8;background:#f4fbfb;box-shadow:0 0 0 3px rgba(22,153,154,.10)}
+.filter-chip.unified-filter.is-open .cr-filter-chevron{transform:rotate(180deg)}
+.filter-chip.unified-filter .cr-filter-menu{display:none;min-width:220px;width:max-content;max-width:300px;padding:7px}
+.filter-chip.unified-filter.is-open .cr-filter-menu{display:block}
+.unified-filter-option{display:flex;width:100%;min-height:34px;align-items:center;gap:9px;padding:7px 9px;border:0;border-radius:6px;background:transparent;color:#315267;font:650 12px/1.25 var(--font-body);text-align:left;cursor:pointer}
+.unified-filter-option:hover{background:#f0f8f8}.unified-filter-option.is-selected{background:#e8f7f6;color:#087d82;font-weight:800}
+.unified-filter-option-mark{display:grid;width:16px;height:16px;place-items:center;border:1px solid #b9ccd3;border-radius:4px;color:transparent;font-size:11px}
+.unified-filter-option.is-selected .unified-filter-option-mark{border-color:#16999a;background:#16999a;color:#fff}
+.tb-dropdown.open>.tb-menu,[data-eb2b-cr-more-root].open>[data-eb2b-cr-more-menu]{display:block}
+#eb2bViewRoot .eb2b-cr-view-tools{display:contents}
+#eb2bViewRoot .table-tool-btn{min-height:34px;padding:7px 10px;border:1px solid #d5e2e7;border-radius:7px;background:#fff;color:#315267;font-size:12px;font-weight:750}
+@media(max-width:700px){.filter-chip.unified-filter{flex:1 1 140px}.filter-chip.unified-filter .cr-filter-menu{position:fixed;top:115px;left:12px;right:12px;width:auto;max-width:none;max-height:52vh;overflow:auto}}
+</style>
+<script id="unified-filter-runtime">
+(()=>{
+  const glyphs={"CR ID":"CR","Kết quả":"KQ","Trạng thái":"S","Vai trò":"VT","Loại dữ liệu":"LD"};
+  const closeAll=except=>document.querySelectorAll('.filter-chip.unified-filter.is-open').forEach(el=>{if(el!==except){el.classList.remove('is-open');el.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}});
+  function enhance(chip){
+    if(!chip||chip.dataset.unifiedFilter==='true')return;
+    const labelEl=chip.querySelector(':scope > span'),select=chip.querySelector(':scope > select');if(!labelEl||!select)return;
+    chip.dataset.unifiedFilter='true';chip.classList.add('unified-filter');select.classList.add('unified-filter-native');
+    const label=(labelEl.textContent||'Bộ lọc').trim();labelEl.hidden=true;
+    const trigger=document.createElement('button');trigger.type='button';trigger.className='cr-filter-trigger';trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
+    trigger.innerHTML=`<span class="cr-filter-glyph">${glyphs[label]||label.slice(0,2).toUpperCase()}</span><span class="cr-filter-copy"><span class="cr-filter-label">${label}</span><strong class="cr-filter-value"></strong></span><span class="cr-filter-chevron">⌄</span>`;
+    const menu=document.createElement('div');menu.className='cr-filter-menu';menu.setAttribute('role','listbox');chip.insertBefore(trigger,select);chip.appendChild(menu);
+    const sync=()=>{const current=select.options[select.selectedIndex];trigger.querySelector('.cr-filter-value').textContent=current?.textContent||'Tất cả';trigger.classList.toggle('is-active',Boolean(select.value));menu.innerHTML=Array.from(select.options).map(option=>`<button type="button" class="unified-filter-option ${option.value===select.value?'is-selected':''}" role="option" aria-selected="${option.value===select.value}" data-filter-value="${encodeURIComponent(option.value)}"><span class="unified-filter-option-mark">✓</span><span>${option.textContent}</span></button>`).join('')};
+    trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!chip.classList.contains('is-open');closeAll(chip);chip.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening))});
+    menu.addEventListener('click',event=>{const option=event.target.closest('[data-filter-value]');if(!option)return;select.value=decodeURIComponent(option.dataset.filterValue||'');chip.classList.remove('is-open');trigger.setAttribute('aria-expanded','false');select.dispatchEvent(new Event('change',{bubbles:true}));sync()});
+    select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{childList:true,subtree:true});sync();
+  }
+  const scan=root=>{if(root.matches?.('.filter-chip'))enhance(root);root.querySelectorAll?.('.filter-chip').forEach(enhance)};
+  document.addEventListener('click',()=>closeAll());new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1)scan(node)}))).observe(document.documentElement,{childList:true,subtree:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>scan(document));else scan(document);
+})();
+</script>
+
+
+<style id="filterParityStyles">
+/* Shared CR Log filter grammar for UAT and Release / PRD in both workspaces. */
+.filter-parity-group{position:relative}
+.filter-parity-group .cr-filter-trigger{min-width:116px}
+.filter-parity-group .cr-filter-menu{width:250px}
+.filter-parity-group .cr-filter-option input{flex:0 0 auto}
+.filter-parity-group .cr-filter-option.is-selected{background:#e8f7f6;color:#173f52;font-weight:750}
+.filter-parity-group .cr-filter-option.is-selected input{accent-color:#16999a}
+.filter-parity-group .cr-filter-legacy{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+#eb2bViewRoot .filter-parity-group .cr-filter-trigger{min-width:116px}
+@media(max-width:760px){.filter-parity-group{flex:1 1 140px}.filter-parity-group .cr-filter-trigger{width:100%}}
+</style>
+<script id="filterParityScript">
+(()=>{
+  const FILTERS={
+    filterTcCr:{label:"CR ID",glyph:"CR"},
+    filterTcResult:{label:"Kết quả",glyph:"KQ"},
+    filterRelCr:{label:"CR ID",glyph:"CR"},
+    filterRelStatus:{label:"Trạng thái",glyph:"S"},
+    eb2bRelFilterCr:{label:"CR ID",glyph:"CR"},
+    eb2bRelFilterStatus:{label:"Trạng thái",glyph:"S"}
+  };
+  const dynamicSelector='[data-eb2b-uat-filter="cr"],[data-eb2b-uat-filter="result"]';
+  const metaFor=select=>FILTERS[select.id] || (select.matches('[data-eb2b-uat-filter="cr"]')?{label:"CR ID",glyph:"CR"}:{label:"Kết quả",glyph:"KQ"});
+  const optionParts=text=>{
+    const match=String(text||"").trim().match(/^(.*?)(?:\s*\((\d+)\))?$/);
+    return {label:(match?.[1]||text||"").trim(),count:match?.[2]||""};
+  };
+  function closeOthers(except){
+    document.querySelectorAll('.filter-parity-group.is-open').forEach(group=>{
+      if(group!==except){group.classList.remove('is-open');group.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}
+    });
+  }
+  function render(group,select){
+    const meta=metaFor(select), options=Array.from(select.options), selected=select.value;
+    const chosen=options.find(option=>option.value===selected);
+    const summary=group.querySelector('.cr-filter-value');
+    if(summary) summary.textContent=selected?(optionParts(chosen?.textContent).label||selected):'Tất cả';
+    group.querySelector('.cr-filter-trigger')?.classList.toggle('is-active',Boolean(selected));
+    const menu=group.querySelector('.cr-filter-menu');
+    if(!menu)return;
+    menu.innerHTML=`<div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${meta.label}</div><span class="cr-filter-menu-hint">Chọn một giá trị</span></div><button type="button" class="cr-filter-reset">Đặt lại</button></div><div class="cr-filter-options">${options.map((option,index)=>{const part=optionParts(option.textContent);const active=option.value===selected;return `<label class="cr-filter-option ${index===0?'is-all ':''}${active?'is-selected':''}"><input type="checkbox" data-filter-parity-value="${String(option.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" ${active?'checked':''}><span class="cr-filter-option-text">${part.label}</span>${part.count?`<span class="cr-filter-count-badge">(${part.count})</span>`:''}</label>`}).join('')}</div>`;
+  }
+  function enhance(select){
+    if(!select || select.dataset.filterParity==='1')return;
+    const host=select.closest('.filter-chip');
+    if(!host)return;
+    const meta=metaFor(select);
+    select.dataset.filterParity='1';
+    host.className='cr-filter-group filter-parity-group';
+    const trigger=document.createElement('button');
+    trigger.className='cr-filter-trigger';trigger.type='button';trigger.setAttribute('aria-haspopup','true');trigger.setAttribute('aria-expanded','false');
+    trigger.innerHTML=`<span class="cr-filter-glyph">${meta.glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${meta.label}</span><strong class="cr-filter-value">Tất cả</strong></span><span class="cr-filter-chevron">⌄</span>`;
+    const menu=document.createElement('div');menu.className='cr-filter-menu';
+    host.replaceChildren(trigger,menu,select);select.classList.add('cr-filter-legacy');
+    trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!host.classList.contains('is-open');closeOthers(host);host.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening));});
+    menu.addEventListener('click',event=>{event.stopPropagation();if(event.target.closest('.cr-filter-reset')){select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));return}const input=event.target.closest('[data-filter-parity-value]');if(!input)return;select.value=input.dataset.filterParityValue||'';select.dispatchEvent(new Event('change',{bubbles:true}));host.classList.remove('is-open');trigger.setAttribute('aria-expanded','false')});
+    select.addEventListener('change',()=>render(host,select));
+    new MutationObserver(()=>render(host,select)).observe(select,{childList:true,subtree:true});
+    render(host,select);
+  }
+  function scan(root=document){Object.keys(FILTERS).forEach(id=>enhance(root.querySelector?.('#'+id)));root.querySelectorAll?.(dynamicSelector).forEach(enhance)}
+  document.addEventListener('click',()=>closeOthers());
+  const start=()=>{scan();new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1){scan(node);if(node.matches?.(dynamicSelector))enhance(node)}}))).observe(document.body,{childList:true,subtree:true})};
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start):start();
 })();
 </script>
 
