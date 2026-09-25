@@ -5853,6 +5853,11 @@ html{
 .admin-scope-pane[data-admin-pane="dms"]{ --pane-c:var(--scope-dms); }
 .admin-scope-pane[data-admin-pane="eb2b"]{ --pane-c:var(--scope-eb2b); }
 .admin-scope-pane #eb2bAdminConfigHost > .list-panel{ border-top:3px solid var(--scope-eb2b); }
+.eb2b-admin-name-input{ width:100%; min-width:120px; border:1px solid transparent; border-radius:7px; padding:5px 7px; font:inherit; font-size:12.5px; color:#22394e; background:transparent; }
+.eb2b-admin-name-input:hover,.eb2b-admin-name-input:focus{ border-color:#c6d6de; background:#fff; outline:none; }
+.eb2b-admin-order-input{ width:64px; border:1px solid transparent; border-radius:7px; padding:5px 7px; font:inherit; font-size:12.5px; color:#5f7690; background:transparent; }
+.eb2b-admin-order-input:hover,.eb2b-admin-order-input:focus{ border-color:#c6d6de; background:#fff; outline:none; }
+.eb2b-admin-color-input{ width:28px; height:28px; padding:2px; border:1px solid #b8c9d8; border-radius:7px; background:#fff; cursor:pointer; }
 body.role-no-manage-users .admin-scope-tab[data-admin-scope="shared"],
 body.role-no-manage-users #sharedTablesPanel,
 body.role-no-manage-users #eb2bSupabaseTablesPanel{ display:none !important; }
@@ -18877,7 +18882,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bCrColor(field,value){
     if(field==="status" || field==="sub_status"){
       const rows=field==="status"?EB2B.rows.statuses:EB2B.rows.sub_statuses;
-      return rows.find(x=>x.name===value)?.color || "#64748b";
+      const item=rows.find(x=>x.name===value);
+      return item?.text_color || item?.color || "#64748b";
     }
     // Reuse the exact same color maps as DMS (global COLOR.category / COLOR.priority)
     // so a given category/priority value always renders with the same color in
@@ -19017,6 +19023,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     trigger.setAttribute("aria-expanded","true");trigger.classList.add("is-open");eb2bActiveCrInline={trigger,menu};
     $$e("[data-eb2b-cr-value]",menu).forEach(option=>option.addEventListener("click",()=>{const value=option.dataset.eb2bCrValue;eb2bCloseCrInline();eb2bUpdateCrInline(row.id,field,value,trigger);}));
   }
+  document.addEventListener("click",e=>{
+    if(!eb2bActiveCrInline) return;
+    if(eb2bActiveCrInline.menu.contains(e.target)) return;
+    if(e.target.closest(".cr-dropdown-trigger") === eb2bActiveCrInline.trigger) return;
+    eb2bCloseCrInline();
+  });
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape" && eb2bActiveCrInline) eb2bCloseCrInline();
+  });
   const EB2B_CR_SCROLL_WIRED={};
   function eb2bWireCrHScroll(){
     const wrap=$e("#eb2bCrTableWrap"),track=$e("#eb2bCrHscrollTrack"),thumb=$e("#eb2bCrHscrollThumb");
@@ -20109,25 +20124,56 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(!name) return;
     const def = EB2B_CONFIG[key], sb=activeDb();
     const payload = {name,sort_order:((EB2B.rows[key]||[]).length+1)*10,is_active:true};
-    if(key==="statuses" || key==="sub_statuses") payload.color=def.defaultColor;
+    if(key==="statuses" || key==="sub_statuses"){
+      payload.color=def.defaultColor;
+      payload.text_color=def.defaultColor;
+      payload.background_color="#eef4fa";
+    }
     const result = await sb.from(def.table).insert(payload);
     if(result.error){ eToast("Không thêm được danh mục: "+result.error.message,"err"); return; }
     await eb2bLoad();
   }
 
+  async function eb2bUpdateConfigField(key,id,field,value){
+    const def = EB2B_CONFIG[key]; if(!def) return;
+    const payload = {[field]:value};
+    if(field==="text_color") payload.color=value; // keep legacy "color" column in sync so any other reader still works
+    const result = await activeDb().from(def.table).update(payload).eq("id",id);
+    if(result.error){ eToast("Không lưu được thay đổi: "+result.error.message,"err"); return; }
+    await eb2bLoad();
+  }
+
   function eb2bRenderAdminHost(){
     const host=$e("#eb2bAdminConfigHost"); if(!host) return;
+    const statusBadge=isOff=>`<span class="badge" style="background:${isOff?"var(--danger-dim)":"var(--success-dim)"};color:${isOff?"var(--danger)":"var(--success)"}">${isOff?"Đã ẩn":"Đang dùng"}</span>`;
+    const colorCell=(key,id,field,value,fallback)=>{
+      const hex=typeof normalizeHexColor==="function"?normalizeHexColor(value,fallback):(value||fallback);
+      return `<span class="admin-color-token"><input type="color" class="eb2b-admin-color-input" value="${eEsc(hex)}" data-eb2b-config-color="${key}" data-eb2b-config-id="${id}" data-eb2b-config-field="${field}"><span>${eEsc(hex)}</span></span>`;
+    };
     host.innerHTML=Object.entries(EB2B_CONFIG).map(([key,def])=>{
       const rows=[...(EB2B.rows[key]||[])].sort((a,b)=>(a.sort_order??0)-(b.sort_order??0));
       const on=rows.filter(r=>r.is_active!==false).length, colored=key==="statuses"||key==="sub_statuses";
+      const colgroup=colored
+        ?`<th style="width:70px;">Thứ tự</th><th>${eEsc(def.label)}</th><th style="width:150px;">Màu nền</th><th style="width:150px;">Màu chữ</th><th style="width:120px;">Trạng thái</th><th style="width:90px;"></th>`
+        :`<th style="width:70px;">Thứ tự</th><th>${eEsc(def.label)}</th><th style="width:120px;">Trạng thái</th><th style="width:90px;"></th>`;
+      const rowHtml=r=>{
+        const off=r.is_active===false;
+        const nameCell=`<td><input type="text" class="eb2b-admin-name-input" value="${eEsc(r.name)}" data-eb2b-config-name="${key}" data-eb2b-config-id="${r.id}"></td>`;
+        const orderCell=`<td class="cell-dim"><input type="number" class="eb2b-admin-order-input" value="${eEsc(r.sort_order??0)}" data-eb2b-config-order="${key}" data-eb2b-config-id="${r.id}"></td>`;
+        const actionCell=`<td><button class="btn btn-ghost btn-sm" type="button" data-eb2b-config-delete="${key}" data-eb2b-id="${r.id}" data-eb2b-active="${off?1:0}">${off?"Hiện lại":"Ẩn"}</button></td>`;
+        if(colored){
+          return `<tr>${orderCell}${nameCell}<td>${colorCell(key,r.id,"background_color",r.background_color,"#eef4fa")}</td><td>${colorCell(key,r.id,"text_color",r.text_color||r.color,def.defaultColor)}</td><td>${statusBadge(off)}</td>${actionCell}</tr>`;
+        }
+        return `<tr>${orderCell}${nameCell}<td>${statusBadge(off)}</td>${actionCell}</tr>`;
+      };
       return `<div class="list-panel" style="margin-top:16px;">
         <div class="list-panel-head">
           <div class="list-panel-count"><span class="admin-scope-tag is-eb2b">e-B2B</span><b>${on}</b> ${eEsc(def.label)} đang dùng${rows.length>on?` · ${rows.length-on} đang ẩn`:""}</div>
           <div class="status-create"><input type="text" maxlength="120" placeholder="Thêm ${eEsc(def.label)}..." data-eb2b-config-input="${key}"><button class="btn btn-primary btn-sm" type="button" data-eb2b-config-add="${key}"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>Thêm</button></div>
         </div>
         <div class="table-wrap"><table>
-          <thead><tr><th style="width:80px;">Thứ tự</th><th>${eEsc(def.label)}</th><th style="width:130px;">Trạng thái</th><th style="width:110px;"></th></tr></thead>
-          <tbody>${rows.length?rows.map(r=>{const off=r.is_active===false;return `<tr><td class="cell-dim">${eEsc(r.sort_order??"")}</td><td>${colored?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;background:${eEsc(r.color||def.defaultColor)}"></span>`:""}${eEsc(r.name)}</td><td class="cell-dim">${off?"Đang ẩn":"Đang dùng"}</td><td><button class="btn btn-ghost btn-sm" type="button" data-eb2b-config-delete="${key}" data-eb2b-id="${r.id}" data-eb2b-active="${off?1:0}">${off?"Hiện lại":"Ẩn"}</button></td></tr>`;}).join(""):`<tr><td colspan="4" class="cell-dim" style="text-align:center;padding:18px;">Chưa có danh mục.</td></tr>`}</tbody>
+          <thead><tr>${colgroup}</tr></thead>
+          <tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${colored?6:4}" class="cell-dim" style="text-align:center;padding:18px;">Chưa có danh mục.</td></tr>`}</tbody>
         </table></div>
         <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${rows.length} ${eEsc(def.label)}</span></div>
       </div>`;
@@ -20216,7 +20262,26 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(purge){eb2bPurge(purge.dataset.eb2bPurge,purge.dataset.eb2bId);return;}
     });
     document.addEventListener("input",ev=>{if(ev.target.id==="eb2bCrSearch"){EB2B.search=ev.target.value;eb2bRenderCrLog();const n=$e("#eb2bCrSearch");if(n){n.focus();n.setSelectionRange(n.value.length,n.value.length);}}});
-    document.addEventListener("change",ev=>{const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();}});
+    document.addEventListener("change",ev=>{
+      const key=ev.target.dataset?.eb2bCrFilter;if(key){EB2B.crFilters[key]=ev.target.value;eb2bRenderCrLog();return;}
+      if(ev.target.matches("[data-eb2b-cr-overdue]")){EB2B.crFilters.overdue=ev.target.checked;eb2bRenderCrLog();return;}
+      const colorInput=ev.target.closest("[data-eb2b-config-color]");
+      if(colorInput){eb2bUpdateConfigField(colorInput.dataset.eb2bConfigColor,colorInput.dataset.eb2bConfigId,colorInput.dataset.eb2bConfigField,colorInput.value);return;}
+      const nameInput=ev.target.closest("[data-eb2b-config-name]");
+      if(nameInput){
+        const value=nameInput.value.trim();
+        if(!value){eToast("Tên không được để trống","err");nameInput.focus();return;}
+        eb2bUpdateConfigField(nameInput.dataset.eb2bConfigName,nameInput.dataset.eb2bConfigId,"name",value);
+        return;
+      }
+      const orderInput=ev.target.closest("[data-eb2b-config-order]");
+      if(orderInput){
+        const value=Number(orderInput.value);
+        if(!Number.isFinite(value)){eToast("Thứ tự phải là số","err");return;}
+        eb2bUpdateConfigField(orderInput.dataset.eb2bConfigOrder,orderInput.dataset.eb2bConfigId,"sort_order",value);
+        return;
+      }
+    });
     $e("#eb2bDrawerOverlay")?.addEventListener("click",eb2bCloseCrDrawer);
     document.addEventListener("keydown", ev=>{
        if(ev.key==="Escape"){eb2bCloseModal();eb2bUatCloseModal();eb2bCloseCrDrawer();}
