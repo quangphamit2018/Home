@@ -9506,6 +9506,15 @@ function setView(view, options){
   if(!VALID_VIEWS.has(view)) view = "dashboard";
   if(view === "admin" && !canViewAdminTab()) view = "dashboard";
   if(view === "recycle" && !isSuperAdmin()) view = "dashboard";
+  // Đang ở workspace e-B2B: nút "Recycle Bin" toàn cầu phải hiện rác e-B2B (eb2b_*),
+  // không phải rác DMS. eb2bShow("recycle") dựng eb2bRenderRecycle() trong #eb2bContent;
+  // bật lại pill #navRecycleBin vì eb2bShow()->clearDmsNavState() gỡ active khỏi mọi .nav-item[data-view].
+  if(view === "recycle" && document.body.classList.contains("eb2b-active") && typeof window.__eb2bShow === "function"){
+    window.__eb2bShow("recycle");
+    const nav = document.getElementById("navRecycleBin");
+    if(nav) nav.classList.add("active");
+    return;
+  }
   const prevView = STATE.currentView;
   STATE.currentView = view;
   try{ localStorage.setItem(VIEW_STORAGE_KEY, view); }catch(_){}
@@ -18940,6 +18949,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   // Exposed so the DMS-side setView() can reset e-B2B from ANY entry point
   // (sidebar click, dashboard tile, global search, programmatic navigation).
   window.__eb2bLeave = eb2bHide;
+  window.__eb2bShow = eb2bShow;
   window.__eb2bReload = ()=>eb2bLoad();
   window.__eb2bCrList = ()=>(EB2B.rows.cr || []).filter(r=>r.cr_id).map(r=>({ cr_id:r.cr_id, title:eb2bCrTitle(r) }));
 
