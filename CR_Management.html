@@ -18291,7 +18291,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       .eb2b-config-add{display:flex;gap:6px;margin-bottom:10px}
       .eb2b-config-add input{min-width:0;flex:1}
       .eb2b-config-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line,#edf0f2);font-size:12px}
-       .eb2b-modal-overlay{position:fixed;inset:0;background:rgba(4,12,20,.68);backdrop-filter:blur(3px);z-index:1000;display:none;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity var(--duration-base,180ms) var(--ease-standard,ease)}
+       .eb2b-modal-overlay{position:fixed;inset:0;background:rgba(4,12,20,.68);backdrop-filter:blur(3px);z-index:1050;display:none;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity var(--duration-base,180ms) var(--ease-standard,ease)}
        .eb2b-modal-overlay.show{display:flex;opacity:1;pointer-events:auto}
        .eb2b-modal-overlay.full{align-items:stretch;justify-content:stretch;padding:0;left:var(--sidebar-w,220px);background:#edf5f7;transition:opacity .22s ease,left .3s ease}
        .eb2b-modal-overlay.full.show{display:flex!important;align-items:stretch;justify-content:stretch;padding:0}
@@ -19005,12 +19005,22 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     </div>`;
   }
   function eb2bCrDocumentPresent(row,type){
-    const link=type==="BRD"?row.brd_link:row.fsd_link;
-    if(link) return true;
-    return EB2B.rows.attachments.some(file=>String(file.cr_id||"")===String(row.cr_id||"")&&!file.testcase_id&&(
-      String(file.category||"").toLowerCase().includes(type.toLowerCase()) ||
-      String(file.file_name||"").toLowerCase().includes(type.toLowerCase())
-    ));
+    // Giống DMS: chỉ tính khi CR có FILE thật được đính kèm ở cấp CR.
+    // Link tham chiếu (brd_link/fsd_link) KHÔNG còn được coi là "Có file".
+    const want=String(type||"").trim().toUpperCase();
+    const marker=want==="BRD"
+      ? /(^|[^a-z0-9])brd([^a-z0-9]|$)|brd[_\-. ]?\d/i
+      : /(^|[^a-z0-9])fsd([^a-z0-9]|$)|fsd[_\-. ]?\d/i;
+    const crId=String(row?.cr_id||"");
+    if(!crId) return false;
+    return (EB2B.rows.attachments||[]).some(file=>{
+      if(file.testcase_id) return false;
+      if(String(file.cr_id||"")!==crId) return false;
+      const category=String(file.category||"").trim().toUpperCase();
+      if(category===want) return true;
+      const fileText=[file.file_name,file.file_path].filter(Boolean).join(" ");
+      return marker.test(fileText);
+    });
   }
   function eb2bCrDocumentHtml(row,type){
     const present=eb2bCrDocumentPresent(row,type);
