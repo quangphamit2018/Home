@@ -19160,6 +19160,276 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     drawer.classList.add("show");
   }
 
+  /*
+   * CR detail parity for e-B2B
+   * ---------------------------
+   * The first e-B2B drawer only showed a compact list for attachments, UAT
+   * and Release.  DMS has a proper working surface for all three tabs, so
+   * keep the e-B2B data namespace but use the same information architecture:
+   * document hub, upload/edit/download actions, workflow KPIs and clickable
+   * detail records.
+   */
+  const EB2B_ATTACHMENT_BUCKET = "eb2b-attachments";
+  const eb2bSignedUrlCache = new Map();
+
+  function eb2bCrFiles(row){
+    const crId = String(row?.cr_id || "");
+    return (EB2B.rows.attachments || []).filter(file =>
+      !file.deleted_at &&
+      String(file.cr_id || "") === crId &&
+      !file.testcase_id
+    );
+  }
+
+  function eb2bAttachmentCategories(selected){
+    const configured = (EB2B.rows.attachment_categories || [])
+      .filter(item => item.is_active !== false)
+      .map(item => item.name)
+      .filter(Boolean);
+    const fallback = (typeof CR_LISTS !== "undefined" && Array.isArray(CR_LISTS.attachCategory))
+      ? CR_LISTS.attachCategory
+      : ["BRD","FSD","Quotation","Mail","Evidence","Other"];
+    return Array.from(new Set([...(configured.length ? configured : fallback), selected || "Other"].filter(Boolean)));
+  }
+
+  function eb2bAttachmentKind(file){
+    const name = String(file?.file_name || "").toLowerCase();
+    const mime = String(file?.mime_type || file?.file_type || "").toLowerCase();
+    if(mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg)$/i.test(name)) return "image";
+    if(mime.includes("pdf") || /\.pdf$/i.test(name)) return "pdf";
+    if(mime.includes("spreadsheet") || mime.includes("excel") || /\.(xlsx?|csv)$/i.test(name)) return "xlsx";
+    if(mime.includes("word") || mime.includes("document") || /\.(docx?|rtf)$/i.test(name)) return "docx";
+    if(mime.includes("presentation") || /\.(pptx?|key)$/i.test(name)) return "ppt";
+    if(mime.includes("message") || /\.(eml|msg)$/i.test(name)) return "mail";
+    if(/\.zip$/i.test(name)) return "zip";
+    return "other";
+  }
+
+  function eb2bAttachmentIcon(kind){
+    const icons = {
+      pdf:'<mi-icon name="file-text" stroke-width="1.7"></mi-icon>',
+      docx:'<mi-icon name="file-text" stroke-width="1.7"></mi-icon>',
+      xlsx:'<mi-icon name="table-2" stroke-width="1.7"></mi-icon>',
+      ppt:'<mi-icon name="presentation" stroke-width="1.7"></mi-icon>',
+      mail:'<mi-icon name="mail" stroke-width="1.7"></mi-icon>',
+      zip:'<mi-icon name="archive" stroke-width="1.7"></mi-icon>',
+      other:'<mi-icon name="file" stroke-width="1.7"></mi-icon>'
+    };
+    return icons[kind] || icons.other;
+  }
+
+  function eb2bAttachmentSize(file){
+    return typeof fmtBytes === "function" ? fmtBytes(Number(file?.file_size) || 0) : `${Math.round((Number(file?.file_size) || 0) / 1024)} KB`;
+  }
+
+  async function eb2bGetSignedUrl(path){
+    if(!path) return "#";
+    const now = Date.now();
+    const cached = eb2bSignedUrlCache.get(path);
+    if(cached && cached.expiresAt - now > 30000) return cached.url;
+    try{
+      const result = await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).createSignedUrl(path, 3600);
+      if(result.error) throw result.error;
+      const url = result.data?.signedUrl || "#";
+      eb2bSignedUrlCache.set(path, {url, expiresAt:now + 3600 * 1000});
+      return url;
+    }catch(error){
+      console.error("Không tạo được signed URL e-B2B:", error);
+      return "#";
+    }
+  }
+
+  function eb2bFileCardHtml(file, url){
+    const kind = eb2bAttachmentKind(file);
+    const image = kind === "image"
+      ? `<img src="${eEsc(url)}" loading="lazy" alt="${eEsc(file.file_name || "Tệp đính kèm")}">`
+      : eb2bAttachmentIcon(kind);
+    const date = eDate(file.uploaded_at || file.created_at) || "—";
+    return `<div class="file-card" data-eb2b-file="${eEsc(file.id)}" data-kind="${kind}" data-url="${eEsc(url)}">
+      <span class="file-cat-tag" data-cat="${eEsc(file.category || "Other")}">${eEsc(file.category || "Other")}</span>
+      <div class="file-actions">
+        <button class="file-download" data-eb2b-file-download="${eEsc(file.id)}" data-url="${eEsc(url)}" data-name="${eEsc(file.file_name || "download")}" type="button" title="Tải xuống"><mi-icon name="download" stroke-width="2"></mi-icon></button>
+        <button class="file-edit" data-eb2b-file-edit="${eEsc(file.id)}" type="button" title="Sửa"><mi-icon name="pen-line" stroke-width="2"></mi-icon></button>
+        <button class="file-del" data-eb2b-file-delete="${eEsc(file.id)}" data-path="${eEsc(file.file_path || "")}" type="button" title="Xóa"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
+      </div>
+      <div class="file-thumb">${image}</div>
+      <div class="file-meta">
+        <div class="file-name" title="${eEsc(file.file_name || "")}">${eEsc(file.file_name || "Tệp chưa có tên")}</div>
+        <div class="file-sub">${eb2bAttachmentSize(file)} · ${eEsc(date)}</div>
+      </div>
+      ${kind !== "image" ? `<a class="file-open" href="${eEsc(url)}" target="_blank" rel="noopener"></a>` : ""}
+    </div>`;
+  }
+
+  async function eb2bRenderCrFiles(row){
+    const grid = $e("#eb2bCrFileGrid");
+    if(!grid) return;
+    const files = eb2bCrFiles(row);
+    const totalSize = files.reduce((sum,file)=>sum + (Number(file.file_size) || 0), 0);
+    const setText = (selector,value)=>{ const el=$e(selector); if(el) el.textContent=value; };
+    setText("#eb2bCrFileCount", files.length);
+    setText("#eb2bCrFileCountLabel", `${files.length} tệp`);
+    setText("#eb2bCrFileSize", files.length
+      ? (typeof fmtBytes === "function" ? fmtBytes(totalSize) : `${Math.round(totalSize / 1024)} KB`)
+      : "—");
+    if(!files.length){
+      grid.innerHTML = `<div style="grid-column:1/-1;">${typeof emptyRow === "function" ? emptyRow("Chưa có file nào được đính kèm cho CR này") : `<div class="empty-state"><p>Chưa có file nào được đính kèm cho CR này.</p></div>`}</div>`;
+      return;
+    }
+    grid.innerHTML = files.map(()=>`<div class="skeleton skeleton-thumb"></div>`).join("");
+    const urls = await Promise.all(files.map(file=>eb2bGetSignedUrl(file.file_path)));
+    if(EB2B.drawerCrId !== row.id) return;
+    grid.innerHTML = files.map((file,index)=>eb2bFileCardHtml(file,urls[index])).join("");
+    $all("[data-eb2b-file]",grid).forEach(card=>{
+      if(card.dataset.kind === "image"){
+        card.addEventListener("click",event=>{
+          if(event.target.closest(".file-actions")) return;
+          if(card.dataset.url && card.dataset.url !== "#") openLightbox(card.dataset.url);
+        });
+      }
+    });
+    $all("[data-eb2b-file-download]",grid).forEach(button=>button.addEventListener("click",event=>{
+      event.preventDefault(); event.stopPropagation();
+      downloadAttachment(button.dataset.url,button.dataset.name,button);
+    }));
+    $all("[data-eb2b-file-edit]",grid).forEach(button=>button.addEventListener("click",event=>{
+      event.stopPropagation();
+      const file=files.find(item=>String(item.id)===String(button.dataset.eb2bFileEdit));
+      if(file) eb2bOpenAttachmentEditor(file,row);
+    }));
+    $all("[data-eb2b-file-delete]",grid).forEach(button=>button.addEventListener("click",event=>{
+      event.stopPropagation();
+      const remove=()=>eb2bDeleteAttachment(button.dataset.eb2bFileDelete,button.dataset.path,row);
+      if(typeof confirmDelete === "function") confirmDelete("Xóa file này?","File sẽ bị xóa khỏi Storage e-B2B.",remove,"Xóa file");
+      else if(window.confirm("File sẽ bị xóa khỏi Storage e-B2B.")) remove();
+    }));
+  }
+
+  async function eb2bHandleCrFileUpload(row,files,category){
+    if(!files.length) return;
+    const button=$e("#eb2bCrFileUploadButton");
+    if(button){button.disabled=true;button.textContent=`Đang tải ${files.length} file...`;}
+    let ok=0,failed=0;
+    for(const file of files){
+      const safeName=file.name.replace(/[^\w.\-() ]+/g,"_");
+      const path=`${row.cr_id || "no-cr"}/CR/${category || "Other"}/${Date.now()}_${safeName}`;
+      const upload=await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).upload(path,file,{upsert:false});
+      if(upload.error){failed++;continue;}
+      const inserted=await activeDb().from(EB2B_TABLES.attachments).insert({
+        cr_id:row.cr_id || null,
+        testcase_id:null,
+        category:category || "Other",
+        file_name:file.name,
+        file_path:path,
+        mime_type:file.type || null,
+        file_size:file.size,
+        uploaded_by:eUser()
+      }).select("*").single();
+      if(inserted.error){
+        await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).remove([path]);
+        failed++;
+      }else{
+        ok++;
+        if(inserted.data) EB2B.rows.attachments.unshift(inserted.data);
+      }
+    }
+    if(button){button.disabled=false;button.textContent="Tải tài liệu lên";}
+    if(ok) eToast(`Đã tải lên ${ok} file e-B2B.`,"ok");
+    if(failed) eToast(`${failed} file tải lên thất bại.`,"err");
+    await eb2bRenderCrFiles(row);
+    eb2bRenderCrLog();
+  }
+
+  async function eb2bDeleteAttachment(id,path,row){
+    const storageResult=path ? await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).remove([path]) : {error:null};
+    if(storageResult.error){eToast("Xóa file khỏi Storage thất bại: "+storageResult.error.message,"err");return;}
+    const result=await activeDb().from(EB2B_TABLES.attachments).delete().eq("id",id);
+    if(result.error){eToast("Xóa metadata file thất bại: "+result.error.message,"err");return;}
+    EB2B.rows.attachments=EB2B.rows.attachments.filter(file=>String(file.id)!==String(id));
+    eToast("Đã xóa file e-B2B.","ok");
+    await eb2bRenderCrFiles(row);
+    eb2bRenderCrLog();
+  }
+
+  function eb2bOpenAttachmentEditor(file,row){
+    const overlay=$("#attachmentModalOverlay");
+    if(!overlay || !file) return;
+    const categories=eb2bAttachmentCategories(file.category || "Other");
+    overlay.innerHTML=`<div class="modal modal-sm attachment-editor">
+      <div class="modal-head"><div><h3>Chỉnh sửa tệp đính kèm</h3><div class="sub">${eEsc(file.file_name || "Tệp chưa có tên")}</div></div><button class="modal-close" id="eb2bAttachmentModalClose" type="button"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></div>
+      <div class="modal-body">
+        <div class="field"><label for="eb2bAttachmentFileName">Tên file hiển thị</label><input id="eb2bAttachmentFileName" type="text" value="${eEsc(file.file_name || "")}" placeholder="Ví dụ: BRD_CR_001_v2.docx"></div>
+        <div class="field"><label for="eb2bAttachmentCategory">Loại tài liệu</label><select id="eb2bAttachmentCategory">${categories.map(category=>`<option value="${eEsc(category)}" ${category===file.category?"selected":""}>${eEsc(category)}</option>`).join("")}</select></div>
+        <div class="editor-note">Đổi tên chỉ cập nhật tên hiển thị; file gốc trong Storage e-B2B vẫn được giữ nguyên.</div>
+      </div>
+      <div class="modal-foot"><button class="btn btn-ghost" id="eb2bAttachmentModalCancel" type="button">Hủy</button><button class="btn btn-primary" id="eb2bAttachmentModalSave" type="button">Lưu thay đổi</button></div>
+    </div>`;
+    overlay.classList.add("show");
+    const close=()=>{overlay.classList.remove("show");overlay.innerHTML="";};
+    $e("#eb2bAttachmentModalClose",overlay)?.addEventListener("click",close);
+    $e("#eb2bAttachmentModalCancel",overlay)?.addEventListener("click",close);
+    $e("#eb2bAttachmentModalSave",overlay)?.addEventListener("click",async()=>{
+      const name=$e("#eb2bAttachmentFileName",overlay)?.value.trim();
+      if(!name){eToast("Vui lòng nhập tên file.","err");return;}
+      const save=$e("#eb2bAttachmentModalSave",overlay); if(save){save.disabled=true;save.textContent="Đang lưu...";}
+      const payload={file_name:name,category:$e("#eb2bAttachmentCategory",overlay)?.value || file.category || "Other"};
+      const result=await activeDb().from(EB2B_TABLES.attachments).update(payload).eq("id",file.id);
+      if(result.error){if(save){save.disabled=false;save.textContent="Lưu thay đổi";}eToast("Cập nhật file thất bại: "+result.error.message,"err");return;}
+      Object.assign(file,payload); close(); eToast("Đã cập nhật thông tin file.","ok"); await eb2bRenderCrFiles(row);
+    });
+    overlay.addEventListener("click",event=>{if(event.target===overlay) close();},{once:true});
+    window.setTimeout(()=> $e("#eb2bAttachmentFileName",overlay)?.focus(),0);
+  }
+
+  /* Override the compact drawer renderer above with the DMS-equivalent
+     workflow surface.  All callbacks still write to eb2b_* tables/bucket. */
+  eb2bOpenCrDrawer = function(row){
+    if(!row) return;
+    EB2B.drawerCrId=row.id;
+    const drawer=$e("#eb2bCrDrawer"), overlay=$e("#eb2bDrawerOverlay");
+    const files=eb2bCrFiles(row);
+    const tests=EB2B.rows.uat.filter(item=>String(item.cr_id||"")===String(row.cr_id||""));
+    const rels=EB2B.rows.release.filter(item=>String(item.cr_id||"")===String(row.cr_id||""));
+    const pass=tests.filter(item=>String(item.pass_fail||"").toLowerCase()==="pass").length;
+    const fail=tests.filter(item=>String(item.pass_fail||"").toLowerCase()==="fail").length;
+    const pending=Math.max(0,tests.length-pass-fail);
+    const done=rels.filter(item=>["Released","Completed"].includes(item.status)).length;
+    const active=rels.filter(item=>item.status==="In Progress").length;
+    const planned=rels.filter(item=>item.status==="Planned").length;
+    const field=(label,value,options={})=>{
+      const empty=value===null||value===undefined||value==="";
+      return `<div class="crlog-field ${options.long?"is-long":""}"><div class="crlog-field-label">${eEsc(label)}</div><div class="crlog-field-value ${empty?"empty":""}">${empty?"Chưa có dữ liệu":eEsc(value)}</div></div>`;
+    };
+    const tcCard=test=>`<div class="workflow-record" data-eb2b-drawer-uat="${eEsc(test.id)}">
+      <div class="workflow-record-index">TC</div><div class="workflow-record-main"><div class="workflow-record-top"><span class="workflow-record-id">${eEsc(test.test_case_id||"TEST CASE")}</span></div><div class="workflow-record-title">${eEsc(test.scenario||"(Chưa có scenario)")}</div><div class="workflow-record-meta"><span><b>Testor</b> ${eEsc(test.testor||"—")}</span><span><b>Ngày test</b> ${eEsc(eDate(test.testing_date)||"Chưa cập nhật")}</span><span><b>Owner</b> ${eEsc(test.owner_scenario||"—")}</span></div></div><div class="workflow-record-status">${eb2bUatResultBadge(test.pass_fail||"Not Started")}<span class="workflow-record-arrow"><mi-icon name="chevron-right" size="1em" stroke-width="2.4"></mi-icon></span></div>
+    </div>`;
+    const relCard=release=>`<div class="workflow-record" data-eb2b-drawer-release="${eEsc(release.id)}">
+      <div class="workflow-record-index">REL</div><div class="workflow-record-main"><div class="workflow-record-top"><span class="workflow-record-id">${eEsc(release.release_id||"RELEASE")}</span></div><div class="workflow-record-title">${eEsc(release.release_name||"(Chưa đặt tên release)")}</div><div class="workflow-record-meta"><span><b>Dự kiến</b> ${eEsc(eDate(release.planned_date)||"Chưa cập nhật")}</span><span><b>Thực tế</b> ${eEsc(eDate(release.actual_date)||"Chưa release")}</span><span><b>Owner</b> ${eEsc(release.release_owner||"—")}</span></div></div><div class="workflow-record-status">${eb2bReleaseBadge(release.status)}<span class="workflow-record-arrow"><mi-icon name="chevron-right" size="1em" stroke-width="2.4"></mi-icon></span></div>
+    </div>`;
+    drawer.innerHTML=`<div class="drawer-head"><div class="drawer-head-top"><div><h2>${eEsc(row.cr_id)}</h2><div class="drawer-app">${eEsc(eb2bCrTitle(row))}</div><div class="drawer-head-context"><span><b>App</b> ${eEsc(row.app||"—")}</span><span><b>Requester</b> ${eEsc(row.requester||"—")}</span><span><b>Request Date</b> ${eEsc(eDate(row.request_date)||"—")}</span></div></div><div class="drawer-head-actions"><button class="icon-btn" data-eb2b-cr-edit="${eEsc(row.id)}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="drawer-close" data-eb2b-drawer-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></div></div><div class="drawer-badges">${eb2bCrBadge("status",row.status)}${eb2bCrBadge("priority",row.priority)}${eb2bCrBadge("category",row.category)}${eb2bCrOverdue(row)?`<span class="badge" style="background:var(--danger-dim);color:var(--danger)">Trễ hạn</span>`:""}</div></div>
+      <div class="tabs"><button class="tab-btn active" data-eb2b-drawer-tab="info">Thông tin</button><button class="tab-btn" data-eb2b-drawer-tab="files">Tệp đính kèm <span class="tab-count">${files.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="uat">Test Case UAT <span class="tab-count">${tests.length}</span></button><button class="tab-btn" data-eb2b-drawer-tab="release">Release / PRD <span class="tab-count">${rels.length}</span></button></div>
+      <div class="drawer-body">
+        <div class="tab-panel active" data-eb2b-panel="info"><div class="dsec"><div class="dsec-head"><span class="dsec-title">Tóm tắt</span></div><div class="summary-grid">${field("Requester",row.requester)}${field("Department",row.department)}${field("Owner",row.owner)}${field("Request Date",eDate(row.request_date))}${field("Deadline",eDate(row.deadline))}${field("App",row.app)}${field("Approved Status",row.approved_status)}${field("Approved Date",eDate(row.approved_date))}</div></div><div class="dsec"><div class="dsec-head"><span class="dsec-title">Chi tiết đầy đủ theo CR Log</span></div><div class="crlog-detail-groups"><div class="crlog-field-group"><div class="crlog-field-group-title">Nội dung & cập nhật</div><div class="crlog-field-grid">${field("Old Name From InterK",row.old_name)}${field("Rename Folder",row.rename_folder)}${field("BRD Link",row.brd_link)}${field("FSD Link",row.fsd_link)}${field("Quotation Link",row.quotation_link)}${field("Description BRD",row.description_brd,{long:true})}${field("Description FSD",row.description_fsd,{long:true})}${field("Progress",row.progress,{long:true})}${field("Note",row.note,{long:true})}</div></div></div></div></div>
+        <div class="tab-panel" data-eb2b-panel="files"><div class="attachments-shell"><div class="attachments-hero"><div><div class="attachments-kicker">CR DOCUMENT HUB · E-B2B</div><h3>Hồ sơ &amp; tệp đính kèm</h3><p>Tập trung BRD, FSD, quotation, mail và các tài liệu của Change Request trong cùng một không gian.</p></div><div class="attachments-metrics"><div class="attachment-metric"><span class="metric-value" id="eb2bCrFileCount">${files.length}</span><span class="metric-label">Tổng tệp</span></div><div class="attachment-metric"><span class="metric-value" id="eb2bCrFileSize">—</span><span class="metric-label">Dung lượng</span></div></div></div><div class="attachments-upload-panel"><div class="attachments-category"><label for="eb2bCrUploadCategory"><mi-icon name="file-type" stroke-width="1.8"></mi-icon>Phân loại tài liệu</label><div class="pro-select-wrap"><select id="eb2bCrUploadCategory">${eb2bAttachmentCategories()[0] ? eb2bAttachmentCategories().map(category=>`<option value="${eEsc(category)}">${eEsc(category)}</option>`).join("") : ""}</select></div><div class="category-hint">Chọn nhóm trước khi tải lên để hồ sơ e-B2B luôn được phân loại nhất quán.</div></div><div class="file-drop attachments-dropzone pro-dropzone" id="eb2bCrFileDrop"><div class="pro-drop-icon"><mi-icon name="upload" stroke-width="1.6"></mi-icon></div><div class="attachments-dropzone-copy"><p><b>Chọn file</b> hoặc kéo thả vào khu vực này</p><div class="hint">Hỗ trợ ảnh, PDF, Word, Excel, mail và tải nhiều file cùng lúc.</div></div><span class="attachments-upload-cta"><mi-icon name="upload" stroke-width="2" size="13"></mi-icon>Tải tài liệu lên</span><input type="file" id="eb2bCrFileInput" multiple hidden></div><button class="btn btn-primary btn-sm hidden" type="button" id="eb2bCrFileUploadButton">Tải tài liệu lên</button></div><div class="attachments-section-bar"><div><h4>Tài liệu của Change Request</h4><p>Nhấn vào thẻ ảnh để xem nhanh; dùng biểu tượng chỉnh sửa để cập nhật tên hoặc loại tài liệu.</p></div><span class="attachments-section-count"><span class="dot" style="background:#0e9a94;"></span><span id="eb2bCrFileCountLabel">${files.length} tệp</span></span></div><div class="file-grid" id="eb2bCrFileGrid"></div></div></div>
+        <div class="tab-panel" data-eb2b-panel="uat"><div class="workflow-panel workflow-panel-uat"><div class="workflow-hero"><div class="workflow-hero-copy"><div class="workflow-eyebrow">QUALITY ASSURANCE · E-B2B</div><h3>Kiểm thử nghiệm thu UAT</h3><p>Theo dõi kịch bản, kết quả, testor và evidence của Change Request trong cùng luồng làm việc.</p></div><button class="btn btn-primary workflow-hero-action" id="eb2bDrawerAddUat"><mi-icon name="plus" stroke-width="2"></mi-icon>Thêm Test Case</button></div><div class="workflow-kpis"><div class="workflow-kpi"><span class="workflow-kpi-value">${tests.length}</span><span class="workflow-kpi-label">Tổng test case</span></div><div class="workflow-kpi is-success"><span class="workflow-kpi-value">${pass}</span><span class="workflow-kpi-label">Đạt yêu cầu</span></div><div class="workflow-kpi is-danger"><span class="workflow-kpi-value">${fail}</span><span class="workflow-kpi-label">Không đạt</span></div><div class="workflow-kpi is-warm"><span class="workflow-kpi-value">${pending}</span><span class="workflow-kpi-label">Chưa có kết quả</span></div></div><div class="workflow-section-head"><div><h4 class="workflow-section-title">Danh sách kịch bản kiểm thử</h4><p class="workflow-section-sub">Chọn một dòng để mở đầy đủ thông tin, chỉnh sửa hoặc quản lý evidence.</p></div><div class="workflow-legend"><span class="workflow-legend-item"><i class="workflow-legend-dot success"></i>Pass</span><span class="workflow-legend-item"><i class="workflow-legend-dot danger"></i>Fail</span><span class="workflow-legend-item"><i class="workflow-legend-dot"></i>Pending</span></div></div><div class="mini-list workflow-list">${tests.map(tcCard).join("") || (typeof emptyRow==="function"?emptyRow("Chưa có test case nào cho CR này"):`<div class="empty-state"><p>Chưa có Test Case UAT.</p></div>`)}</div></div></div>
+        <div class="tab-panel" data-eb2b-panel="release"><div class="workflow-panel workflow-panel-release"><div class="workflow-hero"><div class="workflow-hero-copy"><div class="workflow-eyebrow">DELIVERY CONTROL · E-B2B</div><h3>Release &amp; PRD readiness</h3><p>Quản lý kế hoạch phát hành, môi trường triển khai, checklist go-live và sign-off của Change Request.</p></div><button class="btn btn-primary workflow-hero-action" id="eb2bDrawerAddRelease"><mi-icon name="plus" stroke-width="2"></mi-icon>Thêm Release</button></div><div class="workflow-kpis"><div class="workflow-kpi"><span class="workflow-kpi-value">${rels.length}</span><span class="workflow-kpi-label">Tổng release</span></div><div class="workflow-kpi is-success"><span class="workflow-kpi-value">${done}</span><span class="workflow-kpi-label">Đã hoàn tất</span></div><div class="workflow-kpi"><span class="workflow-kpi-value">${active}</span><span class="workflow-kpi-label">Đang triển khai</span></div><div class="workflow-kpi is-warm"><span class="workflow-kpi-value">${planned}</span><span class="workflow-kpi-label">Đã lên kế hoạch</span></div></div><div class="workflow-section-head"><div><h4 class="workflow-section-title">Release roadmap</h4><p class="workflow-section-sub">Chọn một release để mở đầy đủ kế hoạch deploy, rollback, checklist và sign-off.</p></div><div class="workflow-legend"><span class="workflow-legend-item"><i class="workflow-legend-dot success"></i>Completed</span><span class="workflow-legend-item"><i class="workflow-legend-dot progress"></i>In Progress</span><span class="workflow-legend-item"><i class="workflow-legend-dot planned"></i>Planned</span></div></div><div class="mini-list workflow-list">${rels.map(relCard).join("") || (typeof emptyRow==="function"?emptyRow("Chưa có release nào cho CR này"):`<div class="empty-state"><p>Chưa có Release / PRD.</p></div>`)}</div></div></div>
+      </div>`;
+    overlay.classList.add("show"); overlay.classList.remove("full"); drawer.classList.add("show");
+    const drop=$e("#eb2bCrFileDrop",drawer), input=$e("#eb2bCrFileInput",drawer), category=$e("#eb2bCrUploadCategory",drawer);
+    if(drop && input){
+      drop.addEventListener("click",()=>input.click());
+      input.addEventListener("change",()=>eb2bHandleCrFileUpload(row,Array.from(input.files||[]),category?.value));
+      ["dragenter","dragover"].forEach(type=>drop.addEventListener(type,event=>{event.preventDefault();drop.classList.add("drag");}));
+      ["dragleave","drop"].forEach(type=>drop.addEventListener(type,event=>{event.preventDefault();drop.classList.remove("drag");}));
+      drop.addEventListener("drop",event=>{const files=Array.from(event.dataTransfer?.files||[]);if(files.length)eb2bHandleCrFileUpload(row,files,category?.value);});
+    }
+    $e("#eb2bDrawerAddUat",drawer)?.addEventListener("click",()=>eb2bUatOpenModal(null,row.cr_id));
+    $e("#eb2bDrawerAddRelease",drawer)?.addEventListener("click",()=>eb2bOpenModal("release",null,row.cr_id));
+    $all("[data-eb2b-drawer-uat]",drawer).forEach(node=>node.addEventListener("click",()=>{const item=tests.find(test=>String(test.id)===String(node.dataset.eb2bDrawerUat));if(item)eb2bUatOpenModal(item);}));
+    $all("[data-eb2b-drawer-release]",drawer).forEach(node=>node.addEventListener("click",()=>{const item=rels.find(release=>String(release.id)===String(node.dataset.eb2bDrawerRelease));if(item)eb2bOpenModal("release",item);}));
+    eb2bRenderCrFiles(row);
+  };
+
    const EB2B_UAT_COLUMNS = [
      {key:"test_case_id",label:"Test Case ID"},
      {key:"scenario",label:"Scenario"},
@@ -19286,8 +19556,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      </div>`;
    }
 
-   function eb2bUatModalTemplate(row){
-     const value = row || {};
+   function eb2bUatModalTemplate(row,presetCrId){
+     const value = row || (presetCrId ? {cr_id:presetCrId} : {});
      const isEdit = !!row;
      const crIds = EB2B.rows.cr.map(item=>item.cr_id).filter(Boolean);
      const result = value.pass_fail || "Not Started";
@@ -19345,11 +19615,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      </div>`;
    }
 
-   function eb2bUatOpenModal(row){
+   function eb2bUatOpenModal(row,presetCrId){
      const overlay = $e("#eb2bUatModalOverlay");
      if(!overlay) return;
      EB2B.editingUatId = row ? row.id : null;
-     overlay.innerHTML = eb2bUatModalTemplate(row);
+     overlay.innerHTML = eb2bUatModalTemplate(row,presetCrId);
      overlay.classList.add("show");
      overlay.setAttribute("aria-hidden","false");
      $$e("[data-eb2b-uat-close]",overlay).forEach(button=>button.addEventListener("click", eb2bUatCloseModal));
@@ -20074,17 +20344,18 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     a.href=url;a.download=`${String(row.brd_title||"EB2B_BRD").replace(/[^\w\-]+/g,"_")}.doc`;a.click();URL.revokeObjectURL(url);eToast("Đã xuất BRD EB2B.","ok");
   }
 
-  function eb2bOpenModal(key, row){
+  function eb2bOpenModal(key, row, presetCrId){
     EB2B.editingRec = row ? {key, id:row.id} : null;
     const overlay = $e("#eb2bModalOverlay");
     const title = row ? "Sửa " : "Tạo ";
     const labels = {cr:"CR Log",uat:"UAT Test Case",release:"Release / PRD",brd:"BRD",weekly_mom:"Weekly MoM"};
-    const defs = eb2bFormDefs(key, row || {});
+    const formRow = row || (presetCrId ? {cr_id:presetCrId} : {});
+    const defs = eb2bFormDefs(key, formRow);
     const heading = key==="cr" ? (row ? "Sửa Change Request" : "Tạo Change Request mới") : `${title}${labels[key]}`;
     const subtitle = key==="cr" ? (row ? eText(row.cr_id||"") : "Điền thông tin CR — tương ứng dữ liệu EB2B CR Log") : `Dữ liệu được lưu vào bảng ${EB2B_TABLES[key]}.`;
      overlay.innerHTML = `<div class="eb2b-modal ${key==="cr"?"eb2b-cr-form-modal":""}" role="dialog" aria-modal="true">
       <div class="eb2b-modal-head"><div><h3>${heading}</h3><p>${eEsc(subtitle)}</p></div><button type="button" class="modal-close" data-eb2b-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button></div>
-      <div class="eb2b-modal-body"><div class="eb2b-form-grid">${defs.map(d=>eb2bField(d,row||{})).join("")}</div></div>
+      <div class="eb2b-modal-body"><div class="eb2b-form-grid">${defs.map(d=>eb2bField(d,formRow)).join("")}</div></div>
       <div class="eb2b-modal-foot"><button type="button" class="btn btn-ghost" data-eb2b-close>Hủy</button><button type="button" class="btn btn-primary" id="eb2bSaveRecord">${row?"Lưu thay đổi":key==="cr"?"Tạo CR":"Lưu"}</button></div>
     </div>`;
      const fullPage = key === "cr" || key === "release";
