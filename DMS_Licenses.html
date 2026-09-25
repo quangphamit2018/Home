@@ -968,8 +968,19 @@
     const canEdit = () => ["super-admin", "senior-member"].includes(state.profile?.role);
 
     // ---------- License DMS: Max Licenses (cấu hình ở Quản lý dữ liệu) trừ đi số license đã dùng ----------
-    // 1 license được tính "đã dùng" khi bản ghi Central User có đủ TerritoryHierarchy, RoleName (khác rỗng) và IsActive = 1.
-    const hasValue = (v) => v !== null && v !== undefined && String(v).trim() !== "";
+    // 1 license được tính "đã dùng" khi bản ghi Central User có đủ TerritoryHierarchy, RoleName (khác rỗng, không phải giá trị "rác")
+    // và IsActive = 1. Các giá trị placeholder như "-", "N/A", "Chưa có", "Không xác định", "null"... KHÔNG được tính là có giá trị,
+    // để tránh đếm nhầm license cho những dòng thực ra chưa có dữ liệu thật.
+    const LICENSE_JUNK_VALUES = new Set([
+      "-", "--", "n/a", "na", "null", "none", "undefined", "chưa có", "chua co",
+      "không xác định", "khong xac dinh", "không có", "khong co", "trống", "trong", "empty"
+    ]);
+    const hasValue = (v) => {
+      if (v === null || v === undefined) return false;
+      const s = String(v).trim();
+      if (s === "") return false;
+      return !LICENSE_JUNK_VALUES.has(s.toLowerCase());
+    };
     const licenseIsActive = (r) => ["1", "true", "y", "yes", "active"].includes(String(r?.is_active ?? "").trim().toLowerCase());
     const usesLicense = (r) => hasValue(r?.territory_hierarchy) && hasValue(r?.role_name) && licenseIsActive(r);
     function licenseStats() {
