@@ -19995,6 +19995,75 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 })();
 </script>
 
+
+<style id="filterParityStyles">
+/* Shared CR Log filter grammar for UAT and Release / PRD in both workspaces. */
+.filter-parity-group{position:relative}
+.filter-parity-group .cr-filter-trigger{min-width:116px}
+.filter-parity-group .cr-filter-menu{width:250px}
+.filter-parity-group .cr-filter-option input{flex:0 0 auto}
+.filter-parity-group .cr-filter-option.is-selected{background:#e8f7f6;color:#173f52;font-weight:750}
+.filter-parity-group .cr-filter-option.is-selected input{accent-color:#16999a}
+.filter-parity-group .cr-filter-legacy{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+#eb2bViewRoot .filter-parity-group .cr-filter-trigger{min-width:116px}
+@media(max-width:760px){.filter-parity-group{flex:1 1 140px}.filter-parity-group .cr-filter-trigger{width:100%}}
+</style>
+<script id="filterParityScript">
+(()=>{
+  const FILTERS={
+    filterTcCr:{label:"CR ID",glyph:"CR"},
+    filterTcResult:{label:"Kết quả",glyph:"KQ"},
+    filterRelCr:{label:"CR ID",glyph:"CR"},
+    filterRelStatus:{label:"Trạng thái",glyph:"S"},
+    eb2bRelFilterCr:{label:"CR ID",glyph:"CR"},
+    eb2bRelFilterStatus:{label:"Trạng thái",glyph:"S"}
+  };
+  const dynamicSelector='[data-eb2b-uat-filter="cr"],[data-eb2b-uat-filter="result"]';
+  const metaFor=select=>FILTERS[select.id] || (select.matches('[data-eb2b-uat-filter="cr"]')?{label:"CR ID",glyph:"CR"}:{label:"Kết quả",glyph:"KQ"});
+  const optionParts=text=>{
+    const match=String(text||"").trim().match(/^(.*?)(?:\s*\((\d+)\))?$/);
+    return {label:(match?.[1]||text||"").trim(),count:match?.[2]||""};
+  };
+  function closeOthers(except){
+    document.querySelectorAll('.filter-parity-group.is-open').forEach(group=>{
+      if(group!==except){group.classList.remove('is-open');group.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}
+    });
+  }
+  function render(group,select){
+    const meta=metaFor(select), options=Array.from(select.options), selected=select.value;
+    const chosen=options.find(option=>option.value===selected);
+    const summary=group.querySelector('.cr-filter-value');
+    if(summary) summary.textContent=selected?(optionParts(chosen?.textContent).label||selected):'Tất cả';
+    group.querySelector('.cr-filter-trigger')?.classList.toggle('is-active',Boolean(selected));
+    const menu=group.querySelector('.cr-filter-menu');
+    if(!menu)return;
+    menu.innerHTML=`<div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${meta.label}</div><span class="cr-filter-menu-hint">Chọn một giá trị</span></div><button type="button" class="cr-filter-reset">Đặt lại</button></div><div class="cr-filter-options">${options.map((option,index)=>{const part=optionParts(option.textContent);const active=option.value===selected;return `<label class="cr-filter-option ${index===0?'is-all ':''}${active?'is-selected':''}"><input type="checkbox" data-filter-parity-value="${String(option.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" ${active?'checked':''}><span class="cr-filter-option-text">${part.label}</span>${part.count?`<span class="cr-filter-count-badge">(${part.count})</span>`:''}</label>`}).join('')}</div>`;
+  }
+  function enhance(select){
+    if(!select || select.dataset.filterParity==='1')return;
+    const host=select.closest('.filter-chip');
+    if(!host)return;
+    const meta=metaFor(select);
+    select.dataset.filterParity='1';
+    host.className='cr-filter-group filter-parity-group';
+    const trigger=document.createElement('button');
+    trigger.className='cr-filter-trigger';trigger.type='button';trigger.setAttribute('aria-haspopup','true');trigger.setAttribute('aria-expanded','false');
+    trigger.innerHTML=`<span class="cr-filter-glyph">${meta.glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${meta.label}</span><strong class="cr-filter-value">Tất cả</strong></span><span class="cr-filter-chevron">⌄</span>`;
+    const menu=document.createElement('div');menu.className='cr-filter-menu';
+    host.replaceChildren(trigger,menu,select);select.classList.add('cr-filter-legacy');
+    trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!host.classList.contains('is-open');closeOthers(host);host.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening));});
+    menu.addEventListener('click',event=>{event.stopPropagation();if(event.target.closest('.cr-filter-reset')){select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));return}const input=event.target.closest('[data-filter-parity-value]');if(!input)return;select.value=input.dataset.filterParityValue||'';select.dispatchEvent(new Event('change',{bubbles:true}));host.classList.remove('is-open');trigger.setAttribute('aria-expanded','false')});
+    select.addEventListener('change',()=>render(host,select));
+    new MutationObserver(()=>render(host,select)).observe(select,{childList:true,subtree:true});
+    render(host,select);
+  }
+  function scan(root=document){Object.keys(FILTERS).forEach(id=>enhance(root.querySelector?.('#'+id)));root.querySelectorAll?.(dynamicSelector).forEach(enhance)}
+  document.addEventListener('click',()=>closeOthers());
+  const start=()=>{scan();new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1){scan(node);if(node.matches?.(dynamicSelector))enhance(node)}}))).observe(document.body,{childList:true,subtree:true})};
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start):start();
+})();
+</script>
+
 </body></html>`;
     const blob=new Blob(["\ufeff",html],{type:"application/msword;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
     a.href=url;a.download=`${String(row.brd_title||"EB2B_BRD").replace(/[^\w\-]+/g,"_")}.doc`;a.click();URL.revokeObjectURL(url);eToast("Đã xuất BRD EB2B.","ok");
@@ -20429,5 +20498,74 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   document.addEventListener("DOMContentLoaded", eb2bStart);
 })();
 </script>
+
+<style id="filterParityStyles">
+/* Shared CR Log filter grammar for UAT and Release / PRD in both workspaces. */
+.filter-parity-group{position:relative}
+.filter-parity-group .cr-filter-trigger{min-width:116px}
+.filter-parity-group .cr-filter-menu{width:250px}
+.filter-parity-group .cr-filter-option input{flex:0 0 auto}
+.filter-parity-group .cr-filter-option.is-selected{background:#e8f7f6;color:#173f52;font-weight:750}
+.filter-parity-group .cr-filter-option.is-selected input{accent-color:#16999a}
+.filter-parity-group .cr-filter-legacy{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important}
+#eb2bViewRoot .filter-parity-group .cr-filter-trigger{min-width:116px}
+@media(max-width:760px){.filter-parity-group{flex:1 1 140px}.filter-parity-group .cr-filter-trigger{width:100%}}
+</style>
+<script id="filterParityScript">
+(()=>{
+  const FILTERS={
+    filterTcCr:{label:"CR ID",glyph:"CR"},
+    filterTcResult:{label:"Kết quả",glyph:"KQ"},
+    filterRelCr:{label:"CR ID",glyph:"CR"},
+    filterRelStatus:{label:"Trạng thái",glyph:"S"},
+    eb2bRelFilterCr:{label:"CR ID",glyph:"CR"},
+    eb2bRelFilterStatus:{label:"Trạng thái",glyph:"S"}
+  };
+  const dynamicSelector='[data-eb2b-uat-filter="cr"],[data-eb2b-uat-filter="result"]';
+  const metaFor=select=>FILTERS[select.id] || (select.matches('[data-eb2b-uat-filter="cr"]')?{label:"CR ID",glyph:"CR"}:{label:"Kết quả",glyph:"KQ"});
+  const optionParts=text=>{
+    const match=String(text||"").trim().match(/^(.*?)(?:\s*\((\d+)\))?$/);
+    return {label:(match?.[1]||text||"").trim(),count:match?.[2]||""};
+  };
+  function closeOthers(except){
+    document.querySelectorAll('.filter-parity-group.is-open').forEach(group=>{
+      if(group!==except){group.classList.remove('is-open');group.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}
+    });
+  }
+  function render(group,select){
+    const meta=metaFor(select), options=Array.from(select.options), selected=select.value;
+    const chosen=options.find(option=>option.value===selected);
+    const summary=group.querySelector('.cr-filter-value');
+    if(summary) summary.textContent=selected?(optionParts(chosen?.textContent).label||selected):'Tất cả';
+    group.querySelector('.cr-filter-trigger')?.classList.toggle('is-active',Boolean(selected));
+    const menu=group.querySelector('.cr-filter-menu');
+    if(!menu)return;
+    menu.innerHTML=`<div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${meta.label}</div><span class="cr-filter-menu-hint">Chọn một giá trị</span></div><button type="button" class="cr-filter-reset">Đặt lại</button></div><div class="cr-filter-options">${options.map((option,index)=>{const part=optionParts(option.textContent);const active=option.value===selected;return `<label class="cr-filter-option ${index===0?'is-all ':''}${active?'is-selected':''}"><input type="checkbox" data-filter-parity-value="${String(option.value).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" ${active?'checked':''}><span class="cr-filter-option-text">${part.label}</span>${part.count?`<span class="cr-filter-count-badge">(${part.count})</span>`:''}</label>`}).join('')}</div>`;
+  }
+  function enhance(select){
+    if(!select || select.dataset.filterParity==='1')return;
+    const host=select.closest('.filter-chip');
+    if(!host)return;
+    const meta=metaFor(select);
+    select.dataset.filterParity='1';
+    host.className='cr-filter-group filter-parity-group';
+    const trigger=document.createElement('button');
+    trigger.className='cr-filter-trigger';trigger.type='button';trigger.setAttribute('aria-haspopup','true');trigger.setAttribute('aria-expanded','false');
+    trigger.innerHTML=`<span class="cr-filter-glyph">${meta.glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${meta.label}</span><strong class="cr-filter-value">Tất cả</strong></span><span class="cr-filter-chevron">⌄</span>`;
+    const menu=document.createElement('div');menu.className='cr-filter-menu';
+    host.replaceChildren(trigger,menu,select);select.classList.add('cr-filter-legacy');
+    trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!host.classList.contains('is-open');closeOthers(host);host.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening));});
+    menu.addEventListener('click',event=>{event.stopPropagation();if(event.target.closest('.cr-filter-reset')){select.value='';select.dispatchEvent(new Event('change',{bubbles:true}));return}const input=event.target.closest('[data-filter-parity-value]');if(!input)return;select.value=input.dataset.filterParityValue||'';select.dispatchEvent(new Event('change',{bubbles:true}));host.classList.remove('is-open');trigger.setAttribute('aria-expanded','false')});
+    select.addEventListener('change',()=>render(host,select));
+    new MutationObserver(()=>render(host,select)).observe(select,{childList:true,subtree:true});
+    render(host,select);
+  }
+  function scan(root=document){Object.keys(FILTERS).forEach(id=>enhance(root.querySelector?.('#'+id)));root.querySelectorAll?.(dynamicSelector).forEach(enhance)}
+  document.addEventListener('click',()=>closeOthers());
+  const start=()=>{scan();new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1){scan(node);if(node.matches?.(dynamicSelector))enhance(node)}}))).observe(document.body,{childList:true,subtree:true})};
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start):start();
+})();
+</script>
+
 </body>
 </html>
