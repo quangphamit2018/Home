@@ -10404,19 +10404,41 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
   $("#evidenceArrangeClose", overlay).addEventListener("click", close);
   overlay.onclick = event=>{ if(event.target === overlay) close(); };
 
+  // Chống onConfirm/close chạy 2 lần khi người dùng bấm "Dùng thứ tự mặc định"
+  // trong lúc đang tải danh sách ảnh.
+  let settled = false;
+  const finishDefault = ()=>{ if(settled) return; settled = true; close(); onConfirm(null); };
+  // Nút "Dùng thứ tự mặc định" được gắn ngay từ đầu — giúp bỏ qua bước
+  // sắp xếp khi chưa có ảnh evidence hoặc khi việc lấy ảnh bị treo/lỗi.
+  $("#evidenceArrangeDefault", overlay).addEventListener("click", finishDefault);
+
   // Tải metadata evidence của từng Test Case (chỉ lấy ảnh). fetchTcAttachments
   // đã trả về thứ tự mặc định ổn định, làm thứ tự ban đầu cho modal.
+  // Mỗi TC bọc try/catch + timeout để một TC lỗi/treo không làm kẹt cả modal.
   const groups = [];
-  for(const testcase of selectedTcList){
-    const files = testcase.id ? await exFetchTcAttachments(testcase.id) : [];
-    const images = files.filter(file=>reportIsImageFile(file));
-    if(images.length) groups.push({ testcase, images });
-  }
+  const fetchWithTimeout = (id, ms=8000)=>{
+    let done = false;
+    const timeout = new Promise(res=> setTimeout(()=>{ if(!done) res([]); }, ms));
+    const main = Promise.resolve(exFetchTcAttachments(id))
+      .then(v=>{ done = true; return v; })
+      .catch(()=>{ done = true; return []; });
+    return Promise.race([main, timeout]);
+  };
+  try{
+    for(const testcase of (selectedTcList || [])){
+      let files = [];
+      if(testcase && testcase.id){
+        try{ files = await fetchWithTimeout(testcase.id); }
+        catch(e){ files = []; }
+      }
+      const images = files.filter(file=>reportIsImageFile(file));
+      if(images.length) groups.push({ testcase, images });
+    }
+  }catch(e){ /* groups giữ nguyên [] → đóng modal bên dưới */ }
 
   if(!groups.length){
-    close();
+    finishDefault();
     toast("Các Test Case đã chọn chưa có ảnh evidence — tạo báo cáo với dữ liệu hiện có.", "info");
-    onConfirm(null);
     return;
   }
 
@@ -10603,10 +10625,6 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
     updateCount();
   });
 
-  $("#evidenceArrangeDefault", overlay).addEventListener("click", ()=>{
-    close();
-    onConfirm(null);
-  });
   confirmBtn.addEventListener("click", ()=>{
     const plan = new Map();
     groups.forEach((group, gi)=>{
