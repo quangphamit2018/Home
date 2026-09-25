@@ -10136,7 +10136,7 @@ function zipFolderName(value, fallback){
 }
 
 function evidenceCrFolderName(crId){
-  const cr = (STATE.crList || []).find(item=>String(item.cr_id) === String(crId)) || {};
+  const cr = exCrList().find(item=>String(item.cr_id) === String(crId)) || {};
   const configuredName = String(cr.rename_folder || "").trim();
   if(configuredName){
     const fullName = /^\[CR_[^\]]+\]/i.test(configuredName)
@@ -10158,6 +10158,18 @@ function zipFileName(value, fallback){
   const name = zipFolderName(value, fallback);
   return name || fallback || "evidence";
 }
+
+/* NGUỒN DỮ LIỆU XUẤT FILE (Tải báo cáo / Tải ảnh)
+   null = DMS (giữ nguyên hành vi cũ). Workspace khác (e-B2B) truyền vào nguồn
+   dữ liệu riêng qua openExportSelectionModal(mode, src) để dùng chung toàn bộ
+   luồng chọn CR -> sắp xếp ảnh -> tạo Excel / ZIP mà không đụng tới dữ liệu DMS. */
+let EXPORT_SRC = null;
+function exCrList(){ return (EXPORT_SRC ? EXPORT_SRC.crList : STATE.crList) || []; }
+function exTcList(){ return (EXPORT_SRC ? EXPORT_SRC.tcList : STATE.tcList) || []; }
+function exRelList(){ return (EXPORT_SRC ? EXPORT_SRC.relList : STATE.relList) || []; }
+function exFetchTcAttachments(id){ return EXPORT_SRC ? EXPORT_SRC.fetchTcAttachments(id) : fetchTcAttachments(id); }
+function exSignedUrl(path){ return EXPORT_SRC ? EXPORT_SRC.getSignedUrl(path) : getSignedUrl(path); }
+window.openExportSelectionModal = (mode, src)=> openExportSelectionModal(mode, src);
 
 // 5 lựa chọn tải báo cáo — mỗi lựa chọn ứng với đúng 1 hoặc nhiều sheet Excel.
 // "all" giữ đúng hành vi mặc định trước đây (xuất đủ 4 sheet) để không đổi
@@ -10224,11 +10236,12 @@ function exportSelectionModalTemplate(mode){
     </div>`;
 }
 
-function openExportSelectionModal(mode){
+function openExportSelectionModal(mode, src = null){
+  EXPORT_SRC = src || null;
   const isReport = mode === "report";
   const overlay = $("#exportSelectionOverlay");
   if(!overlay) return;
-  const crs = (STATE.crList || []).filter(cr=>String(cr.cr_id || "").trim());
+  const crs = exCrList().filter(cr=>String(cr.cr_id || "").trim());
   if(!crs.length){
     toast("Chưa có CR để lựa chọn.", "info");
     return;
@@ -10319,7 +10332,7 @@ function openExportSelectionModal(mode){
       const wantsUat = (REPORT_SHEET_OPTIONS.find(o=>o.value===reportType)?.sheets || []).includes("uat_testcase");
       if(wantsUat){
         const idSet = new Set(selectedCrIds.map(id=>String(id)));
-        const tcForArrange = (STATE.tcList || []).filter(t=>idSet.has(String(t.cr_id)));
+        const tcForArrange = exTcList().filter(t=>idSet.has(String(t.cr_id)));
         openEvidenceArrangeModal(tcForArrange, plan=>downloadProgressReport(selectedCrIds, reportType, plan));
       } else {
         downloadProgressReport(selectedCrIds, reportType);
@@ -10396,7 +10409,7 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
   // đã trả về thứ tự mặc định ổn định, làm thứ tự ban đầu cho modal.
   const groups = [];
   for(const testcase of selectedTcList){
-    const files = testcase.id ? await fetchTcAttachments(testcase.id) : [];
+    const files = testcase.id ? await exFetchTcAttachments(testcase.id) : [];
     const images = files.filter(file=>reportIsImageFile(file));
     if(images.length) groups.push({ testcase, images });
   }
@@ -10454,7 +10467,7 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
       const thumb = img.closest(".ea-thumb");
       img.addEventListener("load", ()=>thumb.classList.add("is-ready"));
       img.addEventListener("error", ()=>{ thumb.classList.add("is-ready", "is-error"); });
-      getSignedUrl(file.file_path).then(url=>{
+      Promise.resolve(exSignedUrl(file.file_path)).then(url=>{
         if(url && url !== "#") img.src = url; else thumb.classList.add("is-ready", "is-error");
       }).catch(()=>{ thumb.classList.add("is-ready", "is-error"); });
     });
@@ -10613,20 +10626,20 @@ async function openEvidenceArrangeModal(selectedTcList, onConfirm){
 }
 
 async function downloadEvidenceImagesZip(selectedCrIds = null){
-  const btn = $("#btnEvidenceZip");
+  const btn = $(EXPORT_SRC?.zipBtn || "#btnEvidenceZip");
   if(!btn || btn.disabled) return;
   if(typeof JSZip === "undefined"){
     toast("Không tải được thư viện tạo ZIP. Kiểm tra kết nối mạng rồi thử lại.", "err");
     return;
   }
-  if(!(STATE.tcList || []).length){
+  if(!exTcList().length){
     toast("Chưa có Test Case UAT để tải ảnh evidence.", "info");
     return;
   }
   const selectedIdSet = selectedCrIds == null
     ? null
     : new Set(selectedCrIds.map(id=>String(id)));
-  const selectedTcList = (STATE.tcList || []).filter(testcase=>
+  const selectedTcList = exTcList().filter(testcase=>
     !selectedIdSet || selectedIdSet.has(String(testcase.cr_id))
   );
   if(!selectedTcList.length){
@@ -10647,7 +10660,7 @@ async function downloadEvidenceImagesZip(selectedCrIds = null){
     DLProgress.setIndeterminate("Đang tìm ảnh evidence...");
     const records = [];
     await Promise.all(selectedTcList.map(async testcase=>{
-      const files = await fetchTcAttachments(testcase.id);
+      const files = await exFetchTcAttachments(testcase.id);
       files
         .filter(file=>fileKind(file.file_name, file.file_type) === "image")
         .forEach(file=>records.push({ testcase, file }));
@@ -10668,7 +10681,7 @@ async function downloadEvidenceImagesZip(selectedCrIds = null){
       setLabel(`Đang tải ${index + 1}/${records.length}...`);
       DLProgress.setProgress((index / records.length) * 80, `Đang tải ảnh ${index + 1}/${records.length}...`);
       try{
-        const signedUrl = await getSignedUrl(file.file_path);
+        const signedUrl = await exSignedUrl(file.file_path);
         if(!signedUrl || signedUrl === "#") throw new Error("Không tạo được đường dẫn tải ảnh");
         const response = await fetch(signedUrl, { cache:"no-store" });
         if(!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -10717,7 +10730,7 @@ async function downloadEvidenceImagesZip(selectedCrIds = null){
     const now = vnNowParts();
     const pad = value=>String(value).padStart(2, "0");
     anchor.href = url;
-    anchor.download = `CR_Evidence_Images_${now.year}${pad(now.month)}${pad(now.day)}_${pad(now.hour)}${pad(now.minute)}.zip`;
+    anchor.download = `${EXPORT_SRC?.filePrefix || ""}CR_Evidence_Images_${now.year}${pad(now.month)}${pad(now.day)}_${pad(now.hour)}${pad(now.minute)}.zip`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -11024,6 +11037,7 @@ function crDocumentStatusHtml(c, type){
 }
 
 function crDocumentStatusLabel(c, type){
+  if(EXPORT_SRC && EXPORT_SRC.hasDocument) return EXPORT_SRC.hasDocument(c, type) ? "Có" : "Chưa có";
   return crHasDocument(c, type) ? "Có" : "Chưa có";
 }
 
@@ -11861,7 +11875,7 @@ function reportIsImageFile(file){
 async function reportLoadImage(file){
   let url = "";
   try{
-    url = await getSignedUrl(file.file_path);
+    url = await exSignedUrl(file.file_path);
     if(!url || url === "#") return null;
     const response = await fetch(url, { cache:"no-store" });
     if(!response.ok) return null;
@@ -12076,7 +12090,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
   // evidencePlan: Map<testcaseId, string[]> — danh sách ID ảnh evidence THEO
   // THỨ TỰ người dùng đã sắp xếp ở modal "Sắp xếp ảnh evidence". Ảnh không
   // nằm trong danh sách bị loại khỏi báo cáo. null = giữ thứ tự mặc định.
-  const btn = $("#btnProgressReport");
+  const btn = $(EXPORT_SRC?.reportBtn || "#btnProgressReport");
   if(!btn || btn.disabled) return;
   if(typeof ExcelJS === "undefined"){
     toast("Không tải được thư viện Excel (ExcelJS). Kiểm tra kết nối mạng rồi thử lại.", "err");
@@ -12102,13 +12116,13 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     const selectedIdSet = selectedCrIds == null
       ? null
       : new Set(selectedCrIds.map(id=>String(id)));
-    const selectedCrList = (STATE.crList || []).filter(record=>
+    const selectedCrList = exCrList().filter(record=>
       !selectedIdSet || selectedIdSet.has(String(record.cr_id))
     );
-    const selectedTcList = (wantUat || wantCrLog) ? (STATE.tcList || []).filter(testcase=>
+    const selectedTcList = (wantUat || wantCrLog) ? exTcList().filter(testcase=>
       !selectedIdSet || selectedIdSet.has(String(testcase.cr_id))
     ) : [];
-    const selectedRelList = wantRelease ? (STATE.relList || []).filter(record=>
+    const selectedRelList = wantRelease ? exRelList().filter(record=>
       !selectedIdSet || selectedIdSet.has(String(record.cr_id))
     ) : [];
     if(!selectedCrList.length){
@@ -12130,7 +12144,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     // Chỉ cần khi thật sự có cột BRD/FSD trong sheet sẽ xuất (Report_Weekly
     // hoặc CR_Log) — bỏ qua khi chỉ tải UAT_Testcase/Release_PRD để nhanh hơn.
     if(wantWeekly || wantCrLog){
-      await fetchCrDocumentStatus();
+      if(!EXPORT_SRC) await fetchCrDocumentStatus();
     }
     // Load every evidence record by Test Case ID. No Dashboard aggregates are
     // read here; the three report sheets are built from raw STATE records.
@@ -12143,7 +12157,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
       let evidenceDoneCount = 0;
       DLProgress.setProgress(5, `Đang tải ảnh evidence 0/${selectedTcList.length} Test Case...`);
       await Promise.all(selectedTcList.map(async testcase=>{
-        let files = testcase.id ? await fetchTcAttachments(testcase.id) : [];
+        let files = testcase.id ? await exFetchTcAttachments(testcase.id) : [];
         if(evidencePlan && evidencePlan.has(String(testcase.id))){
           const order = evidencePlan.get(String(testcase.id));
           files = order.map(id=>files.find(f=>String(f.id)===id)).filter(Boolean);
@@ -12397,7 +12411,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
 
     const timestamp = vnNowParts();
     const pad = number=>String(number).padStart(2, "0");
-    const filenamePrefix = sheetFilter === "all" ? "CR_Progress_Report" : `CR_${reportOption.label.replace(/\s+/g,"_")}_Report`;
+    const filenamePrefix = (EXPORT_SRC?.filePrefix || "") + (sheetFilter === "all" ? "CR_Progress_Report" : `CR_${reportOption.label.replace(/\s+/g,"_")}_Report`);
     const filename = `${filenamePrefix}_${timestamp.year}${pad(timestamp.month)}${pad(timestamp.day)}_${pad(timestamp.hour)}${pad(timestamp.minute)}.xlsx`;
     DLProgress.setProgress(92, "Đang đóng gói file Excel...");
     const buffer = await workbook.xlsx.writeBuffer();
@@ -18256,7 +18270,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       body.eb2b-active.eb2b-uat-active .eb2b-uat-top-actions,
       body.eb2b-active.eb2b-release-active .eb2b-release-top-actions,
       body.eb2b-active.eb2b-brd-active .eb2b-brd-top-actions,
-      body.eb2b-active.eb2b-weekly-active .eb2b-weekly-top-actions{display:flex}
+      body.eb2b-active.eb2b-weekly-active .eb2b-weekly-top-actions,
+      body.eb2b-active.eb2b-dashboard-active .eb2b-dashboard-top-actions{display:flex}
       .eb2b-shell{display:grid;gap:16px}
       .eb2b-cr-shell{height:100%;min-height:0;display:flex;flex-direction:column;gap:14px}
       .eb2b-cr-shell .crlog-kpis{flex:0 0 auto}
@@ -18641,6 +18656,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        const actions=$e("#topbarActions");
        actions?.insertAdjacentHTML("beforeend", `
          <div class="eb2b-context-actions eb2b-uat-top-actions" id="eb2bUatTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatTemplateTop" type="button" title="Tải file Excel mẫu"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>Tải template</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatImportTop" type="button" title="Nhập nhiều Test Case từ Excel"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Nhập Excel</button><button class="btn btn-primary" id="eb2bAddTcTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Test Case</button></div>
+         <div class="eb2b-context-actions eb2b-dashboard-top-actions" id="eb2bDashTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bProgressReportTop" type="button" title="Tải báo cáo tiến độ CR và UAT"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon><span class="report-label">Tải báo cáo</span></button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bEvidenceZipTop" type="button" title="Tải toàn bộ ảnh evidence theo cấu trúc thư mục"><mi-icon name="folder-down" size="14" stroke-width="2.5"></mi-icon><span class="evidence-zip-label">Tải ảnh</span></button></div>
          <div class="eb2b-context-actions eb2b-release-top-actions" id="eb2bReleaseTopActions"><button class="btn btn-primary" id="eb2bAddRelTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Release</button></div>
          <div class="eb2b-context-actions eb2b-brd-top-actions" id="eb2bBrdTopActions"><button class="btn btn-primary" id="eb2bAddBrdTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo BRD</button></div>
          <div class="eb2b-context-actions eb2b-weekly-top-actions" id="eb2bWeeklyTopActions"><button class="btn btn-primary" id="eb2bAddWeeklyTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo biên bản Weekly</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bWeeklyImportTop" type="button" title="Nhập biên bản Weekly từ Excel"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Nhập Excel</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bWeeklyDownloadTop" type="button" title="Tải Excel biên bản mới nhất"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>Tải Excel</button></div>`);
@@ -18743,6 +18759,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     }catch(_){}
     document.body.classList.add("eb2b-active");
     document.body.classList.toggle("eb2b-cr-active", tab === "cr");
+    document.body.classList.toggle("eb2b-dashboard-active", tab === "dashboard");
     ["uat","release","brd","weekly"].forEach(name=>document.body.classList.toggle(`eb2b-${name}-active`, tab === (name === "weekly" ? "weekly_mom" : name)));
     eb2bSetHeader(tab);
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.toggle("active", n.dataset.eb2bTab === tab));
@@ -18763,7 +18780,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bHide(){
-    document.body.classList.remove("eb2b-active", "eb2b-cr-active", "eb2b-uat-active", "eb2b-release-active", "eb2b-brd-active", "eb2b-weekly-active");
+    document.body.classList.remove("eb2b-active", "eb2b-dashboard-active", "eb2b-cr-active", "eb2b-uat-active", "eb2b-release-active", "eb2b-brd-active", "eb2b-weekly-active");
     eb2bCloseOverlays();
     $$e("#eb2bNav [data-eb2b-tab]").forEach(n=>n.classList.remove("active"));
     $e("#navEb2bWorkspace")?.classList.remove("is-context");
@@ -20796,6 +20813,37 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     eb2bConfirm("Xóa vĩnh viễn?", "Dữ liệu EB2B sẽ không thể khôi phục.", ok);
   }
 
+  /* Tải báo cáo / Tải ảnh cho e-B2B: dùng chung luồng xuất file của DMS nhưng
+     với nguồn dữ liệu riêng của e-B2B (bảng eb2b_*, bucket eb2b-attachments). */
+  function eb2bEvidenceFiles(testcaseId){
+    const steps = EB2B.rows.evidence_steps || [];
+    const rank = name=>{
+      const key = String(name || "").trim();
+      if(!key) return Number.MAX_SAFE_INTEGER;
+      const found = steps.find(s=> String(s.name || "").trim() === key);
+      return found ? Number(found.sort_order ?? 0) : Number.MAX_SAFE_INTEGER - 1;
+    };
+    const cmp = (a,b)=> String(a || "").localeCompare(String(b || ""), undefined, {numeric:true, sensitivity:"base"});
+    return (EB2B.rows.attachments || [])
+      .filter(f=> String(f.testcase_id || "") === String(testcaseId) && !f.deleted_at)
+      .map(f=> ({...f, evidence_step: f.evidence_step || f.step_name || "", file_type: f.file_type || f.mime_type || "", uploaded_at: f.uploaded_at || f.created_at}))
+      .sort((a,b)=> (rank(a.evidence_step) - rank(b.evidence_step)) || cmp(a.evidence_step, b.evidence_step) || cmp(a.file_name, b.file_name) || (new Date(a.uploaded_at || 0) - new Date(b.uploaded_at || 0)));
+  }
+  function eb2bOpenExport(mode){
+    if(typeof window.openExportSelectionModal !== "function") return;
+    window.openExportSelectionModal(mode, {
+      crList: EB2B.rows.cr || [],
+      tcList: EB2B.rows.uat || [],
+      relList: EB2B.rows.release || [],
+      fetchTcAttachments: async id=> eb2bEvidenceFiles(id),
+      getSignedUrl: path=> eb2bGetSignedUrl(path),
+      hasDocument: (row, type)=> eb2bCrDocumentPresent(row, type),
+      reportBtn: "#eb2bProgressReportTop",
+      zipBtn: "#eb2bEvidenceZipTop",
+      filePrefix: "eB2B_"
+    });
+  }
+
   function eb2bEvents(){
     document.addEventListener("click", ev=>{
       const tab=ev.target.closest("[data-eb2b-tab]");
@@ -20813,6 +20861,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(ev.target.closest("#eb2bAddWeeklyTop")){eb2bOpenModal("weekly_mom",null);return;}
       if(ev.target.closest("#eb2bWeeklyImportTop")){eb2bOpenImport("weekly");return;}
       if(ev.target.closest("#eb2bWeeklyDownloadTop")){eb2bDownloadWeeklyLatest();return;}
+      if(ev.target.closest("#eb2bProgressReportTop")){eb2bOpenExport("report");return;}
+      if(ev.target.closest("#eb2bEvidenceZipTop")){eb2bOpenExport("images");return;}
       const more=ev.target.closest("[data-eb2b-cr-more]");if(more){ev.stopPropagation();more.closest("[data-eb2b-cr-more-root]")?.classList.toggle("open");return;}
       const clear=ev.target.closest("[data-eb2b-cr-clear]");if(clear){EB2B.search="";EB2B.crFilters={status:[],sub_status:[],priority:[],category:[],requester:"",overdue:false};eb2bRenderCrLog();return;}
       const sort=ev.target.closest("[data-eb2b-cr-sort]");if(sort){const k=sort.dataset.eb2bCrSort;EB2B.crSort={key:k,dir:EB2B.crSort.key===k&&EB2B.crSort.dir==="asc"?"desc":"asc"};eb2bRenderCrLog();return;}
