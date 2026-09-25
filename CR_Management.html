@@ -20544,10 +20544,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   async function eb2bAddConfig(key){
-    const input = $e(`[data-eb2b-config-input="${key}"]`), name = input?.value.trim();
+    const input = $e(`[data-eb2b-config-input="${key}"]`), orderInput=$e(`[data-eb2b-config-order-input="${key}"]`), name = input?.value.trim();
     if(!name) return;
+    const enteredOrder=orderInput ? Number.parseInt(orderInput.value,10) : NaN;
+    if(orderInput && (!Number.isInteger(enteredOrder) || enteredOrder<0)){eToast("Thứ tự phải là số nguyên từ 0 trở lên.","err");return;}
     const def = EB2B_CONFIG[key], sb=activeDb();
-    const payload = {name,sort_order:((EB2B.rows[key]||[]).length+1)*10,is_active:true};
+    if((EB2B.rows[key]||[]).some(row=>String(row.name||"").toLowerCase()===name.toLowerCase())){eToast(`${def.label} này đã tồn tại.`,"err");return;}
+    const payload = {name,sort_order:orderInput ? enteredOrder : ((EB2B.rows[key]||[]).length+1)*10,is_active:true};
     if(key==="statuses" || key==="sub_statuses"){
       payload.color=def.defaultColor;
       payload.text_color=def.defaultColor;
@@ -20555,6 +20558,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     }
     const result = await sb.from(def.table).insert(payload);
     if(result.error){ eToast("Không thêm được danh mục: "+result.error.message,"err"); return; }
+    if(input) input.value="";
+    if(orderInput) orderInput.value="0";
     await eb2bLoad();
   }
 
@@ -20605,6 +20610,98 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     host.onkeydown=ev=>{ if(ev.key==="Enter"&&ev.target.dataset?.eb2bConfigInput) host.querySelector(`[data-eb2b-config-add="${ev.target.dataset.eb2bConfigInput}"]`)?.click(); };
   }
   window.__eb2bRenderAdminHost = eb2bRenderAdminHost;
+
+  /*
+   * e-B2B Admin parity
+   * -------------------
+   * The old e-B2B admin host used compact cards with inline fields.  DMS
+   * uses one list-panel per catalog, a consistent create toolbar, table
+   * headers, footer counts and modal editing.  Render the e-B2B catalogs
+   * with that same layout while keeping every read/write on eb2b_* tables.
+   */
+  function eb2bAdminColorToken(value, fallback){
+    const hex=typeof normalizeHexColor==="function"
+      ? normalizeHexColor(value,fallback)
+      : (value || fallback);
+    return `<span class="admin-color-token" style="--admin-color:${eEsc(hex)}"><i></i><span>${eEsc(hex)}</span></span>`;
+  }
+
+  function eb2bAdminConfigModalTemplate(key,row){
+    const def=EB2B_CONFIG[key], colored=key==="statuses" || key==="sub_statuses";
+    const v=row || {};
+    return `<div class="eb2b-modal eb2b-admin-config-modal" role="dialog" aria-modal="true">
+      <div class="eb2b-modal-head">
+        <div><h3>${row ? "Sửa" : "Thêm"} ${eEsc(def.label)}</h3><p>Cấu hình riêng cho workspace e-B2B</p></div>
+        <button type="button" class="modal-close" data-eb2b-config-modal-close><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
+      </div>
+      <div class="eb2b-modal-body">
+        <div class="eb2b-form-grid">
+          <div class="eb2b-field span-2"><label for="eb2bConfigModalName">Tên ${eEsc(def.label)} *</label><input id="eb2bConfigModalName" type="text" maxlength="120" value="${eEsc(v.name || "")}" placeholder="Nhập tên ${eEsc(def.label).toLowerCase()}"></div>
+          <div class="eb2b-field"><label for="eb2bConfigModalOrder">Thứ tự hiển thị</label><input id="eb2bConfigModalOrder" type="number" min="0" step="1" value="${Number(v.sort_order) || 0}"><div class="eb2b-field-hint">Số nhỏ hơn sẽ hiển thị trước.</div></div>
+          <div class="eb2b-field"><label for="eb2bConfigModalActive">Trạng thái</label><select id="eb2bConfigModalActive"><option value="true" ${v.is_active !== false ? "selected" : ""}>Đang dùng</option><option value="false" ${v.is_active === false ? "selected" : ""}>Ẩn khỏi danh sách</option></select></div>
+          ${colored ? `<div class="eb2b-field"><label for="eb2bConfigModalBg">Màu nền</label><input id="eb2bConfigModalBg" type="color" value="${eEsc(normalizeHexColor(v.background_color,"#eef4fa"))}"></div><div class="eb2b-field"><label for="eb2bConfigModalText">Màu chữ</label><input id="eb2bConfigModalText" type="color" value="${eEsc(normalizeHexColor(v.text_color || v.color,def.defaultColor))}"></div>` : ""}
+        </div>
+      </div>
+      <div class="eb2b-modal-foot"><button type="button" class="btn btn-ghost" data-eb2b-config-modal-close>Hủy</button><button type="button" class="btn btn-primary" id="eb2bConfigModalSave">Lưu thay đổi</button></div>
+    </div>`;
+  }
+
+  function eb2bOpenConfigModal(key,id){
+    const def=EB2B_CONFIG[key], row=(EB2B.rows[key] || []).find(item=>String(item.id)===String(id));
+    const overlay=$e("#eb2bModalOverlay");
+    if(!def || !row || !overlay) return;
+    overlay.innerHTML=eb2bAdminConfigModalTemplate(key,row);
+    overlay.classList.add("show");
+    overlay.classList.remove("full");
+    const close=()=>{overlay.classList.remove("show");overlay.innerHTML="";};
+    $$e("[data-eb2b-config-modal-close]",overlay).forEach(button=>button.addEventListener("click",close));
+    overlay.onclick=event=>{if(event.target===overlay)close();};
+    $e("#eb2bConfigModalSave",overlay)?.addEventListener("click",async()=>{
+      const name=($e("#eb2bConfigModalName",overlay)?.value || "").trim().replace(/\s+/g," ");
+      const order=Number.parseInt($e("#eb2bConfigModalOrder",overlay)?.value,10);
+      if(!name){eToast(`Vui lòng nhập tên ${def.label}.`,"err");$e("#eb2bConfigModalName",overlay)?.focus();return;}
+      if(!Number.isInteger(order) || order<0){eToast("Thứ tự phải là số nguyên từ 0 trở lên.","err");return;}
+      const duplicate=(EB2B.rows[key] || []).some(item=>String(item.id)!==String(row.id)&&String(item.name||"").toLowerCase()===name.toLowerCase());
+      if(duplicate){eToast(`${def.label} này đã tồn tại.`,"err");return;}
+      const payload={name,sort_order:order,is_active:$e("#eb2bConfigModalActive",overlay)?.value!=="false",updated_at:eNow()};
+      if(key==="statuses" || key==="sub_statuses"){
+        payload.background_color=$e("#eb2bConfigModalBg",overlay)?.value || "#eef4fa";
+        payload.text_color=$e("#eb2bConfigModalText",overlay)?.value || def.defaultColor;
+        payload.color=payload.text_color;
+      }
+      const save=$e("#eb2bConfigModalSave",overlay);
+      if(save){save.disabled=true;save.textContent="Đang lưu...";}
+      const result=await activeDb().from(def.table).update(payload).eq("id",row.id);
+      if(result.error){if(save){save.disabled=false;save.textContent="Lưu thay đổi";}eToast("Không lưu được danh mục: "+result.error.message,"err");return;}
+      close();eToast(`Đã cập nhật "${name}".`,"ok");await eb2bLoad();
+    });
+    window.setTimeout(()=>$e("#eb2bConfigModalName",overlay)?.focus(),0);
+  }
+
+  eb2bRenderAdminHost=function(){
+    const host=$e("#eb2bAdminConfigHost");
+    if(!host) return;
+    const statusBadge=off=>`<span class="badge" style="background:${off?"var(--danger-dim)":"var(--success-dim)"};color:${off?"var(--danger)":"var(--success)"}"><span class="dot" style="background:${off?"var(--danger)":"var(--success)"}"></span>${off?"Đã ẩn":"Đang dùng"}</span>`;
+    host.innerHTML=Object.entries(EB2B_CONFIG).map(([key,def])=>{
+      const rows=[...(EB2B.rows[key] || [])].sort((a,b)=>(a.sort_order ?? 0)-(b.sort_order ?? 0));
+      const active=rows.filter(item=>item.is_active!==false).length;
+      const colored=key==="statuses" || key==="sub_statuses";
+      const orderInput=key==="statuses" ? "" : `<input type="number" min="0" step="1" value="0" style="width:86px;" aria-label="Thứ tự ${eEsc(def.label)}" data-eb2b-config-order-input="${key}">`;
+      const rowHtml=item=>{
+        const off=item.is_active===false;
+        const actions=`<td class="cell-actions"><div class="row-actions" style="opacity:1;"><button class="icon-btn" type="button" title="Chỉnh sửa" data-eb2b-config-edit="${key}" data-eb2b-id="${eEsc(item.id)}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn ${off?"":"danger"}" type="button" title="${off?"Hiện lại":"Ẩn"}" data-eb2b-config-delete="${key}" data-eb2b-id="${eEsc(item.id)}" data-eb2b-active="${off?1:0}"><mi-icon name="${off?"eye":"eye-off"}" stroke-width="2"></mi-icon></button></div></td>`;
+        if(colored) return `<tr><td class="cell-title">${eEsc(item.name)}</td><td>${eb2bAdminColorToken(item.background_color,"#eef4fa")}</td><td>${eb2bAdminColorToken(item.text_color || item.color,def.defaultColor)}</td><td class="cell-dim">${Number(item.sort_order) || 0}</td>${actions}</tr>`;
+        return `<tr><td class="cell-title">${eEsc(item.name)}</td><td class="cell-dim">${Number(item.sort_order) || 0}</td><td>${statusBadge(off)}</td>${actions}</tr>`;
+      };
+      return `<div class="list-panel" style="margin-top:16px;">
+        <div class="list-panel-head"><div><div class="list-panel-count"><span class="admin-scope-tag is-eb2b">e-B2B</span><b>${active}</b> ${eEsc(def.label)} đang dùng${rows.length>active?` · ${rows.length-active} đang ẩn`:""}</div>${key==="sub_statuses" ? `<div class="hint">Danh sách giá trị dùng để theo dõi chi tiết bên trong từng Status.</div>` : key==="evidence_steps" ? `<div class="hint">Các bước dùng khi quản lý evidence trong Test Case UAT e-B2B.</div>` : key==="attachment_categories" ? `<div class="hint">Danh sách nhóm tài liệu hiển thị trong dropdown Tệp đính kèm e-B2B.</div>` : ""}</div><div class="status-create"><input type="text" maxlength="120" placeholder="${key==="statuses"?"Ví dụ: Pending Review":"Thêm "+eEsc(def.label)+"..."}" data-eb2b-config-input="${key}">${orderInput}<button class="btn btn-primary btn-sm" type="button" data-eb2b-config-add="${key}"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon>Thêm ${eEsc(def.label).toLowerCase()}</button></div></div>
+        <div class="table-wrap"><table><thead><tr>${colored?`<th>${eEsc(def.label)}</th><th>Màu nền</th><th>Màu chữ</th><th>Thứ tự</th><th></th>`:`<th>${eEsc(def.label)}</th><th>Thứ tự</th><th>Trạng thái</th><th></th>`}</tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${colored?5:4}" class="cell-dim" style="text-align:center;padding:18px;">Chưa có danh mục.</td></tr>`}</tbody></table></div>
+        <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${rows.length} ${eEsc(def.label)}</span></div>
+      </div>`;
+    }).join("");
+    host.onkeydown=event=>{if(event.key==="Enter" && event.target.dataset?.eb2bConfigInput)host.querySelector(`[data-eb2b-config-add="${event.target.dataset.eb2bConfigInput}"]`)?.click();};
+  };
+  window.__eb2bRenderAdminHost=eb2bRenderAdminHost;
 
   async function eb2bHideConfig(key,id,makeActive){
     const def=EB2B_CONFIG[key], result=await activeDb().from(def.table).update({is_active:!!makeActive}).eq("id",id);
@@ -20676,6 +20773,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         if(action.dataset.eb2bAct==="delete" && row) eb2bDelete(rowKey,row);
         return;
       }
+      const editConfig=ev.target.closest("[data-eb2b-config-edit]");
+      if(editConfig){eb2bOpenConfigModal(editConfig.dataset.eb2bConfigEdit,editConfig.dataset.eb2bId);return;}
       const add=ev.target.closest("[data-eb2b-config-add]");
       if(add){eb2bAddConfig(add.dataset.eb2bConfigAdd);return;}
       const hide=ev.target.closest("[data-eb2b-config-delete]");
