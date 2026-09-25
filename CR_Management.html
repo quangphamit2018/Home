@@ -5927,6 +5927,35 @@ lucide/dist/esm/lucide.mjs:
 */
 
 </script>
+<script id="morphicons-extra">
+/* Bổ sung icon Lucide cho morphicons (cùng phiên bản lucide v1.48.0) */
+(function(){ if(!window.MI||!window.MI.ICONS) return; Object.assign(window.MI.ICONS,{
+"table-2":[["path",{d:"M3 9h18"}],["path",{d:"M9 3v18"}],["rect",{x:"3",y:"3",width:"18",height:"18",rx:"2"}]],
+"grip-vertical":[["circle",{cx:"9",cy:"12",r:"1"}],["circle",{cx:"9",cy:"5",r:"1"}],["circle",{cx:"9",cy:"19",r:"1"}],["circle",{cx:"15",cy:"12",r:"1"}],["circle",{cx:"15",cy:"5",r:"1"}],["circle",{cx:"15",cy:"19",r:"1"}]],
+"zoom-in":[["circle",{cx:"11",cy:"11",r:"8"}],["line",{x1:"21",x2:"16.65",y1:"21",y2:"16.65"}],["line",{x1:"11",x2:"11",y1:"8",y2:"14"}],["line",{x1:"8",x2:"14",y1:"11",y2:"11"}]],
+"chevron-left":[["path",{d:"m15 18-6-6 6-6"}]],
+"eye-off":[["path",{d:"M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"}],["path",{d:"M14.084 14.158a3 3 0 0 1-4.242-4.242"}],["path",{d:"M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"}],["path",{d:"m2 2 20 20"}]],
+"arrow-up":[["path",{d:"m5 12 7-7 7 7"}],["path",{d:"M12 19V5"}]],
+"arrow-down":[["path",{d:"M12 5v14"}],["path",{d:"m19 12-7 7-7-7"}]],
+"arrow-up-down":[["path",{d:"m21 16-4 4-4-4"}],["path",{d:"M17 20V4"}],["path",{d:"m3 8 4-4 4 4"}],["path",{d:"M7 4v16"}]]
+}); })();
+</script>
+<style id="morphicons-smooth">
+/* Nâng cấp độ mượt: chỉ thêm hiệu ứng, không đổi logic */
+html{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility; }
+.view{ -webkit-overflow-scrolling:touch; overscroll-behavior:contain; scroll-behavior:smooth; }
+mi-icon > svg{ transition: color .2s ease, opacity .2s ease, transform .22s cubic-bezier(.2,.7,.2,1); }
+button:active mi-icon > svg{ transform:scale(.9); }
+.sort-marker mi-icon > svg, .weekly-mom-sort-icon mi-icon > svg, .eb2b-uat-sort-arrow mi-icon > svg{ width:12px; height:12px; }
+.eb2b-uat-sort-arrow{ display:inline-flex; vertical-align:-1px; margin-left:4px; color:var(--accent); }
+.cr-filter-chevron{ display:inline-flex; align-items:center; }
+.cr-filter-chevron mi-icon > svg{ width:14px; height:14px; }
+.unified-filter-option-mark mi-icon > svg{ width:11px; height:11px; }
+.doc-status-icon mi-icon > svg{ width:12px; height:12px; }
+.ea-hint mi-icon > svg{ width:12px; height:12px; vertical-align:-2px; }
+.stat-tile, .substat-pill, .recent-item, .tc-summary-row, .kpi-card{ transition: transform .22s cubic-bezier(.2,.7,.2,1), box-shadow .22s ease, background-color .2s ease, border-color .2s ease; }
+@media (prefers-reduced-motion: reduce){ *,*::before,*::after{ animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
+</style>
 </head>
 <body>
 
@@ -6331,28 +6360,28 @@ lucide/dist/esm/lucide.mjs:
               </div>
               <div class="cr-filter-group" data-filter-key="status">
                 <button class="cr-filter-trigger" id="filterStatusTrigger" type="button" aria-haspopup="true" aria-expanded="false">
-                  <span class="cr-filter-glyph">S</span><span class="cr-filter-copy"><span class="cr-filter-label">Status</span><strong class="cr-filter-value" id="filterStatusSummary">Tất cả</strong></span><span class="cr-filter-count" id="filterStatusCount"></span><span class="cr-filter-chevron">⌄</span>
+                  <span class="cr-filter-glyph">S</span><span class="cr-filter-copy"><span class="cr-filter-label">Status</span><strong class="cr-filter-value" id="filterStatusSummary">Tất cả</strong></span><span class="cr-filter-count" id="filterStatusCount"></span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>
                 </button>
                 <div class="cr-filter-menu" id="menuFilterStatus"></div>
                 <select id="filterStatus" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
               </div>
               <div class="cr-filter-group" data-filter-key="sub_status">
                 <button class="cr-filter-trigger" id="filterSubStatusTrigger" type="button" aria-haspopup="true" aria-expanded="false">
-                  <span class="cr-filter-glyph">SS</span><span class="cr-filter-copy"><span class="cr-filter-label">Sub-status</span><strong class="cr-filter-value" id="filterSubStatusSummary">Tất cả</strong></span><span class="cr-filter-count" id="filterSubStatusCount"></span><span class="cr-filter-chevron">⌄</span>
+                  <span class="cr-filter-glyph">SS</span><span class="cr-filter-copy"><span class="cr-filter-label">Sub-status</span><strong class="cr-filter-value" id="filterSubStatusSummary">Tất cả</strong></span><span class="cr-filter-count" id="filterSubStatusCount"></span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>
                 </button>
                 <div class="cr-filter-menu" id="menuFilterSubStatus"></div>
                 <select id="filterSubStatus" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
               </div>
               <div class="cr-filter-group" data-filter-key="priority">
                 <button class="cr-filter-trigger" id="filterPriorityTrigger" type="button" aria-haspopup="true" aria-expanded="false">
-                  <span class="cr-filter-glyph">P</span><span class="cr-filter-copy"><span class="cr-filter-label">Priority</span><strong class="cr-filter-value" id="filterPrioritySummary">Tất cả</strong></span><span class="cr-filter-count" id="filterPriorityCount"></span><span class="cr-filter-chevron">⌄</span>
+                  <span class="cr-filter-glyph">P</span><span class="cr-filter-copy"><span class="cr-filter-label">Priority</span><strong class="cr-filter-value" id="filterPrioritySummary">Tất cả</strong></span><span class="cr-filter-count" id="filterPriorityCount"></span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>
                 </button>
                 <div class="cr-filter-menu" id="menuFilterPriority"></div>
                 <select id="filterPriority" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
               </div>
               <div class="cr-filter-group" data-filter-key="category">
                 <button class="cr-filter-trigger" id="filterCategoryTrigger" type="button" aria-haspopup="true" aria-expanded="false">
-                  <span class="cr-filter-glyph">C</span><span class="cr-filter-copy"><span class="cr-filter-label">Category</span><strong class="cr-filter-value" id="filterCategorySummary">Tất cả</strong></span><span class="cr-filter-count" id="filterCategoryCount"></span><span class="cr-filter-chevron">⌄</span>
+                  <span class="cr-filter-glyph">C</span><span class="cr-filter-copy"><span class="cr-filter-label">Category</span><strong class="cr-filter-value" id="filterCategorySummary">Tất cả</strong></span><span class="cr-filter-count" id="filterCategoryCount"></span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>
                 </button>
                 <div class="cr-filter-menu" id="menuFilterCategory"></div>
                 <select id="filterCategory" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
@@ -7598,8 +7627,8 @@ function sortHeaderHtml(kind, key, label){
   const direction = active?.direction === "desc" ? "desc" : "asc";
   const rank = active ? activeIndex + 1 : 0;
   const marker = active
-    ? `<span class="sort-marker" aria-hidden="true">${rank > 1 ? rank : ""}${direction === "asc" ? "↑" : "↓"}</span>`
-    : `<span class="sort-marker sort-marker-muted" aria-hidden="true">↕</span>`;
+    ? `<span class="sort-marker" aria-hidden="true">${rank > 1 ? rank : ""}${direction === "asc" ? '<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>' : '<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>'}</span>`
+    : `<span class="sort-marker sort-marker-muted" aria-hidden="true"><mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon></span>`;
   const aria = active ? (direction === "asc" ? "ascending" : "descending") : "none";
   return `<th class="sortable-th${active ? " is-sorted" : ""}" data-sort-kind="${kind}" data-sort-key="${key}" aria-sort="${aria}" title="Bấm để sort${active ? ` (${direction === "asc" ? "tăng dần" : "giảm dần"})` : ""}; giữ Shift để sort nhiều cột">${esc(label)}${marker}</th>`;
 }
@@ -10310,11 +10339,11 @@ function openExportSelectionModal(mode){
      - Map<testcaseId, string[]> -> thứ tự ID ảnh do người dùng chọn
 -------------------------------------------------------------------------- */
 const EA_ICON = {
-  grip: `<svg viewBox="0 0 12 16" width="10" height="14" aria-hidden="true"><g fill="currentColor"><circle cx="3" cy="3" r="1.3"/><circle cx="9" cy="3" r="1.3"/><circle cx="3" cy="8" r="1.3"/><circle cx="9" cy="8" r="1.3"/><circle cx="3" cy="13" r="1.3"/><circle cx="9" cy="13" r="1.3"/></g></svg>`,
-  zoom: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>`,
-  left: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>`,
-  right: `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>`,
-  close: `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>`
+  grip: `<mi-icon name="grip-vertical" size="14" stroke-width="2.4"></mi-icon>`,
+  zoom: `<mi-icon name="zoom-in" size="15" stroke-width="2.3"></mi-icon>`,
+  left: `<mi-icon name="chevron-left" size="14" stroke-width="2.6"></mi-icon>`,
+  right: `<mi-icon name="chevron-right" size="14" stroke-width="2.6"></mi-icon>`,
+  close: `<mi-icon name="x" size="16" stroke-width="2.6"></mi-icon>`
 };
 
 function evidenceArrangeModalTemplate(){
@@ -10324,7 +10353,7 @@ function evidenceArrangeModalTemplate(){
         <div>
           <h3>Sắp xếp ảnh evidence</h3>
           <div class="ea-hints">
-            <span class="ea-hint"><b>1</b>Kéo thả hoặc bấm ◀ ▶ để đổi thứ tự</span>
+            <span class="ea-hint"><b>1</b>Kéo thả hoặc bấm <mi-icon name="chevron-left" size="12" stroke-width="2.6"></mi-icon> <mi-icon name="chevron-right" size="12" stroke-width="2.6"></mi-icon> để đổi thứ tự</span>
             <span class="ea-hint"><b>2</b>Bỏ chọn để loại ảnh khỏi báo cáo</span>
             <span class="ea-hint"><b>3</b>Bấm biểu tượng kính lúp để xem ảnh lớn</span>
           </div>
@@ -15138,7 +15167,7 @@ function weeklyMomSortedRows(rows, sortState){
 
 function weeklyMomSortableHeader(header, index, recordKey, sortState){
   const isActive = Number(sortState?.index) === index;
-  const icon = isActive ? (sortState.direction === "desc" ? "↓" : "↑") : "↕";
+  const icon = isActive ? (sortState.direction === "desc" ? '<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>' : '<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>') : '<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>';
   return `<th><button class="weekly-mom-sort-button${isActive ? " is-active" : ""}" type="button" data-weekly-sort="${esc(recordKey)}" data-weekly-sort-index="${index}" title="Sắp xếp theo ${esc(header)}"><span>${esc(header)}</span><span class="weekly-mom-sort-icon" aria-hidden="true">${icon}</span></button></th>`;
 }
 
@@ -16003,7 +16032,7 @@ function brdModalTemplate(v){
               </span>
             </div>
             <span class="brd-ai-status" id="brdAiStatus"></span>
-            <button type="button" class="btn btn-ai btn-sm" id="brdAiRunBtn"><span class="spin"></span>✨ Phân tích với AI &amp; tự động điền</button>
+            <button type="button" class="btn btn-ai btn-sm" id="brdAiRunBtn"><span class="spin"></span><mi-icon name="sparkles" size="14" stroke-width="2"></mi-icon> Phân tích với AI &amp; tự động điền</button>
           </div>
         </div>
       </div>
@@ -18845,30 +18874,142 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bRenderDashboard(){
+    // Dashboard e-B2B dùng CHUNG bố cục + component với Dashboard DMS
+    // (kpiCard, stat-tile, substat-pill, recent-item, tc-summary-table), dữ liệu từ EB2B.rows.
     const c = $e("#eb2bContent");
-    const cr = EB2B.rows.cr, tc = EB2B.rows.uat, rel = EB2B.rows.release;
-    const active = [...cr,...tc,...rel];
-    const statusCount = {};
-    cr.forEach(row=>{ statusCount[row.status || "Chưa có"] = (statusCount[row.status || "Chưa có"] || 0) + 1; });
-    c.innerHTML = `
-      <div class="eb2b-kpis">
-        <div class="eb2b-kpi"><div class="eb2b-kpi-label">Change Request</div><div class="eb2b-kpi-value">${cr.length}</div></div>
-        <div class="eb2b-kpi"><div class="eb2b-kpi-label">UAT Test Case</div><div class="eb2b-kpi-value">${tc.length}</div></div>
-        <div class="eb2b-kpi"><div class="eb2b-kpi-label">Release / PRD</div><div class="eb2b-kpi-value">${rel.length}</div></div>
-        <div class="eb2b-kpi"><div class="eb2b-kpi-label">BRD / Weekly MoM</div><div class="eb2b-kpi-value">${EB2B.rows.brd.length + EB2B.rows.weekly_mom.length}</div></div>
-      </div>
-      <div class="eb2b-panel">
-        <div class="eb2b-panel-head"><h3>Phân bổ CR theo Status</h3><span class="eb2b-muted">${active.length} bản ghi dữ liệu chính</span></div>
-        <div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>Status</th><th>Số lượng</th></tr></thead><tbody>
-          ${Object.keys(statusCount).length ? Object.entries(statusCount).map(([k,v])=>`<tr><td>${eb2bStatus(k)}</td><td>${v}</td></tr>`).join("") : `<tr><td colspan="2" class="eb2b-empty">Chưa có dữ liệu EB2B.</td></tr>`}
-        </tbody></table></div>
-      </div>
-      <div class="eb2b-panel">
-        <div class="eb2b-panel-head"><h3>CR cập nhật gần đây</h3><button class="btn btn-primary btn-sm" data-eb2b-new="cr">Tạo CR</button></div>
-        <div class="eb2b-table-wrap"><table class="eb2b-table"><thead><tr><th>CR ID</th><th>App</th><th>Owner</th><th>Status</th><th>Cập nhật</th></tr></thead><tbody>
-          ${cr.slice(0,8).map(r=>`<tr><td><b>${eEsc(r.cr_id)}</b></td><td>${eEsc(r.app||"—")}</td><td>${eEsc(r.owner||"—")}</td><td>${eb2bStatus(r.status)}</td><td>${eEsc(eDate(r.updated_at||r.created_at))}</td></tr>`).join("") || `<tr><td colspan="5" class="eb2b-empty">Chưa có CR EB2B.</td></tr>`}
-        </tbody></table></div>
+    const list = EB2B.rows.cr || [], tcList = EB2B.rows.uat || [];
+    const total = list.length;
+    const overdue = list.filter(eb2bCrOverdue).length;
+    const inflight = list.filter(r=> ["In Progress","UAT","In Review"].includes(r.status)).length;
+    const released = list.filter(r=> r.status === "Released").length;
+    const pct = n => total ? Math.round((n/total)*100) : 0;
+    const tcPass = tcList.filter(r=> r.pass_fail === "Pass").length;
+    const tcPct = tcList.length ? Math.round((tcPass/tcList.length)*100) : 0;
+    const rgba = (hex,a)=> typeof hexToRgba === "function" ? hexToRgba(hex,a) : hex;
+    const crByCode = {};
+    list.forEach(r=>{ if(r.cr_id) crByCode[r.cr_id] = r; });
+
+    const statusCatalog = eb2bCrCatalog("status");
+    const statuses = [...statusCatalog, ...new Set(list.map(r=>r.status).filter(s=> s && !statusCatalog.includes(s)))];
+    const statusCounts = {};
+    list.forEach(r=>{ if(r.status) statusCounts[r.status] = (statusCounts[r.status]||0) + 1; });
+    const statusHtml = statuses.map(s=>{
+      const n = statusCounts[s] || 0, p = pct(n), col = eb2bCrColor("status", s);
+      return `<button type="button" class="stat-tile${n ? "" : " is-empty"}" data-eb2b-dash-status="${eEsc(s)}" style="--tile-color:${col}">
+        <span class="stat-tile-top"><span class="stat-tile-dot" style="background:${col}"></span><span class="stat-tile-label">${eEsc(s)}</span></span>
+        <span class="stat-tile-bottom"><span class="stat-tile-value">${n}</span><span class="stat-tile-pct" style="background:${rgba(col,.14)}; color:${col};">${p}%</span></span>
+      </button>`;
+    }).join("");
+
+    const withSub = list.filter(r=> r.sub_status).length;
+    const subCounts = {};
+    list.forEach(r=>{ if(r.sub_status) subCounts[r.sub_status] = (subCounts[r.sub_status]||0) + 1; });
+    const subCatalog = eb2bCrCatalog("sub_status");
+    const subUsed = [...subCatalog, ...Object.keys(subCounts).filter(s=> !subCatalog.includes(s))]
+      .filter(s=> subCounts[s] > 0).sort((a,b)=> subCounts[b] - subCounts[a]);
+    const subHtml = subUsed.length ? subUsed.map(s=>{
+      const col = eb2bCrColor("sub_status", s);
+      return `<button type="button" class="substat-pill" data-eb2b-dash-substatus="${eEsc(s)}" style="--pill-color:${col}">
+        <span class="substat-dot" style="background:${col}"></span><span class="substat-label">${eEsc(s)}</span><span class="substat-value">${subCounts[s]}</span>
+      </button>`;
+    }).join("") : emptyRow("Chưa có CR nào được gán Sub-Status");
+
+    const recent = [...list].sort((a,b)=> new Date(b.updated_at||b.created_at) - new Date(a.updated_at||a.created_at)).slice(0,6);
+    const recentHtml = recent.length ? recent.map(r=>{
+      const title = eb2bCrTitle(r);
+      return `<div class="recent-item" data-eb2b-dash-cr="${eEsc(r.id)}" style="--rail-color:${eb2bCrColor("status", r.status)}">
+        <span class="recent-id">${eEsc(r.cr_id || "—")}</span>
+        <span class="recent-title">${eEsc(title === "—" ? "(chưa có tiêu đề)" : title)}</span>
+        ${eb2bCrBadge("status", r.status)}
+        <span class="recent-meta">${eEsc(relTime(r.updated_at || r.created_at))}</span>
       </div>`;
+    }).join("") : emptyRow("Chưa có Change Request nào");
+
+    const groups = {};
+    tcList.forEach(r=>{
+      const key = r.cr_id || "—";
+      if(!groups[key]) groups[key] = { cr_id:key, total:0, pass:0, fail:0, blocked:0, notStarted:0 };
+      const g = groups[key]; g.total++;
+      const res = r.pass_fail || "Not Started";
+      if(res === "Pass") g.pass++; else if(res === "Fail") g.fail++; else if(res === "Blocked") g.blocked++; else g.notStarted++;
+    });
+    const tcRows = Object.values(groups).sort((a,b)=> b.total - a.total);
+    const tcHtml = tcRows.length ? tcRows.map(g=>{
+      const cr = crByCode[g.cr_id];
+      const p = g.total ? Math.round((g.pass/g.total)*100) : 0;
+      const title = cr ? eb2bCrTitle(cr) : "—";
+      return `<tr class="tc-summary-row" data-eb2b-dash-tc="${eEsc(g.cr_id)}">
+        <td class="tc-cr-id">${eEsc(g.cr_id)}</td>
+        <td class="tc-cr-title" title="${eEsc(cr ? title : "")}">${eEsc(title)}</td>
+        <td>${cr ? eb2bCrBadge("status", cr.status) : "—"}</td>
+        <td class="tc-num">${g.total}</td>
+        <td class="tc-num tc-pass">${g.pass}</td>
+        <td class="tc-num tc-fail">${g.fail}</td>
+        <td class="tc-num tc-blocked">${g.blocked}</td>
+        <td class="tc-num tc-notstarted">${g.notStarted}</td>
+        <td class="tc-progress-cell"><div class="tc-progress-track"><div class="tc-progress-fill" style="width:${p}%"></div></div><span class="tc-progress-label">${p}%</span></td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="9"><div class="empty-state" style="padding:24px 10px;"><p>Chưa có Test Case nào</p></div></td></tr>`;
+
+    c.innerHTML = `
+      <div class="kpi-grid">
+        ${kpiCard("Tổng số CR", total, "Toàn bộ Change Request đã ghi nhận", "", KPI_ICONS.total)}
+        ${kpiCard("Đang xử lý", inflight, "In Progress / UAT / In Review", "accent", KPI_ICONS.inflight, pct(inflight))}
+        ${kpiCard("Trễ hạn", overdue, "Deadline đã qua, chưa Released/Closed", "danger", KPI_ICONS.overdue, pct(overdue))}
+        ${kpiCard("Đã Released", released, "Đã hoàn tất release", "success", KPI_ICONS.released, pct(released))}
+        ${kpiCard("Tổng Test Case", tcList.length, "Pass " + tcPass + "/" + tcList.length, "info", KPI_ICONS.testcase, tcList.length ? tcPct : null)}
+      </div>
+      <div class="panel panel-pad dash-section">
+        <div class="dash-section-head">
+          <h3>Theo trạng thái <span class="total">${total} CR</span></h3>
+          <span class="dash-section-hint">Bấm vào một trạng thái để xem danh sách CR tương ứng</span>
+        </div>
+        <div class="stat-tile-grid">${statusHtml}</div>
+      </div>
+      <div class="panel panel-pad dash-section">
+        <div class="dash-section-head">
+          <h3>Theo Sub-Status <span class="total">${withSub} CR có Sub-Status</span></h3>
+          <span class="dash-section-hint">Bước xử lý chi tiết bên trong từng Status — bấm để lọc CR</span>
+        </div>
+        <div class="substat-grid">${subHtml}</div>
+      </div>
+      <div class="panel panel-pad dash-section">
+        <div class="dash-section-head"><h3>CR gần đây</h3></div>
+        <div class="recent-list">${recentHtml}</div>
+      </div>
+      <div class="panel dash-section tc-summary-panel">
+        <div class="dash-section-head tc-summary-head">
+          <h3>Test Case theo CR <span class="total">${tcList.length} Test Case</span></h3>
+          <span class="dash-section-hint">Tổng Test Case UAT và kết quả theo từng CR — bấm một dòng để mở chi tiết CR</span>
+        </div>
+        <div class="tc-summary-table-wrap">
+          <table class="tc-summary-table">
+            <thead><tr>
+              <th>CR ID</th><th>Tiêu đề</th><th>Status</th>
+              <th class="tc-num-head">Tổng TC</th><th class="tc-num-head">Pass</th><th class="tc-num-head">Fail</th>
+              <th class="tc-num-head">Blocked</th><th class="tc-num-head">Chưa chạy</th><th class="tc-progress-head">Tỉ lệ Pass</th>
+            </tr></thead>
+            <tbody>${tcHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+
+    const goCrFiltered = (field, value)=>{
+      EB2B.search = "";
+      EB2B.crFilters = {status:[], sub_status:[], priority:[], category:[], requester:"", overdue:false};
+      EB2B.crFilters[field] = [String(value || "")].filter(Boolean);
+      eb2bShow("cr");
+    };
+    $$e("[data-eb2b-dash-status]", c).forEach(el=> el.addEventListener("click", ()=> goCrFiltered("status", el.dataset.eb2bDashStatus)));
+    $$e("[data-eb2b-dash-substatus]", c).forEach(el=> el.addEventListener("click", ()=> goCrFiltered("sub_status", el.dataset.eb2bDashSubstatus)));
+    $$e("[data-eb2b-dash-cr]", c).forEach(el=> el.addEventListener("click", ()=>{
+      const row = list.find(x=> String(x.id) === String(el.dataset.eb2bDashCr));
+      if(row) eb2bOpenCrDrawer(row);
+    }));
+    $$e("[data-eb2b-dash-tc]", c).forEach(el=> el.addEventListener("click", ()=>{
+      const row = crByCode[el.dataset.eb2bDashTc];
+      if(row) eb2bOpenCrDrawer(row);
+    }));
   }
 
   function eb2bSearchRows(key){
@@ -18983,7 +19124,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const summary=selected.length===0?"Tất cả":selected.length===1?selected[0]:`${selected[0]} +${selected.length-1}`;
     return `<div class="cr-filter-group" data-eb2b-cr-filter-group="${key}">
       <button class="cr-filter-trigger ${selected.length?"is-active":""}" type="button" data-eb2b-cr-filter-trigger="${key}" aria-haspopup="true" aria-expanded="false">
-        <span class="cr-filter-glyph">${glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${label}</span><strong class="cr-filter-value">${eEsc(summary)}</strong></span><span class="cr-filter-count">${selected.length>1?selected.length:""}</span><span class="cr-filter-chevron">⌄</span>
+        <span class="cr-filter-glyph">${glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${label}</span><strong class="cr-filter-value">${eEsc(summary)}</strong></span><span class="cr-filter-count">${selected.length>1?selected.length:""}</span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>
       </button>
       <div class="cr-filter-menu" data-eb2b-cr-filter-menu="${key}">
         <div class="cr-filter-menu-head"><div><div class="cr-filter-menu-title">${label}</div><span class="cr-filter-menu-hint">Chọn một hoặc nhiều giá trị</span></div><button type="button" class="cr-filter-reset" data-eb2b-cr-filter-reset="${key}">Đặt lại</button></div>
@@ -19011,7 +19152,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
   function eb2bCrDocumentHtml(row,type){
     const present=eb2bCrDocumentPresent(row,type);
-    return `<td class="doc-status-cell" title="${type} ${present?"đã được đính kèm":"chưa được đính kèm"}"><span class="doc-status ${present?"is-present":"is-missing"}"><span class="doc-status-icon">${present?"✓":"—"}</span><span>${present?"Có file":"Chưa có"}</span></span></td>`;
+    return `<td class="doc-status-cell" title="${type} ${present?"đã được đính kèm":"chưa được đính kèm"}"><span class="doc-status ${present?"is-present":"is-missing"}"><span class="doc-status-icon">${present?'<mi-icon name="check" size="12" stroke-width="3"></mi-icon>':"—"}</span><span>${present?"Có file":"Chưa có"}</span></span></td>`;
   }
   function eb2bCrInlineHtml(field,row){
     const value=row[field]||"";
@@ -19103,13 +19244,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const overdue=all.filter(eb2bCrOverdue).length,inProgress=all.filter(r=>["In Progress","In Review","UAT"].includes(r.status)).length,critical=all.filter(r=>r.priority==="Critical").length;
     const requesters=Array.from(new Set(all.map(x=>x.requester).filter(Boolean))).sort();
     const visible=EB2B_CR_COLUMNS.filter(col=>EB2B.crColumns[col.key]);
-    const sortTh=(key,label)=>`<th class="sortable-th ${EB2B.crSort.key===key?"is-sorted":""}" data-eb2b-cr-sort="${key}">${eEsc(label)}<span class="sort-marker">${EB2B.crSort.key===key?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>`;
+    const sortTh=(key,label)=>`<th class="sortable-th ${EB2B.crSort.key===key?"is-sorted":""}" data-eb2b-cr-sort="${key}">${eEsc(label)}<span class="sort-marker">${EB2B.crSort.key===key?(EB2B.crSort.dir==="asc"?'<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>':'<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>'):'<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>'}</span></th>`;
     const rowHtml=r=>{
       const overdueRow=eb2bCrOverdue(r),canEdit=typeof canEditData!=="function"||canEditData();
       return `<tr class="eb2b-cr-row ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-row="${eEsc(r.id)}"><td class="col-check"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""} aria-label="Chọn ${eEsc(r.cr_id)}"></td><td class="cell-id sticky-cr-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td>${visible.map(col=>eb2bCrCellHtml(col.key,r,overdueRow,canEdit)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${eEsc(r.id)}" title="Xem chi tiết"><mi-icon name="eye" stroke-width="2"></mi-icon></button><button class="icon-btn" data-eb2b-cr-edit="${eEsc(r.id)}" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-cr-delete="${eEsc(r.id)}" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></td></tr>`;
     };
     const mobileHtml=r=>`<article class="cr-card eb2b-cr-card ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-view="${eEsc(r.id)}"><div class="cr-card-top"><label class="cr-card-select" onclick="event.stopPropagation()"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""}></label><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}${eb2bCrOverdue(r)?`<span class="badge badge-danger">Trễ hạn</span>`:""}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(r.deadline?eDate(r.deadline):"—")}</span></div><div class="cr-card-inline">${eb2bCrInlineHtml("status",r)}${eb2bCrInlineHtml("priority",r)}</div><div class="cr-card-actions"><button class="btn btn-secondary btn-sm" data-eb2b-cr-edit="${eEsc(r.id)}">Sửa</button><button class="btn btn-secondary btn-sm danger" data-eb2b-cr-delete="${eEsc(r.id)}">Xóa</button></div></article>`;
-    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrFilterCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrFilterCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrFilterCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrFilterCatalog("category"))}<div class="tb-dropdown" data-eb2b-cr-more-root><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-cr-more>Lọc thêm<span class="tb-badge ${EB2B.crFilters.requester||EB2B.crFilters.overdue?"":"hidden"}">${[EB2B.crFilters.requester,EB2B.crFilters.overdue].filter(Boolean).length}</span></button><div class="tb-menu" data-eb2b-cr-more-menu><div class="tb-menu-item-label">Requester</div><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select><div class="tb-menu-divider"></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Chỉ hiển thị quá hạn</label></div></div><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="crlog-table-outer" id="eb2bCrTableOuter"><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?"↑":"↓"):"↕"}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
+    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrFilterCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrFilterCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrFilterCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrFilterCatalog("category"))}<div class="tb-dropdown" data-eb2b-cr-more-root><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-cr-more>Lọc thêm<span class="tb-badge ${EB2B.crFilters.requester||EB2B.crFilters.overdue?"":"hidden"}">${[EB2B.crFilters.requester,EB2B.crFilters.overdue].filter(Boolean).length}</span></button><div class="tb-menu" data-eb2b-cr-more-menu><div class="tb-menu-item-label">Requester</div><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select><div class="tb-menu-divider"></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Chỉ hiển thị quá hạn</label></div></div><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="crlog-table-outer" id="eb2bCrTableOuter"><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?'<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>':'<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>'):'<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>'}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
     const bulk=document.createElement("div");bulk.className=`bulk-bar ${EB2B.crSelection.size?"":"hidden"}`;bulk.innerHTML=`<span><b>${EB2B.crSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-cr-selection-clear>Bỏ chọn</button><button class="btn btn-danger btn-sm bulk-delete-btn" type="button" data-eb2b-cr-bulk-delete><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button></div>`;const crWrap=$e("#eb2bCrTableWrap");crWrap?.parentElement?.insertBefore(bulk,crWrap);
     bulk.querySelector("[data-eb2b-cr-selection-clear]")?.addEventListener("click",()=>{EB2B.crSelection.clear();eb2bRenderCrLog();});
     bulk.querySelector("[data-eb2b-cr-bulk-delete]")?.addEventListener("click",()=>eb2bBulkDelete("cr",EB2B.crSelection));
@@ -19551,7 +19692,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
    function eb2bUatSortHeader(key,label){
      const active = EB2B.uatSort.key === key;
-     const arrow = active ? (EB2B.uatSort.dir === "asc" ? " ↑" : " ↓") : "";
+     const arrow = active ? ('<span class="eb2b-uat-sort-arrow">'+(EB2B.uatSort.dir === "asc" ? '<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>' : '<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>')+'</span>') : "";
      return `<th data-eb2b-uat-sort="${key}" style="cursor:pointer" aria-sort="${active ? (EB2B.uatSort.dir === "asc" ? "ascending" : "descending") : "none"}">${label}${arrow}</th>`;
    }
 
@@ -20017,7 +20158,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
           </div>
         </div>
         <div class="bulk-bar hidden"><span><b>0</b> đã chọn</span></div>
-        <div class="crlog-table-outer"><div class="table-wrap crlog-table-wrap" id="eb2bRelTableWrap"><table id="eb2bRelTable" class="density-${EB2B.releaseDensity}"><thead><tr><th class="col-check"> </th><th>CR ID</th>${visible.map(k=>`<th>${eEsc({release_id:"Release ID",release_name:"Tên Release / Version",environment:"Môi trường",planned_date:"Ngày dự kiến",actual_date:"Ngày thực tế",status:"Trạng thái",checklist_golive:"Go-live Checklist",release_owner:"Release Owner",signoff_by:"Sign-off by",signoff_date:"Ngày sign-off"}[k])}</th>`).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length ? rows.map(r=>`<tr data-eb2b-rel="${eEsc(r.id)}"><td class="cell-check"> </td><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id||"—")}</span></td>${visible.map(k=>eb2bReleaseCell(k,r)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-rel-act="edit" title="Sửa">✎</button><button class="icon-btn danger" data-eb2b-rel-act="del" title="Xóa">⌫</button></div></td></tr>`).join("") : `<tr><td colspan="${visible.length+3}"><div class="empty-state" style="padding:24px 10px;"><p>Chưa có Release</p><span>Bấm “Thêm Release” để tạo release package đầu tiên.</span></div></td></tr>`}</tbody></table><div class="cr-mobile-list rel-mobile-list">${rows.map(r=>`<div class="cr-card" data-eb2b-rel="${eEsc(r.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id||"—")}</span>${eb2bReleaseBadge(r.status)}</div><div class="cr-card-title">${eEsc(r.release_id||r.release_name||"—")}</div><div class="cr-card-meta"><span>${eEsc(r.release_name||"Chưa có version")}</span><span>${eEsc(r.environment||"Chưa chọn môi trường")}</span><span>${eEsc(r.planned_date||"Chưa có ngày dự kiến")}</span></div><div class="cr-card-actions"><button class="icon-btn" data-eb2b-rel-act="edit">✎</button><button class="icon-btn danger" data-eb2b-rel-act="del">⌫</button></div></div>`).join("")}</div></div></div>
+        <div class="crlog-table-outer"><div class="table-wrap crlog-table-wrap" id="eb2bRelTableWrap"><table id="eb2bRelTable" class="density-${EB2B.releaseDensity}"><thead><tr><th class="col-check"> </th><th>CR ID</th>${visible.map(k=>`<th>${eEsc({release_id:"Release ID",release_name:"Tên Release / Version",environment:"Môi trường",planned_date:"Ngày dự kiến",actual_date:"Ngày thực tế",status:"Trạng thái",checklist_golive:"Go-live Checklist",release_owner:"Release Owner",signoff_by:"Sign-off by",signoff_date:"Ngày sign-off"}[k])}</th>`).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length ? rows.map(r=>`<tr data-eb2b-rel="${eEsc(r.id)}"><td class="cell-check"> </td><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id||"—")}</span></td>${visible.map(k=>eb2bReleaseCell(k,r)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-rel-act="edit" title="Sửa"><mi-icon name="pen-line" size="14" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-rel-act="del" title="Xóa">⌫</button></div></td></tr>`).join("") : `<tr><td colspan="${visible.length+3}"><div class="empty-state" style="padding:24px 10px;"><p>Chưa có Release</p><span>Bấm “Thêm Release” để tạo release package đầu tiên.</span></div></td></tr>`}</tbody></table><div class="cr-mobile-list rel-mobile-list">${rows.map(r=>`<div class="cr-card" data-eb2b-rel="${eEsc(r.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id||"—")}</span>${eb2bReleaseBadge(r.status)}</div><div class="cr-card-title">${eEsc(r.release_id||r.release_name||"—")}</div><div class="cr-card-meta"><span>${eEsc(r.release_name||"Chưa có version")}</span><span>${eEsc(r.environment||"Chưa chọn môi trường")}</span><span>${eEsc(r.planned_date||"Chưa có ngày dự kiến")}</span></div><div class="cr-card-actions"><button class="icon-btn" data-eb2b-rel-act="edit"><mi-icon name="pen-line" size="14" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-rel-act="del">⌫</button></div></div>`).join("")}</div></div></div>
         <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Release</span></div>
       </div>
     </div>`;
@@ -20058,7 +20199,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $e('[data-eb2b-new="weekly_mom"]',c)?.remove();
     $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),state=EB2B.weeklyMomSort[String(card?.dataset.eb2bWeekly||"")];if(!state||!Number.isInteger(state.index)||!table.tBodies[0])return;const bodyRows=Array.from(table.tBodies[0].rows);bodyRows.sort((a,b)=>String(a.cells[state.index]?.textContent||"").localeCompare(String(b.cells[state.index]?.textContent||""),"vi",{numeric:true})*(state.direction==="desc"?-1:1));bodyRows.forEach(row=>table.tBodies[0].appendChild(row));});
     $all("[data-eb2b-weekly-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.weekly_mom.find(x=>String(x.id)===String(btn.closest("[data-eb2b-weekly]")?.dataset.eb2bWeekly));if(!row)return;btn.dataset.eb2bWeeklyAct==="edit"?eb2bOpenModal("weekly_mom",row):eb2bDelete("weekly_mom",row);}));
-    $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),key=String(card?.dataset.eb2bWeekly||""),state=EB2B.weeklyMomSort[key]||{index:null,direction:"asc"};Array.from(table.tHead?.rows[0]?.cells||[]).forEach((th,index)=>{const label=th.textContent.trim(),active=Number(state.index)===index;th.innerHTML=`<button class="weekly-mom-sort-button${active?" is-active":""}" type="button"><span>${eEsc(label)}</span><span class="weekly-mom-sort-icon">${active?(state.direction==="desc"?"↓":"↑"):"↕"}</span></button>`;th.querySelector("button")?.addEventListener("click",()=>{EB2B.weeklyMomSort[key]=active?{index,direction:state.direction==="asc"?"desc":"asc"}:{index,direction:"asc"};eb2bRenderWeeklyMom();});});});
+    $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),key=String(card?.dataset.eb2bWeekly||""),state=EB2B.weeklyMomSort[key]||{index:null,direction:"asc"};Array.from(table.tHead?.rows[0]?.cells||[]).forEach((th,index)=>{const label=th.textContent.trim(),active=Number(state.index)===index;th.innerHTML=`<button class="weekly-mom-sort-button${active?" is-active":""}" type="button"><span>${eEsc(label)}</span><span class="weekly-mom-sort-icon">${active?(state.direction==="desc"?'<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>':'<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>'):'<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>'}</span></button>`;th.querySelector("button")?.addEventListener("click",()=>{EB2B.weeklyMomSort[key]=active?{index,direction:state.direction==="asc"?"desc":"asc"}:{index,direction:"asc"};eb2bRenderWeeklyMom();});});});
     $all("[data-eb2b-weekly-toggle]",c).forEach(btn=>btn.addEventListener("click",()=>{const card=btn.closest("[data-eb2b-weekly]"),key=card.dataset.eb2bWeekly;EB2B.weeklyMomExpanded[key]=EB2B.weeklyMomExpanded[key]!==true;eb2bRenderWeeklyMom();}));
   }
 
@@ -20611,7 +20752,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         const off=item.is_active===false;
         const toggleIcon=off
           ? `<mi-icon name="eye" stroke-width="2"></mi-icon>`
-          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"></path><path d="M16.68 16.67A10.94 10.94 0 0 1 12 17.5c-5 0-8.73-3.11-10.5-7.5a11.77 11.77 0 0 1 5.17-5.95"></path><path d="M20.94 12a11.77 11.77 0 0 0-3.67-5.5"></path><path d="m2 2 20 20"></path></svg>`;
+          : `<mi-icon name="eye-off" stroke-width="2"></mi-icon>`;
         const actions=`<td class="cell-actions"><div class="row-actions" style="opacity:1;"><button class="icon-btn" type="button" title="Chỉnh sửa" data-eb2b-config-edit="${key}" data-eb2b-id="${eEsc(item.id)}"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn ${off?"":"danger"}" type="button" title="${off?"Hiện lại":"Ẩn"}" data-eb2b-config-delete="${key}" data-eb2b-id="${eEsc(item.id)}" data-eb2b-active="${off?1:0}">${toggleIcon}</button></div></td>`;
         if(colored) return `<tr><td class="cell-title">${eEsc(item.name)}</td><td>${eb2bAdminColorToken(item.background_color,"#eef4fa")}</td><td>${eb2bAdminColorToken(item.text_color || item.color,def.defaultColor)}</td><td class="cell-dim">${Number(item.sort_order) || 0}</td>${actions}</tr>`;
         return `<tr><td class="cell-title">${eEsc(item.name)}</td><td class="cell-dim">${Number(item.sort_order) || 0}</td><td>${statusBadge(off)}</td>${actions}</tr>`;
@@ -20952,9 +21093,9 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     chip.dataset.unifiedFilter='true';chip.classList.add('unified-filter');select.classList.add('unified-filter-native');
     const label=(labelEl.textContent||'Bộ lọc').trim();labelEl.hidden=true;
     const trigger=document.createElement('button');trigger.type='button';trigger.className='cr-filter-trigger';trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
-    trigger.innerHTML=`<span class="cr-filter-glyph">${glyphs[label]||label.slice(0,2).toUpperCase()}</span><span class="cr-filter-copy"><span class="cr-filter-label">${label}</span><strong class="cr-filter-value"></strong></span><span class="cr-filter-chevron">⌄</span>`;
+    trigger.innerHTML=`<span class="cr-filter-glyph">${glyphs[label]||label.slice(0,2).toUpperCase()}</span><span class="cr-filter-copy"><span class="cr-filter-label">${label}</span><strong class="cr-filter-value"></strong></span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>`;
     const menu=document.createElement('div');menu.className='cr-filter-menu';menu.setAttribute('role','listbox');chip.insertBefore(trigger,select);chip.appendChild(menu);
-    const sync=()=>{const current=select.options[select.selectedIndex];trigger.querySelector('.cr-filter-value').textContent=current?.textContent||'Tất cả';trigger.classList.toggle('is-active',Boolean(select.value));menu.innerHTML=Array.from(select.options).map(option=>`<button type="button" class="unified-filter-option ${option.value===select.value?'is-selected':''}" role="option" aria-selected="${option.value===select.value}" data-filter-value="${encodeURIComponent(option.value)}"><span class="unified-filter-option-mark">✓</span><span>${option.textContent}</span></button>`).join('')};
+    const sync=()=>{const current=select.options[select.selectedIndex];trigger.querySelector('.cr-filter-value').textContent=current?.textContent||'Tất cả';trigger.classList.toggle('is-active',Boolean(select.value));menu.innerHTML=Array.from(select.options).map(option=>`<button type="button" class="unified-filter-option ${option.value===select.value?'is-selected':''}" role="option" aria-selected="${option.value===select.value}" data-filter-value="${encodeURIComponent(option.value)}"><span class="unified-filter-option-mark"><mi-icon name="check" size="11" stroke-width="3"></mi-icon></span><span>${option.textContent}</span></button>`).join('')};
     trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!chip.classList.contains('is-open');closeAll(chip);chip.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening))});
     menu.addEventListener('click',event=>{const option=event.target.closest('[data-filter-value]');if(!option)return;select.value=decodeURIComponent(option.dataset.filterValue||'');chip.classList.remove('is-open');trigger.setAttribute('aria-expanded','false');select.dispatchEvent(new Event('change',{bubbles:true}));sync()});
     select.addEventListener('change',sync);new MutationObserver(sync).observe(select,{childList:true,subtree:true});sync();
@@ -21018,7 +21159,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     host.className='cr-filter-group filter-parity-group';
     const trigger=document.createElement('button');
     trigger.className='cr-filter-trigger';trigger.type='button';trigger.setAttribute('aria-haspopup','true');trigger.setAttribute('aria-expanded','false');
-    trigger.innerHTML=`<span class="cr-filter-glyph">${meta.glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${meta.label}</span><strong class="cr-filter-value">Tất cả</strong></span><span class="cr-filter-chevron">⌄</span>`;
+    trigger.innerHTML=`<span class="cr-filter-glyph">${meta.glyph}</span><span class="cr-filter-copy"><span class="cr-filter-label">${meta.label}</span><strong class="cr-filter-value">Tất cả</strong></span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>`;
     const menu=document.createElement('div');menu.className='cr-filter-menu';
     host.replaceChildren(trigger,menu,select);select.classList.add('cr-filter-legacy');
     trigger.addEventListener('click',event=>{event.stopPropagation();const opening=!host.classList.contains('is-open');closeOthers(host);host.classList.toggle('is-open',opening);trigger.setAttribute('aria-expanded',String(opening));});
