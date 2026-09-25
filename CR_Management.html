@@ -8916,17 +8916,19 @@ function initShell(){
     }
   });
 
-  // Khôi phục đúng tab cuối cùng sau F5/refresh.
-  // Chỉ gọi sau khi các handler và view đã sẵn sàng.
-  setView(STATE.currentView);
-  // Nếu phiên trước đang ở workspace e-B2B thì mở lại đúng tab e-B2B đó
-  // (setView() ở trên chỉ khôi phục được các tab của DMS).
-  try{
-    if(localStorage.getItem(WORKSPACE_STORAGE_KEY) === "eb2b" &&
-       typeof window.__eb2bRestoreSavedTab === "function"){
+  // Chụp workspace cần khôi phục TRƯỚC khi gọi setView(). Trước đây setView()
+  // ghi "dms" vào localStorage ngay tại đây, nên điều kiện mở lại e-B2B luôn sai.
+  let restoreEb2b = false;
+  try{ restoreEb2b = localStorage.getItem(WORKSPACE_STORAGE_KEY) === "eb2b"; }catch(_){}
+  setView(STATE.currentView, { persistWorkspace: !restoreEb2b });
+  if(restoreEb2b){
+    if(typeof window.__eb2bRestoreSavedTab === "function"){
       window.__eb2bRestoreSavedTab(0);
+    }else{
+      // Phòng trường hợp module e-B2B đăng ký sau luồng đăng nhập.
+      window.__eb2bPendingRestore = true;
     }
-  }catch(_){}
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -9481,14 +9483,17 @@ function clearDmsNavState(){
   $("#navDmsWorkspace")?.classList.remove("is-context");
 }
 
-function setView(view){
+function setView(view, options){
   if(!VALID_VIEWS.has(view)) view = "dashboard";
   if(view === "admin" && !canViewAdminTab()) view = "dashboard";
   if(view === "recycle" && !isSuperAdmin()) view = "dashboard";
   const prevView = STATE.currentView;
   STATE.currentView = view;
   try{ localStorage.setItem(VIEW_STORAGE_KEY, view); }catch(_){}
-  try{ localStorage.setItem(WORKSPACE_STORAGE_KEY, "dms"); }catch(_){}
+  // Khi khởi động để khôi phục e-B2B, không được ghi đè workspace đã lưu.
+  if(!options || options.persistWorkspace !== false){
+    try{ localStorage.setItem(WORKSPACE_STORAGE_KEY, "dms"); }catch(_){}
+  }
   // Was e-B2B the active workspace right before this call? Captured before
   // __eb2bLeave() clears the "eb2b-active" class, so we can tell a real
   // cross-workspace switch (e-B2B -> DMS) apart from a plain DMS tab click.
@@ -18777,8 +18782,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       return false;
     }
     eb2bShow(tab);
+    window.__eb2bPendingRestore = false;
     return true;
   };
+  if(window.__eb2bPendingRestore){
+    window.setTimeout(()=>window.__eb2bRestoreSavedTab(0), 0);
+  }
 
   function eb2bOptions(values, selected, empty="— chọn —"){
     const list = Array.from(new Set([selected, ...(values || [])].filter(Boolean)));
