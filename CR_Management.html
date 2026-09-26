@@ -6174,6 +6174,13 @@ button:active mi-icon > svg{ transform:scale(.9); }
       </div>
     </div>
 
+    <!-- Mục Tổng Quan riêng — đứng trên nhóm Workspace. -->
+    <div class="nav-item" data-view="report" title="Tổng Quan — CR của DMS & e-B2B">
+      <mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>
+      <span class="nav-label">Tổng Quan</span>
+      <span class="count" id="navCountReport">0</span>
+    </div>
+
     <div class="nav-group-label">Workspace</div>
     <!-- DMS workspace container. Add future workspaces beside this block;
          the child data-view values below intentionally remain unchanged. -->
@@ -6222,23 +6229,7 @@ button:active mi-icon > svg{ transform:scale(.9); }
     <!-- e-B2B is mounted here at runtime; global tools stay below all workspaces. -->
     <div id="eb2bNavMount" aria-hidden="true"></div>
 
-    <!-- Workspace báo cáo tổng hợp DMS & e-B2B (chỉ Report_Weekly). -->
-    <div class="workspace-nav" data-workspace="report">
-      <div class="nav-item workspace-parent" id="navReportWorkspace"
-           title="Mở / thu gọn Báo cáo DMS & e-B2B" role="button" tabindex="0"
-           aria-expanded="false" aria-controls="navReportChildren">
-        <mi-icon name="file-spreadsheet" stroke-width="2"></mi-icon>
-        <span class="nav-label">Báo cáo DMS &amp; e-B2B</span>
-        <mi-icon name="chevron-down" stroke-width="2.2" svg-class="workspace-chevron"></mi-icon>
-      </div>
-      <div class="workspace-children is-collapsed" id="navReportChildren" aria-label="Báo cáo tổng hợp DMS & e-B2B">
-        <div class="nav-item" data-view="report" title="Report_Weekly">
-          <mi-icon name="calendar-days" stroke-width="2"></mi-icon>
-          <span class="nav-label">Report_Weekly</span>
-          <span class="count" id="navCountReport">0</span>
-        </div>
-      </div>
-    </div>
+
 
     <div class="global-nav-tools" aria-label="Công cụ dùng chung">
       <div class="nav-item global-nav-item hidden" data-view="admin" id="navAdmin" title="Quản Trị Dữ Liệu">
@@ -6708,41 +6699,53 @@ button:active mi-icon > svg{ transform:scale(.9); }
       </div>
     </section>
 
-    <!-- ============ BÁO CÁO DMS & e-B2B VIEW ============ -->
+<!-- ============ TỔNG QUAN (DMS & e-B2B) VIEW ============ -->
     <section class="view hidden" id="view-report">
       <div class="kpi-grid" id="reportKpiGrid"></div>
-      <div class="list-panel" id="reportListPanel">
+
+      <div class="table-toolbar report-toolbar">
+        <div class="tb-search">
+          <mi-icon name="search" stroke-width="2"></mi-icon>
+          <input id="reportSearchInput" type="text" placeholder="Tìm theo CR ID, Tiêu Đề / App, Status...">
+        </div>
+      </div>
+
+      <div class="list-panel report-panel" id="reportPanelDms" data-project="dms">
         <div class="list-panel-head">
-          <div class="list-panel-count"><b id="reportCount">0</b> Change Request · DMS &amp; e-B2B</div>
-          <div class="table-toolbar">
-            <div class="tb-search">
-              <mi-icon name="search" stroke-width="2"></mi-icon>
-              <input id="reportSearchInput" type="text" placeholder="Tìm CR ID, tên CR, Status...">
-            </div>
-            <div class="filter-chip"><span>Dự án</span>
-              <select id="reportFilterProject">
-                <option value="">Tất cả</option>
-                <option value="dms">DMS</option>
-                <option value="eb2b">e-B2B</option>
-              </select>
-            </div>
+          <div class="list-panel-count">
+            <span class="admin-scope-tag is-dms">DMS</span>
+            <b id="reportDmsCount">0</b> Change Request
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Dự án</th><th>CR ID</th><th>Rename Folder</th><th>Priority</th><th>Status</th><th>Sub-Status</th><th>Deadline</th><th>BRD</th><th>FSD</th>
+              <th>Dự án</th><th>CR ID</th><th>Tiêu Đề / App</th><th>Priority</th><th>Status</th><th>Sub-Status</th>
             </tr></thead>
-            <tbody id="reportTableBody"></tbody>
+            <tbody id="reportDmsBody"></tbody>
           </table>
         </div>
-        <div class="list-panel-foot">
-          <span id="reportFootCount">Hiển thị 0 / 0 Change Request</span>
+      </div>
+
+      <div class="list-panel report-panel" id="reportPanelEb2b" data-project="eb2b">
+        <div class="list-panel-head">
+          <div class="list-panel-count">
+            <span class="admin-scope-tag is-eb2b">e-B2B</span>
+            <b id="reportEb2bCount">0</b> Change Request
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Dự án</th><th>CR ID</th><th>Tiêu Đề / App</th><th>Priority</th><th>Status</th><th>Sub-Status</th>
+            </tr></thead>
+            <tbody id="reportEb2bBody"></tbody>
+          </table>
         </div>
       </div>
     </section>
 
-    <!-- ============ ADMIN VIEW ============ -->
+        <!-- ============ ADMIN VIEW ============ -->
     <section class="view hidden" id="view-admin">
       <div class="admin-scope-bar" role="tablist" aria-label="Phạm vi dữ liệu">
         <button type="button" class="admin-scope-tab is-shared" role="tab" data-admin-scope="shared"><span class="dot"></span><span><b>Dùng chung</b><small>Người dùng và yêu cầu cấp quyền — áp dụng cho cả DMS và e-B2B</small></span></button>
@@ -8672,7 +8675,7 @@ const VIEW_META = {
   weekly_mom:{ title:"Weekly MoM", sub:"Biên bản họp Weekly với Vendor và cập nhật theo từng CR", search:false },
   admin:     { title:"Quản Trị Dữ Liệu", sub:"Người dùng dùng chung; danh mục và bảng dữ liệu tách riêng cho DMS và e-B2B", search:false },
   recycle:   { title:"Recycle Bin", sub:"Dữ liệu đã xóa — khôi phục hoặc xóa vĩnh viễn", search:false },
-  report:    { title:"Báo cáo DMS & e-B2B", sub:"Report_Weekly tổng hợp dữ liệu của cả hai dự án DMS và e-B2B", search:false },
+  report:    { title:"Tổng Quan", sub:"CR của các dự án DMS và e-B2B — xem nhanh theo từng dự án và tải báo cáo Report_Weekly", search:false },
 };
 
 function closeMobileNav(){
@@ -9597,8 +9600,6 @@ function closeDmsOverlays(){
 function clearDmsNavState(){
   $all(".nav-item[data-view]").forEach(i=> i.classList.remove("active"));
   $("#navDmsWorkspace")?.classList.remove("is-context");
-  $("#navReportWorkspace")?.classList.remove("is-context");
-  if(typeof setReportWorkspaceNavOpen === "function") setReportWorkspaceNavOpen(false);
 }
 
 function setView(view, options){
@@ -9630,12 +9631,6 @@ function setView(view, options){
   }else{
     $("#navDmsWorkspace")?.classList.remove("is-context");
   }
-  // Workspace "Báo cáo DMS & e-B2B": accordion giống DMS / e-B2B — chỉ mở
-  // nhóm của workspace đang dùng.
-  const inReport = view === "report";
-  $("#navReportWorkspace")?.classList.toggle("is-context", inReport);
-  if(typeof setReportWorkspaceNavOpen === "function") setReportWorkspaceNavOpen(inReport);
-  if(inReport) setDmsWorkspaceNavOpen(false, false);
   $all(".view").forEach(v=> v.classList.add("hidden"));
   const enteringView = $("#view-"+view);
   enteringView.classList.remove("hidden");
@@ -12602,7 +12597,7 @@ const COMBINED_PROJECTS = {
   dms:  { label:"DMS",   tag:"is-dms" },
   eb2b: { label:"e-B2B", tag:"is-eb2b" }
 };
-const COMBINED_REPORT = { search:"", project:"" };
+const COMBINED_REPORT = { search:"" };
 const REPORT_KPI_ICONS = {
   dms:  '<mi-icon name="calendar-range" stroke-width="2"></mi-icon>',
   eb2b: '<mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>'
@@ -12638,22 +12633,14 @@ function combinedMatches(item, query){
   return [c.cr_id, c.rename_folder, c.old_name, c.app, c.status, c.sub_status, COMBINED_PROJECTS[item.project].label]
     .some(value=>String(value || "").toLowerCase().includes(query));
 }
-function combinedDocCell(present, type){
-  return '<td class="doc-status-cell" title="' + type + (present ? ' đã được đính kèm' : ' chưa được đính kèm') + '">'
-    + '<span class="doc-status ' + (present ? 'is-present' : 'is-missing') + '">'
-    + '<span class="doc-status-icon" aria-hidden="true">' + (present ? '<mi-icon name="check" size="1em" stroke-width="3"></mi-icon>' : '—') + '</span>'
-    + '<span>' + (present ? 'Có file' : 'Chưa có') + '</span></span></td>';
-}
-
 function renderCombinedReportView(){
-  const tbody = $("#reportTableBody");
-  if(!tbody) return;
+  const dmsBody = $("#reportDmsBody");
+  if(!dmsBody) return;
   const src = combinedEb2bSource();
   const all = combinedReportRows();
   const nav = $("#navCountReport");
   if(nav) nav.textContent = all.length;
   const dmsCount = all.filter(r=>r.project === "dms").length;
-  const eb2bCount = all.length - dmsCount;
   const overdue = all.filter(r=>isOverdue(r.record)).length;
   const pct = n=> all.length ? Math.round((n / all.length) * 100) : 0;
   const kpi = $("#reportKpiGrid");
@@ -12661,37 +12648,33 @@ function renderCombinedReportView(){
     kpi.innerHTML =
       kpiCard("Tổng số CR", all.length, "Tổng hợp DMS + e-B2B", "", KPI_ICONS.total) +
       kpiCard("CR DMS", dmsCount, "Workspace Quản Lý DMS", "accent", REPORT_KPI_ICONS.dms, pct(dmsCount)) +
-      kpiCard("CR e-B2B", eb2bCount, (src && src.ready) ? "Workspace Quản Lý e-B2B" : "Đang tải dữ liệu e-B2B...", "info", REPORT_KPI_ICONS.eb2b, pct(eb2bCount)) +
+      kpiCard("CR e-B2B", all.length - dmsCount, (src && src.ready) ? "Workspace Quản Lý e-B2B" : "Đang tải dữ liệu e-B2B...", "info", REPORT_KPI_ICONS.eb2b, pct(all.length - dmsCount)) +
       kpiCard("Trễ hạn", overdue, "Deadline đã qua, chưa Released/Closed", "danger", KPI_ICONS.overdue, pct(overdue));
   }
   const query = COMBINED_REPORT.search.trim().toLowerCase();
-  const rows = all.filter(r=> (!COMBINED_REPORT.project || r.project === COMBINED_REPORT.project) && combinedMatches(r, query));
-  const countEl = $("#reportCount");
-  const footEl = $("#reportFootCount");
-  if(countEl) countEl.textContent = rows.length;
-  if(footEl) footEl.textContent = "Hiển thị " + rows.length + " / " + all.length + " Change Request";
-  if(!rows.length){
-    tbody.innerHTML = '<tr><td colspan="9">' + emptyStateBlock("Chưa có Change Request", all.length ? "Không có CR phù hợp với bộ lọc hiện tại." : "Dữ liệu DMS và e-B2B sẽ hiển thị tại đây sau khi tải xong.") + '</td></tr>';
-    return;
-  }
-  tbody.innerHTML = rows.map(item=>{
-    const c = item.record;
-    const late = isOverdue(c);
-    const deadline = c.deadline
-      ? (late ? '<span class="deadline-overdue"><span class="dl-warn">!</span>' + fmtDate(c.deadline) + '</span>' : fmtDate(c.deadline))
-      : "—";
-    return '<tr>'
-      + '<td>' + combinedProjectTag(item.project) + '</td>'
-      + '<td class="cell-id"><span class="id-chip">' + esc(c.cr_id) + '</span></td>'
-      + '<td class="cell-title" title="' + esc(c.rename_folder || "") + '">' + esc(c.rename_folder || crCellTitle(c)) + '</td>'
-      + '<td>' + (c.priority ? badge("priority", c.priority) : '<span class="cell-dim">—</span>') + '</td>'
-      + '<td>' + badge("status", c.status) + '</td>'
-      + '<td>' + (c.sub_status ? badge("sub_status", c.sub_status) : '<span class="cell-dim">—</span>') + '</td>'
-      + '<td class="cell-dim">' + deadline + '</td>'
-      + combinedDocCell(combinedHasDocument(item, "BRD"), "BRD")
-      + combinedDocCell(combinedHasDocument(item, "FSD"), "FSD")
-      + '</tr>';
-  }).join("");
+  // Mỗi dự án một bảng riêng để người xem biết ngay dự án nào có CR nào.
+  ["dms","eb2b"].forEach(project=>{
+    const tbody = project === "dms" ? dmsBody : $("#reportEb2bBody");
+    const countEl = $(project === "dms" ? "#reportDmsCount" : "#reportEb2bCount");
+    const rows = all.filter(r=> r.project === project && combinedMatches(r, query));
+    if(countEl) countEl.textContent = rows.length;
+    if(!rows.length){
+      tbody.innerHTML = '<tr><td colspan="6">' + emptyStateBlock("Chưa có Change Request", query ? "Không có CR phù hợp với từ khóa tìm kiếm." : "CR của dự án này sẽ hiển thị tại đây sau khi tải xong.") + '</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(item=>{
+      const c = item.record;
+      const title = c.rename_folder || c.old_name || c.app || "";
+      return '<tr>'
+        + '<td>' + combinedProjectTag(item.project) + '</td>'
+        + '<td class="cell-id"><span class="id-chip">' + esc(c.cr_id) + '</span></td>'
+        + '<td class="cell-title" title="' + esc(title) + '">' + esc(title || "—") + '</td>'
+        + '<td>' + (c.priority ? badge("priority", c.priority) : '<span class="cell-dim">—</span>') + '</td>'
+        + '<td>' + badge("status", c.status) + '</td>'
+        + '<td>' + (c.sub_status ? badge("sub_status", c.sub_status) : '<span class="cell-dim">—</span>') + '</td>'
+        + '</tr>';
+    }).join("");
+  });
 }
 
 function combinedReportModalTemplate(){
@@ -12920,24 +12903,7 @@ async function downloadCombinedWeeklyReport(selectedKeys){
   }
 }
 
-function setReportWorkspaceNavOpen(open){
-  const parent = $("#navReportWorkspace");
-  const children = $("#navReportChildren");
-  if(!parent || !children) return;
-  const next = Boolean(open);
-  children.classList.toggle("is-collapsed", !next);
-  parent.classList.toggle("is-open", next);
-  parent.setAttribute("aria-expanded", next ? "true" : "false");
-}
 (function initReportWorkspace(){
-  const parent = $("#navReportWorkspace");
-  if(parent){
-    const toggle = ()=> setReportWorkspaceNavOpen(parent.getAttribute("aria-expanded") !== "true");
-    parent.addEventListener("click", toggle);
-    parent.addEventListener("keydown", e=>{
-      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); toggle(); }
-    });
-  }
   document.addEventListener("click", e=>{
     if(e.target.closest("#btnCombinedReport")){ openCombinedReportModal(); return; }
     if(e.target.closest("#btnDashRefresh") && STATE.currentView === "report" && !document.body.classList.contains("eb2b-active")){
@@ -12947,9 +12913,6 @@ function setReportWorkspaceNavOpen(open){
   });
   document.addEventListener("input", e=>{
     if(e.target && e.target.id === "reportSearchInput"){ COMBINED_REPORT.search = e.target.value; renderCombinedReportView(); }
-  });
-  document.addEventListener("change", e=>{
-    if(e.target && e.target.id === "reportFilterProject"){ COMBINED_REPORT.project = e.target.value; renderCombinedReportView(); }
   });
 })();
 
@@ -21789,15 +21752,25 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 </script>
 
 <style id="combined-report-style">
-/* Workspace "Báo cáo DMS & e-B2B" — dùng lại nguyên bộ component của DMS
-   (kpi-card, list-panel, table, export-selection-modal) nên giao diện đồng nhất. */
+/* Mục "Tổng Quan" — dùng lại nguyên bộ component của DMS (kpi-card, list-panel,
+   table) nên giao diện đồng nhất. Mỗi dự án một bảng riêng, cuộn ngang + dọc. */
 #view-report, .combined-report-modal{ --scope-shared:#5d7688; --scope-dms:#0d8a93; --scope-eb2b:#2b7fd6; }
-#view-report #reportTableBody tr{ cursor:default; }
-#view-report .admin-scope-tag, .combined-report-modal .admin-scope-tag{ margin-right:0; }
+#view-report .report-toolbar{ margin:0 0 16px; }
+#view-report .report-toolbar .tb-search{ flex:1 1 auto; max-width:420px; }
+#view-report .report-panel{ margin-bottom:var(--space-5, 20px); }
+#view-report .report-panel .list-panel-count{ display:flex; align-items:center; gap:9px; }
+#view-report .report-panel .list-panel-count .admin-scope-tag{ margin-right:0; }
+#view-report .table-wrap{ max-height:44vh; min-height:160px; overflow:auto; overscroll-behavior:contain; }
+#view-report .table-wrap table{ min-width:860px; }
+#view-report .report-panel tbody tr{ cursor:default; }
 .combined-report-modal .export-cr-top{ display:flex; align-items:center; gap:7px; min-width:0; }
-.combined-report-modal .export-cr-top .admin-scope-tag{ font-size:9.5px; padding:1px 7px; }
+.combined-report-modal .export-cr-top .admin-scope-tag{ font-size:9.5px; padding:1px 7px; margin-right:0; }
 .combined-group-head{ grid-column:1/-1; display:flex; align-items:center; gap:8px; padding:6px 2px 0; color:#6e8798; font-size:11.5px; font-weight:750; }
 .combined-group-head:not(:first-child){ margin-top:6px; }
+@media(max-width:760px){
+  #view-report .table-wrap{ max-height:38vh; }
+  #view-report .report-toolbar .tb-search{ max-width:none; }
+}
 </style>
 <style id="unified-filter-system">
 /* One filter language for all DMS and e-B2B data tabs. */
