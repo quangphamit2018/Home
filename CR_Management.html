@@ -1344,7 +1344,7 @@ td.cell-id .id-chip{
   display:flex; align-items:center; justify-content:center;
   overflow:hidden;
   background:
-    radial-gradient(900px 620px at 50% 36%, rgba(63,208,201,.10), transparent 64%),
+    radial-gradient(900px 640px at 50% 38%, rgba(63,208,201,.14), transparent 66%),
     var(--bg-workspace);
   opacity:0; visibility:hidden;
   transition:opacity var(--duration-slow) var(--ease-standard), visibility 0s linear var(--duration-slow);
@@ -1354,79 +1354,107 @@ td.cell-id .id-chip{
   opacity:1; visibility:visible; pointer-events:auto;
   transition:opacity var(--duration-base) var(--ease-decel), visibility 0s linear 0s;
 }
-.ws-loading-orb{ position:absolute; border-radius:50%; filter:blur(60px); opacity:.4; pointer-events:none; }
+.ws-loading-bg{
+  position:absolute; left:50%; top:50%; width:680px; height:680px;
+  border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, rgba(63,208,201,.16), transparent 62%);
+  animation:wsBgPulse 4.5s ease-in-out infinite;
+}
+.ws-loading-grid{
+  position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size:46px 46px;
+  -webkit-mask:radial-gradient(circle at 50% 50%, #000 0%, transparent 60%);
+          mask:radial-gradient(circle at 50% 50%, #000 0%, transparent 60%);
+}
+.ws-loading-orb{ position:absolute; border-radius:50%; filter:blur(64px); opacity:.42; pointer-events:none; }
 .ws-loading-orb-a{
-  width:380px; height:380px; left:6%; top:12%;
-  background:radial-gradient(circle, rgba(63,208,201,.40), transparent 70%);
-  animation:authOrbFloat 16s ease-in-out infinite;
+  width:420px; height:420px; left:6%; top:10%;
+  background:radial-gradient(circle, rgba(63,208,201,.42), transparent 70%);
+  animation:authOrbFloat 18s ease-in-out infinite;
 }
 .ws-loading-orb-b{
-  width:320px; height:320px; right:8%; bottom:10%;
-  background:radial-gradient(circle, rgba(242,184,75,.22), transparent 70%);
-  animation:authOrbFloat 19s 2s ease-in-out infinite reverse;
+  width:340px; height:340px; right:7%; bottom:8%;
+  background:radial-gradient(circle, rgba(242,184,75,.24), transparent 70%);
+  animation:authOrbFloat 21s 3s ease-in-out infinite reverse;
 }
 .ws-loading-card{
-  position:relative; z-index:1;
-  display:flex; flex-direction:column; align-items:center; gap:16px;
-  padding:36px 44px;
-  opacity:0; transform:translateY(8px);
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; align-items:center; gap:18px;
+  padding:42px 58px 38px;
+  border-radius:26px;
+  background:linear-gradient(180deg, rgba(20,55,86,.55), rgba(14,40,64,.38));
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 32px 90px rgba(0,0,0,.5), 0 0 60px rgba(63,208,201,.10), inset 0 1px 0 rgba(255,255,255,.08);
+  -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+  opacity:0; transform:translateY(10px) scale(.97);
 }
-.ws-loading-screen.is-active .ws-loading-card{ animation:wsLoadingCardIn .5s var(--ease-decel) both; }
-.ws-loading-mark{
-  position:relative; width:56px; height:56px;
+.ws-loading-screen.is-active .ws-loading-card{ animation:wsLoadingCardIn .55s var(--ease-decel) both; }
+.ws-loading-emblem{
+  position:relative; width:84px; height:84px;
   display:flex; align-items:center; justify-content:center;
 }
+.ws-loading-svg{ position:absolute; inset:0; width:100%; height:100%; }
+.ws-r-track-o, .ws-r-track-i{ fill:none; stroke:rgba(255,255,255,.07); }
+.ws-r-track-o{ stroke-width:2; }
+.ws-r-track-i{ stroke-width:1.6; }
+.ws-r-prog-o{
+  fill:none; stroke:url(#wsGradA); stroke-width:3; stroke-linecap:round;
+  stroke-dasharray:34 66; transform-box:view-box; transform-origin:50% 50%;
+  filter:drop-shadow(0 0 7px rgba(63,208,201,.65));
+  animation:wsSpin 2.4s linear infinite;
+}
+.ws-r-prog-i{
+  fill:none; stroke:url(#wsGradB); stroke-width:2.4; stroke-linecap:round;
+  stroke-dasharray:24 76; opacity:.8; transform-box:view-box; transform-origin:50% 50%;
+  filter:drop-shadow(0 0 5px rgba(242,184,75,.5));
+  animation:wsSpin 1.9s linear infinite reverse;
+}
 .ws-loading-mark-glow{
-  position:absolute; inset:-18px; border-radius:50%;
-  background:radial-gradient(circle, rgba(63,208,201,.32), transparent 68%);
+  position:absolute; inset:-14px; border-radius:50%;
+  background:radial-gradient(circle, rgba(63,208,201,.30), transparent 66%);
   animation:wsMarkGlow 2.6s ease-in-out infinite;
 }
 .ws-loading-mark-tile{
   position:relative; z-index:1;
-  width:56px; height:56px; border-radius:15px;
+  width:40px; height:40px; border-radius:12px;
   background:linear-gradient(135deg, var(--accent), var(--accent-shade));
   display:flex; align-items:center; justify-content:center;
-  font-family:var(--font-head); font-weight:800; font-size:20px;
+  font-family:var(--font-head); font-weight:800; font-size:15px;
   color:var(--on-accent-text); letter-spacing:.02em;
-  box-shadow:0 8px 24px rgba(63,208,201,.30), inset 0 1px 0 rgba(255,255,255,.25);
+  box-shadow:0 6px 18px rgba(63,208,201,.35), inset 0 1px 0 rgba(255,255,255,.3);
 }
 .ws-loading-kicker{
-  margin-top:6px;
   font-family:var(--font-head); font-size:10px; font-weight:700;
-  color:var(--text-muted); letter-spacing:.22em; text-transform:uppercase;
+  color:var(--text-muted); letter-spacing:.24em; text-transform:uppercase;
 }
 .ws-loading-text{
-  font-family:var(--font-head); font-size:15px; font-weight:600;
+  font-family:var(--font-head); font-size:17px; font-weight:700;
   color:var(--text-primary); letter-spacing:.005em; text-align:center;
 }
-.ws-loading-text b{ color:var(--accent); font-weight:700; }
+.ws-loading-text b{ color:var(--accent); font-weight:800; }
 .ws-loading-sub{ font-size:12px; color:var(--text-muted); letter-spacing:.02em; }
 .ws-loading-track{
-  margin-top:4px; width:220px; height:2px; border-radius:2px; overflow:hidden;
+  margin-top:2px; width:248px; height:2px; border-radius:2px; overflow:hidden;
   background:rgba(255,255,255,.07);
 }
 .ws-loading-track-fill{
   width:42%; height:100%; border-radius:2px;
   background:linear-gradient(90deg, transparent, var(--accent), #8fe9e3, var(--accent), transparent);
-  filter:drop-shadow(0 0 6px rgba(63,208,201,.5));
+  filter:drop-shadow(0 0 6px rgba(63,208,201,.55));
   animation:wsTrackSlide 1.6s var(--ease-standard) infinite;
 }
-@keyframes wsMarkGlow{ 0%,100%{ transform:scale(.82); opacity:.55; } 50%{ transform:scale(1.12); opacity:1; } }
-@keyframes wsLoadingCardIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+@keyframes wsSpin{ to{ transform:rotate(360deg); } }
+@keyframes wsMarkGlow{ 0%,100%{ transform:scale(.8); opacity:.5; } 50%{ transform:scale(1.15); opacity:1; } }
+@keyframes wsBgPulse{ 0%,100%{ transform:translate(-50%,-50%) scale(.92); opacity:.7; } 50%{ transform:translate(-50%,-50%) scale(1.06); opacity:1; } }
+@keyframes wsLoadingCardIn{ from{ opacity:0; transform:translateY(10px) scale(.97); } to{ opacity:1; transform:none; } }
 @keyframes wsTrackSlide{ 0%{ transform:translateX(-130%); } 100%{ transform:translateX(250%); } }
 @media(prefers-reduced-motion:reduce){
   .ws-loading-screen{ transition:opacity var(--duration-fast) linear; }
-  .ws-loading-mark-glow, .ws-loading-orb-a, .ws-loading-orb-b, .ws-loading-track-fill{ animation:none !important; }
+  .ws-loading-svg circle, .ws-loading-mark-glow, .ws-loading-orb-a, .ws-loading-orb-b, .ws-loading-track-fill, .ws-loading-bg{ animation:none !important; }
   .ws-loading-screen.is-active .ws-loading-card{ animation:none !important; opacity:1; transform:none; }
-}
-
-/* ---- Smooth, professional in-workspace tab transitions (DMS + e-B2B) ---- */
-@keyframes viewTabEnter{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
-.view-tab-enter{ animation:viewTabEnter var(--duration-slow) var(--ease-decel) both; }
-@keyframes topbarTitleSwap{ from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:none; } }
-.topbar-title-swap{ animation:topbarTitleSwap var(--duration-base) var(--ease-decel) both; }
-@media(prefers-reduced-motion:reduce){
-  .view-tab-enter, .topbar-title-swap{ animation:none !important; }
 }
 
 
@@ -5972,17 +6000,33 @@ button:active mi-icon > svg{ transform:scale(.9); }
      for in-workspace tab clicks, same rule the old workspace-enter
      animation used. -->
 <div id="wsLoadingScreen" class="ws-loading-screen" aria-hidden="true">
+  <div class="ws-loading-bg"></div>
+  <div class="ws-loading-grid"></div>
   <div class="ws-loading-orb ws-loading-orb-a"></div>
   <div class="ws-loading-orb ws-loading-orb-b"></div>
   <div class="ws-loading-card">
-    <div class="ws-loading-mark">
+    <div class="ws-loading-emblem">
+      <svg class="ws-loading-svg" viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <linearGradient id="wsGradA" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3fd0c9"/>
+            <stop offset="100%" stop-color="#8fe9e3"/>
+          </linearGradient>
+          <linearGradient id="wsGradB" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f2b84b"/>
+            <stop offset="100%" stop-color="#f7d488"/>
+          </linearGradient>
+        </defs>
+        <circle class="ws-r-track-o" cx="50" cy="50" r="44"/>
+        <circle class="ws-r-prog-o" cx="50" cy="50" r="44" pathLength="100"/>
+        <circle class="ws-r-track-i" cx="50" cy="50" r="34"/>
+        <circle class="ws-r-prog-i" cx="50" cy="50" r="34" pathLength="100"/>
+      </svg>
       <div class="ws-loading-mark-glow"></div>
       <div class="ws-loading-mark-tile">CR</div>
     </div>
     <div class="ws-loading-kicker">Change Request</div>
-    <div class="ws-loading-text">
-      <span id="wsLoadingText">Đang chuyển không gian làm việc</span>
-    </div>
+    <div class="ws-loading-text"><span id="wsLoadingText">Đang chuyển không gian làm việc</span></div>
     <div class="ws-loading-sub">Vui lòng đợi trong giây lát</div>
     <div class="ws-loading-track"><div class="ws-loading-track-fill"></div></div>
   </div>
@@ -9473,7 +9517,7 @@ function wsLoadingStart(label){
 function wsLoadingDone(){
   const screen = document.getElementById("wsLoadingScreen");
   if(!screen) return;
-  const minVisibleMs = 650;
+  const minVisibleMs = 1600;
   const wait = Math.max(0, minVisibleMs - (Date.now() - wsLoadingShownAt));
   clearTimeout(wsLoadingHideTimer);
   wsLoadingHideTimer = setTimeout(()=>{
@@ -9532,18 +9576,19 @@ function setView(view, options){
   enteringView.classList.remove("hidden");
   $("#topbarTitle").textContent = VIEW_META[view].title;
   $("#topbarSub").textContent = VIEW_META[view].sub;
-  // Smooth, professional reveal on every DMS tab switch — a gentle fade and
-  // lift on the entering view, plus a crisp topbar title swap. Re-triggered
-  // each click (remove → reflow → add) so rapid back-to-back switches still
-  // animate. The cross-workspace case (wasEb2bActive) only closes the
-  // full-screen loader underneath; the reveal plays the same either way.
-  enteringView.classList.remove("view-tab-enter");
-  void enteringView.offsetWidth;
-  enteringView.classList.add("view-tab-enter");
-  const headerTitle = $("#topbarTitle");
-  headerTitle?.classList.remove("topbar-title-swap");
-  if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("topbar-title-swap"); }
-  if(wasEb2bActive) wsLoadingDone();
+  // Coming back from e-B2B: mirror its own reveal animation on the way in,
+  // so the workspace switch feels the same in both directions. Only fires
+  // on this one edge — switching between DMS tabs stays instant, matching
+  // how eb2bShow() only animates the first entry into e-B2B, not every tab.
+  if(wasEb2bActive){
+    enteringView.classList.remove("ws-workspace-enter");
+    void enteringView.offsetWidth;
+    enteringView.classList.add("ws-workspace-enter");
+    const headerTitle = $("#topbarTitle");
+    headerTitle?.classList.remove("ws-header-swap");
+    if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("ws-header-swap"); }
+    wsLoadingDone();
+  }
   $all(".view-action").forEach(b=> {
     const views = String(b.dataset.for || "").split(",").map(item=>item.trim());
     b.classList.toggle("hidden", !views.includes(view));
@@ -18990,18 +19035,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $e("#navEb2bChildren")?.classList.remove("is-collapsed");
     $e("#navEb2bWorkspace")?.classList.add("is-open");
     $e("#navEb2bWorkspace")?.setAttribute("aria-expanded", "true");
-    eb2bRender();
-    // Smooth, professional reveal on every e-B2B tab switch — same gentle
-    // fade/lift + topbar title swap used on the DMS side, so the whole app
-    // feels consistent. Re-triggered each click so rapid switches animate.
-    {
+    if(!wasEb2bActive){
       const root=$e("#eb2bViewRoot");
-      root?.classList.remove("view-tab-enter");
-      if(root){ void root.offsetWidth; root.classList.add("view-tab-enter"); }
+      root?.classList.remove("eb2b-view-enter");
+      if(root){ void root.offsetWidth; root.classList.add("eb2b-view-enter"); }
       const headerTitle=$e("#topbarTitle");
-      headerTitle?.classList.remove("topbar-title-swap");
-      if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("topbar-title-swap"); }
+      headerTitle?.classList.remove("eb2b-header-swap");
+      if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("eb2b-header-swap"); }
     }
+    eb2bRender();
     if(!wasEb2bActive && typeof wsLoadingDone === "function") wsLoadingDone();
   }
 
