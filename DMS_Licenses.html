@@ -8,9 +8,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <meta name="description" content="Cổng quản lý Masterdata với xác thực Google và phân quyền Supabase." />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://esm.sh" crossorigin />
+  <!-- Supabase tải song song, không chặn hiển thị. XLSX / ExcelJS (~2MB) được tải lười khi rảnh hoặc khi cần xuất/nhập Excel. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- morphicons (npm install morphicons) — bản ESM chính thức qua esm.sh, định nghĩa <morph-icon> cho toàn app -->
+  <script type="module" async>
+    import { defineMorphIcon } from "https://esm.sh/morphicons@1.7.1/element";
+    defineMorphIcon();
+  </script>
   <style>
     /* =====================================================================
        Masterdata DMS — Crimson theme
@@ -59,13 +65,12 @@
     *::-webkit-scrollbar { width: 9px; height: 9px; }
     *::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #e8a9a5, #c96a66); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
     ::selection { background: #b71c1c; color: #fff; }
-    body {
-      margin: 0; min-width: 320px; color: var(--ink);
+    body { margin: 0; min-width: 320px; color: var(--ink); background: #f4e2e0; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    body::before {
+      content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; transform: translateZ(0);
       background:
         radial-gradient(900px 480px at 92% -8%, rgba(229, 57, 53, .11), transparent 62%),
-        radial-gradient(800px 520px at -8% 108%, rgba(183, 28, 28, .10), transparent 60%),
-        #f4e2e0;
-      background-attachment: fixed;
+        radial-gradient(800px 520px at -8% 108%, rgba(183, 28, 28, .10), transparent 60%);
     }
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
@@ -895,6 +900,100 @@
     .bulk-actions .btn { padding: 7px 12px; font-size: 12px; }
     .data-table .col-sel { width: 42px; min-width: 42px; max-width: 42px; text-align: center; }
     .data-table .col-sel input { width: 16px; height: 16px; accent-color: var(--brand); cursor: pointer; }
+
+    morph-icon { display: contents; }
+    morph-icon > svg { width: 1em; height: 1em; flex: 0 0 auto; overflow: visible; }
+    .search-icon svg { width: 16px; height: 16px; }
+    .badge svg { width: 12px; height: 12px; margin-right: 5px; }
+    .data-table th .sort-ind { display: inline-flex; vertical-align: -2px; font-size: inherit; }
+    .sort-ind svg { width: 12px; height: 12px; display: block; }
+    .import-drop > morph-icon > svg {
+      width: 62px; height: 62px; padding: 16px; border-radius: 20px; color: #fff;
+      background: var(--g-brand); box-shadow: 0 12px 26px rgba(183, 28, 28, .32), inset 0 1px 0 rgba(255, 255, 255, .28);
+      transition: transform .45s var(--ease);
+    }
+    .import-drop { transition: border-color .25s, background .3s, box-shadow .3s; }
+    .import-drop.drag > morph-icon > svg { transform: translateY(3px) scale(1.07); }
+    .table-item .go svg { width: 15px; height: 15px; }
+    .table-item .go { transition: transform .35s var(--ease), box-shadow .35s var(--ease); }
+    button.table-item { transition: transform .35s var(--ease), border-color .25s, background .25s, box-shadow .35s var(--ease); }
+    button.table-item:hover { transform: translateY(-2px); }
+    button.table-item:hover .go { transform: translateX(3px); box-shadow: 0 8px 18px rgba(183, 28, 28, .36); }
+
+    body:not(.auth) .aurora .blob { animation: none; }
+
+    .nav { position: relative; }
+    .nav-indicator {
+      position: absolute; left: 0; right: 0; top: 0; height: 42px; border-radius: 12px; pointer-events: none; opacity: 0;
+      background: linear-gradient(100deg, #e53935 0%, #b71c1c 70%, #94141a 100%);
+      box-shadow: inset 3px 0 0 var(--gold), 0 8px 20px rgba(0, 0, 0, .28);
+      transition: transform .55s var(--ease), height .35s var(--ease), opacity .3s; will-change: transform;
+    }
+    .nav button { position: relative; z-index: 1; transition: color .2s, background-color .2s, transform .35s var(--ease); }
+    .nav button:not(.active):hover { transform: translateX(3px); }
+    .nav.has-indicator button.active, .nav.has-indicator button.active:hover { background: transparent; box-shadow: none; }
+    .nav button svg { transition: transform .4s var(--ease); }
+    .nav button.active svg { transform: scale(1.1); }
+    .brand-mark { transition: transform .6s var(--ease); }
+    .brand:hover .brand-mark { transform: rotate(-8deg) scale(1.06); }
+
+    .topbar h1.swap { animation: title-in .5s var(--ease) both; }
+    @keyframes title-in { from { opacity: 0; transform: translate3d(0, 7px, 0); } }
+    .topbar-icon { transition: transform .45s var(--ease), box-shadow .45s var(--ease); }
+    .topbar-icon:hover { transform: rotate(-6deg) scale(1.06); }
+
+    .page.page-enter > * { animation: page-rise .65s var(--ease) both; }
+    .page.page-enter > :nth-child(2) { animation-delay: 70ms; }
+    .page.page-enter > :nth-child(3) { animation-delay: 140ms; }
+    .page.page-enter > :nth-child(4) { animation-delay: 210ms; }
+    .page.page-enter > :nth-child(n+5) { animation-delay: 260ms; }
+    .page.page-enter .stat-card { animation: card-rise .7s var(--ease) both; animation-delay: 90ms; }
+    .page.page-enter .stat-card:nth-child(2) { animation-delay: 160ms; }
+    .page.page-enter .stat-card:nth-child(3) { animation-delay: 230ms; }
+    .page.page-enter .stat-card:nth-child(4) { animation-delay: 300ms; }
+    .page.page-enter .license-fill { animation: bar-grow 1.2s var(--ease) .25s both; transform-origin: left center; }
+    .page.page-enter .header-row::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; transform: translateX(-100%);
+      background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .16) 50%, transparent 70%);
+      animation: sheen 1.5s var(--ease) .3s forwards;
+    }
+    @keyframes page-rise { from { opacity: 0; transform: translate3d(0, 16px, 0); } }
+    @keyframes card-rise { from { opacity: 0; transform: translate3d(0, 20px, 0) scale(.97); } }
+    @keyframes bar-grow { from { transform: scaleX(0); } }
+    @keyframes sheen { to { transform: translateX(100%); } }
+
+    .stat-card { transition: transform .45s var(--ease), box-shadow .45s var(--ease); }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 2px 4px rgba(90, 13, 18, .05), 0 24px 46px rgba(120, 20, 24, .14); }
+    .stat-card::after { transition: transform .7s var(--ease); }
+    .stat-card:hover::after { transform: scale(1.4); }
+    .panel { transition: box-shadow .35s var(--ease); }
+
+    .btn, .filter-tab, .tl-seg button, .pager-btn, .nav button, .table-item { position: relative; overflow: hidden; }
+    .ripple { position: absolute; border-radius: 50%; pointer-events: none; background: currentColor; opacity: .2; transform: scale(0); animation: ripple .65s var(--ease) forwards; }
+    @keyframes ripple { to { transform: scale(1); opacity: 0; } }
+    .filter-tab, .tl-seg button { transition: background .28s, color .25s, box-shadow .28s, transform .25s var(--ease); }
+    .filter-tab:active, .tl-seg button:active, .pager-btn:active:not(:disabled) { transform: scale(.96); }
+    .pager-btn { transition: background .2s, color .2s, border-color .2s, transform .25s var(--ease), box-shadow .25s; }
+    .pager-btn:hover:not(:disabled):not(.active) { transform: translateY(-1px); }
+    .data-table tbody td { transition: background-color .15s ease; }
+    .badge { transition: transform .3s var(--ease); }
+
+    .modal-backdrop { animation: fade-in .22s ease both; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .modal:not(.confirm-modal) { animation: confirm-pop .34s var(--ease) both; }
+    .toast-icon { animation: pop-in .45s var(--ease) .05s both; }
+
+    .skeleton { place-self: stretch; align-self: start; width: 100%; padding: 20px; display: grid; gap: 13px; }
+    .skeleton .loading { margin-top: 8px; justify-self: center; }
+    .sk { display: block; height: 14px; width: var(--w, 80%); border-radius: 8px; background: linear-gradient(90deg, #f7e6e5 0%, #fff6f5 45%, #f7e6e5 90%); background-size: 200% 100%; animation: sk 1.3s linear infinite; }
+    @keyframes sk { to { background-position: -200% 0; } }
+
+    .scrim { display: none; }
+    @media (max-width: 760px) {
+      .sidebar { transition: transform .45s var(--ease); }
+      .scrim { display: block; position: fixed; inset: 0; z-index: 15; background: rgba(30, 4, 7, .45); opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+      .scrim.show { opacity: 1; pointer-events: auto; }
+    }
+    @media (hover: none) { .stat-card:hover, button.table-item:hover, .nav button:not(.active):hover { transform: none; } }
   </style>
 </head>
 <body class="auth">
@@ -914,34 +1013,196 @@
     // với các app khác nếu cùng dùng chung project Supabase ở trên.
     const APP_CHANNEL_PREFIX = "masterdata-portal-dms-licenses";
 
-    const ICONS = {
-      tools: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.5 17.3a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.2-.6-.6-2.2 2.6-2.6Z"/></svg>',
-      swap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3-3m-3 3 3 3"/></svg>',
-      send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5 21 3Z"/></svg>',
-      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-      logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M16 8l4 4-4 4M20 12H9"/></svg>',
-      lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
-      clockLive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path class="hand-h" d="M12 12V8"/><path class="hand-m" d="M12 12V6.5"/></svg>',
-      grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
-      users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 20v-1.8a3.6 3.6 0 0 0-3.6-3.6H6.6A3.6 3.6 0 0 0 3 18.2V20"/><circle cx="9.5" cy="7.5" r="3.5"/><path d="M17 11a3.5 3.5 0 1 0-1.1-6.8M21 20v-1.8a3.6 3.6 0 0 0-2.7-3.5"/></svg>',
-      database: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></svg>',
-      upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5"/><path d="M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"/></svg>',
-      search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
-      plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
-      edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 16.5-.8 3.3 3.3-.8L18.8 6.7a2.2 2.2 0 0 0-3.1-3.1L4 16.5Z"/><path d="m14.5 5.5 4 4"/></svg>',
-      trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M10 11v6M14 11v6M6 7l.8 13h10.4L18 7M9 7V4h6v3"/></svg>',
-      menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
-      copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
-      close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg>',
-      file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8M8 17h6"/></svg>',
-      refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 11a8 8 0 0 0-14.8-4L3 10M3 5v5h5M4 13a8 8 0 0 0 14.8 4L21 14m0 5v-5h-5"/></svg>',
-      xlsx: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="m8.6 13.2 3.1 4.3M11.7 13.2l-3.1 4.3"/></svg>',
-      toastSuccess: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-      toastError: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v5M12 15.6v.1"/></svg>',
-      toastInfo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c4-2.5 7-5.8 7-10a7 7 0 0 0-14 0c0 4.2 3 7.5 7 10Z"/><circle cx="12" cy="11" r="1.6"/></svg>',
-      pgPrev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>',
-      pgNext: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>'
+    // =====================================================================
+    // Icon system — morphicons (npm install morphicons)
+    // Mỗi icon là 1 path "d" trên lưới 24×24 → <morph-icon> có thể morph bất kỳ icon nào sang icon khác.
+    // Icon luôn có sẵn SVG tĩnh bên trong nên hiển thị ngay cả trước khi thư viện tải xong.
+    // =====================================================================
+    const ICON_D = {
+      tools: ["M14.7 6.3a4 4 0 0 0-5.4 5.2L3.5 17.3a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.2-.6-.6-2.2 2.6-2.6Z", 1.8],
+      swap: ["M7 7h13m0 0-3-3m3 3-3 3M17 17H4m0 0 3-3m-3 3 3 3", 1.9],
+      send: ["M21 3 10.5 13.5M21 3l-6.5 18-4-7.5L3 9.5 21 3Z", 1.9],
+      check: ["M5 12.5l4.5 4.5L19 7.5", 2.2],
+      logout: ["M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M16 8l4 4-4 4M20 12H9", 1.9],
+      lock: ["M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2ZM8 11V8a4 4 0 0 1 8 0v3", 2],
+      grid: ["M4 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM15 3h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM4 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1ZM15 14h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1Z", 1.8],
+      users: ["M16 20v-1.8a3.6 3.6 0 0 0-3.6-3.6H6.6A3.6 3.6 0 0 0 3 18.2V20M6 7.5a3.5 3.5 0 1 0 7 0a3.5 3.5 0 1 0-7 0M17 11a3.5 3.5 0 1 0-1.1-6.8M21 20v-1.8a3.6 3.6 0 0 0-2.7-3.5", 1.8],
+      building: ["M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h3a1 1 0 0 1 1 1v11M3 21h18M8 7h4M8 11h4M8 15h4", 1.8],
+      database: ["M4 5a8 3 0 1 0 16 0a8 3 0 1 0-16 0M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7", 1.8],
+      upload: ["M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14", 1.8],
+      download: ["M12 4v12m0 0-4.5-4.5M12 16l4.5-4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14", 1.8],
+      search: ["M4 11a7 7 0 1 0 14 0a7 7 0 1 0-14 0M20 20l-4-4", 2],
+      plus: ["M12 5v14M5 12h14", 2],
+      edit: ["M4 16.5l-.8 3.3 3.3-.8L18.8 6.7a2.2 2.2 0 0 0-3.1-3.1L4 16.5ZM14.5 5.5l4 4", 1.8],
+      trash: ["M4 7h16M10 11v6M14 11v6M6 7l.8 13h10.4L18 7M9 7V4h6v3", 1.8],
+      menu: ["M4 6h16M4 12h16M4 18h16", 2],
+      copy: ["M10 8h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2ZM16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2", 1.8],
+      close: ["M6 6l12 12M18 6 6 18", 2],
+      file: ["M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9ZM14 3v6h6M8 13h8M8 17h6", 1.8],
+      refresh: ["M20 11a8 8 0 0 0-14.8-4L3 10M3 5v5h5M4 13a8 8 0 0 0 14.8 4L21 14m0 5v-5h-5", 1.8],
+      xlsx: ["M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9ZM14 3v6h6M8.6 13.2l3.1 4.3M11.7 13.2l-3.1 4.3", 1.7],
+      toastSuccess: ["M5 12.5l4.5 4.5L19 7.5", 2.4],
+      toastError: ["M3.5 12a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0M12 8v5M12 15.6v.1", 2.2],
+      toastInfo: ["M12 21c4-2.5 7-5.8 7-10a7 7 0 0 0-14 0c0 4.2 3 7.5 7 10ZM10.4 11a1.6 1.6 0 1 0 3.2 0a1.6 1.6 0 1 0-3.2 0", 2.2],
+      pgPrev: ["M15 6l-6 6 6 6", 2.2],
+      pgNext: ["M9 6l6 6-6 6", 2.2],
+      arrowRight: ["M5 12h14M13 6l6 6-6 6", 2],
+      arrowUpRight: ["M7 17 17 7M8 7h9v9", 2]
     };
+    const mi = (d, sw = 1.8) => `<morph-icon><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg></morph-icon>`;
+    const ICONS = Object.fromEntries(Object.entries(ICON_D).map(([k, [d, sw]]) => [k, mi(d, sw)]));
+    ICONS.clockLive = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path class="hand-h" d="M12 12V8"/><path class="hand-m" d="M12 12V6.5"/></svg>';
+    const SORT_D = { asc: "M6 15l6-6 6 6", desc: "M6 9l6 6 6-6", none: "M8 9l4-4 4 4M16 15l-4 4-4-4" };
+    const sortD = dir => SORT_D[dir] || SORT_D.none;
+    const sortIcon = dir => mi(sortD(dir), 2.2);
+    // Gọi morph an toàn: nếu thư viện chưa tải xong thì icon tĩnh vẫn hiển thị bình thường.
+    const MI = {
+      ok: el => !!el && typeof el.morphTo === "function",
+      to(el, d) { if (d && MI.ok(el)) { try { el.morphTo(d, "snappy"); } catch (_) {} } },
+      set(el, d) { if (d && MI.ok(el)) { try { el.set(d); } catch (_) {} } }
+    };
+    function flashIcon(host, key, ms = 1500) {
+      const el = host?.querySelector("morph-icon"), rest = el?.querySelector("path")?.getAttribute("d");
+      if (!el || !rest || !ICON_D[key]) return;
+      MI.to(el, ICON_D[key][0]);
+      setTimeout(() => MI.to(el, host.dataset.restIcon || rest), ms);
+    }
+    // Rê chuột vào phần tử có data-hover-icon → icon morph sang icon thay thế, rời chuột → morph về.
+    let hoverHost = null;
+    document.addEventListener("pointerover", e => {
+      if (e.pointerType === "touch") return;
+      const host = e.target.closest ? e.target.closest("[data-hover-icon]") : null;
+      if (host === hoverHost) return;
+      if (hoverHost && hoverHost.dataset.restIcon) MI.to(hoverHost.querySelector("morph-icon"), hoverHost.dataset.restIcon);
+      hoverHost = host;
+      if (!host || host.disabled) return;
+      const el = host.querySelector("morph-icon"), alt = ICON_D[host.dataset.hoverIcon];
+      if (!el || !alt) return;
+      if (!host.dataset.restIcon) host.dataset.restIcon = el.querySelector("path")?.getAttribute("d") || "";
+      MI.to(el, alt[0]);
+    }, { passive: true });
+    // Hiệu ứng gợn sóng khi bấm
+    document.addEventListener("pointerdown", e => {
+      const b = e.target.closest ? e.target.closest(".btn, .nav button, .filter-tab, .tl-seg button, .pager-btn, .google-btn, button.table-item") : null;
+      if (!b || b.disabled) return;
+      const r = b.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2.2, w = document.createElement("span");
+      w.className = "ripple";
+      w.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - r.left - s / 2}px;top:${e.clientY - r.top - s / 2}px`;
+      b.appendChild(w); w.addEventListener("animationend", () => w.remove(), { once: true });
+    }, { passive: true });
+
+    // Thư viện Excel nặng: tải lười (khi rảnh hoặc khi cần) thay vì chặn lúc mở trang
+    const LIBS = {
+      xlsx: "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",
+      exceljs: "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
+    };
+    const libCache = {};
+    function loadLib(name) {
+      if (name === "xlsx" && window.XLSX) return Promise.resolve();
+      if (name === "exceljs" && window.ExcelJS) return Promise.resolve();
+      return libCache[name] ||= new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = LIBS[name]; s.async = true; s.onload = resolve;
+        s.onerror = () => { delete libCache[name]; s.remove(); reject(new Error(`Không tải được thư viện ${name}`)); };
+        document.head.appendChild(s);
+      });
+    }
+    let libsPrefetched = false;
+    function prefetchLibs() {
+      if (libsPrefetched) return; libsPrefetched = true;
+      const idle = window.requestIdleCallback || (f => setTimeout(f, 1800));
+      idle(() => { loadLib("xlsx").catch(() => {}); idle(() => loadLib("exceljs").catch(() => {}), { timeout: 6000 }); }, { timeout: 4000 });
+    }
+
+    // ---------- Khung app: chỉ vẽ lại phần nội dung khi chuyển tab / cập nhật dữ liệu ----------
+    let pageAnim = false, pageAnimTimer = 0, lastShellSig = "";
+    const countMemo = {};
+    const reduceMotion = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function appTabs() {
+      return [
+        ["dashboard", "Tổng quan", ICONS.grid, "grid"],
+        ["dms", "DMS Userlist", ICONS.users, "users"],
+        ["central", "Central User list", ICONS.building, "building"],
+        ["tools", "Công Cụ Hỗ Trợ", ICONS.tools, "tools"],
+        ...(isAdmin() ? [["admin", "Quản lý dữ liệu", ICONS.database, "database"]] : [])
+      ];
+    }
+    const shellSig = () => JSON.stringify([appTabs().map(t => t[0]), state.profile?.display_name, state.profile?.email, state.profile?.role]);
+    function patchApp() {
+      const tabs = appTabs();
+      if (!tabs.some(x => x[0] === state.tab)) state.tab = "dashboard";
+      const active = tabs.find(x => x[0] === state.tab) || tabs[0];
+      document.querySelectorAll("#sidebar .nav button[data-tab]").forEach(b => {
+        const on = b.dataset.tab === state.tab;
+        b.classList.toggle("active", on);
+        if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+      });
+      const h1 = document.querySelector(".topbar h1");
+      if (h1 && h1.textContent !== active[1]) { h1.textContent = active[1]; h1.classList.remove("swap"); void h1.offsetWidth; h1.classList.add("swap"); }
+      MI.to(document.querySelector(".topbar-icon morph-icon"), ICON_D[active[3]][0]);
+      const page = document.querySelector(".page");
+      page.innerHTML = renderPage();
+      bindAppEvents();
+      afterPageRender();
+    }
+    function afterPageRender() {
+      const page = document.querySelector(".page"); if (!page) return;
+      if (pageAnim) {
+        pageAnim = false;
+        page.classList.remove("page-enter"); void page.offsetWidth; page.classList.add("page-enter");
+        clearTimeout(pageAnimTimer); pageAnimTimer = setTimeout(() => page.classList.remove("page-enter"), 1500);
+      }
+      countUp(page);
+      requestAnimationFrame(() => positionNavIndicator());
+    }
+    function positionNavIndicator(instant) {
+      const nav = document.querySelector("#sidebar .nav"); if (!nav) return;
+      const ind = nav.querySelector(".nav-indicator"), act = nav.querySelector("button.active");
+      if (!ind) return;
+      if (!act) { ind.style.opacity = "0"; nav.classList.remove("has-indicator"); return; }
+      const jump = instant || !nav.classList.contains("has-indicator");
+      if (jump) ind.style.transition = "none";
+      ind.style.height = act.offsetHeight + "px";
+      ind.style.transform = `translate3d(0, ${act.offsetTop}px, 0)`;
+      ind.style.opacity = "1"; nav.classList.add("has-indicator");
+      if (jump) { void ind.offsetWidth; ind.style.transition = ""; }
+    }
+    let resizeRaf = 0;
+    window.addEventListener("resize", () => { cancelAnimationFrame(resizeRaf); resizeRaf = requestAnimationFrame(() => positionNavIndicator(true)); }, { passive: true });
+    // Số liệu đếm tăng dần khi vào trang hoặc khi dữ liệu thay đổi
+    function countUp(root) {
+      const skip = reduceMotion();
+      root.querySelectorAll(".stat-value, .license-num").forEach((el, i) => {
+        const raw = el.textContent.trim(); if (!/^\d[\d.]*$/.test(raw)) return;
+        const to = Number(raw.replace(/\./g, "")), key = state.tab + ":" + i, from = countMemo[key] ?? 0;
+        countMemo[key] = to;
+        if (from === to || skip) return;
+        const t0 = performance.now(), dur = 950;
+        el.textContent = nf(from);
+        const step = now => {
+          const p = Math.min(1, (now - t0) / dur), k = 1 - Math.pow(1 - p, 3);
+          el.textContent = nf(Math.round(from + (to - from) * k));
+          if (p < 1 && el.isConnected) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    }
+    function setSidebar(open) {
+      const sb = document.querySelector("#sidebar"); if (!sb) return;
+      if (sb.classList.contains("open") === open) return;
+      sb.classList.toggle("open", open);
+      document.querySelector("#scrim")?.classList.toggle("show", open);
+      const mb = document.querySelector("#mobile-menu");
+      if (mb) { mb.setAttribute("aria-expanded", String(open)); MI.to(mb.querySelector("morph-icon"), (open ? ICON_D.close : ICON_D.menu)[0]); }
+    }
+    function goTab(id) {
+      setSidebar(false);
+      if (id === state.tab) return;
+      state.tab = id; saveKey(TAB_KEY, id); state.search = String(savedSearch[id] || ""); state.page = 1;
+      for (const k in countMemo) delete countMemo[k];
+      pageAnim = true; render();
+      window.scrollTo(0, 0);
+    }
 
     const DMS_FIELDS = [
       ["username", "UserName", true], ["dt_active_status", "DTACTIVESTATUS"], ["tenant", "Tenant"],
@@ -1017,6 +1278,8 @@
       const dir = cur?.key === key ? (cur.dir === "asc" ? "desc" : cur.dir === "desc" ? "" : "asc") : "asc";
       if (dir) state.sort[ds] = { key, dir }; else delete state.sort[ds];
       saveJson(SORT_KEY, state.sort); state.page = 1; updateDatasetBody();
+      const si = document.querySelector(`th[data-sort="${CSS.escape(key)}"] morph-icon`);
+      if (si) { MI.set(si, sortD(cur?.key === key ? cur.dir : "")); MI.to(si, sortD(dir)); }
     }
 
     const state = {
@@ -1080,6 +1343,7 @@
       node.className = `toast ${type}`.trim();
       node.innerHTML = `<span class="toast-icon">${iconMap[type] || ICONS.toastInfo}</span><span class="toast-msg">${escapeHtml(message)}</span><button type="button" class="toast-close" aria-label="Đóng thông báo">${ICONS.close}</button><span class="toast-bar"></span>`;
       $("#toast-root").appendChild(node);
+      if (type === "success") { const ic = node.querySelector("morph-icon"); MI.set(ic, "M7 12h10"); requestAnimationFrame(() => MI.to(ic, ICON_D.toastSuccess[0])); }
       const remove = () => { node.classList.add("leaving"); setTimeout(() => node.remove(), 200); };
       const timer = setTimeout(remove, 4200);
       node.querySelector(".toast-close").addEventListener("click", () => { clearTimeout(timer); remove(); });
@@ -1109,6 +1373,8 @@
         $("#confirm-backdrop").addEventListener("click", e => e.target.id === "confirm-backdrop" && close(false));
         $("#confirm-cancel").addEventListener("click", () => close(false));
         $("#confirm-ok").addEventListener("click", () => close(true));
+        const ci = root.querySelector(".confirm-icon morph-icon");
+        if (danger && ci) { MI.set(ci, ICON_D.toastError[0]); requestAnimationFrame(() => MI.to(ci, ICON_D.trash[0])); }
         $("#confirm-ok").focus();
       });
     }
@@ -1146,7 +1412,8 @@
       if (screen === "login") root.innerHTML = renderLogin(entering);
       else if (screen === "loading") root.innerHTML = renderLoadingState();
       else if (screen === "pending") root.innerHTML = renderPending(entering);
-      else { root.innerHTML = renderApp(); bindAppEvents(); }
+      else if (!entering && document.querySelector("#sidebar") && shellSig() === lastShellSig) patchApp();
+      else { root.innerHTML = renderApp(); lastShellSig = shellSig(); bindAppEvents(); pageAnim = true; afterPageRender(); prefetchLibs(); }
     }
 
     function setLoginBusy(busy) {
@@ -1223,29 +1490,24 @@
     }
 
     function renderApp() {
-      const tabs = [
-        ["dashboard", "Tổng quan", ICONS.grid],
-        ["dms", "DMS Userlist", ICONS.users],
-        ["central", "Central User list", ICONS.users],
-        ["tools", "Công Cụ Hỗ Trợ", ICONS.tools],
-        ...(isAdmin() ? [["admin", "Quản lý dữ liệu", ICONS.database]] : [])
-      ];
+      const tabs = appTabs();
       if (!tabs.some(x => x[0] === state.tab)) state.tab = "dashboard";
       const activeTab = tabs.find(x => x[0] === state.tab) || tabs[0];
       return `<div class="app-shell">
         <aside class="sidebar" id="sidebar">
           <div class="brand"><div class="brand-mark">${ICONS.database}</div><div><strong>Masterdata DMS</strong><small>CCVN data workspace</small></div></div>
-          <div class="nav-label">Workspace</div><nav class="nav">${tabs.map(([id, label, icon]) => `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}">${icon}<span>${label}</span></button>`).join("")}</nav>
+          <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.map(([id, label, icon]) => `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
           <div class="sidebar-foot">
             <div class="user-card">
               <div class="user-chip"><div class="avatar">${initials(state.profile.display_name || state.profile.email)}</div><div><b>${escapeHtml(state.profile.display_name || "Người dùng")}</b><span>${escapeHtml(roleLabel(state.profile.role))}</span></div></div>
-              <button class="signout" id="logout" title="Đăng xuất" aria-label="Đăng xuất">${ICONS.logout}</button>
+              <button class="signout" id="logout" data-hover-icon="arrowRight" title="Đăng xuất" aria-label="Đăng xuất">${ICONS.logout}</button>
             </div>
           </div>
         </aside>
+        <div class="scrim" id="scrim"></div>
         <main class="main">
           <header class="topbar">
-            <div style="display:flex;align-items:center;gap:13px"><button class="mobile-menu" id="mobile-menu">${ICONS.menu}</button><div class="topbar-icon">${activeTab[2]}</div><div><h1>${escapeHtml(activeTab[1])}</h1><p>Quản lý masterdata CCVN tập trung và an toàn</p></div></div>
+            <div style="display:flex;align-items:center;gap:13px"><button class="mobile-menu" id="mobile-menu" aria-label="Mở menu" aria-expanded="false">${ICONS.menu}</button><div class="topbar-icon">${activeTab[2]}</div><div><h1>${escapeHtml(activeTab[1])}</h1><p>Quản lý masterdata CCVN tập trung và an toàn</p></div></div>
             <div class="topbar-right">
               <span class="conn-badge"><span class="conn-dot"></span><span>Kết nối an toàn</span></span>
             </div>
@@ -1274,8 +1536,8 @@
         </div>
         <div class="two-col">
           <section class="panel"><div class="panel-head"><div><h2>Truy cập nhanh</h2><p>Mở trực tiếp bảng dữ liệu cần xử lý.</p></div></div><div class="panel-body" style="display:grid;gap:11px">
-            <button class="table-item" data-tab="dms"><div><b>DMS Userlist</b><span>${state.counts.dms.toLocaleString("vi-VN")} người dùng • khóa UserName</span></div><span class="go">→</span></button>
-            <button class="table-item" data-tab="central"><div><b>Central User list</b><span>${state.counts.central.toLocaleString("vi-VN")} người dùng • khóa UserName</span></div><span class="go">→</span></button>
+            <button class="table-item" data-hover-icon="arrowUpRight" data-tab="dms"><div><b>DMS Userlist</b><span>${state.counts.dms.toLocaleString("vi-VN")} người dùng • khóa UserName</span></div><span class="go">${ICONS.arrowRight}</span></button>
+            <button class="table-item" data-hover-icon="arrowUpRight" data-tab="central"><div><b>Central User list</b><span>${state.counts.central.toLocaleString("vi-VN")} người dùng • khóa UserName</span></div><span class="go">${ICONS.arrowRight}</span></button>
           </div></section>
           <section class="panel"><div class="panel-head"><div><h2>Lịch sử import</h2><p>Những lần cập nhật gần nhất.</p></div></div>${recent.length ? `<div class="table-wrap"><table><thead><tr><th>File</th><th>Thời gian</th><th>Trạng thái</th></tr></thead><tbody>${recent.map(log => `<tr><td><strong>${escapeHtml(log.file_name)}</strong></td><td>${formatDate(log.created_at)}</td><td>${log.status === "success" ? '<span class="badge badge-success">Thành công</span>' : '<span class="badge badge-danger">Lỗi</span>'}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty"><strong>Chưa có lịch sử import</strong>Chỉ Super-admin mới có thể nạp file masterdata.</div>`}</section>
         </div>`;
@@ -1331,8 +1593,8 @@
     }
 
     // Xuất dữ liệu đang được lọc (theo ô tìm kiếm) của tab hiện tại ra file Excel (.xlsx)
-    function exportExcel() {
-      if (typeof XLSX === "undefined") { toast("Không tải được thư viện xuất Excel.", "error"); return; }
+    async function exportExcel() {
+      try { await loadLib("xlsx"); } catch (_) { toast("Không tải được thư viện xuất Excel.", "error"); return; }
       const v = getDatasetView();
       if (!v.filtered.length) { toast("Không có dữ liệu để xuất.", "error"); return; }
       const btn = $("#export-excel");
@@ -1349,6 +1611,7 @@
         const fileName = `${v.isDms ? "DMS_Userlist" : "Central_Userlist"}_${stamp}.xlsx`;
         XLSX.writeFile(wb, fileName);
         toast(`Đã xuất ${nf(v.filtered.length)} dòng ra "${fileName}".`, "success");
+        setTimeout(() => flashIcon($("#export-excel"), "check"), 0);
       } catch (err) {
         toast(`Xuất Excel thất bại: ${err.message}`, "error");
       } finally {
@@ -1401,7 +1664,7 @@
         <div class="bulk-actions">
           <button type="button" class="btn btn-secondary" data-bulk="allresults">Chọn tất cả ${nf(v.total)} kết quả</button>
           <button type="button" class="btn btn-secondary" data-bulk="clear" ${!n ? "disabled" : ""}>Bỏ chọn</button>
-          <button type="button" class="btn btn-excel" data-bulk="export" ${!n ? "disabled" : ""}>${ICONS.xlsx} Xuất đã chọn</button>
+          <button type="button" class="btn btn-excel" data-hover-icon="download" data-bulk="export" ${!n ? "disabled" : ""}>${ICONS.xlsx} Xuất đã chọn</button>
           ${isAdmin() ? `<button type="button" class="btn btn-danger" data-bulk="delete" ${!n ? "disabled" : ""}>${ICONS.trash} Xóa đã chọn</button>` : ""}
         </div>
       </div>`;
@@ -1413,11 +1676,11 @@
       const sap = bar.querySelector("#select-all-page"); if (sap) sap.checked = v.pageRows.length > 0 && v.pageRows.every(r => sel.has(r.username));
       bar.querySelectorAll("[data-bulk]").forEach(b => { const act = b.dataset.bulk; if (act === "clear" || act === "export" || act === "delete") b.disabled = !n; });
     }
-    function exportSelected() {
+    async function exportSelected() {
       const v = getDatasetView(), sel = selSet();
       const rows = v.filtered.filter(r => sel.has(r.username));
       if (!rows.length) return toast("Không có dòng nào được chọn để xuất.", "error");
-      if (typeof XLSX === "undefined") return toast("Không tải được thư viện xuất Excel.", "error");
+      try { await loadLib("xlsx"); } catch (_) { return toast("Không tải được thư viện xuất Excel.", "error"); }
       try {
         const header = v.fields.map(([, label]) => label);
         const ws = XLSX.utils.aoa_to_sheet([header, ...rows.map(row => v.fields.map(([key]) => row[key] ?? ""))]);
@@ -1445,13 +1708,13 @@
       const { fields, pageRows, start, total } = v, bn = v.multi ? multiBanner(v.multi) : "";
       if (!total) {
         const msg = state.loading && !v.rows.length
-          ? `<div class="loading"><i class="spinner"></i> <span data-loading-text>${loadingText()}</span></div>`
+          ? `<div class="skeleton">${[72, 94, 81, 66, 90, 77, 85, 60].map(w => `<i class="sk" style="--w:${w}%"></i>`).join("")}<div class="loading"><i class="spinner"></i> <span data-loading-text>${loadingText()}</span></div></div>`
           : `<div class="empty"><strong>Không tìm thấy dữ liệu</strong>Thử đổi từ khóa tìm kiếm hoặc làm mới bảng.</div>`;
         return `${bn}${renderBulkBar(v)}<div class="table-wrap data-scroll is-empty">${msg}</div>${renderPager(v)}`;
       }
       const sel = selSet();
       const s = currentSort(v.isDms ? "dms" : "central", fields);
-      const head = `<th class="col-sel"></th><th class="col-idx">#</th>${fields.map(([key, label]) => { const on = s?.key === key; return `<th class="sortable${on ? " sorted" : ""}" data-sort="${key}" aria-sort="${on ? (s.dir === "asc" ? "ascending" : "descending") : "none"}" title="Bấm để sắp xếp: tăng dần → giảm dần → bỏ sắp xếp">${escapeHtml(label)}<span class="sort-ind">${on ? (s.dir === "asc" ? "▲" : "▼") : "↕"}</span></th>`; }).join("")}<th class="col-act">Thao tác</th>`;
+      const head = `<th class="col-sel"></th><th class="col-idx">#</th>${fields.map(([key, label]) => { const on = s?.key === key; return `<th class="sortable${on ? " sorted" : ""}" data-sort="${key}" aria-sort="${on ? (s.dir === "asc" ? "ascending" : "descending") : "none"}" title="Bấm để sắp xếp: tăng dần → giảm dần → bỏ sắp xếp">${escapeHtml(label)}<span class="sort-ind">${sortIcon(on ? s.dir : "")}</span></th>`; }).join("")}<th class="col-act">Thao tác</th>`;
       const body = pageRows.map((row, i) => `<tr><td class="col-sel"><input type="checkbox" class="row-sel" data-key="${escapeHtml(row.username)}" ${sel.has(row.username) ? "checked" : ""} aria-label="Chọn ${escapeHtml(row.username)}"></td><td class="col-idx">${nf(start + i + 1)}</td>${fields.map(([key]) => `<td>${key === "username" ? `<strong>${cellHtml(row[key])}</strong>` : cellHtml(row[key])}</td>`).join("")}<td class="col-act"><div style="display:flex;gap:4px">${canEdit() ? `<button class="btn btn-plain edit-row" data-key="${escapeHtml(row.username)}" title="Sửa">${ICONS.edit}</button>` : ""}${isAdmin() ? `<button class="btn btn-plain delete-row" data-key="${escapeHtml(row.username)}" title="Xóa" style="color:var(--danger)">${ICONS.trash}</button>` : ""}</div></td></tr>`).join("");
       return `${bn}${renderBulkBar(v)}<div class="table-wrap data-scroll" tabindex="0" aria-label="Bảng dữ liệu, cuộn ngang và dọc để xem đủ các cột"><table class="data-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${renderPager(v)}`;
     }
@@ -1508,7 +1771,7 @@
           <div class="toolbar-right">
             <span class="loading${state.loading ? "" : " hidden"}" data-loading><i class="spinner"></i><span data-loading-text>${loadingText()}</span></span>
             <span class="badge badge-blue" id="row-badge">${rowBadgeText(v)}</span>
-            <button class="btn btn-excel" id="export-excel" title="Xuất dữ liệu đang hiển thị ra file Excel">${ICONS.xlsx} Xuất Excel</button>
+            <button class="btn btn-excel" data-hover-icon="download" id="export-excel" title="Xuất dữ liệu đang hiển thị ra file Excel">${ICONS.xlsx} Xuất Excel</button>
             <button class="btn btn-secondary" id="refresh-data"${state.loading ? " disabled" : ""}><span class="btn-icon${state.loading ? " spin" : ""}">${ICONS.refresh}</span> Làm mới</button>
           </div>
         </div>
@@ -1607,11 +1870,6 @@
     }
 
     function bindAppEvents() {
-      document.querySelectorAll("[data-tab]").forEach(el => el.addEventListener("click", () => {
-        state.tab = el.dataset.tab; saveKey(TAB_KEY, state.tab); state.search = String(savedSearch[state.tab] || ""); state.page = 1; $("#sidebar")?.classList.remove("open"); render();
-      }));
-      $("#mobile-menu")?.addEventListener("click", () => $("#sidebar").classList.toggle("open"));
-      $("#logout")?.addEventListener("click", logout);
       $("#refresh-data")?.addEventListener("click", loadData);
       let searchTimer = null;
       const searchInput = $("#table-search"), searchWrap = searchInput?.closest(".search");
@@ -1648,8 +1906,10 @@
       $("#file-input")?.addEventListener("change", e => e.target.files[0] && importWorkbook(e.target.files[0]));
       const dropzone = $("#dropzone");
       if (dropzone) {
-        ["dragenter", "dragover"].forEach(type => dropzone.addEventListener(type, e => { e.preventDefault(); dropzone.classList.add("drag"); }));
-        ["dragleave", "drop"].forEach(type => dropzone.addEventListener(type, e => { e.preventDefault(); dropzone.classList.remove("drag"); }));
+        const dzIcon = dropzone.querySelector(":scope > morph-icon");
+        const dzSet = on => { if (dropzone.classList.contains("drag") === on) return; dropzone.classList.toggle("drag", on); MI.to(dzIcon, (on ? ICON_D.download : ICON_D.upload)[0]); };
+        ["dragenter", "dragover"].forEach(type => dropzone.addEventListener(type, e => { e.preventDefault(); dzSet(true); }));
+        ["dragleave", "drop"].forEach(type => dropzone.addEventListener(type, e => { e.preventDefault(); dzSet(false); }));
         dropzone.addEventListener("drop", e => e.dataTransfer.files[0] && importWorkbook(e.dataTransfer.files[0]));
       }
       document.querySelectorAll(".approve-user").forEach(el => el.addEventListener("click", () => updateProfile(el.dataset.id, { approval_status: "approved" })));
@@ -1871,7 +2131,7 @@
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="tl-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${toolStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-tl="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-tl="clear">Bỏ chọn hết</button></div></div>
         <div id="tl-list">${renderToolList()}</div></section>` : "";
       const personSection = rem ? "" : `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "② Thông tin người mới" : "① Thông tin account mới"}</h2><p>UserName${cfg.ds === "central" ? ", EmployeeName, Email" : ""} là bắt buộc. ${cfg.ds === "central" ? "EmployeeCode tự lấy theo UserName; tên tự chuyển IN HOA không dấu khi xuất. Ngày sinh để trống = NULL, ngày vào làm để trống = 1900-01-01." : "Các trường khác để trống nếu chưa có."}</p></div>${rep ? "" : `<button type="button" class="btn btn-secondary" data-tl="add">${ICONS.plus} Thêm người</button>`}</div><div class="panel-body" id="tl-cards">${renderToolCards(items, v)}</div></section>`;
-      return dsSeg + seg + pickSection + personSection + `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "③" : "②"} Xem trước &amp; xuất phiếu</h2><p>${rep ? "Dòng xám là account cũ (Deactive), dòng xanh là account mới (Active) — đúng thứ tự thay thế." : rem ? "Dòng xám là account bị remove." : "Dòng xanh là account mới (Active)."}</p></div><button type="button" class="btn btn-excel" id="tl-export" data-tl="export" ${!cnt || v.errors ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div><div class="panel-body" id="tl-preview">${renderToolPreview(items, v)}</div></section>`;
+      return dsSeg + seg + pickSection + personSection + `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "③" : "②"} Xem trước &amp; xuất phiếu</h2><p>${rep ? "Dòng xám là account cũ (Deactive), dòng xanh là account mới (Active) — đúng thứ tự thay thế." : rem ? "Dòng xám là account bị remove." : "Dòng xanh là account mới (Active)."}</p></div><button type="button" class="btn btn-excel" data-hover-icon="download" id="tl-export" data-tl="export" ${!cnt || v.errors ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div><div class="panel-body" id="tl-preview">${renderToolPreview(items, v)}</div></section>`;
     }
     function renderTools() {
       return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools</div><h2 class="page-title">Công Cụ Hỗ Trợ</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
@@ -1898,6 +2158,7 @@
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
       const fileName = `${cfg.filePrefix[tool.mode]}_${stamp}.xlsx`;
       try {
+        await loadLib("exceljs").catch(() => loadLib("xlsx"));
         if (window.ExcelJS) {
           const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet(cfg.sheetName);
           const fill = argb => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
@@ -2104,7 +2365,7 @@
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="upd-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${updStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-upd="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-upd="clear">Bỏ chọn hết</button></div></div>
         <div id="upd-list">${renderUpdList()}</div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p>Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p></div></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" id="upd-export" data-upd="export" ${!canExport ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" data-hover-icon="download" id="upd-export" data-upd="export" ${!canExport ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
     }
     function updRefresh() {
       const cv = $("#upd-preview"); if (cv) cv.innerHTML = renderUpdPreview();
@@ -2154,6 +2415,7 @@
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
       const fileName = `Phieu_Cap_Nhat_${cfg.ds === "dms" ? "DMS" : "Central"}_${stamp}.xlsx`;
       try {
+        await loadLib("exceljs").catch(() => loadLib("xlsx"));
         if (window.ExcelJS) {
           const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet(cfg.ds === "dms" ? "Cap Nhat DMS" : "Cap Nhat");
           const fill = argb => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
@@ -2508,6 +2770,7 @@
       const setStatus = (label, done, total) => { if (status) status.innerHTML = renderImportProgress(label, done, total); };
       setStatus(`Đang đọc file "${file.name}"…`, 0, 1);
       try {
+        await loadLib("xlsx");
         const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false });
         const getSheet = (expected) => workbook.Sheets[workbook.SheetNames.find(name => normalizeHeader(name) === normalizeHeader(expected)) || expected];
         const dmsSheet = getSheet("DMS Userlist"), centralSheet = getSheet("Central User list");
@@ -2609,11 +2872,16 @@
     }
 
     document.addEventListener("click", e => {
+      const tabBtn = e.target.closest("[data-tab]");
+      if (tabBtn && state.profile && document.querySelector(".app-shell")) goTab(tabBtn.dataset.tab);
+      if (e.target.closest("#mobile-menu")) setSidebar(!document.querySelector("#sidebar")?.classList.contains("open"));
+      if (e.target.closest("#scrim")) setSidebar(false);
+      if (e.target.closest("#logout")) logout();
       if (e.target.closest("#google-login")) login().catch(err => { setLoginBusy(false); toast(`Đăng nhập thất bại: ${err.message}`, "error"); });
       if (e.target.closest("#logout-pending")) logout();
       if (e.target.closest("#send-request-btn")) sendRequestToAdmin();
     });
-    boot();
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot); else boot();
   </script>
 </body>
 </html>
