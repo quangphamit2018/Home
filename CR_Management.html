@@ -12352,7 +12352,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     if(wantWeekly){
     const weeklyColumns = [
       {label:"CR ID",             width:13, value:c=>c.cr_id},
-      {label:"Rename Folder",     width:32, value:c=>c.rename_folder},
+      {label:"Description",       width:32, value:c=>c.rename_folder},
       {label:"Priority",         width:12, value:c=>c.priority},
       {label:"Status",           width:17, value:c=>c.status},
       {label:"Sub-Status",       width:18, value:c=>c.sub_status},
@@ -12389,7 +12389,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
       {label:"No", width:7, value:c=>crLogNo(c)},
       {label:"CR ID", width:13, value:c=>c.cr_id},
       {label:"Old Name From InterK", width:24, value:c=>c.old_name},
-      {label:"Rename Folder", width:28, value:c=>c.rename_folder},
+      {label:"Description", width:28, value:c=>c.rename_folder},
       {label:"App", width:16, value:c=>c.app},
       {label:"Requester", width:18, value:c=>c.requester},
       {label:"Department", width:16, value:c=>c.department},
@@ -12902,7 +12902,7 @@ async function downloadCombinedWeeklyReport(selectedKeys){
     // ---- 2 sheet riêng (DMS, e-B2B) — bỏ cột Deadline, BRD, FSD, Loop Mail Header.
     const weeklyColumns = [
       {label:"CR ID",          width:13, value:i=>i.record.cr_id},
-      {label:"Rename Folder",  width:32, value:i=>i.record.rename_folder},
+      {label:"Description",    width:32, value:i=>i.record.rename_folder},
       {label:"Priority",       width:12, value:i=>i.record.priority},
       {label:"Status",         width:17, value:i=>i.record.status},
       {label:"Sub-Status",     width:18, value:i=>i.record.sub_status},
@@ -21825,7 +21825,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 #view-report .report-panel .list-panel-count{ display:flex; align-items:center; gap:9px; }
 #view-report .report-panel .list-panel-count .admin-scope-tag{ margin-right:0; }
 #view-report .table-wrap{ max-height:44vh; min-height:160px; overflow:auto; overscroll-behavior:contain; }
-#view-report .table-wrap table{ min-width:860px; }
+#view-report .table-wrap table{ min-width:860px; table-layout:fixed; }
+/* Cả 2 bảng DMS & e-B2B dùng chung tỉ lệ cột cố định — tránh lệch cột do
+   table-layout:auto tự co giãn theo độ dài nội dung riêng của từng bảng. */
+#view-report .table-wrap table th:nth-child(1), #view-report .table-wrap table td:nth-child(1){ width:9%; }
+#view-report .table-wrap table th:nth-child(2), #view-report .table-wrap table td:nth-child(2){ width:11%; }
+#view-report .table-wrap table th:nth-child(3), #view-report .table-wrap table td:nth-child(3){ width:40%; }
+#view-report .table-wrap table th:nth-child(4), #view-report .table-wrap table td:nth-child(4){ width:12%; }
+#view-report .table-wrap table th:nth-child(5), #view-report .table-wrap table td:nth-child(5){ width:14%; }
+#view-report .table-wrap table th:nth-child(6), #view-report .table-wrap table td:nth-child(6){ width:14%; }
 #view-report th[data-report-sort]{ cursor:pointer; user-select:none; white-space:nowrap; }
 #view-report th[data-report-sort]:hover{ color:#08777c; }
 #view-report th[data-report-sort].is-sorted{ color:#08777c; }
