@@ -6222,6 +6222,24 @@ button:active mi-icon > svg{ transform:scale(.9); }
     <!-- e-B2B is mounted here at runtime; global tools stay below all workspaces. -->
     <div id="eb2bNavMount" aria-hidden="true"></div>
 
+    <!-- Workspace báo cáo tổng hợp DMS & e-B2B (chỉ Report_Weekly). -->
+    <div class="workspace-nav" data-workspace="report">
+      <div class="nav-item workspace-parent" id="navReportWorkspace"
+           title="Mở / thu gọn Báo cáo DMS & e-B2B" role="button" tabindex="0"
+           aria-expanded="false" aria-controls="navReportChildren">
+        <mi-icon name="file-spreadsheet" stroke-width="2"></mi-icon>
+        <span class="nav-label">Báo cáo DMS &amp; e-B2B</span>
+        <mi-icon name="chevron-down" stroke-width="2.2" svg-class="workspace-chevron"></mi-icon>
+      </div>
+      <div class="workspace-children is-collapsed" id="navReportChildren" aria-label="Báo cáo tổng hợp DMS & e-B2B">
+        <div class="nav-item" data-view="report" title="Report_Weekly">
+          <mi-icon name="calendar-days" stroke-width="2"></mi-icon>
+          <span class="nav-label">Report_Weekly</span>
+          <span class="count" id="navCountReport">0</span>
+        </div>
+      </div>
+    </div>
+
     <div class="global-nav-tools" aria-label="Công cụ dùng chung">
       <div class="nav-item global-nav-item hidden" data-view="admin" id="navAdmin" title="Quản Trị Dữ Liệu">
         <mi-icon name="users" stroke-width="2"></mi-icon>
@@ -6274,6 +6292,10 @@ button:active mi-icon > svg{ transform:scale(.9); }
            <mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>
            <span class="report-label">Tải báo cáo</span>
          </button>
+        <button class="btn btn-ghost btn-sm tb-btn view-action hidden" data-for="report" id="btnCombinedReport" type="button" title="Tải báo cáo Report_Weekly tổng hợp DMS & e-B2B">
+          <mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>
+          <span class="report-label">Tải báo cáo</span>
+        </button>
         <button class="btn btn-ghost btn-sm tb-btn view-action hidden" data-for="dashboard,uat" id="btnEvidenceZip" type="button" title="Tải toàn bộ ảnh evidence theo cấu trúc thư mục">
           <mi-icon name="folder-down" size="14" stroke-width="2.5"></mi-icon>
           <span class="evidence-zip-label">Tải ảnh</span>
@@ -6686,6 +6708,40 @@ button:active mi-icon > svg{ transform:scale(.9); }
       </div>
     </section>
 
+    <!-- ============ BÁO CÁO DMS & e-B2B VIEW ============ -->
+    <section class="view hidden" id="view-report">
+      <div class="kpi-grid" id="reportKpiGrid"></div>
+      <div class="list-panel" id="reportListPanel">
+        <div class="list-panel-head">
+          <div class="list-panel-count"><b id="reportCount">0</b> Change Request · DMS &amp; e-B2B</div>
+          <div class="table-toolbar">
+            <div class="tb-search">
+              <mi-icon name="search" stroke-width="2"></mi-icon>
+              <input id="reportSearchInput" type="text" placeholder="Tìm CR ID, tên CR, Status...">
+            </div>
+            <div class="filter-chip"><span>Dự án</span>
+              <select id="reportFilterProject">
+                <option value="">Tất cả</option>
+                <option value="dms">DMS</option>
+                <option value="eb2b">e-B2B</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Dự án</th><th>CR ID</th><th>Rename Folder</th><th>Priority</th><th>Status</th><th>Sub-Status</th><th>Deadline</th><th>BRD</th><th>FSD</th>
+            </tr></thead>
+            <tbody id="reportTableBody"></tbody>
+          </table>
+        </div>
+        <div class="list-panel-foot">
+          <span id="reportFootCount">Hiển thị 0 / 0 Change Request</span>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ ADMIN VIEW ============ -->
     <section class="view hidden" id="view-admin">
       <div class="admin-scope-bar" role="tablist" aria-label="Phạm vi dữ liệu">
@@ -7083,7 +7139,7 @@ const VIEW_STORAGE_KEY = "crControlCurrentView";
    tab DMS đã lưu trước đó. */
 const WORKSPACE_STORAGE_KEY = "crControlWorkspace";
 const EB2B_TAB_STORAGE_KEY = "crControlEb2bTab";
-const VALID_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom", "admin", "recycle"]);
+const VALID_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom", "admin", "recycle", "report"]);
 const DMS_NAV_STORAGE_KEY = "crControlDmsNavOpen";
 const DMS_VIEWS = new Set(["dashboard", "crlog", "uat", "release", "brd", "weekly_mom"]);
 const CR_FILTER_STORAGE_KEY = "crLogFilters";
@@ -8616,6 +8672,7 @@ const VIEW_META = {
   weekly_mom:{ title:"Weekly MoM", sub:"Biên bản họp Weekly với Vendor và cập nhật theo từng CR", search:false },
   admin:     { title:"Quản Trị Dữ Liệu", sub:"Người dùng dùng chung; danh mục và bảng dữ liệu tách riêng cho DMS và e-B2B", search:false },
   recycle:   { title:"Recycle Bin", sub:"Dữ liệu đã xóa — khôi phục hoặc xóa vĩnh viễn", search:false },
+  report:    { title:"Báo cáo DMS & e-B2B", sub:"Report_Weekly tổng hợp dữ liệu của cả hai dự án DMS và e-B2B", search:false },
 };
 
 function closeMobileNav(){
@@ -9540,6 +9597,8 @@ function closeDmsOverlays(){
 function clearDmsNavState(){
   $all(".nav-item[data-view]").forEach(i=> i.classList.remove("active"));
   $("#navDmsWorkspace")?.classList.remove("is-context");
+  $("#navReportWorkspace")?.classList.remove("is-context");
+  if(typeof setReportWorkspaceNavOpen === "function") setReportWorkspaceNavOpen(false);
 }
 
 function setView(view, options){
@@ -9571,6 +9630,12 @@ function setView(view, options){
   }else{
     $("#navDmsWorkspace")?.classList.remove("is-context");
   }
+  // Workspace "Báo cáo DMS & e-B2B": accordion giống DMS / e-B2B — chỉ mở
+  // nhóm của workspace đang dùng.
+  const inReport = view === "report";
+  $("#navReportWorkspace")?.classList.toggle("is-context", inReport);
+  if(typeof setReportWorkspaceNavOpen === "function") setReportWorkspaceNavOpen(inReport);
+  if(inReport) setDmsWorkspaceNavOpen(false, false);
   $all(".view").forEach(v=> v.classList.add("hidden"));
   const enteringView = $("#view-"+view);
   enteringView.classList.remove("hidden");
@@ -9597,6 +9662,7 @@ function setView(view, options){
   if(view === "brd") fetchBrdList().then(renderBrdList);
   if(view === "weekly_mom") fetchWeeklyMomList().then(renderWeeklyMomList);
   if(view === "recycle") loadAndRenderRecycleBin();
+  if(view === "report") renderCombinedReportView();
 }
 
 /* ---------------------------------------------------------------------------
@@ -9862,6 +9928,7 @@ async function refreshAll(){
     renderRelTable();
     renderWeeklyMomList();
     populateCrDropdowns();
+    renderCombinedReportView();
     STATE.initialLoadComplete = true;
   }finally{
     STATE.refreshing = false;
@@ -12522,6 +12589,369 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     DLProgress.close();
   }
 }
+
+/* ============================================================================
+   BÁO CÁO TỔNG HỢP DMS & e-B2B — chỉ sheet Report_Weekly
+   Luồng giống hệt nút "Tải báo cáo" của DMS (chọn CR -> tạo Excel), dùng chung
+   reportStyleSheet / reportSetCell / reportAddTable nên file tải về có ĐÚNG
+   định dạng sheet Report_Weekly của DMS. Dữ liệu = CR DMS (STATE.crList) +
+   CR e-B2B (window.__eb2bReportSource). Khóa chọn dạng "dms::CR_001" /
+   "eb2b::CR_001" để hai dự án trùng CR ID không bị chọn lẫn nhau.
+   ============================================================================ */
+const COMBINED_PROJECTS = {
+  dms:  { label:"DMS",   tag:"is-dms" },
+  eb2b: { label:"e-B2B", tag:"is-eb2b" }
+};
+const COMBINED_REPORT = { search:"", project:"" };
+const REPORT_KPI_ICONS = {
+  dms:  '<mi-icon name="calendar-range" stroke-width="2"></mi-icon>',
+  eb2b: '<mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>'
+};
+
+function combinedEb2bSource(){
+  try{ return typeof window.__eb2bReportSource === "function" ? window.__eb2bReportSource() : null; }
+  catch(_){ return null; }
+}
+function combinedReportRows(){
+  const rows = [];
+  (STATE.crList || []).filter(c=>String(c.cr_id || "").trim())
+    .forEach(c=> rows.push({ project:"dms", key:"dms::" + c.cr_id, record:c }));
+  const src = combinedEb2bSource();
+  ((src && src.crList) || []).filter(c=>String(c.cr_id || "").trim())
+    .forEach(c=> rows.push({ project:"eb2b", key:"eb2b::" + c.cr_id, record:c }));
+  return rows;
+}
+function combinedHasDocument(item, type){
+  if(item.project === "eb2b"){
+    const src = combinedEb2bSource();
+    return !!(src && src.hasDocument(item.record, type));
+  }
+  return crHasDocument(item.record, type);
+}
+function combinedProjectTag(project){
+  const p = COMBINED_PROJECTS[project] || COMBINED_PROJECTS.dms;
+  return '<span class="admin-scope-tag ' + p.tag + '">' + p.label + '</span>';
+}
+function combinedMatches(item, query){
+  if(!query) return true;
+  const c = item.record;
+  return [c.cr_id, c.rename_folder, c.old_name, c.app, c.status, c.sub_status, COMBINED_PROJECTS[item.project].label]
+    .some(value=>String(value || "").toLowerCase().includes(query));
+}
+function combinedDocCell(present, type){
+  return '<td class="doc-status-cell" title="' + type + (present ? ' đã được đính kèm' : ' chưa được đính kèm') + '">'
+    + '<span class="doc-status ' + (present ? 'is-present' : 'is-missing') + '">'
+    + '<span class="doc-status-icon" aria-hidden="true">' + (present ? '<mi-icon name="check" size="1em" stroke-width="3"></mi-icon>' : '—') + '</span>'
+    + '<span>' + (present ? 'Có file' : 'Chưa có') + '</span></span></td>';
+}
+
+function renderCombinedReportView(){
+  const tbody = $("#reportTableBody");
+  if(!tbody) return;
+  const src = combinedEb2bSource();
+  const all = combinedReportRows();
+  const nav = $("#navCountReport");
+  if(nav) nav.textContent = all.length;
+  const dmsCount = all.filter(r=>r.project === "dms").length;
+  const eb2bCount = all.length - dmsCount;
+  const overdue = all.filter(r=>isOverdue(r.record)).length;
+  const pct = n=> all.length ? Math.round((n / all.length) * 100) : 0;
+  const kpi = $("#reportKpiGrid");
+  if(kpi){
+    kpi.innerHTML =
+      kpiCard("Tổng số CR", all.length, "Tổng hợp DMS + e-B2B", "", KPI_ICONS.total) +
+      kpiCard("CR DMS", dmsCount, "Workspace Quản Lý DMS", "accent", REPORT_KPI_ICONS.dms, pct(dmsCount)) +
+      kpiCard("CR e-B2B", eb2bCount, (src && src.ready) ? "Workspace Quản Lý e-B2B" : "Đang tải dữ liệu e-B2B...", "info", REPORT_KPI_ICONS.eb2b, pct(eb2bCount)) +
+      kpiCard("Trễ hạn", overdue, "Deadline đã qua, chưa Released/Closed", "danger", KPI_ICONS.overdue, pct(overdue));
+  }
+  const query = COMBINED_REPORT.search.trim().toLowerCase();
+  const rows = all.filter(r=> (!COMBINED_REPORT.project || r.project === COMBINED_REPORT.project) && combinedMatches(r, query));
+  const countEl = $("#reportCount");
+  const footEl = $("#reportFootCount");
+  if(countEl) countEl.textContent = rows.length;
+  if(footEl) footEl.textContent = "Hiển thị " + rows.length + " / " + all.length + " Change Request";
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="9">' + emptyStateBlock("Chưa có Change Request", all.length ? "Không có CR phù hợp với bộ lọc hiện tại." : "Dữ liệu DMS và e-B2B sẽ hiển thị tại đây sau khi tải xong.") + '</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(item=>{
+    const c = item.record;
+    const late = isOverdue(c);
+    const deadline = c.deadline
+      ? (late ? '<span class="deadline-overdue"><span class="dl-warn">!</span>' + fmtDate(c.deadline) + '</span>' : fmtDate(c.deadline))
+      : "—";
+    return '<tr>'
+      + '<td>' + combinedProjectTag(item.project) + '</td>'
+      + '<td class="cell-id"><span class="id-chip">' + esc(c.cr_id) + '</span></td>'
+      + '<td class="cell-title" title="' + esc(c.rename_folder || "") + '">' + esc(c.rename_folder || crCellTitle(c)) + '</td>'
+      + '<td>' + (c.priority ? badge("priority", c.priority) : '<span class="cell-dim">—</span>') + '</td>'
+      + '<td>' + badge("status", c.status) + '</td>'
+      + '<td>' + (c.sub_status ? badge("sub_status", c.sub_status) : '<span class="cell-dim">—</span>') + '</td>'
+      + '<td class="cell-dim">' + deadline + '</td>'
+      + combinedDocCell(combinedHasDocument(item, "BRD"), "BRD")
+      + combinedDocCell(combinedHasDocument(item, "FSD"), "FSD")
+      + '</tr>';
+  }).join("");
+}
+
+function combinedReportModalTemplate(){
+  return `
+    <div class="modal modal-lg export-selection-modal combined-report-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Tải báo cáo Report_Weekly — DMS &amp; e-B2B</h3>
+          <div class="sub">Có thể chọn 1 CR, nhiều CR hoặc tất cả CR của cả hai dự án trước khi bắt đầu tải.</div>
+        </div>
+        <button class="modal-close" id="combinedReportClose" type="button" aria-label="Đóng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
+      </div>
+      <div class="modal-body">
+        <div class="export-selection-intro">
+          <mi-icon name="info" stroke-width="1.8"></mi-icon>
+          <span>File Excel chỉ gồm sheet <b>Report_Weekly</b>, đúng định dạng báo cáo của DMS. CR của DMS được xếp trước, tiếp theo là CR của e-B2B.</span>
+        </div>
+        <div class="export-report-type">
+          <strong>Lọc theo dự án</strong>
+          <div class="export-report-type-options">
+            <label><input type="radio" name="combinedProject" value="" checked> Tất cả</label>
+            <label><input type="radio" name="combinedProject" value="dms"> DMS</label>
+            <label><input type="radio" name="combinedProject" value="eb2b"> e-B2B</label>
+          </div>
+        </div>
+        <div class="export-selection-toolbar">
+          <strong>Danh sách CR</strong>
+          <div class="export-selection-actions">
+            <button class="btn btn-ghost btn-sm" id="combinedSelectAll" type="button">Chọn tất cả</button>
+            <button class="btn btn-ghost btn-sm" id="combinedSelectNone" type="button">Bỏ chọn</button>
+          </div>
+        </div>
+        <input class="export-selection-search" id="combinedSelectionSearch" type="search"
+          placeholder="Tìm theo CR ID, tên CR, App hoặc dự án..." autocomplete="off">
+        <div class="export-selection-list" id="combinedSelectionList"></div>
+      </div>
+      <div class="modal-foot">
+        <span class="export-selection-selected" id="combinedSelectionCount">Đã chọn 0 CR</span>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" id="combinedSelectionCancel" type="button">Hủy</button>
+          <button class="btn btn-primary" id="combinedSelectionConfirm" type="button">Tạo báo cáo</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openCombinedReportModal(){
+  const overlay = $("#exportSelectionOverlay");
+  if(!overlay) return;
+  const items = combinedReportRows();
+  if(!items.length){
+    toast("Chưa có CR để lựa chọn.", "info");
+    return;
+  }
+  const src = combinedEb2bSource();
+  if(!src || !src.ready) toast("Dữ liệu e-B2B chưa tải xong — danh sách hiện chỉ gồm CR đã có sẵn.", "warn");
+
+  // Giống DMS: mặc định không chọn CR nào.
+  const selected = new Set();
+  let project = "";
+  overlay.innerHTML = combinedReportModalTemplate();
+  overlay.classList.add("show");
+
+  const close = ()=>{
+    overlay.classList.remove("show");
+    overlay.innerHTML = "";
+    overlay.onclick = null;
+  };
+  const list = $("#combinedSelectionList", overlay);
+  const search = $("#combinedSelectionSearch", overlay);
+  const count = $("#combinedSelectionCount", overlay);
+  const confirm = $("#combinedSelectionConfirm", overlay);
+  const scoped = ()=> items.filter(i=> !project || i.project === project);
+  const updateFoot = ()=>{
+    count.textContent = "Đã chọn " + selected.size + " / " + items.length + " CR";
+    confirm.disabled = selected.size === 0;
+    confirm.textContent = "Tạo báo cáo (" + selected.size + ")";
+  };
+  const optionHtml = item=>{
+    const c = item.record;
+    const name = c.rename_folder || c.old_name || c.app || "Chưa có mô tả";
+    return '<label class="export-cr-option">'
+      + '<input type="checkbox" data-combined-key="' + esc(item.key) + '" ' + (selected.has(item.key) ? "checked" : "") + '>'
+      + '<span class="export-cr-copy">'
+      + '<span class="export-cr-top">' + combinedProjectTag(item.project) + '<span class="export-cr-id">' + esc(c.cr_id) + '</span></span>'
+      + '<span class="export-cr-name" title="' + esc(name) + '">' + esc(name) + '</span>'
+      + '<span class="export-cr-status">' + esc(c.status || "Chưa có Status") + '</span>'
+      + '</span></label>';
+  };
+  const render = ()=>{
+    const query = String(search.value || "").trim().toLowerCase();
+    const visible = scoped().filter(i=> combinedMatches(i, query));
+    if(!visible.length){
+      list.innerHTML = '<div class="export-selection-empty">Không tìm thấy CR phù hợp với từ khóa.</div>';
+      updateFoot();
+      return;
+    }
+    list.innerHTML = ["dms","eb2b"].map(p=>{
+      const group = visible.filter(i=> i.project === p);
+      if(!group.length) return "";
+      return '<div class="combined-group-head">' + combinedProjectTag(p) + '<span>' + group.length + ' CR</span></div>' + group.map(optionHtml).join("");
+    }).join("");
+    updateFoot();
+  };
+
+  list.addEventListener("change", event=>{
+    const checkbox = event.target.closest("[data-combined-key]");
+    if(!checkbox) return;
+    if(checkbox.checked) selected.add(checkbox.dataset.combinedKey);
+    else selected.delete(checkbox.dataset.combinedKey);
+    updateFoot();
+  });
+  overlay.querySelectorAll('input[name="combinedProject"]').forEach(radio=>{
+    radio.addEventListener("change", ()=>{ project = radio.value; render(); });
+  });
+  search.addEventListener("input", render);
+  $("#combinedSelectAll", overlay).addEventListener("click", ()=>{ scoped().forEach(i=> selected.add(i.key)); render(); });
+  $("#combinedSelectNone", overlay).addEventListener("click", ()=>{ selected.clear(); render(); });
+  $("#combinedReportClose", overlay).addEventListener("click", close);
+  $("#combinedSelectionCancel", overlay).addEventListener("click", close);
+  overlay.onclick = event=>{ if(event.target === overlay) close(); };
+  confirm.addEventListener("click", ()=>{
+    if(!selected.size) return;
+    const keys = Array.from(selected);
+    close();
+    downloadCombinedWeeklyReport(keys);
+  });
+  render();
+  search.focus();
+}
+
+async function downloadCombinedWeeklyReport(selectedKeys){
+  const btn = $("#btnCombinedReport");
+  if(!btn || btn.disabled) return;
+  if(typeof ExcelJS === "undefined"){
+    toast("Không tải được thư viện Excel (ExcelJS). Kiểm tra kết nối mạng rồi thử lại.", "err");
+    return;
+  }
+  btn.disabled = true;
+  btn.classList.add("is-loading");
+  btn.setAttribute("aria-busy", "true");
+  const label = $(".report-label", btn);
+  const originalLabel = (label && label.textContent) || "Tải báo cáo";
+  if(label) label.textContent = "Đang tạo...";
+  DLProgress.open("Đang tạo báo cáo Excel");
+  DLProgress.setIndeterminate("Đang chuẩn bị dữ liệu...");
+
+  try{
+    // Làm mới trạng thái BRD/FSD của DMS ngay trước khi xuất (giống DMS).
+    await fetchCrDocumentStatus();
+    const keySet = new Set((selectedKeys || []).map(String));
+    const items = combinedReportRows().filter(item=> keySet.has(item.key));
+    if(!items.length){
+      toast("Chưa chọn CR nào để tạo báo cáo.", "info");
+      return;
+    }
+
+    DLProgress.setProgress(75, "Đang dựng các sheet báo cáo...");
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "CR Control";
+    workbook.lastModifiedBy = "CR Control";
+    workbook.created = new Date();
+    workbook.modified = new Date();
+    workbook.properties = { title:"CR Progress Report", subject:"CR / UAT / Release progress" };
+
+    // ---- Sheet "Report_Weekly" — cột, độ rộng, tiêu đề, màu sắc giống hệt DMS.
+    const weeklyColumns = [
+      {label:"CR ID",             width:13, value:i=>i.record.cr_id},
+      {label:"Rename Folder",     width:32, value:i=>i.record.rename_folder},
+      {label:"Priority",         width:12, value:i=>i.record.priority},
+      {label:"Status",           width:17, value:i=>i.record.status},
+      {label:"Sub-Status",       width:18, value:i=>i.record.sub_status},
+      {label:"Deadline",         width:14, date:true, value:i=>i.record.deadline},
+      {label:"BRD",              width:11, value:i=>combinedHasDocument(i, "BRD") ? "Có" : "Chưa có"},
+      {label:"FSD",              width:11, value:i=>combinedHasDocument(i, "FSD") ? "Có" : "Chưa có"},
+      {label:"Loop Mail Header", width:38, value:i=>i.record.loop_mail_header},
+      {label:"Progress",         width:44, value:i=>i.record.progress},
+    ];
+    const weeklySheet = workbook.addWorksheet("Report_Weekly");
+    reportStyleSheet(
+      weeklySheet,
+      "BÁO CÁO TUẦN (WEEKLY REPORT)",
+      "Tóm tắt nhanh theo CR đã chọn — dùng để gửi báo cáo tiến độ định kỳ",
+      weeklyColumns,
+      { defaultWidth:20, specialWidths:{ B:34, I:38, J:46 } }
+    );
+    items.forEach((item, index)=>{
+      const row = weeklySheet.addRow([]);
+      weeklyColumns.forEach((column, columnIndex)=> reportSetCell(row.getCell(columnIndex + 1), column.value(item), column));
+      row.height = 60;
+      row.eachCell(cell=>{
+        cell.alignment = { vertical:"top", wrapText:true };
+        cell.font = { name:"Aptos", size:10, color:{argb:"FF0A1E33"} };
+        cell.border = { bottom:{style:"thin", color:{argb:"FFB9D2DA"}} };
+        if(index % 2 === 1) cell.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FFE8F7F6"} };
+      });
+    });
+    reportAddTable(weeklySheet, "WeeklyReportTable", 5 + items.length, weeklyColumns.length);
+
+    const timestamp = vnNowParts();
+    const pad = number=>String(number).padStart(2, "0");
+    const filename = "DMS_eB2B_CR_Report_Weekly_Report_" + timestamp.year + pad(timestamp.month) + pad(timestamp.day) + "_" + pad(timestamp.hour) + pad(timestamp.minute) + ".xlsx";
+    DLProgress.setProgress(92, "Đang đóng gói file Excel...");
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    const dmsCount = items.filter(i=> i.project === "dms").length;
+    DLProgress.setProgress(100, "Hoàn tất!");
+    toast("Đã tải báo cáo (Report_Weekly) gồm " + items.length + " CR — DMS: " + dmsCount + ", e-B2B: " + (items.length - dmsCount) + ".", "ok");
+  }catch(error){
+    console.error(error);
+    toast("Tạo báo cáo thất bại: " + ((error && error.message) || error), "err");
+  }finally{
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    btn.removeAttribute("aria-busy");
+    if(label) label.textContent = originalLabel;
+    DLProgress.close();
+  }
+}
+
+function setReportWorkspaceNavOpen(open){
+  const parent = $("#navReportWorkspace");
+  const children = $("#navReportChildren");
+  if(!parent || !children) return;
+  const next = Boolean(open);
+  children.classList.toggle("is-collapsed", !next);
+  parent.classList.toggle("is-open", next);
+  parent.setAttribute("aria-expanded", next ? "true" : "false");
+}
+(function initReportWorkspace(){
+  const parent = $("#navReportWorkspace");
+  if(parent){
+    const toggle = ()=> setReportWorkspaceNavOpen(parent.getAttribute("aria-expanded") !== "true");
+    parent.addEventListener("click", toggle);
+    parent.addEventListener("keydown", e=>{
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); toggle(); }
+    });
+  }
+  document.addEventListener("click", e=>{
+    if(e.target.closest("#btnCombinedReport")){ openCombinedReportModal(); return; }
+    if(e.target.closest("#btnDashRefresh") && STATE.currentView === "report" && !document.body.classList.contains("eb2b-active")){
+      const src = combinedEb2bSource();
+      if(src && typeof src.reload === "function") src.reload();
+    }
+  });
+  document.addEventListener("input", e=>{
+    if(e.target && e.target.id === "reportSearchInput"){ COMBINED_REPORT.search = e.target.value; renderCombinedReportView(); }
+  });
+  document.addEventListener("change", e=>{
+    if(e.target && e.target.id === "reportFilterProject"){ COMBINED_REPORT.project = e.target.value; renderCombinedReportView(); }
+  });
+})();
 
 /* ---- Modal nhập Excel ------------------------------------------------------ */
 
@@ -19131,6 +19561,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.loading = false;
     EB2B.ready = true;
     eb2bUpdateNavCounts();
+    if(typeof window.renderCombinedReportView === "function") window.renderCombinedReportView();
     if(opts && opts.soft){
       // Đồng bộ nền (sau đăng nhập / nối lại mạng): vẽ lại có giữ focus, cuộn, dropdown đang mở.
       Object.keys(EB2B_TABLES).forEach(k=>EB2B.rtDirty.add(k));
@@ -21080,6 +21511,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     });
   }
 
+  /* Nguồn dữ liệu e-B2B (chỉ đọc) cho workspace "Báo cáo DMS & e-B2B". */
+  window.__eb2bReportSource = ()=>({
+    ready: !!EB2B.ready,
+    crList: EB2B.rows.cr || [],
+    hasDocument: (row, type)=> eb2bCrDocumentPresent(row, type),
+    reload: ()=> eb2bLoad()
+  });
+
   function eb2bEvents(){
     document.addEventListener("click", ev=>{
       const tab=ev.target.closest("[data-eb2b-tab]");
@@ -21243,6 +21682,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const dirty = new Set(EB2B.rtDirty), foreign = EB2B.rtForeign.splice(0);
     EB2B.rtDirty.clear();
     eb2bUpdateNavCounts();
+    if(typeof window.renderCombinedReportView === "function") window.renderCombinedReportView();
     const has = (...keys)=>keys.some(k=>dirty.has(k));
 
     // 1) Danh mục cấu hình ở Quản Trị Dữ Liệu (không vẽ đè nếu đang gõ ô "Thêm ...").
@@ -21348,6 +21788,17 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 })();
 </script>
 
+<style id="combined-report-style">
+/* Workspace "Báo cáo DMS & e-B2B" — dùng lại nguyên bộ component của DMS
+   (kpi-card, list-panel, table, export-selection-modal) nên giao diện đồng nhất. */
+#view-report, .combined-report-modal{ --scope-shared:#5d7688; --scope-dms:#0d8a93; --scope-eb2b:#2b7fd6; }
+#view-report #reportTableBody tr{ cursor:default; }
+#view-report .admin-scope-tag, .combined-report-modal .admin-scope-tag{ margin-right:0; }
+.combined-report-modal .export-cr-top{ display:flex; align-items:center; gap:7px; min-width:0; }
+.combined-report-modal .export-cr-top .admin-scope-tag{ font-size:9.5px; padding:1px 7px; }
+.combined-group-head{ grid-column:1/-1; display:flex; align-items:center; gap:8px; padding:6px 2px 0; color:#6e8798; font-size:11.5px; font-weight:750; }
+.combined-group-head:not(:first-child){ margin-top:6px; }
+</style>
 <style id="unified-filter-system">
 /* One filter language for all DMS and e-B2B data tabs. */
 .filter-chip.unified-filter{position:relative;display:block;min-width:137px;height:38px;padding:0;border:0;background:transparent;overflow:visible}
@@ -21369,7 +21820,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 </style>
 <script id="unified-filter-runtime">
 (()=>{
-  const glyphs={"CR ID":"CR","Kết quả":"KQ","Trạng thái":"S","Vai trò":"VT","Loại dữ liệu":"LD"};
+  const glyphs={"CR ID":"CR","Kết quả":"KQ","Trạng thái":"S","Vai trò":"VT","Loại dữ liệu":"LD","Dự án":"DA"};
   const closeAll=except=>document.querySelectorAll('.filter-chip.unified-filter.is-open').forEach(el=>{if(el!==except){el.classList.remove('is-open');el.querySelector('.cr-filter-trigger')?.setAttribute('aria-expanded','false')}});
   function enhance(chip){
     if(!chip||chip.dataset.unifiedFilter==='true')return;
