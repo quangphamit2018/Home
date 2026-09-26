@@ -9617,7 +9617,15 @@ function setView(view, options){
   // __eb2bLeave() clears the "eb2b-active" class, so we can tell a real
   // cross-workspace switch (e-B2B -> DMS) apart from a plain DMS tab click.
   const wasEb2bActive = document.body.classList.contains("eb2b-active");
-  if(wasEb2bActive) wsLoadingStart(VIEW_META[view]?.title || "DMS");
+  // Có 3 "khu vực" người dùng đứng: DMS, e-B2B, Tổng Quan (report). Loading
+  // full-screen chỉ nên hiện khi thực sự đổi khu vực — theo CẢ HAI chiều
+  // (kể cả Tổng Quan -> DMS, trước đây bị thiếu nên đi ra khỏi Tổng Quan
+  // không có loading dù đi vào thì có) — và không hiện khi chỉ đổi tab bên
+  // trong cùng một khu vực (DMS tab <-> DMS tab, hay Tổng Quan -> Tổng Quan).
+  const prevContext = wasEb2bActive ? "eb2b" : (prevView === "report" ? "report" : "dms");
+  const nextContext = view === "report" ? "report" : "dms";
+  const isContextSwitch = prevContext !== nextContext;
+  if(isContextSwitch) wsLoadingStart(VIEW_META[view]?.title || "DMS");
   // Leaving e-B2B (if we were in it): un-highlight its tabs, close its forms.
   if(typeof window.__eb2bLeave === "function") window.__eb2bLeave();
   closeDmsOverlays();
@@ -9647,7 +9655,6 @@ function setView(view, options){
     const headerTitle = $("#topbarTitle");
     headerTitle?.classList.remove("ws-header-swap");
     if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("ws-header-swap"); }
-    wsLoadingDone();
   }
   $all(".view-action").forEach(b=> {
     const views = String(b.dataset.for || "").split(",").map(item=>item.trim());
@@ -9657,14 +9664,8 @@ function setView(view, options){
   if(view === "brd") fetchBrdList().then(renderBrdList);
   if(view === "weekly_mom") fetchWeeklyMomList().then(renderWeeklyMomList);
   if(view === "recycle") loadAndRenderRecycleBin();
-  if(view === "report"){
-    renderCombinedReportView();
-    // Màn hình loading khi bấm từ workspace khác sang tab Tổng Quan.
-    if(prevView && prevView !== "report"){
-      wsLoadingStart(VIEW_META.report.title);
-      wsLoadingDone();
-    }
-  }
+  if(view === "report") renderCombinedReportView();
+  if(isContextSwitch) wsLoadingDone();
 }
 
 /* ---------------------------------------------------------------------------
