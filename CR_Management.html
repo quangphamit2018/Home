@@ -1344,7 +1344,7 @@ td.cell-id .id-chip{
   display:flex; align-items:center; justify-content:center;
   overflow:hidden;
   background:
-    radial-gradient(760px 520px at 50% 38%, rgba(63,208,201,.13), transparent 62%),
+    radial-gradient(900px 620px at 50% 36%, rgba(63,208,201,.10), transparent 64%),
     var(--bg-workspace);
   opacity:0; visibility:hidden;
   transition:opacity var(--duration-slow) var(--ease-standard), visibility 0s linear var(--duration-slow);
@@ -1354,76 +1354,79 @@ td.cell-id .id-chip{
   opacity:1; visibility:visible; pointer-events:auto;
   transition:opacity var(--duration-base) var(--ease-decel), visibility 0s linear 0s;
 }
-.ws-loading-orb{ position:absolute; border-radius:50%; filter:blur(46px); opacity:.55; pointer-events:none; }
+.ws-loading-orb{ position:absolute; border-radius:50%; filter:blur(60px); opacity:.4; pointer-events:none; }
 .ws-loading-orb-a{
-  width:320px; height:320px; left:8%; top:16%;
-  background:radial-gradient(circle, rgba(63,208,201,.42), transparent 70%);
-  animation:authOrbFloat 10s ease-in-out infinite;
+  width:380px; height:380px; left:6%; top:12%;
+  background:radial-gradient(circle, rgba(63,208,201,.40), transparent 70%);
+  animation:authOrbFloat 16s ease-in-out infinite;
 }
 .ws-loading-orb-b{
-  width:280px; height:280px; right:10%; bottom:14%;
-  background:radial-gradient(circle, rgba(242,184,75,.28), transparent 70%);
-  animation:authOrbFloat 13s 1s ease-in-out infinite reverse;
+  width:320px; height:320px; right:8%; bottom:10%;
+  background:radial-gradient(circle, rgba(242,184,75,.22), transparent 70%);
+  animation:authOrbFloat 19s 2s ease-in-out infinite reverse;
 }
 .ws-loading-card{
   position:relative; z-index:1;
-  display:flex; flex-direction:column; align-items:center; gap:22px;
-  opacity:0; transform:translateY(10px) scale(.96);
+  display:flex; flex-direction:column; align-items:center; gap:16px;
+  padding:36px 44px;
+  opacity:0; transform:translateY(8px);
 }
 .ws-loading-screen.is-active .ws-loading-card{ animation:wsLoadingCardIn .5s var(--ease-decel) both; }
-.ws-loading-mark{ position:relative; width:60px; height:60px; }
-.ws-loading-ring{
-  position:absolute; inset:0; border-radius:50%;
-  border:3px solid rgba(255,255,255,.08);
-  border-top-color:var(--accent); border-right-color:rgba(63,208,201,.45);
-  filter:drop-shadow(0 0 10px rgba(63,208,201,.35));
-  animation:wsSpin 1.05s linear infinite;
+.ws-loading-mark{
+  position:relative; width:56px; height:56px;
+  display:flex; align-items:center; justify-content:center;
 }
-.ws-loading-ring-inner{
-  position:absolute; inset:12px; border-radius:50%;
-  border:3px solid rgba(255,255,255,.06);
-  border-bottom-color:var(--warning);
-  animation:wsSpin 1.6s linear infinite reverse;
-  opacity:.75;
+.ws-loading-mark-glow{
+  position:absolute; inset:-18px; border-radius:50%;
+  background:radial-gradient(circle, rgba(63,208,201,.32), transparent 68%);
+  animation:wsMarkGlow 2.6s ease-in-out infinite;
 }
-.ws-loading-core{
-  position:absolute; inset:22px; border-radius:50%;
-  background:var(--accent);
-  box-shadow:0 0 16px 2px rgba(63,208,201,.55);
-  animation:wsPulseCore 1.6s ease-in-out infinite;
+.ws-loading-mark-tile{
+  position:relative; z-index:1;
+  width:56px; height:56px; border-radius:15px;
+  background:linear-gradient(135deg, var(--accent), var(--accent-shade));
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-head); font-weight:800; font-size:20px;
+  color:var(--on-accent-text); letter-spacing:.02em;
+  box-shadow:0 8px 24px rgba(63,208,201,.30), inset 0 1px 0 rgba(255,255,255,.25);
 }
-.ws-loading-copy{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+.ws-loading-kicker{
+  margin-top:6px;
+  font-family:var(--font-head); font-size:10px; font-weight:700;
+  color:var(--text-muted); letter-spacing:.22em; text-transform:uppercase;
+}
 .ws-loading-text{
-  font-family:var(--font-body); font-size:14px; font-weight:600;
-  color:var(--text-primary); letter-spacing:.01em; text-align:center;
-  display:flex; align-items:center; gap:2px;
+  font-family:var(--font-head); font-size:15px; font-weight:600;
+  color:var(--text-primary); letter-spacing:.005em; text-align:center;
 }
 .ws-loading-text b{ color:var(--accent); font-weight:700; }
-.ws-loading-dots{ display:inline-flex; align-items:center; margin-left:3px; }
-.ws-loading-dots span{
-  display:inline-block; width:4px; height:4px; margin-left:2px; border-radius:50%;
-  background:var(--accent); opacity:.35;
-  animation:wsDotBlink 1.1s ease-in-out infinite;
+.ws-loading-sub{ font-size:12px; color:var(--text-muted); letter-spacing:.02em; }
+.ws-loading-track{
+  margin-top:4px; width:220px; height:2px; border-radius:2px; overflow:hidden;
+  background:rgba(255,255,255,.07);
 }
-.ws-loading-dots span:nth-child(2){ animation-delay:.15s; }
-.ws-loading-dots span:nth-child(3){ animation-delay:.3s; }
-.ws-loading-sub{ font-size:11.5px; color:var(--text-muted); letter-spacing:.02em; }
-.ws-loading-track{ width:168px; height:3px; border-radius:3px; overflow:hidden; background:rgba(255,255,255,.08); }
 .ws-loading-track-fill{
-  width:40%; height:100%; border-radius:3px;
-  background:linear-gradient(90deg, transparent, var(--accent), #7ee6df, var(--accent), transparent);
-  animation:wsTrackSlide 1.3s ease-in-out infinite;
+  width:42%; height:100%; border-radius:2px;
+  background:linear-gradient(90deg, transparent, var(--accent), #8fe9e3, var(--accent), transparent);
+  filter:drop-shadow(0 0 6px rgba(63,208,201,.5));
+  animation:wsTrackSlide 1.6s var(--ease-standard) infinite;
 }
-@keyframes wsSpin{ to{ transform:rotate(360deg); } }
-@keyframes wsPulseCore{ 0%,100%{ transform:scale(.85); opacity:.85; } 50%{ transform:scale(1.05); opacity:1; } }
-@keyframes wsLoadingCardIn{ from{ opacity:0; transform:translateY(10px) scale(.96); } to{ opacity:1; transform:none; } }
-@keyframes wsDotBlink{ 0%,80%,100%{ opacity:.3; transform:translateY(0); } 40%{ opacity:1; transform:translateY(-2px); } }
-@keyframes wsTrackSlide{ 0%{ transform:translateX(-120%); } 100%{ transform:translateX(240%); } }
+@keyframes wsMarkGlow{ 0%,100%{ transform:scale(.82); opacity:.55; } 50%{ transform:scale(1.12); opacity:1; } }
+@keyframes wsLoadingCardIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+@keyframes wsTrackSlide{ 0%{ transform:translateX(-130%); } 100%{ transform:translateX(250%); } }
 @media(prefers-reduced-motion:reduce){
   .ws-loading-screen{ transition:opacity var(--duration-fast) linear; }
-  .ws-loading-ring, .ws-loading-ring-inner, .ws-loading-core,
-  .ws-loading-orb-a, .ws-loading-orb-b, .ws-loading-dots span, .ws-loading-track-fill{ animation:none !important; }
+  .ws-loading-mark-glow, .ws-loading-orb-a, .ws-loading-orb-b, .ws-loading-track-fill{ animation:none !important; }
   .ws-loading-screen.is-active .ws-loading-card{ animation:none !important; opacity:1; transform:none; }
+}
+
+/* ---- Smooth, professional in-workspace tab transitions (DMS + e-B2B) ---- */
+@keyframes viewTabEnter{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+.view-tab-enter{ animation:viewTabEnter var(--duration-slow) var(--ease-decel) both; }
+@keyframes topbarTitleSwap{ from{ opacity:0; transform:translateY(-5px); } to{ opacity:1; transform:none; } }
+.topbar-title-swap{ animation:topbarTitleSwap var(--duration-base) var(--ease-decel) both; }
+@media(prefers-reduced-motion:reduce){
+  .view-tab-enter, .topbar-title-swap{ animation:none !important; }
 }
 
 
@@ -5973,18 +5976,15 @@ button:active mi-icon > svg{ transform:scale(.9); }
   <div class="ws-loading-orb ws-loading-orb-b"></div>
   <div class="ws-loading-card">
     <div class="ws-loading-mark">
-      <div class="ws-loading-ring"></div>
-      <div class="ws-loading-ring-inner"></div>
-      <div class="ws-loading-core"></div>
+      <div class="ws-loading-mark-glow"></div>
+      <div class="ws-loading-mark-tile">CR</div>
     </div>
-    <div class="ws-loading-copy">
-      <div class="ws-loading-text">
-        <span id="wsLoadingText">Đang chuyển không gian làm việc</span>
-        <span class="ws-loading-dots"><span></span><span></span><span></span></span>
-      </div>
-      <div class="ws-loading-sub">Vui lòng đợi trong giây lát</div>
-      <div class="ws-loading-track"><div class="ws-loading-track-fill"></div></div>
+    <div class="ws-loading-kicker">Change Request</div>
+    <div class="ws-loading-text">
+      <span id="wsLoadingText">Đang chuyển không gian làm việc</span>
     </div>
+    <div class="ws-loading-sub">Vui lòng đợi trong giây lát</div>
+    <div class="ws-loading-track"><div class="ws-loading-track-fill"></div></div>
   </div>
 </div>
 
@@ -9532,19 +9532,18 @@ function setView(view, options){
   enteringView.classList.remove("hidden");
   $("#topbarTitle").textContent = VIEW_META[view].title;
   $("#topbarSub").textContent = VIEW_META[view].sub;
-  // Coming back from e-B2B: mirror its own reveal animation on the way in,
-  // so the workspace switch feels the same in both directions. Only fires
-  // on this one edge — switching between DMS tabs stays instant, matching
-  // how eb2bShow() only animates the first entry into e-B2B, not every tab.
-  if(wasEb2bActive){
-    enteringView.classList.remove("ws-workspace-enter");
-    void enteringView.offsetWidth;
-    enteringView.classList.add("ws-workspace-enter");
-    const headerTitle = $("#topbarTitle");
-    headerTitle?.classList.remove("ws-header-swap");
-    if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("ws-header-swap"); }
-    wsLoadingDone();
-  }
+  // Smooth, professional reveal on every DMS tab switch — a gentle fade and
+  // lift on the entering view, plus a crisp topbar title swap. Re-triggered
+  // each click (remove → reflow → add) so rapid back-to-back switches still
+  // animate. The cross-workspace case (wasEb2bActive) only closes the
+  // full-screen loader underneath; the reveal plays the same either way.
+  enteringView.classList.remove("view-tab-enter");
+  void enteringView.offsetWidth;
+  enteringView.classList.add("view-tab-enter");
+  const headerTitle = $("#topbarTitle");
+  headerTitle?.classList.remove("topbar-title-swap");
+  if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("topbar-title-swap"); }
+  if(wasEb2bActive) wsLoadingDone();
   $all(".view-action").forEach(b=> {
     const views = String(b.dataset.for || "").split(",").map(item=>item.trim());
     b.classList.toggle("hidden", !views.includes(view));
@@ -18991,15 +18990,18 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $e("#navEb2bChildren")?.classList.remove("is-collapsed");
     $e("#navEb2bWorkspace")?.classList.add("is-open");
     $e("#navEb2bWorkspace")?.setAttribute("aria-expanded", "true");
-    if(!wasEb2bActive){
-      const root=$e("#eb2bViewRoot");
-      root?.classList.remove("eb2b-view-enter");
-      if(root){ void root.offsetWidth; root.classList.add("eb2b-view-enter"); }
-      const headerTitle=$e("#topbarTitle");
-      headerTitle?.classList.remove("eb2b-header-swap");
-      if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("eb2b-header-swap"); }
-    }
     eb2bRender();
+    // Smooth, professional reveal on every e-B2B tab switch — same gentle
+    // fade/lift + topbar title swap used on the DMS side, so the whole app
+    // feels consistent. Re-triggered each click so rapid switches animate.
+    {
+      const root=$e("#eb2bViewRoot");
+      root?.classList.remove("view-tab-enter");
+      if(root){ void root.offsetWidth; root.classList.add("view-tab-enter"); }
+      const headerTitle=$e("#topbarTitle");
+      headerTitle?.classList.remove("topbar-title-swap");
+      if(headerTitle){ void headerTitle.offsetWidth; headerTitle.classList.add("topbar-title-swap"); }
+    }
     if(!wasEb2bActive && typeof wsLoadingDone === "function") wsLoadingDone();
   }
 
