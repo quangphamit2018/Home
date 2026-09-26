@@ -6720,7 +6720,7 @@ button:active mi-icon > svg{ transform:scale(.9); }
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Dự án</th><th>CR ID</th><th>Tiêu Đề / App</th><th>Priority</th><th>Status</th><th>Sub-Status</th>
+              <th>Dự án</th><th data-report-sort="cr_id">CR ID<span class="sort-holder"></span></th><th data-report-sort="title">Tiêu Đề / App<span class="sort-holder"></span></th><th data-report-sort="priority">Priority<span class="sort-holder"></span></th><th data-report-sort="status">Status<span class="sort-holder"></span></th><th data-report-sort="sub_status">Sub-Status<span class="sort-holder"></span></th>
             </tr></thead>
             <tbody id="reportDmsBody"></tbody>
           </table>
@@ -6737,7 +6737,7 @@ button:active mi-icon > svg{ transform:scale(.9); }
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Dự án</th><th>CR ID</th><th>Tiêu Đề / App</th><th>Priority</th><th>Status</th><th>Sub-Status</th>
+              <th>Dự án</th><th data-report-sort="cr_id">CR ID<span class="sort-holder"></span></th><th data-report-sort="title">Tiêu Đề / App<span class="sort-holder"></span></th><th data-report-sort="priority">Priority<span class="sort-holder"></span></th><th data-report-sort="status">Status<span class="sort-holder"></span></th><th data-report-sort="sub_status">Sub-Status<span class="sort-holder"></span></th>
             </tr></thead>
             <tbody id="reportEb2bBody"></tbody>
           </table>
@@ -9657,7 +9657,14 @@ function setView(view, options){
   if(view === "brd") fetchBrdList().then(renderBrdList);
   if(view === "weekly_mom") fetchWeeklyMomList().then(renderWeeklyMomList);
   if(view === "recycle") loadAndRenderRecycleBin();
-  if(view === "report") renderCombinedReportView();
+  if(view === "report"){
+    renderCombinedReportView();
+    // Màn hình loading khi bấm từ workspace khác sang tab Tổng Quan.
+    if(prevView && prevView !== "report"){
+      wsLoadingStart(VIEW_META.report.title);
+      wsLoadingDone();
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -12598,6 +12605,58 @@ const COMBINED_PROJECTS = {
   eb2b: { label:"e-B2B", tag:"is-eb2b" }
 };
 const COMBINED_REPORT = { search:"" };
+
+/* ---- Sort bảng Tổng Quan — lưu localStorage để F5 / refresh không mất sort ---- */
+const REPORT_SORT_STORAGE_KEY = "reportSort";
+const REPORT_SORT_KEYS = ["cr_id","title","priority","status","sub_status"];
+const REPORT_SORT_GETTERS = {
+  cr_id:      item=> item.record.cr_id,
+  title:      item=> item.record.rename_folder || item.record.old_name || item.record.app || "",
+  priority:   item=> item.record.priority,
+  status:     item=> item.record.status,
+  sub_status: item=> item.record.sub_status
+};
+COMBINED_REPORT.sort = (()=>{
+  try{
+    const saved = JSON.parse(localStorage.getItem(REPORT_SORT_STORAGE_KEY) || "null");
+    if(saved && REPORT_SORT_KEYS.includes(saved.key) && ["asc","desc"].includes(saved.direction)) return saved;
+  }catch(_){}
+  return null;
+})();
+function toggleReportSort(key){
+  if(!REPORT_SORT_KEYS.includes(key)) return;
+  COMBINED_REPORT.sort = (COMBINED_REPORT.sort && COMBINED_REPORT.sort.key === key)
+    ? { key, direction: COMBINED_REPORT.sort.direction === "asc" ? "desc" : "asc" }
+    : { key, direction:"asc" };
+  try{ localStorage.setItem(REPORT_SORT_STORAGE_KEY, JSON.stringify(COMBINED_REPORT.sort)); }catch(_){}
+}
+function sortedReportRows(rows){
+  const sort = COMBINED_REPORT.sort;
+  if(!sort) return rows;
+  const getter = REPORT_SORT_GETTERS[sort.key];
+  return rows
+    .map((row, index)=>({ row, index }))
+    .sort((a, b)=>{
+      const result = compareTableValues(getter(a.row), getter(b.row), sort.key);
+      if(result) return sort.direction === "desc" ? -result : result;
+      return a.index - b.index;
+    })
+    .map(item=>item.row);
+}
+function updateReportSortMarkers(){
+  $all('#view-report th[data-report-sort]').forEach(th=>{
+    const sort = COMBINED_REPORT.sort;
+    const active = !!(sort && sort.key === th.dataset.reportSort);
+    th.classList.toggle("is-sorted", active);
+    th.setAttribute("aria-sort", active ? (sort.direction === "asc" ? "ascending" : "descending") : "none");
+    const holder = th.querySelector(".sort-holder");
+    if(holder){
+      holder.innerHTML = active
+        ? '<mi-icon name="' + (sort.direction === "asc" ? "arrow-up" : "arrow-down") + '" size="12" stroke-width="2.6"></mi-icon>'
+        : '<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>';
+    }
+  });
+}
 const REPORT_KPI_ICONS = {
   dms:  '<mi-icon name="calendar-range" stroke-width="2"></mi-icon>',
   eb2b: '<mi-icon name="layout-dashboard" stroke-width="2"></mi-icon>'
@@ -12656,7 +12715,7 @@ function renderCombinedReportView(){
   ["dms","eb2b"].forEach(project=>{
     const tbody = project === "dms" ? dmsBody : $("#reportEb2bBody");
     const countEl = $(project === "dms" ? "#reportDmsCount" : "#reportEb2bCount");
-    const rows = all.filter(r=> r.project === project && combinedMatches(r, query));
+    const rows = sortedReportRows(all.filter(r=> r.project === project && combinedMatches(r, query)));
     if(countEl) countEl.textContent = rows.length;
     if(!rows.length){
       tbody.innerHTML = '<tr><td colspan="6">' + emptyStateBlock("Chưa có Change Request", query ? "Không có CR phù hợp với từ khóa tìm kiếm." : "CR của dự án này sẽ hiển thị tại đây sau khi tải xong.") + '</td></tr>';
@@ -12675,6 +12734,7 @@ function renderCombinedReportView(){
         + '</tr>';
     }).join("");
   });
+  updateReportSortMarkers();
 }
 
 function combinedReportModalTemplate(){
@@ -12690,7 +12750,7 @@ function combinedReportModalTemplate(){
       <div class="modal-body">
         <div class="export-selection-intro">
           <mi-icon name="info" stroke-width="1.8"></mi-icon>
-          <span>File Excel chỉ gồm sheet <b>Report_Weekly</b>, đúng định dạng báo cáo của DMS. CR của DMS được xếp trước, tiếp theo là CR của e-B2B.</span>
+          <span>File Excel gồm 2 sheet riêng: <b>DMS</b> và <b>e-B2B</b>, đúng định dạng báo cáo của DMS (đã bỏ cột Deadline, BRD, FSD, Loop Mail Header).</span>
         </div>
         <div class="export-report-type">
           <strong>Lọc theo dự án</strong>
@@ -12823,9 +12883,7 @@ async function downloadCombinedWeeklyReport(selectedKeys){
   DLProgress.setIndeterminate("Đang chuẩn bị dữ liệu...");
 
   try{
-    // Làm mới trạng thái BRD/FSD của DMS ngay trước khi xuất (giống DMS).
-    await fetchCrDocumentStatus();
-    const keySet = new Set((selectedKeys || []).map(String));
+        const keySet = new Set((selectedKeys || []).map(String));
     const items = combinedReportRows().filter(item=> keySet.has(item.key));
     if(!items.length){
       toast("Chưa chọn CR nào để tạo báo cáo.", "info");
@@ -12841,38 +12899,42 @@ async function downloadCombinedWeeklyReport(selectedKeys){
     workbook.properties = { title:"CR Progress Report", subject:"CR / UAT / Release progress" };
 
     // ---- Sheet "Report_Weekly" — cột, độ rộng, tiêu đề, màu sắc giống hệt DMS.
+    // ---- 2 sheet riêng (DMS, e-B2B) — bỏ cột Deadline, BRD, FSD, Loop Mail Header.
     const weeklyColumns = [
-      {label:"CR ID",             width:13, value:i=>i.record.cr_id},
-      {label:"Rename Folder",     width:32, value:i=>i.record.rename_folder},
-      {label:"Priority",         width:12, value:i=>i.record.priority},
-      {label:"Status",           width:17, value:i=>i.record.status},
-      {label:"Sub-Status",       width:18, value:i=>i.record.sub_status},
-      {label:"Deadline",         width:14, date:true, value:i=>i.record.deadline},
-      {label:"BRD",              width:11, value:i=>combinedHasDocument(i, "BRD") ? "Có" : "Chưa có"},
-      {label:"FSD",              width:11, value:i=>combinedHasDocument(i, "FSD") ? "Có" : "Chưa có"},
-      {label:"Loop Mail Header", width:38, value:i=>i.record.loop_mail_header},
-      {label:"Progress",         width:44, value:i=>i.record.progress},
+      {label:"CR ID",          width:13, value:i=>i.record.cr_id},
+      {label:"Rename Folder",  width:32, value:i=>i.record.rename_folder},
+      {label:"Priority",       width:12, value:i=>i.record.priority},
+      {label:"Status",         width:17, value:i=>i.record.status},
+      {label:"Sub-Status",     width:18, value:i=>i.record.sub_status},
+      {label:"Progress",       width:44, value:i=>i.record.progress},
     ];
-    const weeklySheet = workbook.addWorksheet("Report_Weekly");
-    reportStyleSheet(
-      weeklySheet,
-      "BÁO CÁO TUẦN (WEEKLY REPORT)",
-      "Tóm tắt nhanh theo CR đã chọn — dùng để gửi báo cáo tiến độ định kỳ",
-      weeklyColumns,
-      { defaultWidth:20, specialWidths:{ B:34, I:38, J:46 } }
-    );
-    items.forEach((item, index)=>{
-      const row = weeklySheet.addRow([]);
-      weeklyColumns.forEach((column, columnIndex)=> reportSetCell(row.getCell(columnIndex + 1), column.value(item), column));
-      row.height = 60;
-      row.eachCell(cell=>{
-        cell.alignment = { vertical:"top", wrapText:true };
-        cell.font = { name:"Aptos", size:10, color:{argb:"FF0A1E33"} };
-        cell.border = { bottom:{style:"thin", color:{argb:"FFB9D2DA"}} };
-        if(index % 2 === 1) cell.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FFE8F7F6"} };
+    const addCombinedSheet = (sheetName, tableName, subtitle, rows)=>{
+      const sheet = workbook.addWorksheet(sheetName);
+      reportStyleSheet(
+        sheet,
+        "BÁO CÁO TUẦN (WEEKLY REPORT)",
+        subtitle,
+        weeklyColumns,
+        { defaultWidth:20, specialWidths:{ B:34, F:46 } }
+      );
+      rows.forEach((item, index)=>{
+        const row = sheet.addRow([]);
+        weeklyColumns.forEach((column, columnIndex)=> reportSetCell(row.getCell(columnIndex + 1), column.value(item), column));
+        row.height = 60;
+        row.eachCell(cell=>{
+          cell.alignment = { vertical:"top", wrapText:true };
+          cell.font = { name:"Aptos", size:10, color:{argb:"FF0A1E33"} };
+          cell.border = { bottom:{style:"thin", color:{argb:"FFB9D2DA"}} };
+          if(index % 2 === 1) cell.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FFE8F7F6"} };
+        });
       });
-    });
-    reportAddTable(weeklySheet, "WeeklyReportTable", 5 + items.length, weeklyColumns.length);
+      reportAddTable(sheet, tableName, 5 + rows.length, weeklyColumns.length);
+    };
+    const dmsItems = items.filter(i=> i.project === "dms");
+    const eb2bItems = items.filter(i=> i.project === "eb2b");
+    addCombinedSheet("DMS", "DMSWeeklyTable", "Tóm tắt nhanh theo CR đã chọn — dự án DMS, dùng để gửi báo cáo tiến độ định kỳ", dmsItems);
+    addCombinedSheet("e-B2B", "EB2BWeeklyTable", "Tóm tắt nhanh theo CR đã chọn — dự án e-B2B, dùng để gửi báo cáo tiến độ định kỳ", eb2bItems);
+    
 
     const timestamp = vnNowParts();
     const pad = number=>String(number).padStart(2, "0");
@@ -12890,7 +12952,7 @@ async function downloadCombinedWeeklyReport(selectedKeys){
     setTimeout(()=>URL.revokeObjectURL(url), 1000);
     const dmsCount = items.filter(i=> i.project === "dms").length;
     DLProgress.setProgress(100, "Hoàn tất!");
-    toast("Đã tải báo cáo (Report_Weekly) gồm " + items.length + " CR — DMS: " + dmsCount + ", e-B2B: " + (items.length - dmsCount) + ".", "ok");
+    toast("Đã tải báo cáo gồm 2 sheet — DMS: " + dmsCount + " CR, e-B2B: " + (items.length - dmsCount) + " CR.", "ok");
   }catch(error){
     console.error(error);
     toast("Tạo báo cáo thất bại: " + ((error && error.message) || error), "err");
@@ -12905,6 +12967,8 @@ async function downloadCombinedWeeklyReport(selectedKeys){
 
 (function initReportWorkspace(){
   document.addEventListener("click", e=>{
+    const sortTh = e.target.closest('#view-report th[data-report-sort]');
+    if(sortTh){ toggleReportSort(sortTh.dataset.reportSort); renderCombinedReportView(); return; }
     if(e.target.closest("#btnCombinedReport")){ openCombinedReportModal(); return; }
     if(e.target.closest("#btnDashRefresh") && STATE.currentView === "report" && !document.body.classList.contains("eb2b-active")){
       const src = combinedEb2bSource();
@@ -21762,6 +21826,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 #view-report .report-panel .list-panel-count .admin-scope-tag{ margin-right:0; }
 #view-report .table-wrap{ max-height:44vh; min-height:160px; overflow:auto; overscroll-behavior:contain; }
 #view-report .table-wrap table{ min-width:860px; }
+#view-report th[data-report-sort]{ cursor:pointer; user-select:none; white-space:nowrap; }
+#view-report th[data-report-sort]:hover{ color:#08777c; }
+#view-report th[data-report-sort].is-sorted{ color:#08777c; }
+#view-report th[data-report-sort] .sort-holder{ display:inline-flex; vertical-align:-1px; margin-left:4px; color:#6c969d; font-size:12px; }
+#view-report th[data-report-sort].is-sorted .sort-holder{ color:#08777c; }
+#view-report th[data-report-sort] .sort-holder mi-icon > svg{ width:12px; height:12px; }
 #view-report .report-panel tbody tr{ cursor:default; }
 .combined-report-modal .export-cr-top{ display:flex; align-items:center; gap:7px; min-width:0; }
 .combined-report-modal .export-cr-top .admin-scope-tag{ font-size:9.5px; padding:1px 7px; margin-right:0; }
