@@ -952,11 +952,7 @@
     .page.page-enter .stat-card:nth-child(3) { animation-delay: 230ms; }
     .page.page-enter .stat-card:nth-child(4) { animation-delay: 300ms; }
     .page.page-enter .license-fill { animation: bar-grow 1.2s var(--ease) .25s both; transform-origin: left center; }
-    .page.page-enter .header-row::before {
-      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0; transform: translateX(-100%);
-      background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .16) 50%, transparent 70%);
-      animation: sheen 1.5s var(--ease) .3s forwards;
-    }
+
     @keyframes page-rise { from { opacity: 0; transform: translate3d(0, 16px, 0); } }
     @keyframes card-rise { from { opacity: 0; transform: translate3d(0, 20px, 0) scale(.97); } }
     @keyframes bar-grow { from { transform: scaleX(0); } }
@@ -1138,7 +1134,7 @@
         if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
       });
       const h1 = document.querySelector(".topbar h1");
-      if (h1 && h1.textContent !== active[1]) { h1.textContent = active[1]; h1.classList.remove("swap"); void h1.offsetWidth; h1.classList.add("swap"); }
+      if (h1 && h1.textContent !== active[1]) h1.textContent = active[1];
       MI.to(document.querySelector(".topbar-icon morph-icon"), ICON_D[active[3]][0]);
       const page = document.querySelector(".page");
       page.innerHTML = renderPage();
@@ -1147,11 +1143,7 @@
     }
     function afterPageRender() {
       const page = document.querySelector(".page"); if (!page) return;
-      if (pageAnim) {
-        pageAnim = false;
-        page.classList.remove("page-enter"); void page.offsetWidth; page.classList.add("page-enter");
-        clearTimeout(pageAnimTimer); pageAnimTimer = setTimeout(() => page.classList.remove("page-enter"), 1500);
-      }
+      pageAnim = false;
       countUp(page);
       requestAnimationFrame(() => positionNavIndicator());
     }
