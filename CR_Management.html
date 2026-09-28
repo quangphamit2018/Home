@@ -3064,6 +3064,22 @@ tbody tr.detail-selected:hover{ background:
   display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
   color:#0e817c; background:#e8f7f5; font-size:11px; font-weight:800; white-space:nowrap;
 }
+/* Dung lượng Supabase (tab Dùng chung) */
+.sb-usage-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; padding:16px 18px 6px; }
+.sb-usage-card{ border:1px solid #dbe8ec; border-radius:14px; padding:14px 16px; background:#fbfefe; }
+.sb-usage-card h5{ margin:0 0 10px; font-size:12.5px; color:#16344e; display:flex; justify-content:space-between; gap:8px; }
+.sb-usage-card h5 small{ color:#7890a2; font-weight:700; }
+.sb-usage-bar{ height:10px; border-radius:999px; background:#e3eef1; overflow:hidden; }
+.sb-usage-bar > i{ display:block; height:100%; border-radius:999px; background:#0e9a94; transition:width .4s; }
+.sb-usage-bar.warn > i{ background:#e0a53c; } .sb-usage-bar.crit > i{ background:#e0505a; }
+.sb-usage-nums{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+.sb-usage-nums b{ display:block; font-size:16px; color:#153852; letter-spacing:-.02em; }
+.sb-usage-nums span{ font-size:10.5px; color:#7890a2; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+.sb-usage-foot{ padding:8px 18px 16px; font-size:11.5px; color:#7890a2; line-height:1.55; }
+.sb-usage-foot table{ margin-top:8px; width:100%; }
+.sb-usage-setup{ margin:14px 18px 16px; padding:12px 14px; border-radius:12px; background:#fff8e6; border:1px solid #fbe6ab; color:#7a5a12; font-size:12px; line-height:1.55; }
+.sb-usage-setup pre{ margin:8px 0 0; max-height:220px; overflow:auto; padding:10px; border-radius:8px; background:#fff; border:1px solid #f1dfa8; font-size:11px; color:#3b3b3b; white-space:pre; }
+@media(max-width:760px){ .sb-usage-grid{ grid-template-columns:1fr; } }
 /* Sắp xếp tệp đính kèm CR: ô chọn kiểu sắp xếp + tiêu đề nhóm theo loại tài liệu. */
 .attachments-bar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
 .attachments-sort{ display:inline-flex; align-items:center; gap:8px; margin:0; }
@@ -5906,6 +5922,7 @@ html{
 .admin-scope-pane #eb2bAdminConfigHost > .list-panel{ border-top:3px solid var(--scope-eb2b); }
 body.role-no-manage-users .admin-scope-tab[data-admin-scope="shared"],
 body.role-no-manage-users #sharedTablesPanel,
+body.role-no-manage-users #sbUsagePanel,
 body.role-no-manage-users #eb2bSupabaseTablesPanel{ display:none !important; }
 @media(max-width:760px){ .admin-scope-bar{ grid-template-columns:1fr; } }
 </style>
@@ -6773,6 +6790,16 @@ button:active mi-icon > svg{ transform:scale(.9); }
         <button type="button" class="admin-scope-tab is-eb2b" role="tab" data-admin-scope="eb2b"><span class="dot"></span><span><b>e-B2B</b><small>Danh mục và bảng dữ liệu riêng của workspace e-B2B</small></span></button>
       </div>
       <div class="admin-scope-pane" data-admin-pane="shared">
+      <div class="list-panel" id="sbUsagePanel" style="margin-bottom:16px;">
+        <div class="list-panel-head">
+          <div>
+            <div class="list-panel-count"><span class="admin-scope-tag is-shared">Dùng chung</span>Dung lượng Supabase</div>
+            <div class="hint">Dung lượng thực tế của Database và Storage (file đính kèm), so với hạn mức gói đang dùng. Chỉ Quản trị viên thấy mục này.</div>
+          </div>
+          <div class="table-toolbar"><button class="btn btn-sm" id="btnRefreshSbUsage" type="button">Làm mới</button></div>
+        </div>
+        <div id="sbUsageBody"><div class="sb-usage-foot">Đang tải dung lượng...</div></div>
+      </div>
       <div class="list-panel" id="sharedTablesPanel" style="margin-bottom:16px;">
         <div class="list-panel-head"><div>
           <div class="list-panel-count"><span class="admin-scope-tag is-shared">Dùng chung</span>Bảng dùng chung DMS + e-B2B</div>
@@ -17657,6 +17684,103 @@ document.addEventListener("click", e=>{
   const b = e.target.closest(".admin-scope-tab");
   if(b) setAdminScope(b.dataset.adminScope);
 });
+/* Dung lượng Supabase (tab Dùng chung). Số đo thật lấy từ RPC get_storage_usage()
+   (xem SQL bên dưới). Hạn mức KHÔNG đọc được từ client nên khai báo ở SB_PLAN_LIMITS:
+   Free = 500 MB DB / 1 GB Storage; Pro = 8 GB DB / 100 GB Storage. Sửa cho đúng gói của bạn. */
+const SB_PLAN_LIMITS = { label:"Free", dbBytes: 500*1024*1024, storageBytes: 1024*1024*1024 };
+const SB_USAGE_SQL = `-- Chạy 1 lần trong Supabase → SQL Editor.
+-- Trả về dung lượng THẬT của Database và Storage cho app; chỉ super_admin (app_users) gọi được.
+create or replace function public.get_storage_usage()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, storage, pg_temp
+as $$
+declare
+  v_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_db bigint;
+  v_storage bigint;
+  v_files bigint;
+  v_buckets jsonb;
+begin
+  if not exists (
+    select 1 from public.app_users
+    where lower(email) = v_email and role = 'super_admin' and active is not false
+  ) then
+    raise exception 'not_allowed';
+  end if;
+
+  select pg_database_size(current_database()) into v_db;
+
+  select coalesce(sum((metadata ->> 'size')::bigint), 0), count(*)
+    into v_storage, v_files
+  from storage.objects;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'bucket', bucket_id, 'files', files, 'bytes', bytes) order by bytes desc), '[]'::jsonb)
+    into v_buckets
+  from (
+    select bucket_id, count(*) as files,
+           coalesce(sum((metadata ->> 'size')::bigint), 0) as bytes
+    from storage.objects group by bucket_id
+  ) b;
+
+  return jsonb_build_object(
+    'db_bytes', v_db,
+    'storage_bytes', v_storage,
+    'storage_files', v_files,
+    'buckets', v_buckets,
+    'measured_at', now()
+  );
+end;
+$$;
+
+revoke all on function public.get_storage_usage() from public, anon;
+grant execute on function public.get_storage_usage() to authenticated;
+`;
+function sbFmt(n){
+  n = Number(n) || 0;
+  if(n >= 1073741824) return (n/1073741824).toFixed(2) + " GB";
+  if(n >= 1048576) return (n/1048576).toFixed(2) + " MB";
+  if(n >= 1024) return (n/1024).toFixed(1) + " KB";
+  return n + " B";
+}
+function sbUsageCard(title, used, limit, extra){
+  const pct = limit > 0 ? Math.min(100, used/limit*100) : 0;
+  const left = Math.max(0, limit - used);
+  const cls = pct >= 90 ? "crit" : pct >= 75 ? "warn" : "";
+  return `<div class="sb-usage-card">
+    <h5><span>${esc(title)}</span><small>${pct.toFixed(1)}% đã dùng${extra ? " · " + esc(extra) : ""}</small></h5>
+    <div class="sb-usage-bar ${cls}"><i style="width:${pct.toFixed(2)}%"></i></div>
+    <div class="sb-usage-nums">
+      <div><b>${sbFmt(used)}</b><span>Đã sử dụng</span></div>
+      <div><b>${sbFmt(left)}</b><span>Còn lại</span></div>
+      <div><b>${sbFmt(limit)}</b><span>Hạn mức</span></div>
+    </div></div>`;
+}
+async function loadSbUsage(){
+  const body = $("#sbUsageBody");
+  if(!body || !canManageUsers()) return;
+  body.innerHTML = `<div class="sb-usage-foot">Đang tải dung lượng...</div>`;
+  const { data, error } = await STATE.sb.rpc("get_storage_usage");
+  if(error || !data){
+    body.innerHTML = `<div class="sb-usage-setup"><b>Chưa đọc được dung lượng${error ? ": " + esc(error.message) : ""}.</b><br>
+      Chạy đoạn SQL sau một lần trong Supabase → SQL Editor, rồi bấm "Làm mới":
+      <pre>${esc(SB_USAGE_SQL)}</pre></div>`;
+    return;
+  }
+  const L = SB_PLAN_LIMITS;
+  const buckets = (data.buckets || []).map(b=>
+    `<tr><td class="cell-id">${esc(b.bucket)}</td><td>${Number(b.files)||0} tệp</td><td>${sbFmt(b.bytes)}</td></tr>`).join("");
+  body.innerHTML = `<div class="sb-usage-grid">
+      ${sbUsageCard("Database", data.db_bytes, L.dbBytes, "gói " + L.label)}
+      ${sbUsageCard("Storage (file đính kèm)", data.storage_bytes, L.storageBytes, (Number(data.storage_files)||0) + " tệp")}
+    </div>
+    <div class="sb-usage-foot">Cập nhật lúc ${esc(fmtDateTime(data.measured_at))}. Hạn mức theo gói ${esc(L.label)} (khai báo trong <code>SB_PLAN_LIMITS</code>).
+      ${buckets ? `<table><thead><tr><th>Bucket</th><th>Số tệp</th><th>Dung lượng</th></tr></thead><tbody>${buckets}</tbody></table>` : ""}</div>`;
+}
+document.addEventListener("click", e=>{ if(e.target.closest("#btnRefreshSbUsage")) loadSbUsage(); });
+
 async function loadAndRenderAdmin(){
   if(!canViewAdminTab()){ return; }
   setAdminScope(ADMIN_SCOPE);
@@ -17684,6 +17808,7 @@ async function loadAndRenderAdmin(){
   if(canManageUsers()){
     renderAdminTable();
     renderAccessRequestsPanel();
+    loadSbUsage();
   }
   renderAdminStatusTable();
   renderAdminSubStatusTable();
