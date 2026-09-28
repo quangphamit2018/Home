@@ -3064,6 +3064,26 @@ tbody tr.detail-selected:hover{ background:
   display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
   color:#0e817c; background:#e8f7f5; font-size:11px; font-weight:800; white-space:nowrap;
 }
+/* Sắp xếp tệp đính kèm CR: ô chọn kiểu sắp xếp + tiêu đề nhóm theo loại tài liệu. */
+.attachments-bar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+.attachments-sort{ display:inline-flex; align-items:center; gap:8px; margin:0; }
+.attachments-sort-label{ color:#7890a2; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.attachments-sort .pro-select-wrap{ display:block; min-width:230px; }
+.attachments-sort .pro-select-wrap select{ height:34px; font-size:12px; border-radius:9px; }
+#crFileGrid .file-group-head{
+  grid-column:1/-1; display:flex; align-items:center; gap:8px; margin:6px 0 -4px;
+  color:#18364f; font-size:12px; font-weight:800; letter-spacing:.02em;
+}
+#crFileGrid .file-group-head:first-child{ margin-top:0; }
+#crFileGrid .file-group-head::before{ content:""; width:8px; height:8px; border-radius:50%; background:#0e9a94; flex:none; }
+#crFileGrid .file-group-head .grp-count{ padding:2px 8px; border-radius:999px; background:#e8f7f5; color:#0e817c; font-size:10.5px; font-weight:800; }
+#crFileGrid .file-group-head::after{ content:""; flex:1; height:1px; background:#dfeaec; }
+@media(max-width:760px){
+  .attachments-section-bar{ flex-wrap:wrap; align-items:stretch; }
+  .attachments-bar-right{ width:100%; justify-content:space-between; }
+  .attachments-sort{ flex:1; }
+  .attachments-sort .pro-select-wrap{ min-width:0; flex:1; }
+}
 #crFileGrid{ grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
 #crFileGrid .empty-state{
   grid-column:1/-1; padding:72px 20px; border:1px dashed #d7e6e9;
@@ -7280,6 +7300,7 @@ const STATE = {
   crSelection: new Set(), // cr_id values currently selected in CR Log table
   crColumns: null,        // populated by loadCrColumnPrefs()
   crDensity: localStorage.getItem("crDensity") || "comfortable",
+  crFileSort: (function(){ try{ return localStorage.getItem("crFileSort") || "cat_date_desc"; }catch(_){ return "cat_date_desc"; } })(), // sắp xếp tệp đính kèm CR
   tcDensity: localStorage.getItem("uatDensity") || "comfortable",
   tcColumns: null,
   tcSelection: new Set(),
@@ -13966,7 +13987,13 @@ function renderDrawer(cr){
               <h4>Tài liệu của Change Request</h4>
               <p>Nhấn vào thẻ để mở file; dùng biểu tượng chỉnh sửa để cập nhật thông tin hiển thị.</p>
             </div>
-            <span class="attachments-section-count"><span class="dot" style="background:#0e9a94;"></span><span id="crFileCountLabel">0 tệp</span></span>
+            <div class="attachments-bar-right">
+              <label class="attachments-sort" for="crFileSort">
+                <span class="attachments-sort-label">Sắp xếp</span>
+                <span class="pro-select-wrap"><select id="crFileSort">${crFileSortOptionsHtml()}</select></span>
+              </label>
+              <span class="attachments-section-count"><span class="dot" style="background:#0e9a94;"></span><span id="crFileCountLabel">0 tệp</span></span>
+            </div>
           </div>
           <div class="file-grid" id="crFileGrid"></div>
         </div>
@@ -14080,6 +14107,15 @@ function renderDrawer(cr){
     });
   });
 
+  const sortSel = $("#crFileSort");
+  if(sortSel){
+    sortSel.addEventListener("change", ()=>{
+      STATE.crFileSort = sortSel.value;
+      try{ localStorage.setItem("crFileSort", STATE.crFileSort); }catch(_){}
+      renderDrawerFiles(cr.cr_id);
+    });
+  }
+
   const drop = $("#crFileDrop");
   const input = $("#crFileInput");
   drop.addEventListener("click", ()=> input.click());
@@ -14095,10 +14131,55 @@ function renderDrawer(cr){
   $("#drawerAddRel").addEventListener("click", ()=> openRelModal(null, cr.cr_id));
 }
 
+/* Sắp xếp tệp đính kèm CR theo Loại tài liệu (category) và Ngày upload.
+   Thứ tự loại tài liệu lấy theo danh mục Admin (sort_order); loại lạ/không có
+   trong danh mục xếp cuối theo A→Z. Chỉ đổi thứ tự hiển thị, không đổi dữ liệu. */
+const CR_FILE_SORTS = {
+  cat_date_desc:{ label:"Loại tài liệu → Ngày mới nhất", byCat:true,  dir:-1 },
+  cat_date_asc: { label:"Loại tài liệu → Ngày cũ nhất",  byCat:true,  dir: 1 },
+  date_desc:    { label:"Ngày upload: mới nhất trước",   byCat:false, dir:-1 },
+  date_asc:     { label:"Ngày upload: cũ nhất trước",    byCat:false, dir: 1 }
+};
+function crFileSortMode(){
+  return CR_FILE_SORTS[STATE.crFileSort] ? STATE.crFileSort : "cat_date_desc";
+}
+function crFileSortOptionsHtml(){
+  const cur = crFileSortMode();
+  return Object.keys(CR_FILE_SORTS).map(k=>
+    `<option value="${k}"${k===cur?" selected":""}>${esc(CR_FILE_SORTS[k].label)}</option>`).join("");
+}
+function crFileCatName(f){ return String((f && f.category) || "Other").trim() || "Other"; }
+function sortCrFiles(files){
+  const mode = CR_FILE_SORTS[crFileSortMode()];
+  const names = (STATE.attachCategoryList && STATE.attachCategoryList.length)
+    ? STATE.attachCategoryList.map(c=>c.name) : CR_LISTS.attachCategory;
+  const rank = new Map();
+  names.forEach((n,i)=>{ const k = String(n||"").trim().toLowerCase(); if(!rank.has(k)) rank.set(k, i); });
+  const catRank = f=>{ const k = crFileCatName(f).toLowerCase(); return rank.has(k) ? rank.get(k) : 1e6; };
+  const ts = f=>{ const t = Date.parse(f.uploaded_at || ""); return isNaN(t) ? 0 : t; };
+  return files.map((f,i)=>({f,i})).sort((a,b)=>{
+    if(mode.byCat){
+      const d = catRank(a.f) - catRank(b.f);
+      if(d) return d;
+      const n = crFileCatName(a.f).localeCompare(crFileCatName(b.f), "vi");
+      if(n) return n;
+    }
+    const dt = (ts(a.f) - ts(b.f)) * mode.dir;
+    return dt || (a.i - b.i);
+  }).map(x=>x.f);
+}
+function crFileGroupHeadHtml(files, i){
+  if(!CR_FILE_SORTS[crFileSortMode()].byCat) return "";
+  const cat = crFileCatName(files[i]);
+  if(i > 0 && crFileCatName(files[i-1]) === cat) return "";
+  const n = files.filter(x=> crFileCatName(x) === cat).length;
+  return `<div class="file-group-head"><span>${esc(cat)}</span><span class="grp-count">${n}</span></div>`;
+}
+
 async function renderDrawerFiles(cr_id){
   const grid = $("#crFileGrid");
   if(!grid) return;
-  const files = (STATE.attachCache[cr_id]||[]).filter(f=> !f.testcase_id);
+  const files = sortCrFiles((STATE.attachCache[cr_id]||[]).filter(f=> !f.testcase_id));
   const totalSize = files.reduce((sum, file)=> sum + (Number(file.file_size) || 0), 0);
   const countEl = $("#crFileCount");
   const countLabel = $("#crFileCountLabel");
@@ -14112,7 +14193,7 @@ async function renderDrawerFiles(cr_id){
   }
   grid.innerHTML = files.map(()=> `<div class="skeleton skeleton-thumb"></div>`).join("");
   const urls = await Promise.all(files.map(f=> getSignedUrl(f.file_path)));
-  grid.innerHTML = files.map((f,i)=> fileCardHtml(f, urls[i])).join("");
+  grid.innerHTML = files.map((f,i)=> crFileGroupHeadHtml(files, i) + fileCardHtml(f, urls[i])).join("");
   bindFileCardEvents(grid, cr_id);
 }
 
