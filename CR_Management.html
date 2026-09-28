@@ -14502,8 +14502,14 @@ async function saveAttachmentMeta(file){
   }
 }
 
+/* Sort theo Test Case ID (natural sort: _02_01 < _02_02 < _03 < _10) */
+const TC_ID_COLLATOR = new Intl.Collator("en", { numeric:true, sensitivity:"base" });
+function sortByTestCaseId(list){
+  return [...(list||[])].sort((a,b)=> TC_ID_COLLATOR.compare(String(a.test_case_id||""), String(b.test_case_id||"")));
+}
+
 function renderDrawerLinked(cr_id){
-  const tcs = STATE.tcList.filter(t=>t.cr_id===cr_id);
+  const tcs = sortByTestCaseId(STATE.tcList.filter(t=>t.cr_id===cr_id));
   const tcHtml = tcs.length ? tcs.map(tcMiniCardHtml).join("") : emptyRow("Chưa có test case nào cho CR này");
   const rels = STATE.relList.filter(r=>r.cr_id===cr_id);
   const relHtml = rels.length ? rels.map(relMiniCardHtml).join("") : emptyRow("Chưa có release nào cho CR này");
@@ -20452,7 +20458,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     EB2B.drawerCrId=row.id;
     const drawer=$e("#eb2bCrDrawer"), overlay=$e("#eb2bDrawerOverlay");
     const files=eb2bCrFiles(row);
-    const tests=EB2B.rows.uat.filter(item=>String(item.cr_id||"")===String(row.cr_id||""));
+    const tests=(typeof sortByTestCaseId==="function"?sortByTestCaseId:(l=>l))(EB2B.rows.uat.filter(item=>String(item.cr_id||"")===String(row.cr_id||"")));
     const rels=EB2B.rows.release.filter(item=>String(item.cr_id||"")===String(row.cr_id||""));
     const pass=tests.filter(item=>String(item.pass_fail||"").toLowerCase()==="pass").length;
     const fail=tests.filter(item=>String(item.pass_fail||"").toLowerCase()==="fail").length;
