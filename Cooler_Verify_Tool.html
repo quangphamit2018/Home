@@ -584,9 +584,34 @@ $('btnExport').addEventListener('click', () => {
     });
   }
 
+  function shortestUniqueKeys(paths){
+    const segs = paths.map(p => p.split('.'));
+    const map = {};
+    for (let i = 0; i < paths.length; i++) {
+      const s = segs[i];
+      let chosen = paths[i];
+      for (let level = 1; level <= s.length; level++) {
+        const cand = s.slice(s.length - level).join('.');
+        let cnt = 0;
+        for (let j = 0; j < paths.length; j++) {
+          const sj = segs[j];
+          if (sj.slice(sj.length - level).join('.') === cand) cnt++;
+        }
+        if (cnt === 1) { chosen = cand; break; }
+      }
+      map[paths[i]] = chosen;
+    }
+    return map;
+  }
   function dmsFinish(allRows, cols, t0, failed){
-    dmsColumns = cols.map(k => k === '__SourceFile' ? 'SourceFile' : k);
-    dmsRows = allRows;
+    const fullCols = cols.filter(k => k !== '__SourceFile');
+    const shortMap = shortestUniqueKeys(fullCols);
+    dmsRows = allRows.map(r => {
+      const nr = {};
+      for (const k in r) nr[k === '__SourceFile' ? '__SourceFile' : (shortMap[k] || k)] = r[k];
+      return nr;
+    });
+    dmsColumns = ['SourceFile'].concat(fullCols.map(p => shortMap[p] || p));
     const secs = ((performance.now() - t0)/1000).toFixed(2);
     dms('dms-stFiles').textContent = dmsFileCount;
     dms('dms-stRows').textContent = allRows.length;
