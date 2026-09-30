@@ -387,11 +387,31 @@ body.sidebar-hidden .drawer{ left:0; }
 
 .sidebar-foot{ margin-top:auto; padding-top:14px; border-top:1px solid var(--border); }
 .conn-pill{
-  display:flex; align-items:center; gap:8px; font-size: var(--text-caption-size); color: var(--text-muted);
-  padding:8px 10px; border-radius: var(--radius-sm); background: var(--bg-surface-soft); margin-bottom:8px;
-  overflow:hidden; transition: padding var(--duration-slow) var(--ease-standard);
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px; border-radius:12px;
+  background:linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border:1px solid rgba(255,255,255,0.07);
+  margin-bottom:10px; overflow:hidden;
+  transition:background var(--duration-base) var(--ease-standard), border-color var(--duration-base) var(--ease-standard);
 }
-.conn-dot{ width:7px; height:7px; border-radius:50%; background: var(--success); box-shadow:0 0 0 3px var(--success-dim); flex-shrink:0; }
+.conn-pill:hover{
+  background:linear-gradient(135deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035));
+  border-color:rgba(63,208,201,0.22);
+}
+.conn-avatar{
+  position:relative; flex-shrink:0; width:34px; height:34px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, rgba(63,208,201,0.22), rgba(63,208,201,0.06));
+  border:1px solid rgba(63,208,201,0.3);
+}
+.conn-avatar-text{ font-size:12.5px; font-weight:700; color:var(--accent); letter-spacing:.02em; text-transform:uppercase; }
+.conn-dot{
+  position:absolute; right:-2px; bottom:-2px; width:9px; height:9px; border-radius:50%;
+  background:var(--success); box-shadow:0 0 0 2px #081b2c, 0 0 0 4px var(--success-dim); flex-shrink:0;
+}
+.conn-info{ display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
+.conn-email{ color:var(--text-primary); font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conn-role{ font-size:10.5px; font-weight:600; color:var(--accent); letter-spacing:.03em; }
 
 /* ---- Workspace navigation -------------------------------------------------
    DMS is a workspace container, not a new data view. Its child views keep
@@ -4018,30 +4038,47 @@ tbody tr.detail-selected:hover{ background:
 }
 .tc-evidence-list-head h4{ color:#18364f; font-size:14px; }
 .tc-evidence-list-head p{ margin-top:3px; color:#8498a7; font-size:11.5px; }
-.tc-evidence-grid .evidence-group{ margin-bottom:20px; }
+.tc-evidence-grid .evidence-group{ margin-bottom:22px; }
+.tc-evidence-grid .evidence-group:last-child{ margin-bottom:0; }
 .tc-evidence-grid .evidence-group-title{
-  color:#3f6478;
-  font-size:11px;
-  font-weight:800;
-  letter-spacing:.08em;
-  text-transform:uppercase;
+  display:flex; align-items:center; gap:9px;
+  color:#2f6478; font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase;
+  margin-bottom:12px;
+}
+.tc-evidence-grid .evidence-group-title::before{
+  content:""; width:4px; height:14px; border-radius:3px;
+  background:linear-gradient(180deg, #0e9a94, #3fd0c9); flex-shrink:0;
+}
+.tc-evidence-grid .evidence-group-title .line{
+  flex:1; height:1px; margin-left:4px;
+  background:linear-gradient(90deg, rgba(15,42,68,0.14), transparent);
 }
 .tc-evidence-grid .file-grid{
-  grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
   gap:16px;
 }
 /* Đồng bộ hiệu ứng màu theo loại file / phân loại với lưới tài liệu CR
    (xem khối "FILE CARD — màu nhận diện..." ở phần CSS đính kèm phía trên). */
-.tc-evidence-grid .file-thumb{ background:linear-gradient(150deg, var(--kind-tint,#eef7f7), #ffffff); }
+.tc-evidence-grid .file-card{ border-radius:14px; overflow:hidden; border-color:#e2edf0; box-shadow:0 6px 18px -16px rgba(15,42,68,.45); }
+.tc-evidence-grid .file-thumb{ height:128px; background:linear-gradient(150deg, var(--kind-tint,#eef7f7), #ffffff); }
+.tc-evidence-grid .file-thumb img{ transition:transform .5s cubic-bezier(.2,.8,.2,1); }
+.tc-evidence-grid .file-card:hover .file-thumb img{ transform:scale(1.06); }
 .tc-evidence-grid .file-card:hover{
-  transform:translateY(-3px); box-shadow:0 18px 30px -22px rgba(15,42,68,.62);
+  transform:translateY(-4px); box-shadow:0 22px 38px -24px rgba(15,42,68,.6);
   border-color:var(--kind-border, #a8d9d6);
 }
+.tc-evidence-grid .file-cat-tag{
+  top:9px; left:9px; font-size:9.5px; font-weight:800; padding:3px 8px; border-radius:6px;
+  letter-spacing:.04em; box-shadow:0 4px 10px -4px rgba(15,42,68,.5);
+}
+.tc-evidence-grid .file-meta{ padding:11px 12px 13px; }
 .tc-evidence-grid .file-name{
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
-  overflow:hidden; text-overflow:ellipsis; white-space:normal; line-height:1.35;
-  min-height:2.4em; overflow-wrap:anywhere; word-break:break-word;
+  overflow:hidden; text-overflow:ellipsis; white-space:normal; line-height:1.4;
+  min-height:2.6em; overflow-wrap:anywhere; word-break:break-word;
+  font-size:12px; font-weight:600; color:#18364f;
 }
+.tc-evidence-grid .file-sub{ font-size:11px; color:#7890a2; margin-top:3px; }
 @media(max-width:760px){
   #tcModalOverlay .tc-detail-summary{ grid-template-columns:repeat(2,minmax(0,1fr)); }
   .tc-evidence-hero{ flex-direction:column; gap:12px; }
@@ -5677,9 +5714,11 @@ html{
   box-shadow:0 0 0 3px rgba(23,159,160,.09);
 }
 
-.ev-order-wrap{display:flex;flex-direction:column;gap:6px;min-width:0}
-.ev-order-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-dim,#64748b);padding:0 4px}
-.ev-order-input{width:56px;padding:4px 6px;border:1px solid var(--border,#d6e2e0);border-radius:8px;font-weight:700;text-align:center;font-size:12px}
+.ev-order-wrap{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ev-order-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10.5px;font-weight:600;color:#5f7690;padding:6px 10px;border-radius:9px;background:#f1f6f7;border:1px solid #e2edf0;transition:background .2s ease,border-color .2s ease}
+.ev-order-row:focus-within{background:#eaf6f5;border-color:#a8d9d6}
+.ev-order-input{width:48px;padding:3px 6px;border:1px solid #d6e2e0;border-radius:7px;font-weight:700;text-align:center;font-size:12px;color:#18364f;background:#fff;transition:border-color .15s ease,box-shadow .15s ease}
+.ev-order-input:focus{outline:none;border-color:#0e9a94;box-shadow:0 0 0 3px rgba(14,154,148,.16)}
 </style>
 
 <style id="import-modal-polish">
@@ -6283,9 +6322,15 @@ button:active mi-icon > svg{ transform:scale(.9); }
 
 
     <div class="sidebar-foot">
-      <div class="conn-pill" style="flex-direction:column; align-items:flex-start; gap:2px;">
-        <div style="display:flex; align-items:center; gap:8px;"><span class="conn-dot"></span><span id="sidebarUserEmail" style="color:var(--text-dim); font-weight:600;"></span></div>
-        <span id="sidebarUserRole" style="padding-left:15px; font-size:10.5px;"></span>
+      <div class="conn-pill">
+        <div class="conn-avatar">
+          <span class="conn-avatar-text" id="sidebarUserInitial">U</span>
+          <span class="conn-dot"></span>
+        </div>
+        <div class="conn-info">
+          <span class="conn-email" id="sidebarUserEmail"></span>
+          <span class="conn-role" id="sidebarUserRole"></span>
+        </div>
       </div>
       <div class="nav-item" id="btnLogout" style="margin-bottom:0;" title="Đăng xuất">
         <mi-icon name="log-in" stroke-width="2"></mi-icon>
@@ -8449,6 +8494,7 @@ async function handleAuthState(){
   }
   $("#sidebarUserEmail").textContent = STATE.userEmail;
   $("#sidebarUserRole").textContent = roleLabel(STATE.userRole);
+  $("#sidebarUserInitial").textContent = (STATE.userEmail || "U").trim().charAt(0).toUpperCase();
   applyRolePermissionsToUI();
   $("#navAdmin").classList.toggle("hidden", !canViewAdminTab());
   $("#navRecycleBin").classList.toggle("hidden", !isSuperAdmin());
