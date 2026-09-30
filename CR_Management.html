@@ -14385,29 +14385,40 @@ async function handleFileUpload(cr_id, testcase_id, evidence_step, files, catego
   };
 
   // Upload song song thay vì tuần tự — nhanh hơn nhiều với nhiều file.
+  // Mỗi file bọc try/catch: 1 file lỗi (mất mạng, exception...) không làm cả
+  // Promise.all vỡ — trước đây nếu vỡ, toast "0/N file..." kẹt trên màn hình
+  // mãi mãi trông như upload treo (đúng lỗi người dùng đang gặp).
+  let uploadErr = null;
   await Promise.all(valid.map(async file=>{
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    // Hậu tố ngẫu nhiên để 2 file cùng tên upload trong cùng 1 mili-giây
-    // không đụng path nhau (upsert:false sẽ từ chối nếu trùng).
-    const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const path = `${cr_id}/${testcase_id? 'evidence/'+testcase_id : category||'Other'}/${unique}_${safeName}`;
-    const { error: upErr } = await STATE.sb.storage.from(BUCKET).upload(path, file, { upsert:false });
-    if(upErr){ failCount++; done++; setProgress(); return; }
-    const { error: insErr } = await STATE.sb.from("cr_attachments").insert({
-      cr_id, testcase_id: testcase_id || null, evidence_step: evidence_step || null,
-      category: testcase_id ? "Evidence" : (category || "Other"),
-      file_name: file.name, file_path: path, file_type: file.type, file_size: file.size,
-    });
-    if(insErr){
-      // Storage đã upload nhưng ghi DB lỗi → xóa file khỏi Storage để không
-      // để lại file mồ côi chiếm dung lượng (trước đây bị bỏ lơ).
-      await STATE.sb.storage.from(BUCKET).remove([path]);
+    try{
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      // Hậu tố ngẫu nhiên để 2 file cùng tên upload trong cùng 1 mili-giây
+      // không đụng path nhau (upsert:false sẽ từ chối nếu trùng).
+      const unique = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const path = `${cr_id}/${testcase_id? 'evidence/'+testcase_id : category||'Other'}/${unique}_${safeName}`;
+      const { error: upErr } = await STATE.sb.storage.from(BUCKET).upload(path, file, { upsert:false });
+      if(upErr){ failCount++; return; }
+      const { error: insErr } = await STATE.sb.from("cr_attachments").insert({
+        cr_id, testcase_id: testcase_id || null, evidence_step: evidence_step || null,
+        category: testcase_id ? "Evidence" : (category || "Other"),
+        file_name: file.name, file_path: path, file_type: file.type, file_size: file.size,
+      });
+      if(insErr){
+        // Storage đã upload nhưng ghi DB lỗi → xóa file khỏi Storage để không
+        // để lại file mồ côi chiếm dung lượng (trước đây bị bỏ lơ).
+        await STATE.sb.storage.from(BUCKET).remove([path]);
+        failCount++;
+      } else okCount++;
+    }catch(e){
       failCount++;
-    } else okCount++;
-    done++; setProgress();
+      uploadErr = uploadErr || e;
+    }finally{
+      done++; setProgress();
+    }
   }));
 
   progress?.dismiss?.();
+  if(uploadErr) toast("Lỗi khi tải file lên: " + (uploadErr.message || uploadErr), "err");
   if(okCount) toast(`Đã tải lên ${okCount}/${total} file thành công`, "ok");
   if(failCount) toast(`${failCount} file tải lên thất bại`, "err");
 
@@ -20427,32 +20438,41 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const total=valid.length;
     let ok=0,failed=0,done=0;
     // Upload song song + tiến trình trên nút; metadata lỗi thì dọn file Storage.
-    await Promise.all(valid.map(async file=>{
-      const safeName=file.name.replace(/[^\w.\-() ]+/g,"_");
-      const unique=`${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-      const path=`${row.cr_id || "no-cr"}/CR/${category || "Other"}/${unique}_${safeName}`;
-      const upload=await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).upload(path,file,{upsert:false});
-      if(upload.error){failed++;done++;setBtn(`Đang tải ${done}/${total} file...`);return;}
-      const inserted=await activeDb().from(EB2B_TABLES.attachments).insert({
-        cr_id:row.cr_id || null,
-        testcase_id:null,
-        category:category || "Other",
-        file_name:file.name,
-        file_path:path,
-        mime_type:file.type || null,
-        file_size:file.size,
-        uploaded_by:eUser()
-      }).select("*").single();
-      if(inserted.error){
-        await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).remove([path]);
-        failed++;
-      }else{
-        ok++;
-        if(inserted.data) EB2B.rows.attachments.unshift(inserted.data);
-      }
-      done++;setBtn(`Đang tải ${done}/${total} file...`);
-    }));
-    if(button){button.disabled=false;button.textContent="Tải tài liệu lên";}
+    // try/finally để nút luôn bật lại kể cả khi exception giữa chừng —
+    // trước đây exception làm nút kẹt "Đang tải 0/N file..." vĩnh viễn.
+    let uploadErr=null;
+    try{
+      await Promise.all(valid.map(async file=>{
+        try{
+          const safeName=file.name.replace(/[^\w.\-() ]+/g,"_");
+          const unique=`${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+          const path=`${row.cr_id || "no-cr"}/CR/${category || "Other"}/${unique}_${safeName}`;
+          const upload=await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).upload(path,file,{upsert:false});
+          if(upload.error){failed++;return;}
+          const inserted=await activeDb().from(EB2B_TABLES.attachments).insert({
+            cr_id:row.cr_id || null,
+            testcase_id:null,
+            category:category || "Other",
+            file_name:file.name,
+            file_path:path,
+            mime_type:file.type || null,
+            file_size:file.size,
+            uploaded_by:eUser()
+          }).select("*").single();
+          if(inserted.error){
+            await activeDb().storage.from(EB2B_ATTACHMENT_BUCKET).remove([path]);
+            failed++;
+          }else{
+            ok++;
+            if(inserted.data) EB2B.rows.attachments.unshift(inserted.data);
+          }
+        }catch(e){failed++;uploadErr=uploadErr||e;}
+        finally{done++;setBtn(`Đang tải ${done}/${total} file...`);}
+      }));
+    }finally{
+      if(button){button.disabled=false;button.textContent="Tải tài liệu lên";}
+    }
+    if(uploadErr) eToast("Lỗi khi tải file lên: "+(uploadErr.message||uploadErr),"err");
     if(ok) eToast(`Đã tải lên ${ok}/${total} file e-B2B.`,"ok");
     if(failed) eToast(`${failed} file tải lên thất bại.`,"err");
     await eb2bRenderCrFiles(row);
@@ -20889,22 +20909,30 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      const total=valid.length;
      let ok=0,failed=0,done=0;
      // Upload song song; metadata lỗi thì dọn file Storage, không dừng cả lô.
-     await Promise.all(valid.map(async file=>{
-       const safeName=file.name.replace(/[^\w.\-() ]+/g,"_");
-       const unique=`${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-       const path=`uat/${row.cr_id || "no-cr"}/${row.id}/${unique}_${safeName}`;
-       const upload=await sb.storage.from("eb2b-attachments").upload(path,file,{upsert:false});
-       if(upload.error){failed++;done++;setBtn(`Đang tải ${done}/${total} file...`);return;}
-       const inserted=await sb.from(EB2B_TABLES.attachments).insert({
-         cr_id:row.cr_id || null,testcase_id:row.id,category:"uat_evidence",
-         step_name:step || null,file_name:file.name,file_path:path,mime_type:file.type || null,
-         file_size:file.size,uploaded_by:eUser()
-       }).select("*").single();
-       if(inserted.error){await sb.storage.from("eb2b-attachments").remove([path]);failed++;}
-       else{ok++;if(inserted.data) EB2B.rows.attachments.unshift(inserted.data);}
-       done++;setBtn(`Đang tải ${done}/${total} file...`);
-     }));
-     resetBtn();
+     // try/finally để nút luôn trở về trạng thái thường, kể cả khi exception.
+     let uploadErr=null;
+     try{
+       await Promise.all(valid.map(async file=>{
+         try{
+           const safeName=file.name.replace(/[^\w.\-() ]+/g,"_");
+           const unique=`${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+           const path=`uat/${row.cr_id || "no-cr"}/${row.id}/${unique}_${safeName}`;
+           const upload=await sb.storage.from("eb2b-attachments").upload(path,file,{upsert:false});
+           if(upload.error){failed++;return;}
+           const inserted=await sb.from(EB2B_TABLES.attachments).insert({
+             cr_id:row.cr_id || null,testcase_id:row.id,category:"uat_evidence",
+             step_name:step || null,file_name:file.name,file_path:path,mime_type:file.type || null,
+             file_size:file.size,uploaded_by:eUser()
+           }).select("*").single();
+           if(inserted.error){await sb.storage.from("eb2b-attachments").remove([path]);failed++;}
+           else{ok++;if(inserted.data) EB2B.rows.attachments.unshift(inserted.data);}
+         }catch(e){failed++;uploadErr=uploadErr||e;}
+         finally{done++;setBtn(`Đang tải ${done}/${total} file...`);}
+       }));
+     }finally{
+       resetBtn();
+     }
+     if(uploadErr) eToast("Lỗi khi tải evidence lên: "+(uploadErr.message||uploadErr),"err");
      if(ok) eToast(`Đã tải ${ok}/${total} evidence vào bucket EB2B.`,"ok");
      if(failed) eToast(`${failed} file tải lên thất bại.`,"err");
      const refreshed=EB2B.rows.uat.find(item=>String(item.id)===String(row.id)) || row;
