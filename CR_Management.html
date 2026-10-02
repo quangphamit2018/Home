@@ -15904,7 +15904,7 @@ const WEEKLY_MOM_DE_EXCEL_HEADERS = [
 // Mẫu nhập Excel tách riêng theo mục con đang xem:
 // Vendor = sheet "Report_Weekly" (11 cột); DE = các sheet có bảng CR riêng (DMS, e-B2B) với 6 cột.
 function weeklyMomExcelTemplate(){
-  const isDe = STATE.weeklyMomActiveType === "de";
+  const isDe = (window.__weeklyMomImportForceDe === true) || STATE.weeklyMomActiveType === "de";
   return {
     isDe,
     headers: isDe ? WEEKLY_MOM_DE_EXCEL_HEADERS : WEEKLY_MOM_EXCEL_HEADERS,
@@ -16381,7 +16381,9 @@ async function saveWeeklyMom(overlay, isEdit){
       ({ error } = await STATE.sb.from(wTable).update(payload).eq("id", STATE.editingWeeklyMomId));
     }else{
       payload.created_by = STATE.userEmail || null;
-      if(!fromEb2b) payload.meeting_type = STATE.weeklyMomActiveType === "de" ? "de" : "vendor";
+      payload.meeting_type = fromEb2b
+        ? ((typeof window.__eb2bWeeklyType === "function" ? window.__eb2bWeeklyType() : "vendor") === "de" ? "de" : "vendor")
+        : (STATE.weeklyMomActiveType === "de" ? "de" : "vendor");
       ({ error } = await STATE.sb.from(wTable).insert(payload));
     }
     if(error){ toast("Lưu biên bản Weekly thất bại: " + error.message, "err"); return; }
@@ -16457,6 +16459,13 @@ function openWeeklyMomExcelImportModal(){
   overlay.classList.add("show", "full");
   overlay.dataset.weeklyMomExcelFileName = "";
   impBindModal(overlay, "weeklyMomImport", f=> handleWeeklyMomExcelFile(overlay, f));
+  const clearForceDe = ()=>{ window.__weeklyMomImportForceDe = false; };
+  overlay.querySelector("#weeklyMomImportModalClose")?.addEventListener("click", clearForceDe);
+  overlay.querySelector("#weeklyMomImportModalCancel")?.addEventListener("click", clearForceDe);
+  if(!overlay.dataset.wmForceDeDismissBound){
+    overlay.dataset.wmForceDeDismissBound = "1";
+    overlay.addEventListener("click", e=>{ if(e.target === overlay) clearForceDe(); });
+  }
 }
 
 function handleWeeklyMomExcelFile(overlay, file){
@@ -16657,17 +16666,19 @@ async function executeWeeklyMomExcelImport(overlay, annotated){
   confirm.textContent = "Đang nhập...";
   const uploadDate = todayISO();
   const fileName = overlay.dataset.weeklyMomExcelFileName || "weekly_mom_import.xlsx";
-  const meetingType = STATE.weeklyMomActiveType === "de" ? "de" : "vendor";
+  const meetingType = ((window.__weeklyMomImportForceDe === true) || STATE.weeklyMomActiveType === "de") ? "de" : "vendor";
+  window.__weeklyMomImportForceDe = false;
   // DE: mỗi sheet có bảng CR (DMS / e-B2B) lưu thành một biên bản riêng, không trộn lẫn.
+  // Sheet "e-B2B" (bất kể hoa thường) -> bảng eb2b_weekly_mom (workspace e-B2B);
+  // các sheet còn lại (DMS...) -> bảng weekly_mom (workspace DMS).
+  const isEb2bSheet = name => /e\s*-\s*b\s*2\s*b/i.test(String(name || ""));
   const groups = meetingType === "de"
     ? [...new Set(rows.map(row=> row.sheetName || "DE"))].map(sheetName=>({
         sheetName,
         rows: rows.filter(row=> (row.sheetName || "DE") === sheetName)
       }))
     : [{ sheetName:null, rows }];
-  const payloads = groups.map(group=>({
-    // Database trigger sẽ ghi đè meeting_date/upload_date bằng ngày server UTC+7
-    // đối với source_type = excel; không bao giờ lấy ngày từ nội dung file.
+  const buildPayload = group=>({
     meeting_date: uploadDate,
     upload_date: uploadDate,
     vendor: "Excel Import",
@@ -16683,8 +16694,19 @@ async function executeWeeklyMomExcelImport(overlay, annotated){
     created_by: STATE.userEmail || null,
     updated_by: STATE.userEmail || null,
     uploaded_by: STATE.userEmail || null
-  }));
-  const { error } = await STATE.sb.from("weekly_mom").insert(payloads);
+  });
+  const dmsGroups = groups.filter(g=> !isEb2bSheet(g.sheetName));
+  const eb2bGroups = groups.filter(g=> isEb2bSheet(g.sheetName));
+  let insertError = null;
+  if(dmsGroups.length){
+    const { error } = await STATE.sb.from("weekly_mom").insert(dmsGroups.map(buildPayload));
+    if(error) insertError = error;
+  }
+  if(!insertError && eb2bGroups.length){
+    const { error } = await STATE.sb.from("eb2b_weekly_mom").insert(eb2bGroups.map(buildPayload));
+    if(error) insertError = error;
+  }
+  const error = insertError;
   confirm.disabled = false;
   confirm.textContent = originalLabel;
   if(error){
@@ -16697,6 +16719,9 @@ async function executeWeeklyMomExcelImport(overlay, annotated){
   overlay.classList.remove("show");
   await fetchWeeklyMomList();
   renderWeeklyMomList();
+  if(typeof eb2bGroups !== "undefined" && eb2bGroups && eb2bGroups.length && typeof window.__eb2bReload === "function"){
+    try{ await window.__eb2bReload(); }catch(_){}
+  }
 }
 
 function weeklyMomExportRow(item){
@@ -19394,6 +19419,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      releaseSelection: new Set(),
      weeklyMomExpanded: {},
      weeklyMomSort: {},
+     weeklyMomActiveType: "vendor",
     loading: false,
     ready: false,
     reloadQueued: false,   // realtime báo có thay đổi trong lúc đang tải -> tải lại 1 lần sau đó
@@ -20043,6 +20069,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   window.__eb2bShow = eb2bShow;
   window.__eb2bReload = ()=>eb2bLoad();
   window.__eb2bCrList = ()=>(EB2B.rows.cr || []).filter(r=>r.cr_id).map(r=>({ cr_id:r.cr_id, title:eb2bCrTitle(r) }));
+  window.__eb2bWeeklyType = ()=>EB2B.weeklyMomActiveType || "vendor";
+  window.__eb2bWeeklySetType = (t)=>{ EB2B.weeklyMomActiveType = (t === "de" ? "de" : "vendor"); };
 
   /* Khôi phục tab e-B2B sau F5 / Refresh.
      Được DMS (initShell) gọi ngay sau setView(): nếu lần trước người dùng đang
@@ -21503,9 +21531,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bRenderWeeklyMom(){
-    const c=$e("#eb2bContent"), rows=EB2B.rows.weekly_mom;
-    c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><mi-icon name="calendar-days" stroke-width="2"></mi-icon></div><div><div class="weekly-mom-title">Biên bản Weekly với Vendor</div><div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]===true;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><mi-icon name="chevron-down" stroke-width="2.2"></mi-icon></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
+    const c=$e("#eb2bContent"), allRows=EB2B.rows.weekly_mom;
+    const eb2bTypeOf = record=> (record && record.meeting_type === "de" ? "de" : "vendor");
+    const activeType = (EB2B.weeklyMomActiveType === "de" ? "de" : "vendor");
+    const rows = allRows.filter(record=> eb2bTypeOf(record) === activeType);
+    c.innerHTML=`<div class="weekly-mom-workspace"><div class="weekly-mom-intro"><div class="weekly-mom-intro-icon"><mi-icon name="calendar-days" stroke-width="2"></mi-icon></div><div><div class="weekly-mom-title">${activeType === "de" ? "Biên bản Weekly với DE" : "Biên bản Weekly với Vendor"}</div><div class="weekly-mom-note">${activeType === "de" ? "Biên bản họp Weekly với DE. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn." : "Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn."}</div></div><div class="weekly-mom-total"><b>${rows.length}</b> buổi họp</div></div><div class="weekly-mom-subtabs" id="eb2bWeeklyMomSubTabs" role="tablist" aria-label="Loại biên bản Weekly"><button class="weekly-mom-subtab${activeType === "vendor" ? " is-active" : ""}" type="button" role="tab" aria-selected="${activeType === "vendor"}" data-eb2b-weekly-type="vendor"><mi-icon name="users" stroke-width="2"></mi-icon><span class="weekly-mom-subtab-label">Biên bản Weekly với Vendor</span><span class="weekly-mom-subtab-count">${allRows.filter(r=>eb2bTypeOf(r) === "vendor").length}</span></button><button class="weekly-mom-subtab${activeType === "de" ? " is-active" : ""}" type="button" role="tab" aria-selected="${activeType === "de"}" data-eb2b-weekly-type="de"><mi-icon name="presentation" stroke-width="2"></mi-icon><span class="weekly-mom-subtab-label">Biên bản Weekly với DE</span><span class="weekly-mom-subtab-count">${allRows.filter(r=>eb2bTypeOf(r) === "de").length}</span></button></div><div id="eb2bWeeklyMomGrid" class="weekly-mom-grid">${rows.length?rows.map(record=>{const items=Array.isArray(record.cr_items)?record.cr_items:[];const key=String(record.id);const expanded=EB2B.weeklyMomExpanded[key]===true;return `<article class="weekly-mom-card${expanded?"":" is-collapsed"}" data-eb2b-weekly="${eEsc(key)}"><div class="weekly-mom-card-head"><div class="weekly-mom-card-date">${eEsc(record.meeting_date||"Chưa có ngày")}</div><div><div class="weekly-mom-card-vendor">${eEsc(record.vendor||"Chưa nhập Vendor")}</div><div class="weekly-mom-card-title">${eEsc(record.meeting_title||"Weekly Vendor Meeting")}</div></div><div class="weekly-mom-card-actions"><button class="btn btn-ghost btn-sm" data-eb2b-weekly-act="edit">Sửa</button><button class="btn btn-ghost btn-sm" style="color:#c0433f" data-eb2b-weekly-act="del">Xóa</button><button class="weekly-mom-card-toggle" data-eb2b-weekly-toggle type="button" aria-expanded="${expanded}"><span>${expanded?"Thu lại":"Xem chi tiết"}</span><mi-icon name="chevron-down" stroke-width="2.2"></mi-icon></button></div></div><div class="weekly-mom-card-body" ${expanded?"":"hidden"}><div class="weekly-mom-summary"><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Số CR</div><div class="weekly-mom-summary-value">${items.length}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Thành phần</div><div class="weekly-mom-summary-value">${eEsc(record.participants||"—")}</div></div><div class="weekly-mom-summary-item"><div class="weekly-mom-summary-label">Tóm tắt</div><div class="weekly-mom-summary-value">${eEsc(record.overall_summary||"—")}</div></div></div><div class="weekly-mom-form-rows"><table class="weekly-mom-table weekly-mom-detail-table"><thead><tr>${["CR ID","Description","Priority","Status","Sub-Status","BRD","FSD","ETA","Loop Mail Header","Progress","Note"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${items.length?items.map(item=>`<tr><td class="weekly-mom-crid">${eEsc(item.cr_id||"—")}</td><td>${eEsc(item.description||"—")}</td><td>${eEsc(item.priority||"—")}</td><td>${eEsc(item.status||"—")}</td><td>${eEsc(item.sub_status||"—")}</td><td>${eEsc(item.brd||"—")}</td><td>${eEsc(item.fsd||"—")}</td><td>${eEsc(item.eta||"—")}</td><td>${eEsc(item.loop_mail_header||"—")}</td><td>${eEsc(item.progress||item.current_update||"—")}</td><td>${eEsc(item.note||"—")}</td></tr>`).join(""):`<tr><td colspan="11" style="text-align:center;color:#8a9ca9;">Buổi họp này chưa có CR.</td></tr>`}</tbody></table></div></div></article>`}).join(""):`<div class="weekly-mom-empty"><b>Chưa có biên bản Weekly nào</b><br><span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span></div>`}</div></div>`;
     $e('[data-eb2b-new="weekly_mom"]',c)?.remove();
+    $all("[data-eb2b-weekly-type]",c).forEach(btn=>btn.addEventListener("click",()=>{ const t = btn.dataset.eb2bWeeklyType === "de" ? "de" : "vendor"; if(EB2B.weeklyMomActiveType === t) return; if(typeof window.__eb2bWeeklySetType === "function") window.__eb2bWeeklySetType(t); eb2bRenderWeeklyMom(); }));
     $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),state=EB2B.weeklyMomSort[String(card?.dataset.eb2bWeekly||"")];if(!state||!Number.isInteger(state.index)||!table.tBodies[0])return;const bodyRows=Array.from(table.tBodies[0].rows);bodyRows.sort((a,b)=>String(a.cells[state.index]?.textContent||"").localeCompare(String(b.cells[state.index]?.textContent||""),"vi",{numeric:true})*(state.direction==="desc"?-1:1));bodyRows.forEach(row=>table.tBodies[0].appendChild(row));});
     $all("[data-eb2b-weekly-act]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const row=EB2B.rows.weekly_mom.find(x=>String(x.id)===String(btn.closest("[data-eb2b-weekly]")?.dataset.eb2bWeekly));if(!row)return;btn.dataset.eb2bWeeklyAct==="edit"?eb2bOpenModal("weekly_mom",row):eb2bDelete("weekly_mom",row);}));
     $all(".weekly-mom-detail-table",c).forEach(table=>{const card=table.closest("[data-eb2b-weekly]"),key=String(card?.dataset.eb2bWeekly||""),state=EB2B.weeklyMomSort[key]||{index:null,direction:"asc"};Array.from(table.tHead?.rows[0]?.cells||[]).forEach((th,index)=>{const label=th.textContent.trim(),active=Number(state.index)===index;th.innerHTML=`<button class="weekly-mom-sort-button${active?" is-active":""}" type="button"><span>${eEsc(label)}</span><span class="weekly-mom-sort-icon">${active?(state.direction==="desc"?'<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>':'<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>'):'<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>'}</span></button>`;th.querySelector("button")?.addEventListener("click",()=>{EB2B.weeklyMomSort[key]=active?{index,direction:state.direction==="asc"?"desc":"asc"}:{index,direction:"asc"};eb2bRenderWeeklyMom();});});});
@@ -22125,7 +22157,15 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       if(ev.target.closest("#eb2bAddRelTop")){eb2bOpenModal("release",null);return;}
       if(ev.target.closest("#eb2bAddBrdTop")){window.__brdFromEb2b=true;openBrdModal(null);return;}
       if(ev.target.closest("#eb2bAddWeeklyTop")){window.__weeklyFromEb2b=true;window.__eb2bWeeklyRecord=null;openWeeklyMomModal(null);return;}
-      if(ev.target.closest("#eb2bWeeklyImportTop")){eb2bOpenImport("weekly");return;}
+      if(ev.target.closest("#eb2bWeeklyImportTop")){
+        if(EB2B.weeklyMomActiveType === "de"){
+          window.__weeklyMomImportForceDe = true;
+          if(typeof openWeeklyMomExcelImportModal === "function") openWeeklyMomExcelImportModal();
+        } else {
+          eb2bOpenImport("weekly");
+        }
+        return;
+      }
       if(ev.target.closest("#eb2bWeeklyDownloadTop")){eb2bDownloadWeeklyLatest();return;}
       if(ev.target.closest("#eb2bProgressReportTop")){eb2bOpenExport("report");return;}
       if(ev.target.closest("#eb2bEvidenceZipTop")){eb2bOpenExport("images");return;}
