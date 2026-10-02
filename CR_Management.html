@@ -4887,6 +4887,29 @@ body.detail-nav-visible .modal-overlay.full .modal-head{
 .weekly-mom-note{ margin-top:4px; color:#526f80; font-size:12px; line-height:1.5; }
 .weekly-mom-total{ margin-left:auto; color:#466678; font-size:12px; white-space:nowrap; z-index:1; }
 .weekly-mom-total b{ color:#087d82; font-size:20px; margin-right:4px; }
+/* ---- Sub-tab: Biên bản Weekly với Vendor / DE --------------------------- */
+.weekly-mom-subtabs{
+  display:flex; gap:8px; flex-wrap:wrap; padding:6px; margin-bottom:14px;
+  border:1px solid #cfe1e6; border-radius:14px; background:#eaf4f6;
+  box-shadow:inset 0 1px 2px rgba(22,52,78,.05);
+}
+.weekly-mom-subtab{
+  flex:1 1 220px; display:flex; align-items:center; gap:9px; padding:10px 14px; cursor:pointer;
+  border:1px solid transparent; border-radius:11px; background:transparent; color:#4a6c7c;
+  font-family:var(--font-head); font-size:13px; font-weight:750; text-align:left;
+  transition:background .16s ease,color .16s ease,border-color .16s ease,box-shadow .16s ease;
+}
+.weekly-mom-subtab:hover{ color:#0f4e50; background:rgba(255,255,255,.6); }
+.weekly-mom-subtab svg{ width:16px; height:16px; flex:0 0 auto; }
+.weekly-mom-subtab-label{ flex:1 1 auto; min-width:0; }
+.weekly-mom-subtab.is-active{
+  color:#065f63; background:#fff; border-color:#a8d7d6; box-shadow:0 4px 12px rgba(23,159,160,.16);
+}
+.weekly-mom-subtab-count{
+  flex:0 0 auto; min-width:24px; padding:2px 8px; border-radius:999px; text-align:center;
+  background:#d9eaee; color:#3f6577; font-size:11.5px; font-weight:800;
+}
+.weekly-mom-subtab.is-active .weekly-mom-subtab-count{ background:#cdeceb; color:#065f63; }
 .weekly-mom-grid{ display:grid; gap:13px; }
 .weekly-mom-card{
   overflow:hidden; border:1px solid #cbdfe4; border-radius:16px; background:#fff;
@@ -6815,10 +6838,22 @@ button:active mi-icon > svg{ transform:scale(.9); }
             <mi-icon name="calendar-days" stroke-width="2"></mi-icon>
           </div>
           <div>
-            <div class="weekly-mom-title">Biên bản Weekly với Vendor</div>
-            <div class="weekly-mom-note">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div>
+            <div class="weekly-mom-title" id="weeklyMomIntroTitle">Biên bản Weekly với Vendor</div>
+            <div class="weekly-mom-note" id="weeklyMomIntroNote">Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.</div>
           </div>
           <div class="weekly-mom-total"><b id="weeklyMomCount">0</b> buổi họp</div>
+        </div>
+        <div class="weekly-mom-subtabs" id="weeklyMomSubTabs" role="tablist" aria-label="Loại biên bản Weekly">
+          <button class="weekly-mom-subtab is-active" type="button" role="tab" aria-selected="true" data-weekly-type="vendor">
+            <mi-icon name="users" stroke-width="2"></mi-icon>
+            <span class="weekly-mom-subtab-label">Biên bản Weekly với Vendor</span>
+            <span class="weekly-mom-subtab-count" id="weeklyMomCountVendor">0</span>
+          </button>
+          <button class="weekly-mom-subtab" type="button" role="tab" aria-selected="false" data-weekly-type="de">
+            <mi-icon name="presentation" stroke-width="2"></mi-icon>
+            <span class="weekly-mom-subtab-label">Biên bản Weekly với DE</span>
+            <span class="weekly-mom-subtab-count" id="weeklyMomCountDe">0</span>
+          </button>
         </div>
         <div id="weeklyMomGrid" class="weekly-mom-grid"></div>
       </div>
@@ -7400,6 +7435,7 @@ const STATE = {
   weeklyMomRows: [],
   weeklyMomExpanded: {},
   weeklyMomSort: {},
+  weeklyMomActiveType: "vendor",  // "vendor" = Biên bản Weekly với Vendor | "de" = với DE
   editingUserId: null,
   brdVersionRows: [],     // dòng lịch sử phiên bản đang soạn trong form BRD (mảng object)
   drawerCrId: null,       // cr_id (text) currently shown in drawer
@@ -9127,6 +9163,9 @@ function initShell(){
   $("#btnAddWeeklyMom").addEventListener("click", ()=>{ window.__weeklyFromEb2b = false; openWeeklyMomModal(null); });
   $("#btnWeeklyMomImport").addEventListener("click", openWeeklyMomExcelImportModal);
   $("#btnWeeklyMomDownload").addEventListener("click", openWeeklyMomDownloadModal);
+  $all("#weeklyMomSubTabs [data-weekly-type]").forEach(btn=>{
+    btn.addEventListener("click", ()=> weeklyMomSetType(btn.dataset.weeklyType));
+  });
   $("#btnEvidenceZip").addEventListener("click", ()=> openExportSelectionModal("images"));
   $("#btnDashRefresh").addEventListener("click", async ()=>{
     if(STATE.refreshing) return;
@@ -15933,6 +15972,14 @@ async function fetchWeeklyMomList(){
   renderNavCounts();
 }
 
+// Chuyển giữa 2 mục con của Weekly MoM: biên bản với Vendor / với DE.
+function weeklyMomSetType(type){
+  const next = type === "de" ? "de" : "vendor";
+  if(STATE.weeklyMomActiveType === next) return;
+  STATE.weeklyMomActiveType = next;
+  renderWeeklyMomList();
+}
+
 function weeklyMomActionButton(action, id, label, danger=false){
   return `<button class="btn btn-ghost btn-sm" data-weekly-act="${action}" data-id="${esc(String(id))}"${danger ? ' style="color:#c0433f;"' : ""}>${label}</button>`;
 }
@@ -15978,9 +16025,28 @@ function weeklyMomSortableHeader(header, index, recordKey, sortState){
 function renderWeeklyMomList(){
   const grid = $("#weeklyMomGrid");
   if(!grid) return;
+  const activeType = STATE.weeklyMomActiveType === "de" ? "de" : "vendor";
+  const typeOf = record=> (record.meeting_type === "de" ? "de" : "vendor"); // bản ghi cũ chưa có meeting_type -> nhóm Vendor
+  const list = STATE.weeklyMomList.filter(record=> typeOf(record) === activeType);
   const countEl = $("#weeklyMomCount");
-  if(countEl) countEl.textContent = STATE.weeklyMomList.length;
+  if(countEl) countEl.textContent = list.length;
   if($("#navCountWeeklyMom")) $("#navCountWeeklyMom").textContent = STATE.weeklyMomList.length;
+  const vendorCountEl = $("#weeklyMomCountVendor");
+  if(vendorCountEl) vendorCountEl.textContent = STATE.weeklyMomList.filter(record=> typeOf(record) === "vendor").length;
+  const deCountEl = $("#weeklyMomCountDe");
+  if(deCountEl) deCountEl.textContent = STATE.weeklyMomList.filter(record=> typeOf(record) === "de").length;
+  $all("#weeklyMomSubTabs [data-weekly-type]").forEach(btn=>{
+    const isActive = btn.dataset.weeklyType === activeType;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+  // Tiêu đề / mô tả khối intro đổi theo mục con đang xem
+  const introTitle = $("#weeklyMomIntroTitle");
+  const introNote = $("#weeklyMomIntroNote");
+  if(introTitle) introTitle.textContent = activeType === "de" ? "Biên bản Weekly với DE" : "Biên bản Weekly với Vendor";
+  if(introNote) introNote.textContent = activeType === "de"
+    ? "Biên bản họp Weekly với DE. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn."
+    : "Mỗi buổi họp có thể ghi nhận nhiều CR. Bấm tên cột để sắp xếp; mở chi tiết để xem toàn bộ dữ liệu trong khung cuộn.";
 
   if(STATE.loadErrors.weeklyMom){
     grid.innerHTML = `<div class="weekly-mom-error">
@@ -15989,7 +16055,7 @@ function renderWeeklyMomList(){
     </div>`;
     return;
   }
-  if(!STATE.weeklyMomList.length){
+  if(!list.length){
     grid.innerHTML = `<div class="weekly-mom-empty">
       <b>Chưa có biên bản Weekly nào</b><br>
       <span style="font-size:12px;">Bấm “Tạo biên bản Weekly” để ghi nhận buổi họp đầu tiên.</span>
@@ -15997,7 +16063,7 @@ function renderWeeklyMomList(){
     return;
   }
 
-  grid.innerHTML = STATE.weeklyMomList.map(record=>{
+  grid.innerHTML = list.map(record=>{
     const rows = weeklyMomRowsOf(record);
     const recordKey = String(record.id);
     const sortState = STATE.weeklyMomSort[recordKey] || { index:null, direction:"asc" };
@@ -16301,6 +16367,7 @@ async function saveWeeklyMom(overlay, isEdit){
       ({ error } = await STATE.sb.from(wTable).update(payload).eq("id", STATE.editingWeeklyMomId));
     }else{
       payload.created_by = STATE.userEmail || null;
+      if(!fromEb2b) payload.meeting_type = STATE.weeklyMomActiveType === "de" ? "de" : "vendor";
       ({ error } = await STATE.sb.from(wTable).insert(payload));
     }
     if(error){ toast("Lưu biên bản Weekly thất bại: " + error.message, "err"); return; }
@@ -16512,6 +16579,7 @@ async function executeWeeklyMomExcelImport(overlay, annotated){
     cr_items: rows.map(row=>row.data),
     source_type: "excel",
     source_file_name: fileName,
+    meeting_type: STATE.weeklyMomActiveType === "de" ? "de" : "vendor",
     created_by: STATE.userEmail || null,
     updated_by: STATE.userEmail || null,
     uploaded_by: STATE.userEmail || null
