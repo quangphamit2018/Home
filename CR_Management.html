@@ -16697,20 +16697,26 @@ async function executeWeeklyMomExcelImport(overlay, annotated){
   });
   const dmsGroups = groups.filter(g=> !isEb2bSheet(g.sheetName));
   const eb2bGroups = groups.filter(g=> isEb2bSheet(g.sheetName));
+  // Lưu e-B2B TRƯỚC rồi mới đến DMS: nếu bảng e-B2B lỗi (thiếu cột...)
+  // thì DMS chưa kịp ghi gì, tránh tình trạng lưu một nửa rồi bấm "Nhập"
+  // lại nhiều lần sinh ra biên bản trùng lặp.
   let insertError = null;
-  if(dmsGroups.length){
-    const { error } = await STATE.sb.from("weekly_mom").insert(dmsGroups.map(buildPayload));
-    if(error) insertError = error;
-  }
-  if(!insertError && eb2bGroups.length){
+  let dmsSaved = 0;
+  if(eb2bGroups.length){
     const { error } = await STATE.sb.from("eb2b_weekly_mom").insert(eb2bGroups.map(buildPayload));
     if(error) insertError = error;
+  }
+  if(!insertError && dmsGroups.length){
+    const { error } = await STATE.sb.from("weekly_mom").insert(dmsGroups.map(buildPayload));
+    if(error) insertError = error;
+    else dmsSaved = dmsGroups.length;
   }
   const error = insertError;
   confirm.disabled = false;
   confirm.textContent = originalLabel;
   if(error){
-    toast("Nhập Weekly MoM thất bại: " + error.message, "err");
+    toast("Nhập Weekly MoM thất bại: " + error.message
+      + (dmsSaved ? ` LƯU Ý: ${dmsSaved} biên bản DMS đã lưu xong — KHÔNG bấm "Nhập" lại (sẽ bị trùng). Hãy sửa lỗi rồi làm mới.` : ""), "err");
     return;
   }
   toast(groups.length > 1
