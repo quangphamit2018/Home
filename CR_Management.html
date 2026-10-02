@@ -15896,7 +15896,21 @@ const WEEKLY_MOM_EXCEL_HEADERS = [
   "CR ID", "Description", "Priority", "Status", "Sub-Status",
   "BRD", "FSD", "ETA", "Loop Mail Header", "Progress", "Note"
 ];
+// File Excel của DE có cấu trúc riêng: mỗi sheet có bảng CR (DMS / e-B2B) với 6 cột.
+const WEEKLY_MOM_DE_EXCEL_HEADERS = [
+  "CR ID", "Description", "Priority", "Status", "Sub-Status", "Progress"
+];
 
+// Mẫu nhập Excel tách riêng theo mục con đang xem:
+// Vendor = sheet "Report_Weekly" (11 cột); DE = các sheet có bảng CR riêng (DMS, e-B2B) với 6 cột.
+function weeklyMomExcelTemplate(){
+  const isDe = STATE.weeklyMomActiveType === "de";
+  return {
+    isDe,
+    headers: isDe ? WEEKLY_MOM_DE_EXCEL_HEADERS : WEEKLY_MOM_EXCEL_HEADERS,
+    sheetLabel: isDe ? 'sheet "DMS" và "e-B2B"' : `sheet "${WEEKLY_MOM_EXCEL_SHEET_NAME}"`
+  };
+}
 function weeklyMomExcelText(value){
   if(value === null || value === undefined) return "";
   return String(value).replace(/\r\n/g, "\n").trim();
@@ -16402,19 +16416,30 @@ async function deleteWeeklyMom(record){
 }
 
 function weeklyMomExcelImportModalTemplate(){
+  const spec = weeklyMomExcelTemplate();
+  const de = spec.isDe;
   return importModalShell("weeklyMomImport", {
     title: "Nhập Weekly MoM từ Excel",
-    sheet: WEEKLY_MOM_EXCEL_SHEET_NAME,
-    sub: `Đọc sheet "${WEEKLY_MOM_EXCEL_SHEET_NAME}" theo cấu trúc file báo cáo Weekly`,
+    sheet: spec.sheetLabel,
+    sub: de
+      ? 'Đọc sheet "DMS" và "e-B2B" theo cấu trúc file báo cáo Weekly của DE'
+      : `Đọc sheet "${WEEKLY_MOM_EXCEL_SHEET_NAME}" theo cấu trúc file báo cáo Weekly`,
     steps: [
-      ["Chuẩn bị file", "Đủ 11 cột theo mẫu"],
-      ["Điền dữ liệu", `Sheet "${WEEKLY_MOM_EXCEL_SHEET_NAME}"`],
+      ["Chuẩn bị file", de ? "Đủ 6 cột theo mẫu DE" : "Đủ 11 cột theo mẫu"],
+      ["Điền dữ liệu", de ? 'Sheet "DMS" + "e-B2B"' : `Sheet "${WEEKLY_MOM_EXCEL_SHEET_NAME}"`],
       ["Chọn file", "Hệ thống kiểm tra"],
-      ["Xác nhận nhập", "Tạo batch mới"],
+      ["Xác nhận nhập", de ? "Tạo biên bản riêng" : "Tạo batch mới"],
     ],
     template: false,
-    dropHint: `Ưu tiên sheet "${WEEKLY_MOM_EXCEL_SHEET_NAME}"; nếu không có, đọc sheet đầu tiên`,
-    reqs: [
+    dropHint: de
+      ? 'Đọc mọi sheet có bảng CR (DMS, e-B2B); dòng tiêu đề "BÁO CÁO TUẦN" phía trên được bỏ qua'
+      : `Ưu tiên sheet "${WEEKLY_MOM_EXCEL_SHEET_NAME}"; nếu không có, đọc sheet đầu tiên`,
+    reqs: de ? [
+      `Dùng đúng cấu trúc file báo cáo Weekly của DE, đủ header của <b>6 cột</b>: ${WEEKLY_MOM_DE_EXCEL_HEADERS.join(", ")}.`,
+      `<b>DMS</b> và <b>e-B2B</b> được nhập thành <b>hai biên bản riêng</b>, không trộn lẫn.`,
+      `<b>CR ID</b> là cột bắt buộc có dữ liệu.`,
+      `Ngày upload tự ghi theo giờ Việt Nam (UTC+7): <b>${esc(todayISO())}</b>; mỗi lần nhập tạo <b>batch mới</b>.`,
+    ] : [
       `Dùng đúng cấu trúc <b>${esc(WEEKLY_MOM_EXCEL_SHEET_NAME)}</b>, đủ header của <b>11 cột</b>.`,
       `<b>CR ID</b> là cột bắt buộc có dữ liệu.`,
       `Ngày upload tự ghi theo giờ Việt Nam (UTC+7): <b>${esc(todayISO())}</b>.`,
@@ -16422,7 +16447,6 @@ function weeklyMomExcelImportModalTemplate(){
     ],
   });
 }
-
 function openWeeklyMomExcelImportModal(){
   if(!canManageWeeklyMom()){
     toast("Chỉ Super-admin và Senior-member được nhập Weekly MoM từ Excel.", "err");
@@ -16458,8 +16482,12 @@ function handleWeeklyMomExcelFile(overlay, file){
       toast("File không đúng định dạng Excel: " + error.message, "err");
       return;
     }
-    const sheetName = workbook.SheetNames.includes(WEEKLY_MOM_EXCEL_SHEET_NAME)
-      ? WEEKLY_MOM_EXCEL_SHEET_NAME
+    // Mục con DE dùng cấu trúc riêng (sheet DMS / e-B2B, 6 cột), không dùng mẫu Report_Weekly của Vendor.
+    if(weeklyMomExcelTemplate().isDe){
+      handleWeeklyMomDeWorkbook(overlay, workbook);
+      return;
+    }
+    const sheetName = workbook.SheetNames.includes(WEEKLY_MOM_EXCEL_SHEET_NAME)      ? WEEKLY_MOM_EXCEL_SHEET_NAME
       : workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(worksheet, { defval:"", raw:false });
@@ -16484,12 +16512,72 @@ function handleWeeklyMomExcelFile(overlay, file){
   reader.readAsArrayBuffer(file);
 }
 
+// Chuẩn hóa tên cột (bỏ khoảng trắng thừa) trước khi đọc dữ liệu.
+function weeklyMomNormalizeExcelRow(row){
+  const out = {};
+  Object.keys(row || {}).forEach(key=>{ out[String(key).replace(/\s+/g, " ").trim()] = row[key]; });
+  return out;
+}
+
+// File DE: bảng CR nằm trong từng sheet (DMS / e-B2B) và có thể có dòng tiêu đề
+// "BÁO CÁO TUẦN" phía trên, nên phải dò dòng đầu tiên có ô "CR ID".
+function weeklyMomDeSheetGroups(workbook){
+  return workbook.SheetNames.map(name=>{
+    const worksheet = workbook.Sheets[name];
+    if(!worksheet) return null;
+    const matrix = XLSX.utils.sheet_to_json(worksheet, { header:1, defval:"", raw:false });
+    const headerRowIndex = matrix.findIndex(row=> Array.isArray(row) &&
+      row.some(cell=> String(cell == null ? "" : cell).trim().toLowerCase() === "cr id"));
+    if(headerRowIndex < 0) return null;
+    const rows = XLSX.utils.sheet_to_json(worksheet, { defval:"", raw:false, range: headerRowIndex || undefined });
+    if(!rows.length) return null;
+    const headers = new Set(Object.keys(rows[0]).map(key=> String(key).replace(/\s+/g, " ").trim().toLowerCase()));
+    return {
+      sheetName: name,
+      firstDataRow: headerRowIndex + 2,
+      rows,
+      missing: WEEKLY_MOM_DE_EXCEL_HEADERS.filter(header=> !headers.has(header.toLowerCase()))
+    };
+  }).filter(Boolean);
+}
+
+function handleWeeklyMomDeWorkbook(overlay, workbook){
+  const host = $("#weeklyMomImportPreviewHost");
+  const groups = weeklyMomDeSheetGroups(workbook);
+  if(!groups.length){
+    host.innerHTML = `<div class="empty-state" style="padding:30px 0;">
+      <p>Không tìm thấy bảng CR nào trong file.</p>
+      <p class="hint">File DE cần có sheet chứa dòng header: <b>${esc(WEEKLY_MOM_DE_EXCEL_HEADERS.join(", "))}</b>.</p>
+    </div>`;
+    return;
+  }
+  const invalid = groups.filter(group=> group.missing.length);
+  if(invalid.length){
+    host.innerHTML = `<div class="empty-state" style="padding:30px 0;">
+      <p>File đang thiếu cột bắt buộc theo mẫu DE (${WEEKLY_MOM_DE_EXCEL_HEADERS.length} cột):</p>
+      <b>${invalid.map(group=> `Sheet "${esc(group.sheetName)}": thiếu ${esc(group.missing.join(", "))}`).join("<br>")}</b>
+      <p class="hint" style="margin-top:8px;">Cần đủ header của ${WEEKLY_MOM_DE_EXCEL_HEADERS.length} cột theo mẫu DE trước khi xác nhận nhập.</p>
+    </div>`;
+    return;
+  }
+  // Mỗi sheet là một biên bản riêng: kiểm tra trùng CR ID theo từng sheet, không gộp DMS với e-B2B.
+  const annotated = [];
+  groups.forEach(group=>{
+    const parsed = group.rows.map(row=> weeklyMomExcelRowToItem(weeklyMomNormalizeExcelRow(row)));
+    weeklyMomExcelValidateRows(parsed).forEach((entry, index)=>{
+      annotated.push({ ...entry, rowIndex: group.firstDataRow + index, sheetName: group.sheetName });
+    });
+  });
+  renderWeeklyMomExcelImportPreview(overlay, annotated, groups.map(group=> group.sheetName).join(" + "));
+}
 function renderWeeklyMomExcelImportPreview(overlay, annotated, sheetName){
   const host = $("#weeklyMomImportPreviewHost");
+  const spec = weeklyMomExcelTemplate();
+  const headers = spec.headers;
   const total = annotated.length;
   const validCount = annotated.filter(row=>row.valid).length;
   const errorCount = total - validCount;
-  const columnStats = WEEKLY_MOM_EXCEL_HEADERS.map(header=>({
+  const columnStats = headers.map(header=>({
     header,
     filled: annotated.filter(row=>weeklyMomExcelText(
       header === "Progress" ? weeklyMomProgressValue(row.data) : row.data[headerKeyForWeeklyMom(header)]
@@ -16497,13 +16585,14 @@ function renderWeeklyMomExcelImportPreview(overlay, annotated, sheetName){
   }));
   host.innerHTML = `
     <div class="import-summary">
-      <div class="import-stat"><b>${total}</b><span>Tổng dòng ở sheet ${esc(sheetName)}</span></div>
-      <div class="import-stat ok"><b>${validCount}</b><span>Hợp lệ (tạo batch mới)</span></div>
+      <div class="import-stat"><b>${total}</b><span>${spec.isDe ? "Tổng dòng CR đã đọc" : `Tổng dòng ở sheet ${esc(sheetName)}`}</span></div>
+      <div class="import-stat ok"><b>${validCount}</b><span>${spec.isDe ? "Hợp lệ (tạo biên bản theo sheet)" : "Hợp lệ (tạo batch mới)"}</span></div>
       <div class="import-stat ${errorCount ? "danger" : ""}"><b>${errorCount}</b><span>Có lỗi (bỏ qua)</span></div>
     </div>
     <p style="font-size:12.5px;color:#7890a2;margin:-6px 0 10px;">
-      Đã kiểm tra đủ header của 11 cột. <b>CR ID là cột bắt buộc có dữ liệu</b>;
+      Đã kiểm tra đủ header của ${headers.length} cột. <b>CR ID là cột bắt buộc có dữ liệu</b>;
       các ô trống còn lại được đánh dấu “—” để bạn kiểm tra trước khi xác nhận.
+      ${spec.isDe ? "Mỗi sheet (DMS, e-B2B) sẽ được lưu thành một biên bản riêng." : ""}
       Dữ liệu hợp lệ sẽ được lưu trong batch mới ngày <b>${esc(todayISO())}</b>.
     </p>
     <div class="weekly-mom-column-check">
@@ -16511,12 +16600,13 @@ function renderWeeklyMomExcelImportPreview(overlay, annotated, sheetName){
     </div>
     <div class="table-wrap weekly-mom-import-preview">
       <table>
-        <thead><tr><th>#</th>${WEEKLY_MOM_EXCEL_HEADERS.map(header=>`<th>${esc(header)}</th>`).join("")}<th>Kết quả</th></tr></thead>
+        <thead><tr><th>#</th>${spec.isDe ? "<th>Sheet</th>" : ""}${headers.map(header=>`<th>${esc(header)}</th>`).join("")}<th>Kết quả</th></tr></thead>
         <tbody>
           ${annotated.map(row=>`
             <tr>
               <td class="cell-dim">${row.rowIndex}</td>
-              ${WEEKLY_MOM_EXCEL_HEADERS.map(header=>{
+              ${spec.isDe ? `<td>${esc(row.sheetName || "—")}</td>` : ""}
+              ${headers.map(header=>{
                 const value = header === "CR ID" ? row.data.cr_id : header === "Progress" ? weeklyMomProgressValue(row.data) : row.data[headerKeyForWeeklyMom(header)];
                 return `<td class="${value ? "" : "import-cell-empty"}" title="${esc(value || "")}">${esc(value || "—")}</td>`;
               }).join("")}
@@ -16567,31 +16657,43 @@ async function executeWeeklyMomExcelImport(overlay, annotated){
   confirm.textContent = "Đang nhập...";
   const uploadDate = todayISO();
   const fileName = overlay.dataset.weeklyMomExcelFileName || "weekly_mom_import.xlsx";
-  const payload = {
+  const meetingType = STATE.weeklyMomActiveType === "de" ? "de" : "vendor";
+  // DE: mỗi sheet có bảng CR (DMS / e-B2B) lưu thành một biên bản riêng, không trộn lẫn.
+  const groups = meetingType === "de"
+    ? [...new Set(rows.map(row=> row.sheetName || "DE"))].map(sheetName=>({
+        sheetName,
+        rows: rows.filter(row=> (row.sheetName || "DE") === sheetName)
+      }))
+    : [{ sheetName:null, rows }];
+  const payloads = groups.map(group=>({
     // Database trigger sẽ ghi đè meeting_date/upload_date bằng ngày server UTC+7
     // đối với source_type = excel; không bao giờ lấy ngày từ nội dung file.
     meeting_date: uploadDate,
     upload_date: uploadDate,
     vendor: "Excel Import",
-    meeting_title: `Weekly CR Import - ${fileName}`,
+    meeting_title: group.sheetName
+      ? `Weekly CR Import - ${fileName} · ${group.sheetName}`
+      : `Weekly CR Import - ${fileName}`,
     participants: STATE.userEmail || "",
-    overall_summary: `Import ${rows.length} CR từ Excel vào ngày ${uploadDate} (UTC+7).`,
-    cr_items: rows.map(row=>row.data),
+    overall_summary: `Import ${group.rows.length} CR từ Excel vào ngày ${uploadDate} (UTC+7).`,
+    cr_items: group.rows.map(row=>row.data),
     source_type: "excel",
     source_file_name: fileName,
-    meeting_type: STATE.weeklyMomActiveType === "de" ? "de" : "vendor",
+    meeting_type: meetingType,
     created_by: STATE.userEmail || null,
     updated_by: STATE.userEmail || null,
     uploaded_by: STATE.userEmail || null
-  };
-  const { error } = await STATE.sb.from("weekly_mom").insert(payload);
+  }));
+  const { error } = await STATE.sb.from("weekly_mom").insert(payloads);
   confirm.disabled = false;
   confirm.textContent = originalLabel;
   if(error){
     toast("Nhập Weekly MoM thất bại: " + error.message, "err");
     return;
   }
-  toast(`Đã tạo batch Weekly MoM mới gồm ${rows.length} CR. Dữ liệu cũ không bị ghi đè.`, "ok");
+  toast(groups.length > 1
+    ? `Đã tạo ${groups.length} biên bản Weekly riêng cho ${groups.map(group=> group.sheetName).join(" và ")} gồm ${rows.length} CR. Dữ liệu cũ không bị ghi đè.`
+    : `Đã tạo batch Weekly MoM mới gồm ${rows.length} CR. Dữ liệu cũ không bị ghi đè.`, "ok");
   overlay.classList.remove("show");
   await fetchWeeklyMomList();
   renderWeeklyMomList();
