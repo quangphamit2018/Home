@@ -7219,9 +7219,17 @@ button:active mi-icon > svg{ transform:scale(.9); }
             </button>
           </div>
         </div>
+        <div class="bulk-bar hidden" id="recycleBulkBar">
+          <span><b id="recycleBulkCount">0</b> đã chọn</span>
+          <div class="bulk-actions">
+            <button class="btn btn-ghost btn-sm" id="recycleBulkClear" type="button">Bỏ chọn</button>
+            <button class="btn btn-danger btn-sm bulk-delete-btn" id="recycleBulkDelete" type="button"><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa vĩnh viễn đã chọn</button>
+          </div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
+              <th class="col-check"><input type="checkbox" class="select-all-check" id="recycleSelectAll" title="Chọn tất cả"></th>
               <th>Loại</th><th>Tên / ID</th><th>Đã xóa lúc</th><th>Người xóa</th><th></th>
             </tr></thead>
             <tbody id="recycleTableBody"></tbody>
@@ -7468,6 +7476,7 @@ const STATE = {
   editingSubStatusId: null,
   evidenceLoadWarned: false,
   recycleList: [],   // các dòng đã soft-delete từ các bảng dữ liệu chính
+  recycleSelection: new Set(), // key "type:id" của các mục đang chọn trong Recycle Bin
 };
 
 /* Togglable CR Log columns (CR ID + Status + Actions are structural, not toggled) */
@@ -9150,6 +9159,18 @@ function initShell(){
   }
   if($("#btnRefreshRecycle")){
     $("#btnRefreshRecycle").addEventListener("click", loadAndRenderRecycleBin);
+  }
+  if($("#recycleSelectAll")){
+    $("#recycleSelectAll").addEventListener("change", e=>{
+      const typeFilter = $("#filterRecycleType") ? $("#filterRecycleType").value : "";
+      STATE.recycleList.filter(it=> !typeFilter || it.type === typeFilter).forEach(it=>{
+        if(e.target.checked) STATE.recycleSelection.add(recycleKey(it));
+        else STATE.recycleSelection.delete(recycleKey(it));
+      });
+      renderRecycleBin();
+    });
+    $("#recycleBulkClear").addEventListener("click", ()=>{ STATE.recycleSelection.clear(); renderRecycleBin(); });
+    $("#recycleBulkDelete").addEventListener("click", bulkPurgeRecycleItems);
   }
 
   $("#btnAddCr").addEventListener("click", ()=> openCrModal(null));
@@ -16766,6 +16787,10 @@ function openWeeklyMomDownloadModal(){
     toast("Chưa có dữ liệu Weekly MoM để tải.", "warn");
     return;
   }
+  const dlTypeOf = record=> (record.meeting_type === "de" ? "de" : "vendor");
+  const dlGroups = { vendor: candidates.filter(r=> dlTypeOf(r) === "vendor"), de: candidates.filter(r=> dlTypeOf(r) === "de") };
+  let dlType = STATE.weeklyMomActiveType === "de" ? "de" : "vendor";
+  if(!dlGroups[dlType].length) dlType = dlType === "de" ? "vendor" : "de";
   const overlay = $("#weeklyMomModalOverlay");
   overlay.innerHTML = `<div class="modal modal-lg brd-modal">
     <div class="modal-head">
@@ -16777,24 +16802,48 @@ function openWeeklyMomDownloadModal(){
         Mỗi lựa chọn tương ứng một biên bản/batch. Nếu cùng một ngày có nhiều lần import,
         hãy chọn đúng tên file và số CR cần tải.
       </div>
-      <div class="weekly-mom-download-list">
-        ${candidates.map((record, index)=>{
-          const source = record.source_type === "excel"
-            ? `Excel · ${record.source_file_name || "Không rõ tên file"}`
-            : `Manual · ${weeklyMomText(record.vendor) || "Không rõ Vendor"}`;
-          return `<label class="weekly-mom-download-option">
-            <input type="radio" name="weeklyMomDownloadRecord" value="${esc(String(record.id))}" ${index === 0 ? "checked" : ""}>
-            <span><b>${esc(weeklyMomDateLabel(record.meeting_date))} · ${esc(source)}</b>
-            <span>${weeklyMomRowsOf(record).length} CR · Upload ${esc(weeklyMomDateLabel(record.upload_date))}</span></span>
-          </label>`;
-        }).join("")}
+      <div class="weekly-mom-subtabs" id="weeklyMomDlTabs" role="tablist" style="margin-bottom:12px;">
+        <button class="weekly-mom-subtab" type="button" role="tab" data-dl-type="vendor">
+          <mi-icon name="users" stroke-width="2"></mi-icon>
+          <span class="weekly-mom-subtab-label">Weekly với Vendor</span>
+          <span class="weekly-mom-subtab-count">${dlGroups.vendor.length}</span>
+        </button>
+        <button class="weekly-mom-subtab" type="button" role="tab" data-dl-type="de">
+          <mi-icon name="presentation" stroke-width="2"></mi-icon>
+          <span class="weekly-mom-subtab-label">Weekly với DE</span>
+          <span class="weekly-mom-subtab-count">${dlGroups.de.length}</span>
+        </button>
       </div>
+      <div class="weekly-mom-download-list" id="weeklyMomDlList"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" id="weeklyMomModalCancel" type="button">Hủy</button>
       <button class="btn btn-primary" id="weeklyMomModalSave" type="button">Tải file Excel</button>
     </div>
   </div>`;
+  const renderDlList = ()=>{
+    overlay.querySelectorAll("[data-dl-type]").forEach(btn=>{
+      const active = btn.dataset.dlType === dlType;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    const list = dlGroups[dlType];
+    $("#weeklyMomDlList").innerHTML = list.length ? list.map((record, index)=>{
+      const source = record.source_type === "excel"
+        ? `Excel · ${record.source_file_name || "Không rõ tên file"}`
+        : `Manual · ${weeklyMomText(record.vendor) || "Không rõ Vendor"}`;
+      return `<label class="weekly-mom-download-option">
+        <input type="radio" name="weeklyMomDownloadRecord" value="${esc(String(record.id))}" ${index === 0 ? "checked" : ""}>
+        <span><b>${esc(weeklyMomDateLabel(record.meeting_date))} · ${esc(source)}</b>
+        <span>${weeklyMomRowsOf(record).length} CR · Upload ${esc(weeklyMomDateLabel(record.upload_date))}</span></span>
+      </label>`;
+    }).join("") : `<div class="hint" style="padding:16px; text-align:center;">Chưa có biên bản ${dlType === "de" ? "DE" : "Vendor"} để tải.</div>`;
+    $("#weeklyMomModalSave").disabled = !list.length;
+  };
+  overlay.querySelectorAll("[data-dl-type]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ dlType = btn.dataset.dlType; renderDlList(); });
+  });
+  renderDlList();
   overlay.classList.add("show");
   const close = ()=> overlay.classList.remove("show");
   $("#weeklyMomModalClose").addEventListener("click", close);
@@ -17626,7 +17675,7 @@ async function loadAndRenderRecycleBin(opts){
   const seq = ++recycleLoadSeq;
   recycleCountSeq++; // bỏ kết quả đếm cũ đang chạy dở
   const tbody = $("#recycleTableBody");
-  if(tbody && !silent) tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:24px; color:var(--text-dim);">Đang tải...</td></tr>`;
+  if(tbody && !silent) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-dim);">Đang tải...</td></tr>`;
 
   const results = await Promise.all(RECYCLE_TABLES.map(t=>
     STATE.sb.from(t.table).select("*").not("deleted_at", "is", null).order("deleted_at", { ascending:false })
@@ -17668,13 +17717,19 @@ function renderRecycleBin(){
   const footEl = $("#recycleFootCount"); if(footEl) footEl.textContent = `Hiển thị ${rows.length} / ${STATE.recycleList.length} mục`;
   setRecycleNavCount(STATE.recycleList.length);
 
+  // Bỏ các mục đã chọn không còn trong danh sách (đã khôi phục / xóa)
+  const validKeys = new Set(STATE.recycleList.map(recycleKey));
+  [...STATE.recycleSelection].forEach(k=>{ if(!validKeys.has(k)) STATE.recycleSelection.delete(k); });
+  updateRecycleBulkBar(rows);
+
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:32px; color:var(--text-dim);">Recycle Bin trống.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:32px; color:var(--text-dim);">Recycle Bin trống.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = rows.map(it=> `
     <tr data-recycle-type="${esc(it.type)}" data-recycle-id="${esc(String(it.id))}">
+      <td class="cell-check"><input type="checkbox" class="row-check" data-recycle-check="${esc(recycleKey(it))}" ${STATE.recycleSelection.has(recycleKey(it)) ? "checked" : ""}></td>
       <td>${badge("role", RECYCLE_TYPE_LABEL[it.type] || it.type)}</td>
       <td>${esc(String(it.label))}${it.title ? " — " + esc(String(it.title)) : ""}</td>
       <td>${fmtDateTime(it.deleted_at)}</td>
@@ -17687,6 +17742,14 @@ function renderRecycleBin(){
       </td>
     </tr>
   `).join("");
+
+  $all("#recycleTableBody .row-check").forEach(cb=>{
+    cb.addEventListener("change", ()=>{
+      if(cb.checked) STATE.recycleSelection.add(cb.dataset.recycleCheck);
+      else STATE.recycleSelection.delete(cb.dataset.recycleCheck);
+      updateRecycleBulkBar(rows);
+    });
+  });
 
   $all("#recycleTableBody tr[data-recycle-type]").forEach(tr=>{
     const type = tr.dataset.recycleType;
@@ -17722,8 +17785,46 @@ async function restoreRecycleItem(item){
   if(String(item.type).startsWith("eb2b_") && typeof window.__eb2bReload === "function") window.__eb2bReload();
 }
 
-async function purgeRecycleItem(item){
+function recycleKey(it){ return `${it.type}:${it.id}`; }
+
+function updateRecycleBulkBar(visibleRows){
+  const n = STATE.recycleSelection.size;
+  const bar = $("#recycleBulkBar");
+  if(bar) bar.classList.toggle("hidden", n === 0);
+  const cnt = $("#recycleBulkCount"); if(cnt) cnt.textContent = n;
+  const all = $("#recycleSelectAll");
+  if(all){
+    const rows = visibleRows || [];
+    const sel = rows.filter(it=> STATE.recycleSelection.has(recycleKey(it))).length;
+    all.checked = rows.length > 0 && sel === rows.length;
+    all.indeterminate = sel > 0 && sel < rows.length;
+  }
+}
+
+async function bulkPurgeRecycleItems(){
   if(!isSuperAdmin()){ toast("Chỉ Quản trị viên mới có thể xóa vĩnh viễn.", "err"); return; }
+  const items = STATE.recycleList.filter(it=> STATE.recycleSelection.has(recycleKey(it)));
+  if(!items.length) return;
+  confirmDelete(
+    `Xóa vĩnh viễn ${items.length} mục?`,
+    `${items.length} mục đã chọn sẽ bị xóa vĩnh viễn khỏi hệ thống và KHÔNG THỂ khôi phục lại.`,
+    async ()=>{
+      let ok = 0, fail = 0;
+      for(const item of items){
+        if(await purgeRecycleItem(item, { quiet:true })) ok++; else fail++;
+      }
+      STATE.recycleSelection.clear();
+      if(fail) toast(`Đã xóa vĩnh viễn ${ok} mục, ${fail} mục lỗi.`, ok ? "warn" : "err");
+      else toast(`Đã xóa vĩnh viễn ${ok} mục.`, "ok");
+      await loadAndRenderRecycleBin();
+    },
+    `Xóa vĩnh viễn ${items.length} mục`
+  );
+}
+
+async function purgeRecycleItem(item, opts){
+  const quiet = !!(opts && opts.quiet);
+  if(!isSuperAdmin()){ toast("Chỉ Quản trị viên mới có thể xóa vĩnh viễn.", "err"); return false; }
   try{
     if(item.type === "cr" && item.raw && item.raw.cr_id){
       const files = await fetchAttachments(item.raw.cr_id);
@@ -17748,9 +17849,15 @@ async function purgeRecycleItem(item){
     console.warn("Không xóa được file đính kèm trước khi xóa vĩnh viễn:", e);
   }
   const { error } = await STATE.sb.from(item.table).delete().eq("id", item.id);
-  if(error){ toast("Xóa vĩnh viễn thất bại: " + error.message, "err"); return; }
+  if(error){
+    if(quiet) console.warn("Xóa vĩnh viễn thất bại:", error.message);
+    else toast("Xóa vĩnh viễn thất bại: " + error.message, "err");
+    return false;
+  }
+  if(quiet) return true;
   toast(`Đã xóa vĩnh viễn "${item.label}"`, "ok");
   await loadAndRenderRecycleBin();
+  return true;
 }
 
 /* ===== e-B2B BRD bridge: dùng CHUNG form + template Word của DMS nhưng lưu vào eb2b_brd_records ===== */
