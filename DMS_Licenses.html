@@ -1976,7 +1976,7 @@
     }
     const curDs = () => dsConfig(tool.ds);
 
-    const tool = { mode: loadKey(TOOL_MODE_KEY, TOOL_MODES_OK, "replace"), ds: loadKey(TOOL_DS_KEY, TOOL_DS_OK, "central"), picked: [], q: "", status: "", repl: {}, list: [], single: false, shared: null };
+    const tool = { mode: loadKey(TOOL_MODE_KEY, TOOL_MODES_OK, "replace"), ds: loadKey(TOOL_DS_KEY, TOOL_DS_OK, "central"), picked: [], q: "", status: "", repl: {}, list: [], single: false, shared: null, snap: null, applying: false };
     let toolIdx = { src: null, ds: "" };
     const blankPerson = (ds, o = {}) => {
       const base = { username: "", touched: false, email: "" };
@@ -1996,7 +1996,7 @@
       }
       return toolIdx;
     }
-    const toolPickedRows = () => { const u = toolIndex().u; return tool.picked.map(k => u.get(k.toLowerCase())).filter(Boolean); };
+    const toolPickedRows = () => { const u = toolIndex().u; return tool.picked.map(k => tool.snap?.[k.toLowerCase()] || u.get(k.toLowerCase())).filter(Boolean); };
     const toolCount = items => tool.mode === "remove" || (tool.mode === "replace" && tool.single) ? tool.picked.length : items.length;
     function toolPersons() {
       const cfg = curDs();
@@ -2141,7 +2141,7 @@
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="tl-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${toolStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-tl="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-tl="clear">Bỏ chọn hết</button></div></div>
         <div id="tl-list">${renderToolList()}</div></section>` : "";
       const personSection = rem ? "" : `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "② Thông tin người mới" : "① Thông tin account mới"}</h2>${rep ? `<p id="tl-hint-single" style="display:${tool.single ? "block" : "none"}">Nhập Email mới. Mỗi account đã chọn sẽ được Deactive và tạo lại với cùng UserName, Role, Tenant, Region, ExpireDate… — chỉ khác Email.</p>` : ""}<p id="tl-hint-main" style="display:${rep && tool.single ? "none" : "block"}">UserName${cfg.ds === "central" ? ", EmployeeName, Email" : ""} là bắt buộc. ${cfg.ds === "central" ? "EmployeeCode tự lấy theo UserName; tên tự chuyển IN HOA không dấu khi xuất. Ngày sinh để trống = NULL, ngày vào làm để trống = 1900-01-01." : "Các trường khác để trống nếu chưa có."}</p></div>${rep ? `<label class="tl-check"><input type="checkbox" id="tl-single" ${tool.single ? "checked" : ""}> Giữ nguyên account, chỉ đổi Email cho tất cả account đã chọn</label>` : `<button type="button" class="btn btn-secondary" data-tl="add">${ICONS.plus} Thêm người</button>`}</div><div class="panel-body" id="tl-cards">${renderToolCards(items, v)}</div></section>`;
-      return dsSeg + seg + pickSection + personSection + `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "③" : "②"} Xem trước &amp; xuất phiếu</h2><p>${rep ? "Dòng xám là account cũ (Deactive), dòng xanh là account mới (Active) — đúng thứ tự thay thế." : rem ? "Dòng xám là account bị remove." : "Dòng xanh là account mới (Active)."}</p></div><button type="button" class="btn btn-excel" data-hover-icon="download" id="tl-export" data-tl="export" ${!cnt || v.errors ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div><div class="panel-body" id="tl-preview">${renderToolPreview(items, v)}</div></section>`;
+      return dsSeg + seg + pickSection + personSection + `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "③" : "②"} Xem trước &amp; xuất phiếu</h2><p>${rep ? "Dòng xám là account cũ (Deactive), dòng xanh là account mới (Active) — đúng thứ tự thay thế." : rem ? "Dòng xám là account bị remove." : "Dòng xanh là account mới (Active)."}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${toolSingleOn() ? `<button type="button" class="btn btn-primary" id="tl-apply" data-tl="apply" ${!cnt || v.errors || tool.applying ? "disabled" : ""}>${ICONS.refresh} Cập nhật dữ liệu</button>` : ""}<button type="button" class="btn btn-excel" data-hover-icon="download" id="tl-export" data-tl="export" ${!cnt || v.errors ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="tl-preview">${renderToolPreview(items, v)}</div></section>`;
     }
     function renderTools() {
       return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools</div><h2 class="page-title">Công Cụ Hỗ Trợ</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
@@ -2151,12 +2151,37 @@
       items.forEach(({ p }, i) => { const el = document.querySelector(`[data-msg="${i}"]`); if (el) el.outerHTML = toolMsg(v.res[i], p.touched, i); });
       const pv = $("#tl-preview"); if (pv) pv.innerHTML = renderToolPreview(items, v);
       const b = $("#tl-export"); if (b) b.disabled = !toolCount(items) || v.errors > 0;
+      const ap = $("#tl-apply"); if (ap) ap.disabled = !toolCount(items) || v.errors > 0 || tool.applying;
       const c = $("#tl-count"); if (c) c.textContent = `${tool.picked.length} đã chọn`;
     }
     function toolDrawPersons() {
       const el = $("#tl-cards"), items = toolPersons();
       if (el) el.innerHTML = renderToolCards(items, toolValidate(items));
       toolRefresh();
+    }
+    async function toolApply() {
+      if (!toolSingleOn() || tool.applying) return;
+      const cfg = curDs(), items = toolPersons(), v = toolValidate(items), rows = toolPickedRows();
+      if (!rows.length || v.errors) return;
+      const email = String(items[0].p.email || "").trim().toLowerCase();
+      const ok = await confirmDialog({ title: "Cập nhật dữ liệu?", message: `Đổi Email thành "${email}" cho ${nf(rows.length)} account trong ${cfg.label}? Các trường khác giữ nguyên. Phiếu Excel vẫn xuất được với Email cũ sau khi cập nhật.`, confirmText: "Cập nhật", danger: false });
+      if (!ok) return;
+      tool.applying = true;
+      const btn = $("#tl-apply"), restore = btn ? btn.innerHTML : null;
+      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang cập nhật…`; }
+      try {
+        tool.snap ||= {};
+        rows.forEach(r => { const k = String(r.username).trim().toLowerCase(); tool.snap[k] ||= { ...r }; });
+        const now = new Date().toISOString();
+        await upsertBatches(cfg.table, rows.map(r => ({ username: r.username, email, updated_at: now })));
+        toast(`Đã cập nhật Email cho ${nf(rows.length)} account.`, "success");
+        await loadData();
+      } catch (err) {
+        toast(`Cập nhật thất bại: ${err.message}`, "error");
+      } finally {
+        tool.applying = false;
+        const b2 = $("#tl-apply"); if (b2) { b2.innerHTML = restore || b2.innerHTML; toolRefresh(); }
+      }
     }
     async function toolExport() {
       const cfg = curDs();
@@ -2195,9 +2220,9 @@
       pg.addEventListener("click", e => {
         const t = e.target;
         const dsBtn = t.closest("[data-tl-ds]");
-        if (dsBtn) { tool.ds = dsBtn.dataset.tlDs; saveKey(TOOL_DS_KEY, tool.ds); tool.picked = []; tool.status = ""; tool.q = ""; tool.repl = {}; tool.shared = null; tool.list = []; upd.picked = []; upd.edits = {}; updLastSaved = null; $("#tool-root").innerHTML = renderToolBody(); return; }
+        if (dsBtn) { tool.ds = dsBtn.dataset.tlDs; saveKey(TOOL_DS_KEY, tool.ds); tool.picked = []; tool.status = ""; tool.q = ""; tool.repl = {}; tool.shared = null; tool.snap = null; tool.list = []; upd.picked = []; upd.edits = {}; updLastSaved = null; $("#tool-root").innerHTML = renderToolBody(); return; }
         const m = t.closest("[data-tl-mode]");
-        if (m) { tool.mode = m.dataset.tlMode; saveKey(TOOL_MODE_KEY, tool.mode); tool.status = ""; $("#tool-root").innerHTML = renderToolBody(); return; }
+        if (m) { tool.mode = m.dataset.tlMode; tool.snap = null; saveKey(TOOL_MODE_KEY, tool.mode); tool.status = ""; $("#tool-root").innerHTML = renderToolBody(); return; }
         if (tool.mode === "update") return;
         const tr = t.closest("tr[data-pk]");
         if (tr) {
@@ -2209,6 +2234,7 @@
         const a = t.closest("[data-tl]"); if (!a) return;
         const act = a.dataset.tl, i = Number(a.dataset.i);
         if (act === "export") toolExport();
+        else if (act === "apply") toolApply();
         else if (act === "add") { tool.list.push(blankPerson(tool.ds)); toolDrawPersons(); }
         else if (act === "pickall") {
           const rows = toolListRows();
@@ -2217,7 +2243,7 @@
           const have = new Set(tool.picked); rows.forEach(r => have.has(r.username) || tool.picked.push(r.username));
           $("#tl-list").innerHTML = renderToolList(); toolDrawPersons(); toast(`Đã chọn ${nf(rows.length)} account.`, "success");
         }
-        else if (act === "clear") { tool.picked = []; $("#tl-list").innerHTML = renderToolList(); toolDrawPersons(); }
+        else if (act === "clear") { tool.picked = []; tool.snap = null; $("#tl-list").innerHTML = renderToolList(); toolDrawPersons(); }
         else if (act === "remove") {
           if (tool.mode === "create") tool.list.splice(i, 1);
           else { const k = tool.picked.splice(i, 1)[0], row = [...pg.querySelectorAll("tr[data-pk]")].find(x => x.dataset.pk === k); if (row) { row.classList.remove("sel"); row.querySelector("input").checked = false; } }
