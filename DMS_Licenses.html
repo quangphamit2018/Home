@@ -2068,7 +2068,7 @@
       const newEmail = String(items[0]?.p.email || "").trim().toLowerCase();
       const cloneNew = o => cfg.ds === "central"
         ? [o.username, nz(o.description), nz(o.employee_code), nz(o.employee_name), nz(o.date_of_birth, "NULL"), nz(o.date_of_joining, "NULL"), newEmail, nz(o.role_name), nz(o.territory_hierarchy), "1", "Active"]
-        : [o.username, nz(o.role_name), nz(o.tenant), nz(o.region_code), nz(o.region), newEmail, nz(o.expire_date), "1", "1", "Active"];
+        : [o.username, nz(o.role_name), nz(o.tenant), nz(o.region_code), nz(o.region), newEmail, nz(o.expire_date), nz(o.user_active_status, "0"), nz(o.dt_active_status, "0"), "Active"];
       const news = toolSingleOn() ? toolPickedRows().map(cloneNew) : items.map(({ p }) => cfg.ds === "central"
         ? [p.username.trim(), p.desc.trim(), p.code.trim() || p.username.trim(), toolName(p.name), dt(p.dob) || "NULL", dt(p.doj) || "1900-01-01 00:00:00.000", p.email.trim().toLowerCase(), p.role.trim(), p.terr.trim(), "1", "Active"]
         : [p.username.trim(), p.role_name.trim(), p.tenant.trim(), p.region_code.trim(), p.region.trim(), (p.email || "").trim().toLowerCase(), p.expire_date.trim(), "1", "1", "Active"]);
