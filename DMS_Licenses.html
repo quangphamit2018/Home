@@ -1976,7 +1976,7 @@
     }
     const curDs = () => dsConfig(tool.ds);
 
-    const tool = { mode: loadKey(TOOL_MODE_KEY, TOOL_MODES_OK, "replace"), ds: loadKey(TOOL_DS_KEY, TOOL_DS_OK, "central"), picked: [], q: "", status: "", repl: {}, list: [] };
+    const tool = { mode: loadKey(TOOL_MODE_KEY, TOOL_MODES_OK, "replace"), ds: loadKey(TOOL_DS_KEY, TOOL_DS_OK, "central"), picked: [], q: "", status: "", repl: {}, list: [], single: false, shared: null };
     let toolIdx = { src: null, ds: "" };
     const blankPerson = (ds, o = {}) => {
       const base = { username: "", touched: false, email: "" };
@@ -2006,6 +2006,13 @@
         return tool.list.map((p, i) => ({ p, old: null, i }));
       }
       const idx = toolIndex();
+      if (tool.single) {
+        if (!tool.picked.length) return [];
+        const first = idx.u.get(tool.picked[0].toLowerCase());
+        const seed = cfg.ds === "central" ? { role: first?.role_name || TOOL_DEFAULT_ROLE } : { role_name: first?.role_name || "" };
+        tool.shared ||= blankPerson(cfg.ds, seed);
+        return [{ p: tool.shared, old: null, i: 0, shared: true }];
+      }
       return tool.picked.map((k, i) => {
         const old = idx.u.get(k.toLowerCase());
         const seed = cfg.ds === "central" ? { role: old?.role_name || TOOL_DEFAULT_ROLE } : { role_name: old?.role_name || "" };
@@ -2051,7 +2058,7 @@
       const oldRow = (o, note) => cfg.ds === "central"
         ? [o.username, nz(o.description), nz(o.employee_code), nz(o.employee_name), nz(o.date_of_birth, "NULL"), nz(o.date_of_joining, "NULL"), nz(o.email), nz(o.role_name), nz(o.territory_hierarchy), "0", note]
         : [o.username, nz(o.role_name), nz(o.tenant), nz(o.region_code), nz(o.region), nz(o.email), nz(o.expire_date), nz(o.user_active_status, "0"), nz(o.dt_active_status, "0"), note];
-      const olds = tool.mode === "replace" ? items.filter(x => x.old).map(x => oldRow(x.old, "Deactive")) : tool.mode === "remove" ? toolPickedRows().map(o => oldRow(o, "Remove")) : [];
+      const olds = tool.mode === "replace" ? (tool.single ? toolPickedRows().map(o => oldRow(o, "Deactive")) : items.filter(x => x.old).map(x => oldRow(x.old, "Deactive"))) : tool.mode === "remove" ? toolPickedRows().map(o => oldRow(o, "Remove")) : [];
       const news = items.map(({ p }) => cfg.ds === "central"
         ? [p.username.trim(), p.desc.trim(), p.code.trim() || p.username.trim(), toolName(p.name), dt(p.dob) || "NULL", dt(p.doj) || "1900-01-01 00:00:00.000", p.email.trim().toLowerCase(), p.role.trim(), p.terr.trim(), "1", "Active"]
         : [p.username.trim(), p.role_name.trim(), p.tenant.trim(), p.region_code.trim(), p.region.trim(), (p.email || "").trim().toLowerCase(), p.expire_date.trim(), "1", "1", "Active"]);
@@ -2097,11 +2104,11 @@
       const cfg = curDs();
       if (!items.length) return `<div class="empty"><strong>Chưa chọn account nào</strong>Tick chọn account cần thay thế ở bước ① để nhập thông tin người mới.</div>`;
       const F = (i, f, label, { req = false, type = "text", ph = "" } = {}) => `<div class="field"><label>${label}${req ? " *" : ""}</label><input data-i="${i}" data-f="${f}" type="${type}" value="${escapeHtml(items[i].p[f])}" placeholder="${escapeHtml(ph)}" autocomplete="off" /></div>`;
-      return items.map(({ p, old }, i) => `<div class="tl-card"><div class="tl-card-head"><div class="tl-idx">${i + 1}</div>
-        <div class="tl-old">${old ? `<span class="tl-lbl">Thay cho</span> <b>${escapeHtml(old.username)}</b> · ${escapeHtml(old[cfg.nameKey] || "")} <span class="nil">${escapeHtml(cfg.ds === "central" ? (old.description || "") : (old.role_name || ""))}</span>` : `<b>Account mới #${i + 1}</b>`}</div>
+      return items.map(({ p, old, shared }, i) => `<div class="tl-card"><div class="tl-card-head"><div class="tl-idx">${i + 1}</div>
+        <div class="tl-old">${shared ? `<span class="tl-lbl">Thay thế cho</span> <b>${nf(tool.picked.length)} account đã chọn</b>` : old ? `<span class="tl-lbl">Thay cho</span> <b>${escapeHtml(old.username)}</b> · ${escapeHtml(old[cfg.nameKey] || "")} <span class="nil">${escapeHtml(cfg.ds === "central" ? (old.description || "") : (old.role_name || ""))}</span>` : `<b>Account mới #${i + 1}</b>`}</div>
         ${toolMsg(v.res[i], p.touched, i)}
         ${old ? `<button type="button" class="btn btn-plain" data-tl="copy" data-i="${i}" title="Copy thông tin từ account cũ">${ICONS.copy}</button>` : ""}
-        <button type="button" class="btn btn-plain" data-tl="remove" data-i="${i}" title="Bỏ dòng này">${ICONS.close}</button></div>
+        ${shared ? "" : `<button type="button" class="btn btn-plain" data-tl="remove" data-i="${i}" title="Bỏ dòng này">${ICONS.close}</button>`}</div>
         <div class="tl-grid">${cfg.personFields.map(([f, label, req, type, ph]) => F(i, f, label, { req: !!req, type: type || "text", ph: ph || "" })).join("")}</div></div>`).join("");
     }
     function renderToolPreview(items, v) {
@@ -2123,7 +2130,7 @@
         <div class="toolbar"><div class="search"><span class="search-icon">${ICONS.search}</span><input id="tl-search" value="${escapeHtml(tool.q)}" placeholder="Tìm hoặc dán nhiều UserName…" autocomplete="off" /></div>
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="tl-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${toolStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-tl="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-tl="clear">Bỏ chọn hết</button></div></div>
         <div id="tl-list">${renderToolList()}</div></section>` : "";
-      const personSection = rem ? "" : `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "② Thông tin người mới" : "① Thông tin account mới"}</h2><p>UserName${cfg.ds === "central" ? ", EmployeeName, Email" : ""} là bắt buộc. ${cfg.ds === "central" ? "EmployeeCode tự lấy theo UserName; tên tự chuyển IN HOA không dấu khi xuất. Ngày sinh để trống = NULL, ngày vào làm để trống = 1900-01-01." : "Các trường khác để trống nếu chưa có."}</p></div>${rep ? "" : `<button type="button" class="btn btn-secondary" data-tl="add">${ICONS.plus} Thêm người</button>`}</div><div class="panel-body" id="tl-cards">${renderToolCards(items, v)}</div></section>`;
+      const personSection = rem ? "" : `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "② Thông tin người mới" : "① Thông tin account mới"}</h2><p>UserName${cfg.ds === "central" ? ", EmployeeName, Email" : ""} là bắt buộc. ${cfg.ds === "central" ? "EmployeeCode tự lấy theo UserName; tên tự chuyển IN HOA không dấu khi xuất. Ngày sinh để trống = NULL, ngày vào làm để trống = 1900-01-01." : "Các trường khác để trống nếu chưa có."}</p></div>${rep ? `<label class="tl-check"><input type="checkbox" id="tl-single" ${tool.single ? "checked" : ""}> 1 người thay thế cho tất cả account đã chọn</label>` : `<button type="button" class="btn btn-secondary" data-tl="add">${ICONS.plus} Thêm người</button>`}</div><div class="panel-body" id="tl-cards">${renderToolCards(items, v)}</div></section>`;
       return dsSeg + seg + pickSection + personSection + `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "③" : "②"} Xem trước &amp; xuất phiếu</h2><p>${rep ? "Dòng xám là account cũ (Deactive), dòng xanh là account mới (Active) — đúng thứ tự thay thế." : rem ? "Dòng xám là account bị remove." : "Dòng xanh là account mới (Active)."}</p></div><button type="button" class="btn btn-excel" data-hover-icon="download" id="tl-export" data-tl="export" ${!cnt || v.errors ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div><div class="panel-body" id="tl-preview">${renderToolPreview(items, v)}</div></section>`;
     }
     function renderTools() {
@@ -2178,7 +2185,7 @@
       pg.addEventListener("click", e => {
         const t = e.target;
         const dsBtn = t.closest("[data-tl-ds]");
-        if (dsBtn) { tool.ds = dsBtn.dataset.tlDs; saveKey(TOOL_DS_KEY, tool.ds); tool.picked = []; tool.status = ""; tool.q = ""; tool.repl = {}; tool.list = []; upd.picked = []; upd.edits = {}; updLastSaved = null; $("#tool-root").innerHTML = renderToolBody(); return; }
+        if (dsBtn) { tool.ds = dsBtn.dataset.tlDs; saveKey(TOOL_DS_KEY, tool.ds); tool.picked = []; tool.status = ""; tool.q = ""; tool.repl = {}; tool.shared = null; tool.list = []; upd.picked = []; upd.edits = {}; updLastSaved = null; $("#tool-root").innerHTML = renderToolBody(); return; }
         const m = t.closest("[data-tl-mode]");
         if (m) { tool.mode = m.dataset.tlMode; saveKey(TOOL_MODE_KEY, tool.mode); tool.status = ""; $("#tool-root").innerHTML = renderToolBody(); return; }
         if (tool.mode === "update") return;
@@ -2232,7 +2239,7 @@
         t.setRangeText((e.clipboardData || window.clipboardData).getData("text").replace(/[\r\n\t;,]+/g, " ").trim() + " ", t.selectionStart, t.selectionEnd, "end");
         t.dispatchEvent(new Event("input", { bubbles: true }));
       });
-      pg.addEventListener("change", e => { if (tool.mode === "update") return; if (e.target.id === "tl-status") { tool.status = e.target.value; $("#tl-list").innerHTML = renderToolList(); } });
+      pg.addEventListener("change", e => { if (tool.mode === "update") return; if (e.target.id === "tl-single") { tool.single = e.target.checked; toolDrawPersons(); return; } if (e.target.id === "tl-status") { tool.status = e.target.value; $("#tl-list").innerHTML = renderToolList(); } });
     }
 
     /* =====================================================================
