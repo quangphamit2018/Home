@@ -12557,14 +12557,15 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     const weeklyColumns = [
       {label:"CR ID",             width:13, value:c=>c.cr_id},
       {label:"Description",       width:32, value:c=>c.rename_folder},
-      {label:"Priority",         width:12, value:c=>c.priority},
-      {label:"Status",           width:17, value:c=>c.status},
-      {label:"Sub-Status",       width:18, value:c=>c.sub_status},
-      {label:"Deadline",         width:14, date:true, value:c=>c.deadline},
-      {label:"BRD",              width:11, value:c=>crDocumentStatusLabel(c, "BRD")},
-      {label:"FSD",              width:11, value:c=>crDocumentStatusLabel(c, "FSD")},
-      {label:"Loop Mail Header", width:38, value:c=>c.loop_mail_header},
-      {label:"Progress",         width:44, value:c=>c.progress},
+      {label:"Priority",          width:12, value:c=>c.priority},
+      {label:"Status",            width:17, value:c=>c.status},
+      {label:"Sub-Status",        width:18, value:c=>c.sub_status},
+      {label:"BRD",               width:11, value:c=>crDocumentStatusLabel(c, "BRD")},
+      {label:"FSD",               width:11, value:c=>crDocumentStatusLabel(c, "FSD")},
+      {label:"ETA",               width:14, date:true, value:c=>c.eta || c.deadline},
+      {label:"Loop Mail Header",  width:38, value:c=>c.loop_mail_header},
+      {label:"Progress",          width:44, value:c=>c.progress},
+      {label:"Note",              width:38, value:c=>c.note},
     ];
     const weeklySheet = workbook.addWorksheet("Report_Weekly");
     reportStyleSheet(
@@ -12572,7 +12573,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
       "BÁO CÁO TUẦN (WEEKLY REPORT)",
       "Tóm tắt nhanh theo CR đã chọn — dùng để gửi báo cáo tiến độ định kỳ",
       weeklyColumns,
-      { defaultWidth:20, specialWidths:{ B:34, I:38, J:46 } }
+      { defaultWidth:20, specialWidths:{ B:34, I:38, J:46, K:38 } }
     );
     selectedCrList.forEach((record, index)=>{
       const row = weeklySheet.addRow([]);
@@ -13103,14 +13104,19 @@ async function downloadCombinedWeeklyReport(selectedKeys){
     workbook.properties = { title:"CR Progress Report", subject:"CR / UAT / Release progress" };
 
     // ---- Sheet "Report_Weekly" — cột, độ rộng, tiêu đề, màu sắc giống hệt DMS.
-    // ---- 2 sheet riêng (DMS, e-B2B) — bỏ cột Deadline, BRD, FSD, Loop Mail Header.
+    // ---- 2 sheet riêng (DMS, e-B2B) — đúng 11 cột như Report_Weekly của DMS.
     const weeklyColumns = [
-      {label:"CR ID",          width:13, value:i=>i.record.cr_id},
-      {label:"Description",    width:32, value:i=>i.record.rename_folder},
-      {label:"Priority",       width:12, value:i=>i.record.priority},
-      {label:"Status",         width:17, value:i=>i.record.status},
-      {label:"Sub-Status",     width:18, value:i=>i.record.sub_status},
-      {label:"Progress",       width:44, value:i=>i.record.progress},
+      {label:"CR ID",            width:13, value:i=>i.record.cr_id},
+      {label:"Description",      width:32, value:i=>i.record.rename_folder},
+      {label:"Priority",         width:12, value:i=>i.record.priority},
+      {label:"Status",           width:17, value:i=>i.record.status},
+      {label:"Sub-Status",       width:18, value:i=>i.record.sub_status},
+      {label:"BRD",              width:11, value:i=>combinedHasDocument(i, "BRD") ? "Có" : "Chưa có"},
+      {label:"FSD",              width:11, value:i=>combinedHasDocument(i, "FSD") ? "Có" : "Chưa có"},
+      {label:"ETA",              width:14, date:true, value:i=>i.record.eta || i.record.deadline},
+      {label:"Loop Mail Header", width:38, value:i=>i.record.loop_mail_header},
+      {label:"Progress",         width:44, value:i=>i.record.progress},
+      {label:"Note",             width:38, value:i=>i.record.note},
     ];
     const addCombinedSheet = (sheetName, tableName, subtitle, rows)=>{
       const sheet = workbook.addWorksheet(sheetName);
@@ -13119,7 +13125,7 @@ async function downloadCombinedWeeklyReport(selectedKeys){
         "BÁO CÁO TUẦN (WEEKLY REPORT)",
         subtitle,
         weeklyColumns,
-        { defaultWidth:20, specialWidths:{ B:34, F:46 } }
+        { defaultWidth:20, specialWidths:{ B:34, I:38, J:46, K:38 } }
       );
       rows.forEach((item, index)=>{
         const row = sheet.addRow([]);
