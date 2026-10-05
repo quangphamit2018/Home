@@ -1214,6 +1214,7 @@
     const LICENSE_SETTINGS_TABLE = "app_settings";
     const LICENSE_SETTINGS_KEY = "max_licenses";
     const DEFAULT_MAX_LICENSES = 215;
+    const PICK_ALL_MAX = 1000; // giới hạn "Chọn tất cả kết quả" (trước đây 200)
 
     // Số dòng mỗi trang cho phép người dùng chọn; nhớ lựa chọn gần nhất trên trình duyệt
     const PAGE_SIZES = [10, 50, 100, 200, 500];
@@ -2195,7 +2196,7 @@
         else if (act === "pickall") {
           const rows = toolListRows();
           if (!rows.length) return toast("Không có kết quả để chọn.", "error");
-          if (rows.length > 200) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa 200 account rồi chọn.`, "error");
+          if (rows.length > PICK_ALL_MAX) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa ${nf(PICK_ALL_MAX)} account rồi chọn.`, "error");
           const have = new Set(tool.picked); rows.forEach(r => have.has(r.username) || tool.picked.push(r.username));
           $("#tl-list").innerHTML = renderToolList(); toolDrawPersons(); toast(`Đã chọn ${nf(rows.length)} account.`, "success");
         }
@@ -2459,7 +2460,7 @@
         else if (act === "pickall") {
           const rows = updListRows();
           if (!rows.length) return toast("Không có kết quả để chọn.", "error");
-          if (rows.length > 200) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa 200 account rồi chọn.`, "error");
+          if (rows.length > PICK_ALL_MAX) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa ${nf(PICK_ALL_MAX)} account rồi chọn.`, "error");
           const have = new Set(upd.picked); rows.forEach(r => have.has(r.username) || upd.picked.push(r.username));
           updLastSaved = null;
           $("#upd-list").innerHTML = renderUpdList(); updDrawCards(); toast(`Đã chọn ${nf(rows.length)} account.`, "success");
