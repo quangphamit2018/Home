@@ -113,6 +113,10 @@
       box-shadow: inset 3px 0 0 var(--gold), 0 8px 20px rgba(0, 0, 0, .28);
     }
     .nav button:focus-visible, .signout:focus-visible { outline-color: var(--gold); }
+    .nav button.nav-parent.group-on { color: #fff; font-weight: 650; }
+    .nav button.nav-sub { padding: 9px 12px 9px 40px; font-size: 13px; gap: 10px; margin-top: -2px; }
+    .nav button.nav-sub::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .55; flex: 0 0 auto; margin-left: -4px; }
+    .nav button.nav-sub.active::before { opacity: 1; background: var(--gold); }
     .nav svg { width: 17px; height: 17px; flex: 0 0 auto; }
     .sidebar-foot { margin-top: auto; padding: 16px 4px 0; border-top: 1px solid rgba(255, 255, 255, .12); }
     .user-card {
@@ -1120,6 +1124,7 @@
         ["dms", "DMS Userlist", ICONS.users, "users"],
         ["central", "Central User list", ICONS.building, "building"],
         ["tools", "Công Cụ Hỗ Trợ", ICONS.tools, "tools"],
+        ["tools_mdm", "Công Cụ Hỗ Trợ", ICONS.tools, "tools"],
         ...(isAdmin() ? [["admin", "Quản lý dữ liệu", ICONS.database, "database"]] : [])
       ];
     }
@@ -1133,6 +1138,7 @@
         b.classList.toggle("active", on);
         if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
       });
+      document.querySelector("#sidebar .nav-parent")?.classList.toggle("group-on", state.tab === "tools" || state.tab === "tools_mdm");
       const h1 = document.querySelector(".topbar h1");
       if (h1 && h1.textContent !== active[1]) h1.textContent = active[1];
       MI.to(document.querySelector(".topbar-icon morph-icon"), ICON_D[active[3]][0]);
@@ -1190,7 +1196,7 @@
     function goTab(id) {
       setSidebar(false);
       if (id === state.tab) return;
-      state.tab = id; saveKey(TAB_KEY, id); state.search = String(savedSearch[id] || ""); state.page = 1;
+      state.tab = id; saveKey(TAB_KEY, id); if (TEAMS_OK.includes(id)) saveKey(TEAM_KEY, id); state.search = String(savedSearch[id] || ""); state.page = 1;
       for (const k in countMemo) delete countMemo[k];
       pageAnim = true; render();
       window.scrollTo(0, 0);
@@ -1225,8 +1231,8 @@
     }
     function savePageSize(v) { try { localStorage.setItem(PAGE_SIZE_KEY, String(v)); } catch (_) {} }
     // Nhớ tab đang mở (và chế độ trong Công Cụ Hỗ Trợ) để F5 / tải lại trang vẫn giữ nguyên
-    const TAB_KEY = "masterdata_tab", TOOL_MODE_KEY = "masterdata_tool_mode";
-    const TABS_OK = ["dashboard", "dms", "central", "tools", "admin"], TOOL_MODES_OK = ["replace", "create", "remove", "update"];
+    const TAB_KEY = "masterdata_tab", TOOL_MODE_KEY = "masterdata_tool_mode", TEAM_KEY = "masterdata_tools_team", TEAMS_OK = ["tools", "tools_mdm"];
+    const TABS_OK = ["dashboard", "dms", "central", "tools", "tools_mdm", "admin"], TOOL_MODES_OK = ["replace", "create", "remove", "update"];
     function loadKey(key, allowed, fallback) { try { const v = localStorage.getItem(key); return allowed.includes(v) ? v : fallback; } catch (_) { return fallback; } }
     function saveKey(key, v) { try { localStorage.setItem(key, v); } catch (_) {} }
     // Bộ lọc theo điều kiện license ở tab Central User list. Mặc định "used" (đúng logic tính license đang dùng:
@@ -1490,7 +1496,9 @@
       return `<div class="app-shell">
         <aside class="sidebar" id="sidebar">
           <div class="brand"><div class="brand-mark">${ICONS.database}</div><div><strong>Masterdata DMS</strong><small>CCVN data workspace</small></div></div>
-          <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.map(([id, label, icon]) => `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
+          <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.filter(t => t[0] !== "tools_mdm").map(([id, label, icon]) => id === "tools"
+            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? " group-on" : ""}" data-tools-parent>${icon}<span>${label}</span></button>` + [["tools", "L1 Team"], ["tools_mdm", "MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("")
+            : `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
           <div class="sidebar-foot">
             <div class="user-card">
               <div class="user-chip"><div class="avatar">${initials(state.profile.display_name || state.profile.email)}</div><div><b>${escapeHtml(state.profile.display_name || "Người dùng")}</b><span>${escapeHtml(roleLabel(state.profile.role))}</span></div></div>
@@ -1515,6 +1523,7 @@
       if (state.tab === "dashboard") return renderDashboard();
       if (state.tab === "dms" || state.tab === "central") return renderDataset();
       if (state.tab === "tools") return renderTools();
+      if (state.tab === "tools_mdm") return renderMdm();
       if (state.tab === "admin" && isAdmin()) return renderAdmin();
       return renderDashboard();
     }
@@ -1897,6 +1906,7 @@
       bindDatasetBody();
       bindToolEvents();
       bindUpdateEvents();
+      bindMdmEvents();
       $("#file-input")?.addEventListener("change", e => e.target.files[0] && importWorkbook(e.target.files[0]));
       const dropzone = $("#dropzone");
       if (dropzone) {
@@ -2146,8 +2156,30 @@
       const personSection = rem ? "" : `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "② Thông tin người mới" : "① Thông tin account mới"}</h2>${rep ? `<p id="tl-hint-single" style="display:${tool.single ? "block" : "none"}">Nhập Email mới. Mỗi account đã chọn sẽ được Deactive và tạo lại với cùng UserName, Role, Tenant, Region, ExpireDate… — chỉ khác Email.</p>` : ""}<p id="tl-hint-main" style="display:${rep && tool.single ? "none" : "block"}">UserName${cfg.ds === "central" ? ", EmployeeName, Email" : ""} là bắt buộc. ${cfg.ds === "central" ? "EmployeeCode tự lấy theo UserName; tên tự chuyển IN HOA không dấu khi xuất. Ngày sinh để trống = NULL, ngày vào làm để trống = 1900-01-01." : "Các trường khác để trống nếu chưa có."}</p></div>${rep ? `<label class="tl-check"><input type="checkbox" id="tl-single" ${tool.single ? "checked" : ""}> Giữ nguyên account, chỉ đổi Email cho tất cả account đã chọn</label>` : `<button type="button" class="btn btn-secondary" data-tl="add">${ICONS.plus} Thêm người</button>`}</div><div class="panel-body" id="tl-cards">${renderToolCards(items, v)}</div></section>`;
       return dsSeg + seg + pickSection + personSection + `<section class="panel tl-panel"><div class="panel-head"><div><h2>${rep ? "③" : "②"} Xem trước &amp; xuất phiếu</h2><p>${rep ? "Dòng xám là account cũ (Deactive), dòng xanh là account mới (Active) — đúng thứ tự thay thế." : rem ? "Dòng xám là account bị remove." : "Dòng xanh là account mới (Active)."}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${toolSingleOn() ? `<button type="button" class="btn btn-primary" id="tl-apply" data-tl="apply" ${!cnt || v.errors || tool.applying ? "disabled" : ""}>${ICONS.refresh} Cập nhật dữ liệu</button>` : ""}<button type="button" class="btn btn-excel" data-hover-icon="download" id="tl-export" data-tl="export" ${!cnt || v.errors ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="tl-preview">${renderToolPreview(items, v)}</div></section>`;
     }
+    // ---------- Công Cụ Hỗ Trợ › MDM Team ----------
+    const MDM_KEY = "masterdata_mdm_mode";
+    const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"]];
+    let mdmMode = loadKey(MDM_KEY, MDM_MODES.map(m => m[0]), "stock-init");
+    function renderMdmBody() {
+      const m = MDM_MODES.find(x => x[0] === mdmMode) || MDM_MODES[0];
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>${escapeHtml(m[1])}</h2><p>Chức năng của MDM Team.</p></div></div><div class="panel-body"><div class="empty"><strong>Chức năng đang được xây dựng</strong>Đang chờ mẫu phiếu Excel và quy tắc xử lý cho “${escapeHtml(m[1])}”.</div></div></section>`;
+    }
+    function renderMdm() {
+      return `<div id="mdm-page"><div class="header-row"><div><div class="eyebrow">Support tools · MDM Team</div><h2 class="page-title">MDM Team</h2><p class="page-subtitle">Tạo tồn kho ban đầu, tăng/giảm tồn và cài đặt giá cho SKU.</p></div></div>
+        <div class="tl-seg">${MDM_MODES.map(([k, l, ic]) => `<button type="button" data-mdm-mode="${k}" class="${mdmMode === k ? "on" : ""}">${ICONS[ic]} ${l}</button>`).join("")}</div>
+        <div id="mdm-root">${renderMdmBody()}</div></div>`;
+    }
+    function bindMdmEvents() {
+      const pg = $("#mdm-page"); if (!pg) return;
+      pg.addEventListener("click", e => {
+        const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
+        mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
+        pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
+        $("#mdm-root").innerHTML = renderMdmBody();
+      });
+    }
     function renderTools() {
-      return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools</div><h2 class="page-title">Công Cụ Hỗ Trợ</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
+      return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools · L1 Team</div><h2 class="page-title">L1 Team</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
     }
     function toolRefresh() {
       const items = toolPersons(), v = toolValidate(items);
@@ -2939,6 +2971,7 @@
     document.addEventListener("click", e => {
       const tabBtn = e.target.closest("[data-tab]");
       if (tabBtn && state.profile && document.querySelector(".app-shell")) goTab(tabBtn.dataset.tab);
+      if (e.target.closest("[data-tools-parent]") && state.profile && document.querySelector(".app-shell")) goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools"));
       if (e.target.closest("#mobile-menu")) setSidebar(!document.querySelector("#sidebar")?.classList.contains("open"));
       if (e.target.closest("#scrim")) setSidebar(false);
       if (e.target.closest("#logout")) logout();
