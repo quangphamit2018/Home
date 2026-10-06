@@ -113,9 +113,17 @@
       box-shadow: inset 3px 0 0 var(--gold), 0 8px 20px rgba(0, 0, 0, .28);
     }
     .nav button:focus-visible, .signout:focus-visible { outline-color: var(--gold); }
-    .nav button.nav-parent.group-on { color: #fff; font-weight: 650; }
-    .nav button.nav-sub { padding: 9px 12px 9px 40px; font-size: 13px; gap: 10px; margin-top: -2px; }
-    .nav button.nav-sub::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .55; flex: 0 0 auto; margin-left: -4px; }
+    .nav button.nav-parent { width: 100%; }
+    .nav button.nav-parent.group-on { color: #fff; font-weight: 650; background: rgba(255, 255, 255, .12); box-shadow: inset 3px 0 0 var(--gold); }
+    .nav button.nav-parent .nav-chev { width: 15px; height: 15px; margin-left: auto; opacity: .85; transition: transform .3s var(--ease); }
+    .nav button.nav-parent[aria-expanded="false"] .nav-chev { transform: rotate(-90deg); }
+    .nav-sub-wrap { display: grid; grid-template-rows: 1fr; margin-top: -2px; transition: grid-template-rows .3s var(--ease), margin-top .3s var(--ease), opacity .25s; }
+    .nav-sub-wrap.collapsed { grid-template-rows: 0fr; margin-top: -5px; opacity: 0; pointer-events: none; }
+    .nav-sub-wrap.collapsed .nav-sub-inner { visibility: hidden; transition: visibility 0s .3s; }
+    .nav-sub-inner { overflow: hidden; min-height: 0; display: grid; gap: 4px; position: relative; }
+    .nav-sub-inner::before { content: ""; position: absolute; left: 23px; top: 6px; bottom: 6px; width: 1px; background: rgba(255, 255, 255, .18); }
+    .nav button.nav-sub { padding: 9px 12px 9px 38px; font-size: 13px; gap: 10px; }
+    .nav button.nav-sub::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .55; flex: 0 0 auto; margin-left: -17px; }
     .nav button.nav-sub.active::before { opacity: 1; background: var(--gold); }
     .nav svg { width: 17px; height: 17px; flex: 0 0 auto; }
     .sidebar-foot { margin-top: auto; padding: 16px 4px 0; border-top: 1px solid rgba(255, 255, 255, .12); }
@@ -1138,7 +1146,7 @@
         b.classList.toggle("active", on);
         if (on) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
       });
-      document.querySelector("#sidebar .nav-parent")?.classList.toggle("group-on", state.tab === "tools" || state.tab === "tools_mdm");
+      syncToolsNav();
       const h1 = document.querySelector(".topbar h1");
       if (h1 && h1.textContent !== active[1]) h1.textContent = active[1];
       MI.to(document.querySelector(".topbar-icon morph-icon"), ICON_D[active[3]][0]);
@@ -1146,6 +1154,14 @@
       page.innerHTML = renderPage();
       bindAppEvents();
       afterPageRender();
+    }
+    function syncToolsNav() {
+      const p = document.querySelector("#sidebar .nav-parent"); if (!p) return;
+      const inG = state.tab === "tools" || state.tab === "tools_mdm";
+      p.classList.toggle("group-on", inG && toolsOpen);
+      p.classList.toggle("active", inG && !toolsOpen);   // thu lại → tab cha mang dấu "đang chọn"
+      p.setAttribute("aria-expanded", String(toolsOpen));
+      document.querySelector("#nav-tools-sub")?.classList.toggle("collapsed", !toolsOpen);
     }
     function afterPageRender() {
       const page = document.querySelector(".page"); if (!page) return;
@@ -1161,7 +1177,7 @@
       const jump = instant || !nav.classList.contains("has-indicator");
       if (jump) ind.style.transition = "none";
       ind.style.height = act.offsetHeight + "px";
-      ind.style.transform = `translate3d(0, ${act.offsetTop}px, 0)`;
+      ind.style.transform = `translate3d(0, ${Math.round(act.getBoundingClientRect().top - nav.getBoundingClientRect().top)}px, 0)`;
       ind.style.opacity = "1"; nav.classList.add("has-indicator");
       if (jump) { void ind.offsetWidth; ind.style.transition = ""; }
     }
@@ -1231,7 +1247,8 @@
     }
     function savePageSize(v) { try { localStorage.setItem(PAGE_SIZE_KEY, String(v)); } catch (_) {} }
     // Nhớ tab đang mở (và chế độ trong Công Cụ Hỗ Trợ) để F5 / tải lại trang vẫn giữ nguyên
-    const TAB_KEY = "masterdata_tab", TOOL_MODE_KEY = "masterdata_tool_mode", TEAM_KEY = "masterdata_tools_team", TEAMS_OK = ["tools", "tools_mdm"];
+    const TAB_KEY = "masterdata_tab", TOOL_MODE_KEY = "masterdata_tool_mode", TEAM_KEY = "masterdata_tools_team", TEAMS_OK = ["tools", "tools_mdm"], TOOLS_OPEN_KEY = "masterdata_tools_open";
+    let toolsOpen = loadKey(TOOLS_OPEN_KEY, ["1", "0"], "1") === "1";   // nhóm "Công Cụ Hỗ Trợ" đang xổ xuống hay thu lại
     const TABS_OK = ["dashboard", "dms", "central", "tools", "tools_mdm", "admin"], TOOL_MODES_OK = ["replace", "create", "remove", "update"];
     function loadKey(key, allowed, fallback) { try { const v = localStorage.getItem(key); return allowed.includes(v) ? v : fallback; } catch (_) { return fallback; } }
     function saveKey(key, v) { try { localStorage.setItem(key, v); } catch (_) {} }
@@ -1497,7 +1514,7 @@
         <aside class="sidebar" id="sidebar">
           <div class="brand"><div class="brand-mark">${ICONS.database}</div><div><strong>Masterdata DMS</strong><small>CCVN data workspace</small></div></div>
           <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.filter(t => t[0] !== "tools_mdm").map(([id, label, icon]) => id === "tools"
-            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? " group-on" : ""}" data-tools-parent>${icon}<span>${label}</span></button>` + [["tools", "L1 Team"], ["tools_mdm", "MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("")
+            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? (toolsOpen ? " group-on" : " active") : ""}" data-tools-parent aria-expanded="${toolsOpen}" aria-controls="nav-tools-sub">${icon}<span>${label}</span><svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="nav-sub-wrap${toolsOpen ? "" : " collapsed"}" id="nav-tools-sub"><div class="nav-sub-inner">` + [["tools", "L1 Team"], ["tools_mdm", "MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("") + `</div></div>`
             : `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
           <div class="sidebar-foot">
             <div class="user-card">
@@ -2971,7 +2988,11 @@
     document.addEventListener("click", e => {
       const tabBtn = e.target.closest("[data-tab]");
       if (tabBtn && state.profile && document.querySelector(".app-shell")) goTab(tabBtn.dataset.tab);
-      if (e.target.closest("[data-tools-parent]") && state.profile && document.querySelector(".app-shell")) goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools"));
+      if (e.target.closest("[data-tools-parent]") && state.profile && document.querySelector(".app-shell")) {
+        const inG = state.tab === "tools" || state.tab === "tools_mdm";
+        if (!inG) { toolsOpen = true; saveKey(TOOLS_OPEN_KEY, "1"); goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools")); syncToolsNav(); }
+        else { toolsOpen = !toolsOpen; saveKey(TOOLS_OPEN_KEY, toolsOpen ? "1" : "0"); syncToolsNav(); positionNavIndicator(); setTimeout(() => positionNavIndicator(), 330); }
+      }
       if (e.target.closest("#mobile-menu")) setSidebar(!document.querySelector("#sidebar")?.classList.contains("open"));
       if (e.target.closest("#scrim")) setSidebar(false);
       if (e.target.closest("#logout")) logout();
