@@ -1002,6 +1002,51 @@
       .scrim.show { opacity: 1; pointer-events: auto; }
     }
     @media (hover: none) { .stat-card:hover, button.table-item:hover, .nav button:not(.active):hover { transform: none; } }
+  
+    /* ---- MDM · Tăng/Giảm tồn ---- */
+    .adj-dir { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .adj-dir button { text-align: left; display: flex; gap: 14px; align-items: center; padding: 14px 16px; border: 1.5px solid var(--line-strong); border-radius: 14px; background: #fff; color: var(--ink); transition: .18s; }
+    .adj-dir button:hover { border-color: var(--brand-light); }
+    .adj-dir .sign { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 22px; font-weight: 800; background: var(--surface-soft); color: var(--muted); flex: none; }
+    .adj-dir strong { display: block; font-size: 14px; }
+    .adj-dir small { color: var(--muted); font-size: 11.5px; }
+    .adj-dir button.on.inc { border-color: var(--success); background: var(--success-soft); }
+    .adj-dir button.on.inc .sign { background: var(--success); color: #fff; }
+    .adj-dir button.on.dec { border-color: var(--brand); background: var(--brand-soft); }
+    .adj-dir button.on.dec .sign { background: var(--g-brand); color: #fff; }
+    .adj-cfg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 16px; background: var(--surface-soft); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 18px; }
+    .adj-cfg .field.bad input { border-color: var(--danger); background: var(--danger-soft); }
+    .adj-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .adj-bar h3 { margin: 0; font-size: 13.5px; }
+    .adj-bar h3 small { font-weight: 500; color: var(--muted); margin-left: 6px; }
+    .adj-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .adj-chip { font-size: 12px; font-weight: 650; padding: 5px 11px; border-radius: 99px; background: #f4eeee; color: var(--ink-2); }
+    .adj-chip.ok { background: var(--success-soft); color: var(--success); }
+    .adj-chip.err { background: var(--danger-soft); color: var(--danger); }
+    .adj-chip.warn { background: var(--warning-soft); color: var(--warning); }
+    .adj-grid { border: 1px solid var(--line-strong); border-radius: 14px; background: #fff; max-height: 440px; overflow: auto; }
+    .adj-head, .adj-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr) 44px; align-items: center; }
+    .adj-head { position: sticky; top: 0; z-index: 2; background: linear-gradient(#fff6f5, #fdeceb); border-bottom: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 700; color: var(--brand-dark); text-transform: uppercase; letter-spacing: .04em; }
+    .adj-head span { padding: 11px 12px; }
+    .adj-head em { font-style: normal; text-transform: none; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+    .adj-row { border-bottom: 1px solid var(--line); }
+    .adj-row:last-child { border-bottom: 0; }
+    .adj-row:nth-child(even) { background: #fffafa; }
+    .adj-n { text-align: center; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .adj-row input { width: 100%; border: 0; border-left: 1px solid var(--line); background: transparent; padding: 11px 12px; font: 600 13.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink); outline: none; }
+    .adj-row input.num { text-align: right; }
+    .adj-row input:focus { background: #fff; box-shadow: inset 0 0 0 2px var(--brand-light); }
+    .adj-row input.bad { background: var(--danger-soft); box-shadow: inset 0 0 0 1.5px var(--danger); color: var(--danger); }
+    .adj-row input.dup { background: var(--warning-soft); }
+    .adj-row .adj-del { border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; padding: 8px; border-radius: 8px; }
+    .adj-row .adj-del:hover { color: var(--danger); background: var(--danger-soft); }
+    .adj-tip { margin: 10px 2px 0; font-size: 12px; color: var(--muted); }
+    .adj-tip kbd { font: 600 11px ui-monospace, Consolas, monospace; background: #fff; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--ink-2); }
+    .adj-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line-strong); }
+    .adj-foot .meta { font-size: 12px; color: var(--muted); }
+    .adj-foot .meta b { color: var(--ink-2); }
+    @media (max-width: 900px) { .adj-cfg { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body class="auth">
@@ -2177,50 +2222,94 @@
     const MDM_KEY = "masterdata_mdm_mode";
     const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"]];
     let mdmMode = loadKey(MDM_KEY, MDM_MODES.map(m => m[0]), "stock-init");
-    /* ---- Tăng tồn / Giảm tồn: xuất CSV UTF-16 LE BOM, không có dòng trống cuối ---- */
+    /* ---- Tăng tồn / Giảm tồn: lưới nhập ItemCode + UOM0, xuất CSV UTF-16 LE BOM, không có dòng trống cuối ---- */
     const ADJ_COLS = ["DocumentDate", "AdjustmentDescription", "WareHouseCode", "StorageLocationCode", "ItemCode", "ItemTypeCode", "SubCode", "UOM0", "UOM1", "ProductionDate", "ExpireDate", "Notes", "Reason"];
     const ADJ_DIR = { increase: ["tangton", "Stock Audit - Stock increase", "Tăng tồn"], decrease: ["giamton", "Stock Audit - Stock decrease", "Giảm tồn"] };
     const adjToday = () => { const d = new Date(); return [String(d.getDate()).padStart(2, "0"), String(d.getMonth() + 1).padStart(2, "0"), d.getFullYear()].join("/"); };
-    const mdmAdj = { dir: "increase", date: adjToday(), wh: "MW001", sl: "RL001", type: "1", text: "" };
+    const adjBlank = () => ({ item: "", qty: "" });
+    const mdmAdj = { dir: "increase", date: adjToday(), wh: "MW001", sl: "RL001", type: "1", rows: [adjBlank()] };
     function adjParse() {
-      const [desc, reason] = ADJ_DIR[mdmAdj.dir], rows = [], errs = [];
-      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(mdmAdj.date.trim())) errs.push("DocumentDate phải có dạng dd/mm/yyyy.");
-      if (!mdmAdj.wh.trim() || !mdmAdj.sl.trim()) errs.push("Thiếu WareHouseCode hoặc StorageLocationCode.");
-      mdmAdj.text.split(/\r?\n/).forEach((ln, i) => {
-        if (!ln.trim()) return;
-        const [item, qty] = ln.trim().split(/[\t,;\s]+/);
-        if (!item || !/^-?\d+(\.\d+)?$/.test(qty || "") || Number(qty) === 0) return errs.push(`Dòng ${i + 1}: cần "ItemCode  Số lượng" (số lượng khác 0).`);
-        const q = (mdmAdj.dir === "decrease" ? "-" : "") + qty.replace("-", ""); // giảm tồn luôn ra số âm, tăng tồn luôn ra số dương
-        rows.push([mdmAdj.date.trim(), desc, mdmAdj.wh.trim(), mdmAdj.sl.trim(), item, mdmAdj.type.trim() || "1", "", q, "", "", "", "", reason]);
+      const [desc, reason] = ADJ_DIR[mdmAdj.dir], out = [], bad = {}, cfgBad = {}, seen = {}, dup = {};
+      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(mdmAdj.date.trim())) cfgBad.date = 1;
+      ["wh", "sl", "type"].forEach(k => { if (!mdmAdj[k].trim()) cfgBad[k] = 1; });
+      let total = 0;
+      mdmAdj.rows.forEach((r, i) => {
+        const item = r.item.trim(), qty = r.qty.trim();
+        if (!item && !qty) return;
+        const okQty = /^-?\d+(\.\d+)?$/.test(qty) && Number(qty) !== 0;
+        if (!item || !okQty) { bad[i] = { item: !item, qty: !okQty }; return; }
+        const q = (mdmAdj.dir === "decrease" ? "-" : "") + qty.replace("-", ""); // giảm tồn luôn ra số âm
+        total += Number(q); if (seen[item] != null) dup[i] = dup[seen[item]] = 1; else seen[item] = i;
+        out.push([mdmAdj.date.trim(), desc, mdmAdj.wh.trim(), mdmAdj.sl.trim(), item, mdmAdj.type.trim(), "", q, "", "", "", "", reason]);
       });
-      return { rows, errs };
+      return { out, bad, cfgBad, dup, total, nbad: Object.keys(bad).length, ndup: Object.keys(dup).length, ncfg: Object.keys(cfgBad).length };
     }
-    function adjPreview() {
-      const { rows, errs } = adjParse();
-      const msg = errs.length ? `<div class="tl-msg err">${errs.slice(0, 6).map(escapeHtml).join("<br>")}</div>` : "";
-      const tbl = rows.length ? `<div class="table-wrap"><table><thead><tr><th>ItemCode</th><th>UOM0</th><th>Description</th><th>Reason</th></tr></thead><tbody>${rows.slice(0, 200).map(r => `<tr><td>${escapeHtml(r[4])}</td><td>${escapeHtml(r[7])}</td><td>${escapeHtml(r[1])}</td><td>${escapeHtml(r[12])}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty"><strong>Chưa có dòng hợp lệ</strong>Dán ItemCode và số lượng ở trên.</div>`;
-      const b = $("#adj-export"); if (b) b.disabled = !rows.length || !!errs.length;
-      return msg + tbl;
+    function adjRowHtml(r, i) {
+      return `<div class="adj-row" data-r="${i}"><span class="adj-n">${i + 1}</span><input data-c="item" value="${escapeHtml(r.item)}" placeholder="vd: 4208" autocomplete="off" inputmode="numeric"><input data-c="qty" class="num" value="${escapeHtml(r.qty)}" placeholder="vd: 3120" autocomplete="off" inputmode="numeric"><button type="button" class="adj-del" data-adj-del title="Xóa dòng">×</button></div>`;
+    }
+    function adjEnsureTail() { const l = mdmAdj.rows[mdmAdj.rows.length - 1]; if (!l || l.item.trim() || l.qty.trim()) mdmAdj.rows.push(adjBlank()); }
+    function adjDrawRows(focus) {
+      adjEnsureTail();
+      $("#adj-rows").innerHTML = mdmAdj.rows.map(adjRowHtml).join("");
+      adjMeta();
+      if (focus) { const el = document.querySelector(`#adj-rows .adj-row[data-r="${focus[0]}"] input[data-c="${focus[1]}"]`); if (el) { el.focus(); el.select(); } }
+    }
+    function adjMeta() {
+      const v = adjParse(), nf2 = n => nf(Math.abs(n));
+      document.querySelectorAll("#adj-rows .adj-row").forEach(row => {
+        const i = Number(row.dataset.r), bd = v.bad[i];
+        row.querySelector('[data-c="item"]').classList.toggle("bad", !!(bd && bd.item));
+        row.querySelector('[data-c="qty"]').classList.toggle("bad", !!(bd && bd.qty));
+        row.querySelector('[data-c="item"]').classList.toggle("dup", !!v.dup[i]);
+      });
+      document.querySelectorAll("#adj-cfg .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
+      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng hợp lệ</span>`, `<span class="adj-chip">Tổng ${v.total < 0 ? "−" : ""}${nf2(v.total)}</span>`];
+      if (v.nbad) chips.push(`<span class="adj-chip err">${v.nbad} dòng lỗi</span>`);
+      if (v.ndup) chips.push(`<span class="adj-chip warn">${v.ndup} dòng trùng ItemCode</span>`);
+      $("#adj-chips").innerHTML = chips.join("");
+      $("#adj-export").disabled = !v.out.length || !!v.nbad || !!v.ncfg;
+      $("#adj-meta").innerHTML = `Mô tả <b>${ADJ_DIR[mdmAdj.dir][0]}</b> · Reason <b>${ADJ_DIR[mdmAdj.dir][1]}</b> · UOM0 ra <b>${mdmAdj.dir === "decrease" ? "số âm" : "số dương"}</b>`;
     }
     function adjExport() {
-      const { rows, errs } = adjParse(); if (!rows.length || errs.length) return;
-      const text = [ADJ_COLS, ...rows].map(r => r.join(",")).join("\r\n"); // không có \r\n ở cuối
+      const v = adjParse(); if (!v.out.length || v.nbad || v.ncfg) return;
+      const text = [ADJ_COLS, ...v.out].map(r => r.join(",")).join("\r\n"); // không có \r\n ở cuối
       const buf = new ArrayBuffer(2 + text.length * 2), dv = new DataView(buf);
       dv.setUint16(0, 0xFEFF, true); // BOM FF FE
       for (let i = 0; i < text.length; i++) dv.setUint16(2 + i * 2, text.charCodeAt(i), true);
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `${ADJ_DIR[mdmAdj.dir][0]}_${stamp}.csv`;
       const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: "text/csv;charset=utf-16le" })), download: fileName });
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      toast(`Đã xuất "${fileName}" (UTF-16 LE BOM, ${nf(rows.length)} dòng).`, "success");
+      toast(`Đã xuất "${fileName}" (UTF-16 LE BOM, ${nf(v.out.length)} dòng).`, "success");
+    }
+    function adjPaste(e) {
+      const inp = e.target.closest("#adj-rows input"); if (!inp) return;
+      const txt = (e.clipboardData || window.clipboardData).getData("text").replace(/\r/g, "").replace(/\n+$/, "");
+      const col = inp.dataset.c;
+      if (!/[\t\n]/.test(txt) && !(col === "item" && /\s/.test(txt.trim()))) return; // dán 1 giá trị đơn → để trình duyệt tự xử lý
+      e.preventDefault();
+      let r = Number(inp.closest(".adj-row").dataset.r);
+      const lines = txt.split("\n");
+      lines.forEach((ln, k) => {
+        const row = mdmAdj.rows[r + k] || (mdmAdj.rows[r + k] = adjBlank());
+        const cells = ln.includes("\t") ? ln.split("\t") : (col === "item" ? ln.trim().split(/[\s,;]+/) : [ln]);
+        if (col === "item") { row.item = (cells[0] || "").trim(); if (cells[1] !== undefined) row.qty = cells[1].trim(); }
+        else row.qty = (cells[0] || "").trim();
+      });
+      adjDrawRows([r + lines.length, col]);
+      toast(`Đã dán ${nf(lines.length)} dòng.`, "success");
     }
     function renderAdj() {
-      const F = (k, l) => `<label class="tl-lbl">${l}<input class="field" data-adj="${k}" value="${escapeHtml(mdmAdj[k])}"></label>`;
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Tăng Tồn / Giảm Tồn</h2><p>Dán ItemCode và số lượng (copy 2 cột từ Excel). Giảm tồn tự xuất số lượng âm, nhập 432 hay -432 đều được. Xuất CSV sẵn sàng upload, không cần chuyển encoding.</p></div></div><div class="panel-body">
-        <div class="tl-seg">${Object.entries(ADJ_DIR).map(([k, v]) => `<button type="button" data-adj-dir="${k}" class="${mdmAdj.dir === k ? "on" : ""}">${v[2]}</button>`).join("")}</div>
-        <div class="tl-grid" style="margin:12px 0">${F("date", "DocumentDate (dd/mm/yyyy)")}${F("wh", "WareHouseCode")}${F("sl", "StorageLocationCode")}${F("type", "ItemTypeCode")}</div>
-        <textarea class="field" data-adj="text" rows="8" placeholder="4208&#9;3120&#10;2090&#9;432" style="width:100%;font-family:monospace">${escapeHtml(mdmAdj.text)}</textarea>
-        <div id="adj-preview" style="margin-top:12px">${adjPreview()}</div>
-        <div style="margin-top:12px"><button type="button" id="adj-export" class="btn btn-excel">Xuất CSV (UTF-16 LE BOM)</button></div></div></section>`;
+      const F = (k, l, ph) => `<div class="field" data-k="${k}"><label>${l}</label><input data-adj="${k}" value="${escapeHtml(mdmAdj[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Tăng Tồn / Giảm Tồn</h2><p>Chọn loại điều chỉnh, nhập thông số kho, rồi dán danh sách sản phẩm vào bảng. Xuất CSV sẵn sàng upload, không cần chuyển encoding.</p></div></div><div class="panel-body">
+        <div class="adj-dir">
+          <button type="button" class="inc ${mdmAdj.dir === "increase" ? "on" : ""}" data-adj-dir="increase"><span class="sign">+</span><span><strong>Tăng tồn</strong><small>UOM0 là số dương</small></span></button>
+          <button type="button" class="dec ${mdmAdj.dir === "decrease" ? "on" : ""}" data-adj-dir="decrease"><span class="sign">−</span><span><strong>Giảm tồn</strong><small>UOM0 tự chuyển thành số âm</small></span></button>
+        </div>
+        <div class="adj-cfg" id="adj-cfg">${F("date", "Ngày chứng từ (DocumentDate)", "dd/mm/yyyy")}${F("wh", "Kho (WareHouseCode)")}${F("sl", "Vị trí kho (StorageLocationCode)")}${F("type", "ItemTypeCode")}</div>
+        <div class="adj-bar"><h3>Danh sách sản phẩm<small>ItemCode &amp; UOM0</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="adj-chips"></div><button type="button" class="btn btn-plain" data-adj-act="add">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-adj-act="clear">Xóa tất cả</button></div></div>
+        <div class="adj-grid"><div class="adj-head"><span style="text-align:center">#</span><span>ItemCode</span><span style="text-align:right">UOM0 <em>(số lượng)</em></span><span></span></div><div id="adj-rows">${mdmAdj.rows.map(adjRowHtml).join("")}</div></div>
+        <p class="adj-tip">💡 Copy 2 cột từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>ItemCode</b> đầu tiên — toàn bộ dòng sẽ tự điền. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu, ô vàng = ItemCode bị trùng.</p>
+        <div class="adj-foot"><div class="meta" id="adj-meta"></div><button type="button" id="adj-export" class="btn btn-primary btn-lg">⬇ Xuất CSV (UTF-16 LE BOM)</button></div></div></section>`;
     }
     function renderMdmBody() {
       if (mdmMode === "stock-adj") return renderAdj();
@@ -2235,18 +2324,39 @@
     function bindMdmEvents() {
       const pg = $("#mdm-page"); if (!pg) return;
       pg.addEventListener("input", e => {
-        const k = e.target.dataset.adj; if (!k) return;
-        mdmAdj[k] = e.target.value; $("#adj-preview").innerHTML = adjPreview();
+        const t = e.target;
+        if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
+        const row = t.closest("#adj-rows .adj-row"); if (!row || !t.dataset.c) return;
+        mdmAdj.rows[Number(row.dataset.r)][t.dataset.c] = t.value;
+        const last = mdmAdj.rows.length - 1;
+        if (Number(row.dataset.r) === last) { mdmAdj.rows.push(adjBlank()); $("#adj-rows").insertAdjacentHTML("beforeend", adjRowHtml(adjBlank(), last + 1)); }
+        adjMeta();
       });
-      pg.addEventListener("click", e => {
+      pg.addEventListener("paste", adjPaste);
+      pg.addEventListener("keydown", e => {
+        const t = e.target; if (!t.closest || !t.closest("#adj-rows") || !["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) return;
+        e.preventDefault();
+        const r = Number(t.closest(".adj-row").dataset.r) + (e.key === "ArrowUp" ? -1 : 1);
+        const el = document.querySelector(`#adj-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
+      });
+      pg.addEventListener("click", async e => {
         if (e.target.closest("#adj-export")) return adjExport();
         const d = e.target.closest("[data-adj-dir]");
-        if (d) { mdmAdj.dir = d.dataset.adjDir; $("#mdm-root").innerHTML = renderMdmBody(); return; }
+        if (d) { mdmAdj.dir = d.dataset.adjDir; $("#mdm-root").innerHTML = renderMdmBody(); adjDrawRows(); return; }
+        const del = e.target.closest("[data-adj-del]");
+        if (del) { mdmAdj.rows.splice(Number(del.closest(".adj-row").dataset.r), 1); return adjDrawRows(); }
+        const ac = e.target.closest("[data-adj-act]");
+        if (ac) {
+          if (ac.dataset.adjAct === "add") { mdmAdj.rows.push(adjBlank()); return adjDrawRows([mdmAdj.rows.length - 1, "item"]); }
+          if (mdmAdj.rows.some(r => r.item || r.qty) && !(await confirmDialog({ title: "Xóa toàn bộ danh sách?", message: "Tất cả dòng ItemCode / UOM0 đang nhập sẽ bị xóa.", confirmText: "Xóa tất cả", danger: true }))) return;
+          mdmAdj.rows = [adjBlank()]; return adjDrawRows([0, "item"]);
+        }
         const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
         mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
         pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
-        $("#mdm-root").innerHTML = renderMdmBody();
+        $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "stock-adj") adjDrawRows();
       });
+      if (mdmMode === "stock-adj") adjDrawRows();
     }
     function renderTools() {
       return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools · L1 Team</div><h2 class="page-title">L1 Team</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
