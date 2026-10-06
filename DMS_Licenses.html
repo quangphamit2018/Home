@@ -2285,7 +2285,7 @@
        đối chiếu rõ ràng dữ liệu cũ/mới (tô nổi bật ô thay đổi), lưu thẳng vào
        bảng tương ứng rồi xuất phiếu Excel làm hồ sơ đối chiếu.
         ===================================================================== */
-    const upd = { picked: [], q: "", status: "", edits: {} };
+    const upd = { picked: [], q: "", status: "", edits: {}, single: false, sharedEmail: "" };
     let updIdx = { src: null, ds: "" };
     let updLastSaved = null;
     function updIndex() {
@@ -2306,9 +2306,21 @@
       return upd.picked.map(k => {
         const old = idx.u.get(k.toLowerCase());
         if (!old) return null;
+        if (upd.single) {   // chế độ "chỉ đổi Email": giữ nguyên mọi trường, chỉ ghi đè Email dùng chung
+          const edit = updEditableFields().reduce((o, [f]) => (o[f] = old[f] ?? "", o), {});
+          const em = upd.sharedEmail.trim(); if (em) edit.email = em;
+          return { key: old.username, old, edit };
+        }
         return { key: old.username, old, edit: updEditFor(old.username, old) };
       }).filter(Boolean);
     }
+    const updEmailError = () => {
+      if (!upd.single) return "";
+      const em = upd.sharedEmail.trim();
+      if (!em) return "Chưa nhập Email mới";
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) ? "" : "Email sai định dạng";
+    };
+    const updBlocked = () => upd.single && !!upd.sharedEmail.trim() && !!updEmailError();
     const updChangedFields = (old, edit) => updEditableFields().filter(([f]) => String(old?.[f] ?? "").trim() !== String(edit?.[f] ?? "").trim()).map(([f]) => f);
     const updChangedItems = () => updPersons().map(item => ({ ...item, changed: updChangedFields(item.old, item.edit) })).filter(item => item.changed.length);
     const updStatus = () => upd.status || "all";
@@ -2356,6 +2368,13 @@
       const items = updPersons();
       const cfg = curDs();
       if (!items.length) return `<div class="empty"><strong>Chưa chọn account nào</strong>Tick chọn account cần cập nhật ở bước ① để chỉnh sửa thông tin.</div>`;
+      if (upd.single) {
+        const err = updEmailError();
+        return `<div class="tl-card"><div class="tl-card-head"><div class="tl-idx">✉</div>
+          <div class="tl-old"><span class="tl-lbl">Cập nhật cho</span> <b>${nf(items.length)} account đã chọn</b> <span class="nil">— giữ nguyên mọi thông tin khác, chỉ đổi Email</span></div>
+          <span class="tl-msg ${err ? (upd.sharedEmail.trim() ? "err" : "") : "ok"}" id="upd-shared-msg">${escapeHtml(err || "Hợp lệ")}</span></div>
+          <div class="tl-grid"><div class="field"><label>Email mới *</label><input id="upd-shared-email" type="email" value="${escapeHtml(upd.sharedEmail)}" placeholder="ten@coca-cola.com.vn" autocomplete="off" /></div></div></div>`;
+      }
       const capped = items.length > RENDER_CARD_MAX;
       const note = capped ? `<div class="empty" style="padding:10px 0"><strong>Hiển thị ${RENDER_CARD_MAX} / ${nf(items.length)} thẻ</strong>Các account còn lại vẫn được chọn, giữ nguyên dữ liệu gốc. Dùng ô tìm kiếm để chọn riêng account cần chỉnh.</div>` : "";
       return (capped ? items.slice(0, RENDER_CARD_MAX) : items).map((item, i) => {
@@ -2399,20 +2418,20 @@
     function renderUpdBody() {
       const cfg = curDs();
       const nAll = cfg.rows().length, nOff = cfg.rows().filter(r => !cfg.isActive(r)).length, changedCount = updChangedItems().length;
-      const canExport = changedCount > 0 || !!(updLastSaved && updLastSaved.pairs.length);
+      const canExport = (changedCount > 0 || !!(updLastSaved && updLastSaved.pairs.length)) && !updBlocked();
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Chọn account cần cập nhật (${escapeHtml(cfg.label)})</h2><p>Tìm theo UserName, EmployeeCode hoặc Email; có thể dán nhiều mã cùng lúc. Lựa chọn được giữ nguyên khi bạn tìm kiếm.</p></div><span class="badge badge-blue" id="upd-count">${upd.picked.length} đã chọn</span></div>
         <div class="toolbar"><div class="search"><span class="search-icon">${ICONS.search}</span><input id="upd-search" value="${escapeHtml(upd.q)}" placeholder="Tìm hoặc dán nhiều UserName…" autocomplete="off" /></div>
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="upd-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${updStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-upd="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-upd="clear">Bỏ chọn hết</button></div></div>
         <div id="upd-list">${renderUpdList()}</div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p>Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p></div></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" data-hover-icon="download" id="upd-export" data-upd="export" ${!canExport ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p id="upd-hint-main" style="display:${upd.single ? "none" : "block"}">Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p><p id="upd-hint-single" style="display:${upd.single ? "block" : "none"}">Nhập Email mới. Mỗi account đã chọn giữ nguyên toàn bộ thông tin, chỉ đổi Email.</p></div><label class="tl-check"><input type="checkbox" id="upd-single" ${upd.single ? "checked" : ""}> Giữ nguyên thông tin, chỉ đổi Email cho tất cả dòng đã chọn</label></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount || updBlocked() ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" data-hover-icon="download" id="upd-export" data-upd="export" ${!canExport ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
     }
     function updRefresh() {
       const cv = $("#upd-preview"); if (cv) cv.innerHTML = renderUpdPreview();
       const changedCount = updChangedItems().length;
       const canExport = changedCount > 0 || !!(updLastSaved && updLastSaved.pairs.length);
-      const sv = $("#upd-save"); if (sv) sv.disabled = !changedCount;
-      const ex = $("#upd-export"); if (ex) ex.disabled = !canExport;
+      const sv = $("#upd-save"); if (sv) sv.disabled = !changedCount || updBlocked();
+      const ex = $("#upd-export"); if (ex) ex.disabled = !canExport || updBlocked();
       const c = $("#upd-count"); if (c) c.textContent = `${upd.picked.length} đã chọn`;
     }
     function updDrawCards() {
@@ -2422,8 +2441,8 @@
     async function updSave() {
       const cfg = curDs();
       const items = updChangedItems();
-      if (!items.length) return;
-      const ok = await confirmDialog({ title: "Lưu cập nhật?", message: `Lưu thay đổi cho ${items.length} account vào ${cfg.label}?`, confirmText: "Lưu cập nhật", danger: false });
+      if (!items.length || updBlocked()) return;
+      const ok = await confirmDialog({ title: "Lưu cập nhật?", message: upd.single ? `Đổi Email thành "${upd.sharedEmail.trim().toLowerCase()}" cho ${nf(items.length)} account trong ${cfg.label}? Các trường khác giữ nguyên.` : `Lưu thay đổi cho ${items.length} account vào ${cfg.label}?`, confirmText: "Lưu cập nhật", danger: false });
       if (!ok) return;
       const btn = $("#upd-save"), restore = btn ? btn.innerHTML : null;
       if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang lưu…`; }
@@ -2449,7 +2468,7 @@
       const cfg = curDs();
       const items = updChangedItems();
       const usingSaved = !items.length && updLastSaved && updLastSaved.pairs.length;
-      if (!items.length && !usingSaved) return;
+      if ((!items.length && !usingSaved) || updBlocked()) return;
       const cols = ["Status", ...cfg.fields.map(([, label]) => label), "Changed Fields"];
       const pairs = usingSaved ? updLastSaved.pairs : items.map(updRowPair);
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
@@ -2522,6 +2541,12 @@
         if (tool.mode !== "update") return;
         const t = e.target;
         if (t.id === "upd-search") { upd.q = t.value; clearTimeout(timer); timer = setTimeout(() => { $("#upd-list").innerHTML = renderUpdList(); }, 150); return; }
+        if (t.id === "upd-shared-email") {
+          upd.sharedEmail = t.value; updLastSaved = null; updRefresh();
+          const m = $("#upd-shared-msg"), err = updEmailError();
+          if (m) { m.className = `tl-msg ${err ? (upd.sharedEmail.trim() ? "err" : "") : "ok"}`; m.textContent = err || "Hợp lệ"; }
+          return;
+        }
         if (!t.dataset.f) return;
         const edit = upd.edits[t.dataset.key]; if (!edit) return;
         edit[t.dataset.f] = t.value;
@@ -2543,7 +2568,7 @@
         t.setRangeText((e.clipboardData || window.clipboardData).getData("text").replace(/[\r\n\t;,]+/g, " ").trim() + " ", t.selectionStart, t.selectionEnd, "end");
         t.dispatchEvent(new Event("input", { bubbles: true }));
       });
-      pg.addEventListener("change", e => { if (tool.mode !== "update") return; if (e.target.id === "upd-status") { upd.status = e.target.value; $("#upd-list").innerHTML = renderUpdList(); } });
+      pg.addEventListener("change", e => { if (tool.mode !== "update") return; if (e.target.id === "upd-single") { upd.single = e.target.checked; updLastSaved = null; const hs = $("#upd-hint-single"), hm = $("#upd-hint-main"); if (hs) hs.style.display = upd.single ? "block" : "none"; if (hm) hm.style.display = upd.single ? "none" : "block"; updDrawCards(); return; } if (e.target.id === "upd-status") { upd.status = e.target.value; $("#upd-list").innerHTML = renderUpdList(); } });
     }
     async function boot() {
       state.booting = configured();
