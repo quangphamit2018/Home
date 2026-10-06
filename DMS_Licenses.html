@@ -2177,7 +2177,53 @@
     const MDM_KEY = "masterdata_mdm_mode";
     const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"]];
     let mdmMode = loadKey(MDM_KEY, MDM_MODES.map(m => m[0]), "stock-init");
+    /* ---- Tăng tồn / Giảm tồn: xuất CSV UTF-16 LE BOM, không có dòng trống cuối ---- */
+    const ADJ_COLS = ["DocumentDate", "AdjustmentDescription", "WareHouseCode", "StorageLocationCode", "ItemCode", "ItemTypeCode", "SubCode", "UOM0", "UOM1", "ProductionDate", "ExpireDate", "Notes", "Reason"];
+    const ADJ_DIR = { increase: ["tangton", "Stock Audit - Stock increase", "Tăng tồn"], decrease: ["giamton", "Stock Audit - Stock decrease", "Giảm tồn"] };
+    const adjToday = () => { const d = new Date(); return [String(d.getDate()).padStart(2, "0"), String(d.getMonth() + 1).padStart(2, "0"), d.getFullYear()].join("/"); };
+    const mdmAdj = { dir: "increase", date: adjToday(), wh: "MW001", sl: "RL001", type: "1", text: "" };
+    function adjParse() {
+      const [desc, reason] = ADJ_DIR[mdmAdj.dir], rows = [], errs = [];
+      if (!/^\d{2}\/\d{2}\/\d{4}$/.test(mdmAdj.date.trim())) errs.push("DocumentDate phải có dạng dd/mm/yyyy.");
+      if (!mdmAdj.wh.trim() || !mdmAdj.sl.trim()) errs.push("Thiếu WareHouseCode hoặc StorageLocationCode.");
+      mdmAdj.text.split(/\r?\n/).forEach((ln, i) => {
+        if (!ln.trim()) return;
+        const [item, qty] = ln.trim().split(/[\t,;\s]+/);
+        if (!item || !/^-?\d+(\.\d+)?$/.test(qty || "") || Number(qty) === 0) return errs.push(`Dòng ${i + 1}: cần "ItemCode  Số lượng" (số lượng khác 0).`);
+        const q = (mdmAdj.dir === "decrease" ? "-" : "") + qty.replace("-", ""); // giảm tồn luôn ra số âm, tăng tồn luôn ra số dương
+        rows.push([mdmAdj.date.trim(), desc, mdmAdj.wh.trim(), mdmAdj.sl.trim(), item, mdmAdj.type.trim() || "1", "", q, "", "", "", "", reason]);
+      });
+      return { rows, errs };
+    }
+    function adjPreview() {
+      const { rows, errs } = adjParse();
+      const msg = errs.length ? `<div class="tl-msg err">${errs.slice(0, 6).map(escapeHtml).join("<br>")}</div>` : "";
+      const tbl = rows.length ? `<div class="table-wrap"><table><thead><tr><th>ItemCode</th><th>UOM0</th><th>Description</th><th>Reason</th></tr></thead><tbody>${rows.slice(0, 200).map(r => `<tr><td>${escapeHtml(r[4])}</td><td>${escapeHtml(r[7])}</td><td>${escapeHtml(r[1])}</td><td>${escapeHtml(r[12])}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty"><strong>Chưa có dòng hợp lệ</strong>Dán ItemCode và số lượng ở trên.</div>`;
+      const b = $("#adj-export"); if (b) b.disabled = !rows.length || !!errs.length;
+      return msg + tbl;
+    }
+    function adjExport() {
+      const { rows, errs } = adjParse(); if (!rows.length || errs.length) return;
+      const text = [ADJ_COLS, ...rows].map(r => r.join(",")).join("\r\n"); // không có \r\n ở cuối
+      const buf = new ArrayBuffer(2 + text.length * 2), dv = new DataView(buf);
+      dv.setUint16(0, 0xFEFF, true); // BOM FF FE
+      for (let i = 0; i < text.length; i++) dv.setUint16(2 + i * 2, text.charCodeAt(i), true);
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `${ADJ_DIR[mdmAdj.dir][0]}_${stamp}.csv`;
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: "text/csv;charset=utf-16le" })), download: fileName });
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      toast(`Đã xuất "${fileName}" (UTF-16 LE BOM, ${nf(rows.length)} dòng).`, "success");
+    }
+    function renderAdj() {
+      const F = (k, l) => `<label class="tl-lbl">${l}<input class="field" data-adj="${k}" value="${escapeHtml(mdmAdj[k])}"></label>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Tăng Tồn / Giảm Tồn</h2><p>Dán ItemCode và số lượng (copy 2 cột từ Excel). Giảm tồn tự xuất số lượng âm, nhập 432 hay -432 đều được. Xuất CSV sẵn sàng upload, không cần chuyển encoding.</p></div></div><div class="panel-body">
+        <div class="tl-seg">${Object.entries(ADJ_DIR).map(([k, v]) => `<button type="button" data-adj-dir="${k}" class="${mdmAdj.dir === k ? "on" : ""}">${v[2]}</button>`).join("")}</div>
+        <div class="tl-grid" style="margin:12px 0">${F("date", "DocumentDate (dd/mm/yyyy)")}${F("wh", "WareHouseCode")}${F("sl", "StorageLocationCode")}${F("type", "ItemTypeCode")}</div>
+        <textarea class="field" data-adj="text" rows="8" placeholder="4208&#9;3120&#10;2090&#9;432" style="width:100%;font-family:monospace">${escapeHtml(mdmAdj.text)}</textarea>
+        <div id="adj-preview" style="margin-top:12px">${adjPreview()}</div>
+        <div style="margin-top:12px"><button type="button" id="adj-export" class="btn btn-excel">Xuất CSV (UTF-16 LE BOM)</button></div></div></section>`;
+    }
     function renderMdmBody() {
+      if (mdmMode === "stock-adj") return renderAdj();
       const m = MDM_MODES.find(x => x[0] === mdmMode) || MDM_MODES[0];
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>${escapeHtml(m[1])}</h2><p>Chức năng của MDM Team.</p></div></div><div class="panel-body"><div class="empty"><strong>Chức năng đang được xây dựng</strong>Đang chờ mẫu phiếu Excel và quy tắc xử lý cho “${escapeHtml(m[1])}”.</div></div></section>`;
     }
@@ -2188,7 +2234,14 @@
     }
     function bindMdmEvents() {
       const pg = $("#mdm-page"); if (!pg) return;
+      pg.addEventListener("input", e => {
+        const k = e.target.dataset.adj; if (!k) return;
+        mdmAdj[k] = e.target.value; $("#adj-preview").innerHTML = adjPreview();
+      });
       pg.addEventListener("click", e => {
+        if (e.target.closest("#adj-export")) return adjExport();
+        const d = e.target.closest("[data-adj-dir]");
+        if (d) { mdmAdj.dir = d.dataset.adjDir; $("#mdm-root").innerHTML = renderMdmBody(); return; }
         const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
         mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
         pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
