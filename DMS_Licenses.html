@@ -1214,7 +1214,8 @@
     const LICENSE_SETTINGS_TABLE = "app_settings";
     const LICENSE_SETTINGS_KEY = "max_licenses";
     const DEFAULT_MAX_LICENSES = 215;
-    const PICK_ALL_MAX = 1000; // giới hạn "Chọn tất cả kết quả" (trước đây 200)
+    const RENDER_CARD_MAX = 100;  // chỉ giới hạn số thẻ nhập liệu VẼ ra màn hình (không giới hạn số account được chọn/xuất)
+    const RENDER_PREVIEW_MAX = 200; // số dòng xem trước vẽ ra màn hình; file Excel vẫn xuất đủ
 
     // Số dòng mỗi trang cho phép người dùng chọn; nhớ lựa chọn gần nhất trên trình duyệt
     const PAGE_SIZES = [10, 50, 100, 200, 500];
@@ -2114,12 +2115,14 @@
       const cfg = curDs();
       if (!items.length) return `<div class="empty"><strong>Chưa chọn account nào</strong>Tick chọn account cần thay thế ở bước ① để nhập thông tin người mới.</div>`;
       const F = (i, f, label, { req = false, type = "text", ph = "" } = {}) => `<div class="field"><label>${label}${req ? " *" : ""}</label><input data-i="${i}" data-f="${f}" type="${type}" value="${escapeHtml(items[i].p[f])}" placeholder="${escapeHtml(ph)}" autocomplete="off" /></div>`;
-      return items.map(({ p, old, shared }, i) => `<div class="tl-card"><div class="tl-card-head"><div class="tl-idx">${i + 1}</div>
+      const capped = tool.mode === "replace" && !toolSingleOn() && items.length > RENDER_CARD_MAX;
+      const note = capped ? `<div class="empty" style="padding:10px 0"><strong>Hiển thị ${RENDER_CARD_MAX} / ${nf(items.length)} thẻ</strong>Chọn nhiều account thì nên bật chế độ dùng chung 1 Email mới cho tất cả.</div>` : "";
+      return (capped ? items.slice(0, RENDER_CARD_MAX) : items).map(({ p, old, shared }, i) => `<div class="tl-card"><div class="tl-card-head"><div class="tl-idx">${i + 1}</div>
         <div class="tl-old">${shared ? `<span class="tl-lbl">Thay thế cho</span> <b>${nf(tool.picked.length)} account đã chọn</b> <span class="nil">— giữ nguyên UserName &amp; mọi thông tin khác, chỉ đổi Email</span>` : old ? `<span class="tl-lbl">Thay cho</span> <b>${escapeHtml(old.username)}</b> · ${escapeHtml(old[cfg.nameKey] || "")} <span class="nil">${escapeHtml(cfg.ds === "central" ? (old.description || "") : (old.role_name || ""))}</span>` : `<b>Account mới #${i + 1}</b>`}</div>
         ${toolMsg(v.res[i], p.touched, i)}
         ${old ? `<button type="button" class="btn btn-plain" data-tl="copy" data-i="${i}" title="Copy thông tin từ account cũ">${ICONS.copy}</button>` : ""}
         ${shared ? "" : `<button type="button" class="btn btn-plain" data-tl="remove" data-i="${i}" title="Bỏ dòng này">${ICONS.close}</button>`}</div>
-        <div class="tl-grid">${(shared ? cfg.personFields.filter(x => x[0] === "email").map(x => ["email", "Email mới", true, "email", "ten@coca-cola.com.vn"]) : cfg.personFields).map(([f, label, req, type, ph]) => F(i, f, label, { req: !!req, type: type || "text", ph: ph || "" })).join("")}</div></div>`).join("");
+        <div class="tl-grid">${(shared ? cfg.personFields.filter(x => x[0] === "email").map(x => ["email", "Email mới", true, "email", "ten@coca-cola.com.vn"]) : cfg.personFields).map(([f, label, req, type, ph]) => F(i, f, label, { req: !!req, type: type || "text", ph: ph || "" })).join("")}</div></div>`).join("") + note;
     }
     function renderToolPreview(items, v) {
       const cfg = curDs();
@@ -2127,7 +2130,7 @@
       if (!olds.length && !news.length) return `<div class="empty"><strong>Chưa có dữ liệu để xem trước</strong>${tool.mode === "create" ? "Bấm “Thêm người” để nhập account mới." : tool.mode === "remove" ? "Chọn account cần remove ở bước ①." : "Chọn account cần thay thế ở bước ①."}</div>`;
       const row = (r, c) => `<tr class="${c}">${r.map(x => `<td>${cellHtml(x)}</td>`).join("")}</tr>`;
       return `<div class="tl-sum">${olds.length ? `<span class="badge badge-blue">${olds.length} account ${tool.mode === "remove" ? "Remove" : "Deactive"}</span>` : ""}${news.length ? `<span class="badge badge-success">${news.length} account Active mới</span>` : ""}${v.errors ? `<span class="badge badge-danger">${v.errors} dòng lỗi</span>` : ""}${v.warnings ? `<span class="badge badge-warning">${v.warnings} dòng cảnh báo</span>` : ""}</div>
-        <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cfg.ticketCols.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${olds.map(r => row(r, "r-old")).join("")}${news.map(r => row(r, "r-new")).join("")}</tbody></table></div>`;
+        <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cfg.ticketCols.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${olds.slice(0, RENDER_PREVIEW_MAX).map(r => row(r, "r-old")).join("")}${news.slice(0, RENDER_PREVIEW_MAX).map(r => row(r, "r-new")).join("")}</tbody></table></div>${Math.max(olds.length, news.length) > RENDER_PREVIEW_MAX ? `<div class="tl-foot">Xem trước ${RENDER_PREVIEW_MAX} dòng đầu mỗi loại / ${nf(Math.max(olds.length, news.length))} — file Excel xuất đủ toàn bộ.</div>` : ""}`;
     }
     function renderToolBody() {
       const cfg = curDs();
@@ -2239,7 +2242,6 @@
         else if (act === "pickall") {
           const rows = toolListRows();
           if (!rows.length) return toast("Không có kết quả để chọn.", "error");
-          if (rows.length > PICK_ALL_MAX) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa ${nf(PICK_ALL_MAX)} account rồi chọn.`, "error");
           const have = new Set(tool.picked); rows.forEach(r => have.has(r.username) || tool.picked.push(r.username));
           $("#tl-list").innerHTML = renderToolList(); toolDrawPersons(); toast(`Đã chọn ${nf(rows.length)} account.`, "success");
         }
@@ -2354,7 +2356,9 @@
       const items = updPersons();
       const cfg = curDs();
       if (!items.length) return `<div class="empty"><strong>Chưa chọn account nào</strong>Tick chọn account cần cập nhật ở bước ① để chỉnh sửa thông tin.</div>`;
-      return items.map((item, i) => {
+      const capped = items.length > RENDER_CARD_MAX;
+      const note = capped ? `<div class="empty" style="padding:10px 0"><strong>Hiển thị ${RENDER_CARD_MAX} / ${nf(items.length)} thẻ</strong>Các account còn lại vẫn được chọn, giữ nguyên dữ liệu gốc. Dùng ô tìm kiếm để chọn riêng account cần chỉnh.</div>` : "";
+      return (capped ? items.slice(0, RENDER_CARD_MAX) : items).map((item, i) => {
         const changed = updChangedFields(item.old, item.edit);
         return `<div class="tl-card"><div class="tl-card-head"><div class="tl-idx">${i + 1}</div>
           <div class="tl-old"><b>${escapeHtml(item.old.username)}</b> · ${escapeHtml(item.old[cfg.nameKey] || "")} <span class="nil">${escapeHtml(cfg.ds === "central" ? (item.old.description || "") : (item.old.role_name || ""))}</span></div>
@@ -2362,7 +2366,7 @@
           <button type="button" class="btn btn-plain" data-upd="reset" data-key="${escapeHtml(item.key)}" title="Khôi phục dữ liệu gốc">${ICONS.refresh}</button>
           <button type="button" class="btn btn-plain" data-upd="remove" data-key="${escapeHtml(item.key)}" title="Bỏ khỏi danh sách">${ICONS.close}</button></div>
           <div class="tl-grid">${updEditableFields().map(([key]) => updFieldInput(key, item)).join("")}</div></div>`;
-      }).join("");
+      }).join("") + note;
     }
     function updRowPair({ old, edit, changed }) {
       const cfg = curDs();
@@ -2387,10 +2391,10 @@
         }
         return `<div class="empty"><strong>Chưa có thay đổi để xem trước</strong>Chỉnh sửa thông tin ở bước ② — account nào có trường khác dữ liệu gốc sẽ hiện ở đây.</div>`;
       }
-      const rows = items.map(item => { const { oldVals, newVals, changedIdx } = updRowPair(item); return row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx); }).join("");
+      const rows = items.slice(0, RENDER_PREVIEW_MAX).map(item => { const { oldVals, newVals, changedIdx } = updRowPair(item); return row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx); }).join("");
       return `<div class="tl-sum"><span class="badge badge-blue">${items.length} account có thay đổi</span><span class="badge badge-success">${items.reduce((n, x) => n + x.changed.length, 0)} trường được cập nhật</span></div>
         <div class="upd-legend"><span><i class="lg-old"></i>Old data</span><span><i class="lg-new"></i>New data</span><span><i class="lg-chg"></i>Changed cell</span></div>
-        <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+        <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>${items.length > RENDER_PREVIEW_MAX ? `<div class="tl-foot">Xem trước ${RENDER_PREVIEW_MAX} account đầu / ${nf(items.length)} — file Excel và lưu dữ liệu áp dụng đủ toàn bộ.</div>` : ""}`;
     }
     function renderUpdBody() {
       const cfg = curDs();
@@ -2503,7 +2507,6 @@
         else if (act === "pickall") {
           const rows = updListRows();
           if (!rows.length) return toast("Không có kết quả để chọn.", "error");
-          if (rows.length > PICK_ALL_MAX) return toast(`Có ${nf(rows.length)} kết quả — hãy thu hẹp còn tối đa ${nf(PICK_ALL_MAX)} account rồi chọn.`, "error");
           const have = new Set(upd.picked); rows.forEach(r => have.has(r.username) || upd.picked.push(r.username));
           updLastSaved = null;
           $("#upd-list").innerHTML = renderUpdList(); updDrawCards(); toast(`Đã chọn ${nf(rows.length)} account.`, "success");
