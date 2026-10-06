@@ -2402,7 +2402,7 @@
       const row = (vals, cls, changedIdx) => `<tr class="${cls}">${vals.map((v, i) => `<td class="${changedIdx.has(i) ? "chg" : ""}">${cellHtml(v)}</td>`).join("")}</tr>`;
       if (!items.length) {
         if (updLastSaved && updLastSaved.pairs.length) {
-          const rows = updLastSaved.pairs.map(({ oldVals, newVals, changedIdx }) => row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx)).join("");
+          const sp = updLastSaved.pairs.slice(0, RENDER_PREVIEW_MAX), rows = sp.map(({ oldVals, changedIdx }) => row(oldVals, "r-old", changedIdx)).join("") + sp.map(({ newVals, changedIdx }) => row(newVals, "r-new", changedIdx)).join("");
           return `<div class="tl-sum"><span class="badge badge-success">${ICONS.check} Đã lưu ${updLastSaved.count} account · ${updLastSaved.fieldCount} trường</span></div>
             <div class="empty" style="padding:10px 0 16px"><strong>Phiếu đã lưu vào ${escapeHtml(cfg.label)}</strong>Bạn vẫn có thể xuất phiếu Excel dưới đây làm hồ sơ đối chiếu. Chỉnh sửa thêm sẽ thay bằng phiếu mới.</div>
             <div class="upd-legend"><span><i class="lg-old"></i>Old data</span><span><i class="lg-new"></i>New data</span><span><i class="lg-chg"></i>Changed cell</span></div>
@@ -2410,7 +2410,7 @@
         }
         return `<div class="empty"><strong>Chưa có thay đổi để xem trước</strong>Chỉnh sửa thông tin ở bước ② — account nào có trường khác dữ liệu gốc sẽ hiện ở đây.</div>`;
       }
-      const rows = items.slice(0, RENDER_PREVIEW_MAX).map(item => { const { oldVals, newVals, changedIdx } = updRowPair(item); return row(oldVals, "r-old", changedIdx) + row(newVals, "r-new", changedIdx); }).join("");
+      const pv = items.slice(0, RENDER_PREVIEW_MAX).map(updRowPair), rows = pv.map(({ oldVals, changedIdx }) => row(oldVals, "r-old", changedIdx)).join("") + pv.map(({ newVals, changedIdx }) => row(newVals, "r-new", changedIdx)).join("");
       return `<div class="tl-sum"><span class="badge badge-blue">${items.length} account có thay đổi</span><span class="badge badge-success">${items.reduce((n, x) => n + x.changed.length, 0)} trường được cập nhật</span></div>
         <div class="upd-legend"><span><i class="lg-old"></i>Old data</span><span><i class="lg-new"></i>New data</span><span><i class="lg-chg"></i>Changed cell</span></div>
         <div class="table-wrap"><table class="tl-table tl-prev"><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>${items.length > RENDER_PREVIEW_MAX ? `<div class="tl-foot">Xem trước ${RENDER_PREVIEW_MAX} account đầu / ${nf(items.length)} — file Excel và lưu dữ liệu áp dụng đủ toàn bộ.</div>` : ""}`;
@@ -2424,7 +2424,7 @@
         <div class="toolbar-right"><label class="tl-check">Trạng thái <select id="upd-status" aria-label="Lọc theo trạng thái">${[["all", "Tất cả", nAll], ["active", "Active", nAll - nOff], ["inactive", "Deactive", nOff]].map(([k, l, n]) => `<option value="${k}"${updStatus() === k ? " selected" : ""}>${l} (${nf(n)})</option>`).join("")}</select></label><button type="button" class="btn btn-secondary" data-upd="pickall">Chọn tất cả kết quả</button><button type="button" class="btn btn-secondary" data-upd="clear">Bỏ chọn hết</button></div></div>
         <div id="upd-list">${renderUpdList()}</div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>② Chỉnh sửa thông tin</h2><p id="upd-hint-main" style="display:${upd.single ? "none" : "block"}">Chỉ trường khác dữ liệu gốc mới tính là thay đổi (viền vàng + chấm vàng đánh dấu). Bấm biểu tượng làm mới để khôi phục 1 account về dữ liệu gốc.</p><p id="upd-hint-single" style="display:${upd.single ? "block" : "none"}">Nhập Email mới. Mỗi account đã chọn giữ nguyên toàn bộ thông tin, chỉ đổi Email.</p></div><label class="tl-check"><input type="checkbox" id="upd-single" ${upd.single ? "checked" : ""}> Giữ nguyên thông tin, chỉ đổi Email cho tất cả dòng đã chọn</label></div><div class="panel-body" id="upd-cards">${renderUpdCards()}</div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Mỗi account có thay đổi hiện 2 dòng — <b>Dữ liệu cũ</b> và <b>Dữ liệu mới</b>; ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount || updBlocked() ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" data-hover-icon="download" id="upd-export" data-upd="export" ${!canExport ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>③ Xem trước &amp; xuất phiếu</h2><p>Hiện toàn bộ <b>Dữ liệu cũ</b> trước, rồi đến toàn bộ <b>Dữ liệu mới</b> (cùng thứ tự account); ô nào khác nhau được tô vàng nổi bật để đối chiếu nhanh.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="upd-save" data-upd="save" ${!changedCount || updBlocked() ? "disabled" : ""}>${ICONS.check} Lưu cập nhật</button><button type="button" class="btn btn-excel" data-hover-icon="download" id="upd-export" data-upd="export" ${!canExport ? "disabled" : ""}>${ICONS.xlsx} Xuất phiếu Excel</button></div></div><div class="panel-body" id="upd-preview">${renderUpdPreview()}</div></section>`;
     }
     function updRefresh() {
       const cv = $("#upd-preview"); if (cv) cv.innerHTML = renderUpdPreview();
@@ -2489,7 +2489,8 @@
             });
           };
           put(cols, "FFF3DCF2", new Set(), true);
-          pairs.forEach(({ oldVals, newVals, changedIdx }) => { put(oldVals, "FFD9D9D9", changedIdx); put(newVals, "FFB9E4A8", changedIdx); });
+          pairs.forEach(({ oldVals, changedIdx }) => put(oldVals, "FFD9D9D9", changedIdx));
+          pairs.forEach(({ newVals, changedIdx }) => put(newVals, "FFB9E4A8", changedIdx));
           ws.getColumn(1).width = 13;
           cfg.fields.forEach((_, i) => { ws.getColumn(i + 2).width = 22; });
           ws.getColumn(cols.length).width = 30;
@@ -2498,7 +2499,7 @@
           const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })), download: fileName });
           document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
         } else {
-          const aoa = [cols]; pairs.forEach(({ oldVals, newVals }) => aoa.push(oldVals, newVals));
+          const aoa = [cols]; pairs.forEach(({ oldVals }) => aoa.push(oldVals)); pairs.forEach(({ newVals }) => aoa.push(newVals));
           const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, "Cap Nhat"); XLSX.writeFile(wb, fileName);
         }
