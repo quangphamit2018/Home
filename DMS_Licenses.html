@@ -1264,6 +1264,15 @@
     .jira-config { display: grid; gap: 10px; }
     .jira-config .btn { justify-self: start; }
   </style>
+<style>
+  /* Ngày quan trọng — luôn gọn trong 3 thẻ cân đối, cuộn bên trong khi có nhiều hơn */
+  .cal-imp { contain: none; }
+  .cal-imp-list { box-sizing: border-box; max-height: 268px; overflow-y: auto; overflow-x: hidden; grid-auto-rows: 74px; scrollbar-width: thin; scrollbar-color: rgba(140,18,24,.28) transparent; }
+  .cal-imp-list::-webkit-scrollbar { width: 8px; }
+  .cal-imp-list::-webkit-scrollbar-thumb { background: rgba(140,18,24,.22); border-radius: 99px; }
+  .cal-imp-i { min-height: 74px; }
+  @media (min-width: 1081px) { .cal-imp { flex: 0 0 auto; } }
+</style>
 </head>
 <body class="auth">
   <div class="aurora" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><i class="grid"></i></div>
@@ -2139,7 +2148,7 @@
       const grn = cokeImportantList(cokeToday()).find(x => x.kind === "grn" && !x.past);
       const dateStr = grn ? cokeFmt(grn.t, true) : "—";
       const cfg = state.jiraConfig || {};
-      const hasCfg = !!(cfg.base_url && cfg.email && cfg.token && cfg.project_key);
+      const hasCfg = !!cfg.project_key && !!(cfg.proxy_url || (cfg.base_url && cfg.email && cfg.token));
       const warn = !hasCfg ? (isAdmin() ? "Chưa cấu hình Jira — vào Quản lý dữ liệu để nhập token." : "Chưa cấu hình Jira — liên hệ Super-admin.") : "";
       return `<section class="cal-jira" aria-label="Tạo Jira ticket">
         <div class="cal-jira-head"><div><h3>Tạo Jira ticket</h3><p>Tự động tạo ticket Close GRN Module</p></div>${ICONS.send}</div>
@@ -2155,7 +2164,7 @@
     async function createJiraTicket() {
       if (!canEdit()) return toast("Chỉ Super-admin và Senior-member được tạo Jira ticket.", "error");
       const cfg = state.jiraConfig;
-      if (!cfg || !cfg.base_url || !cfg.email || !cfg.token || !cfg.project_key) return toast("Chưa cấu hình Jira.", "error");
+      if (!cfg || !cfg.project_key || (!cfg.proxy_url && (!cfg.base_url || !cfg.email || !cfg.token))) return toast("Chưa cấu hình Jira.", "error");
       const grn = cokeImportantList(cokeToday()).find(x => x.kind === "grn" && !x.past);
       if (!grn) return toast("Không tìm thấy ngày Close GRN Module sắp tới.", "error");
       const dateStr = cokeFmt(grn.t, true).replace(/\//g, "-");
@@ -2165,15 +2174,35 @@
       const restore = btn ? btn.innerHTML : null;
       if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang tạo…`; }
       try {
-        const base = String(cfg.base_url).replace(/\/$/, "");
-        const body = { fields: { project: { key: cfg.project_key }, summary, description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: descText }] }] }, issuetype: { name: cfg.issue_type || "Task" } } };
-        const res = await fetch(`${base}/rest/api/3/issue`, { method: "POST", headers: { "Authorization": `Basic ${btoa(`${cfg.email}:${cfg.token}`)}`, "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(body) });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || `HTTP ${res.status}`);
-        toast(`Đã tạo ticket ${data.key}`, "success");
-        if (data.key) window.open(`${base}/browse/${data.key}`, "_blank", "noopener");
-      } catch (err) {
-        toast(`Tạo Jira ticket thất bại: ${err.message}`, "error");
+                const base = String(cfg.base_url || "").replace(/\/+$/, "");
+        const proxy = String(cfg.proxy_url || "").trim().replace(/\/+$/, "");
+        let ticketKey = "", browseUrl = "";
+        if (proxy) {
+          let res;
+          try {
+            res = await fetch(proxy, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify({ summary, description: descText, issue_type: cfg.issue_type || "Task", project_key: cfg.project_key, date: dateStr }) });
+          } catch (e) {
+            throw new Error("Không kết nối được tới Proxy URL. Kiểm tra lại địa chỉ proxy (phải là https và cho phép CORS).");
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || data.error || `HTTP ${res.status}`);
+          ticketKey = data.key || data.issue_key || "";
+          browseUrl = data.browse_url || (ticketKey && base ? `${base}/browse/${ticketKey}` : "");
+        } else {
+          const body = { fields: { project: { key: cfg.project_key }, summary, description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: descText }] }] }, issuetype: { name: cfg.issue_type || "Task" } } };
+          let res;
+          try {
+            res = await fetch(`${base}/rest/api/3/issue`, { method: "POST", headers: { "Authorization": `Basic ${btoa(`${cfg.email}:${cfg.token}`)}`, "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(body) });
+          } catch (e) {
+            throw new Error("Trình duyệt bị chặn CORS khi gọi trực tiếp Jira. Hãy cấu hình Proxy URL để tạo ticket qua máy chủ.");
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || `HTTP ${res.status}`);
+          ticketKey = data.key || "";
+          browseUrl = ticketKey && base ? `${base}/browse/${ticketKey}` : "";
+        }
+        toast(ticketKey ? `Đã tạo ticket ${ticketKey}` : "Đã tạo ticket Jira", "success");
+        if (browseUrl) window.open(browseUrl, "_blank", "noopener");
       } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = restore; }
       }
@@ -2190,13 +2219,15 @@
           <div class="field"><label>API Token</label><input id="jira-token" type="password" value="${escapeHtml(c.token || "")}" placeholder="ATATT3xF..." autocomplete="off"></div>
           <div class="field"><label>Project key</label><input id="jira-project" value="${escapeHtml(c.project_key || "")}" placeholder="PADM2" autocomplete="off"></div>
           <div class="field"><label>Issue type</label><input id="jira-issuetype" value="${escapeHtml(c.issue_type || "Task")}" placeholder="Task" autocomplete="off"></div>
+          <div class="field"><label>Proxy URL (khuyên dùng)</label><input id="jira-proxy" value="${escapeHtml(c.proxy_url || "")}" placeholder="https://jira-proxy.ten-ban.workers.dev" autocomplete="off"></div>
           <button type="button" class="btn btn-primary" id="save-jira">Lưu cấu hình Jira</button>
         </div></div></section>`;
     }
     async function saveJiraConfig() {
       if (!isAdmin()) return toast("Chỉ Super-admin mới được cấu hình Jira.", "error");
-      const cfg = { base_url: ($("#jira-base")?.value || "").trim(), email: ($("#jira-email")?.value || "").trim(), token: ($("#jira-token")?.value || "").trim(), project_key: ($("#jira-project")?.value || "").trim(), issue_type: ($("#jira-issuetype")?.value || "Task").trim() };
-      if (!cfg.base_url || !cfg.email || !cfg.token || !cfg.project_key) return toast("Hãy nhập đủ base URL, email, token, project key.", "error");
+      const cfg = { base_url: ($("#jira-base")?.value || "").trim(), email: ($("#jira-email")?.value || "").trim(), token: ($("#jira-token")?.value || "").trim(), project_key: ($("#jira-project")?.value || "").trim(), issue_type: ($("#jira-issuetype")?.value || "Task").trim(), proxy_url: ($("#jira-proxy")?.value || "").trim() };
+      if (!cfg.project_key) return toast("Hãy nhập Project key.", "error");
+      if (!cfg.proxy_url && (!cfg.base_url || !cfg.email || !cfg.token)) return toast("Hãy nhập đủ base URL, email, token — hoặc điền Proxy URL để tạo ticket qua máy chủ.", "error");
       const { error } = await state.supabase.from(LICENSE_SETTINGS_TABLE).upsert({ key: JIRA_CONFIG_KEY, value: JSON.stringify(cfg), updated_at: new Date().toISOString(), updated_by: state.session?.user?.id }, { onConflict: "key" });
       if (error) return toast(`Không lưu được: ${error.message}`, "error");
       state.jiraConfig = cfg;
