@@ -2203,6 +2203,8 @@
         }
         toast(ticketKey ? `Đã tạo ticket ${ticketKey}` : "Đã tạo ticket Jira", "success");
         if (browseUrl) window.open(browseUrl, "_blank", "noopener");
+      } catch (err) {
+        toast(err && err.message ? err.message : "Tạo ticket Jira thất bại.", "error");
       } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = restore; }
       }
@@ -3827,4 +3829,3 @@
   </script>
 </body>
 </html>
-
