@@ -1047,6 +1047,133 @@
     .adj-foot .meta b { color: var(--ink-2); }
     @media (max-width: 900px) { .adj-cfg { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: 1fr; } }
+  
+    /* ---------- Lịch Coke (445) ở Tổng quan ---------- */
+    .cal { margin-bottom: 22px; border-radius: 26px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 26px 56px rgba(140, 18, 24, .17), 0 2px 4px rgba(90, 13, 18, .05); }
+    .cal-hero {
+      position: relative; overflow: hidden; color: #fff; padding: 28px 32px 70px; display: flex; gap: 26px; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;
+      background:
+        radial-gradient(520px 300px at 94% -35%, rgba(255, 200, 87, .46), transparent 62%),
+        radial-gradient(420px 260px at 0% 135%, rgba(255, 110, 96, .38), transparent 65%),
+        linear-gradient(118deg, #d32f2f 0%, #a11318 46%, #4d0a10 100%);
+    }
+    .cal-hero::before {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 64px; pointer-events: none;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0 50C180 8 360 78 600 42S1020 4 1200 38V80H0Z' fill='%23fff' fill-opacity='.10'/%3E%3Cpath d='M0 62C220 30 400 86 640 56S1000 28 1200 54V80H0Z' fill='%23fff' fill-opacity='.16'/%3E%3Cpath d='M0 50C180 8 360 78 600 42S1020 4 1200 38' fill='none' stroke='%23ffc857' stroke-width='2' stroke-opacity='.85' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+    }
+    .cal-ghost { position: absolute; right: 470px; top: -34px; font-size: 230px; font-weight: 900; line-height: 1; letter-spacing: -.05em; color: rgba(255, 255, 255, .07); pointer-events: none; user-select: none; }
+    .cal-hero > *:not(.cal-ghost) { position: relative; z-index: 1; }
+    .cal-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ffdca0; background: rgba(255, 255, 255, .13); border: 1px solid rgba(255, 255, 255, .22); border-radius: 99px; padding: 5px 12px; margin-bottom: 10px; }
+    .cal-title { margin: 0; font-size: 48px; line-height: 1.05; font-weight: 800; letter-spacing: -.025em; text-shadow: 0 4px 22px rgba(60, 0, 6, .45); }
+    .cal-title small { font-size: 48px; font-weight: 800; color: var(--gold); margin-left: 10px; }
+    .cal-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .cal-chip { font-size: 12px; font-weight: 650; padding: 5px 12px; border-radius: 99px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .24); color: #fff; }
+    .cal-chip.gold { background: linear-gradient(135deg, #ffd978, #ffb62e); border-color: transparent; color: #5a0d12; box-shadow: 0 6px 16px rgba(255, 184, 46, .35); }
+    .cal-kpis { display: flex; gap: 12px; flex-wrap: wrap; }
+    .cal-kpi { min-width: 128px; padding: 13px 17px; border-radius: 18px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18); }
+    .cal-kpi label { display: block; font-size: 11px; font-weight: 650; letter-spacing: .04em; color: rgba(255, 236, 234, .82); }
+    .cal-kpi b { display: block; font-size: 30px; font-weight: 800; line-height: 1.15; margin-top: 3px; font-variant-numeric: tabular-nums; }
+    .cal-kpi b em { font-style: normal; font-size: 16px; font-weight: 650; opacity: .75; }
+    .cal-kpi span { display: block; font-size: 11px; color: rgba(255, 236, 234, .78); margin-top: 2px; }
+    .cal-bar { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .22); margin-top: 8px; overflow: hidden; }
+    .cal-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ffd978, #ffb62e); transition: width .6s ease; }
+
+    .cal-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 13px 26px; background: var(--surface-soft); border-bottom: 1px solid var(--line); }
+    .cal-today { display: inline-flex; align-items: center; gap: 9px; font-size: 13px; color: var(--ink-2); }
+    .cal-today b { color: var(--brand-dark); }
+    .cal-today .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand-light); box-shadow: 0 0 0 4px rgba(229, 57, 53, .18); animation: cal-pulse 2s ease-in-out infinite; }
+    .cal-nav { display: inline-flex; gap: 8px; align-items: center; }
+    .cal-btn { display: inline-grid; place-items: center; height: 36px; min-width: 36px; padding: 0 12px; border-radius: 11px; font-size: 12.5px; font-weight: 700; cursor: pointer; color: var(--ink-2); background: linear-gradient(180deg, #fff, #fff8f7); border: 1px solid var(--line-strong); transition: .2s ease; }
+    .cal-btn svg { width: 16px; height: 16px; }
+    .cal-btn:hover:not(:disabled) { background: var(--g-soft); border-color: #dc8985; color: var(--brand-dark); transform: translateY(-1px); }
+    .cal-btn.today { color: #fff; border-color: transparent; background: var(--g-brand); box-shadow: 0 8px 18px rgba(183, 28, 28, .28); }
+    .cal-btn.today:hover:not(:disabled) { background: var(--g-brand-hover); color: #fff; }
+    .cal-btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
+
+    .cal-body { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 24px; padding: 22px 26px 26px; }
+    .cal-body.cal-anim .cal-grid, .cal-body.cal-anim .cal-side { animation: cal-swap .45s cubic-bezier(.2, .8, .2, 1) both; }
+    .cal-grid { display: grid; grid-template-columns: 100px repeat(7, minmax(0, 1fr)); gap: 7px; align-content: start; }
+    .cal-dh { text-align: center; font-size: 11.5px; font-weight: 750; letter-spacing: .06em; color: var(--muted); padding: 4px 0 6px; }
+    .cal-dh.sun { color: var(--brand-light); }
+    .cal-wk { display: flex; flex-direction: column; justify-content: center; border-radius: 15px; padding: 8px 11px; background: var(--g-soft); border: 1px solid var(--brand-soft-2); }
+    .cal-wk b { font-size: 13px; font-weight: 780; color: var(--brand-dark); }
+    .cal-wk small { font-size: 10px; white-space: nowrap; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .cal-wk.now { background: var(--g-brand); border-color: transparent; box-shadow: 0 10px 22px rgba(183, 28, 28, .30); }
+    .cal-wk.now b, .cal-wk.now small { color: #fff; }
+    .cal-d { position: relative; min-height: 68px; border-radius: 15px; padding: 8px 9px; display: flex; flex-direction: column; justify-content: space-between; gap: 2px; background: #fff; border: 1px solid var(--line); transition: transform .25s ease, box-shadow .25s ease; overflow: hidden; }
+    .cal-d:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(120, 20, 24, .13); z-index: 2; }
+    .cal-d .n { font-size: 20px; font-weight: 760; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .cal-d .s { font-size: 10px; line-height: 1.2; color: var(--muted); font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .cal-d .tag { position: absolute; top: 8px; right: 8px; font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: .03em; border-radius: 99px; padding: 2px 7px; }
+    .cal-d.sun { background: linear-gradient(180deg, #fff6f5, #ffe7e5); }
+    .cal-d.sun .n { color: var(--brand-light); }
+    .cal-d.hol { background: linear-gradient(160deg, #fff8e3, #ffe3a3); border-color: #f0c35a; }
+    .cal-d.hol .n { color: #8a5200; }
+    .cal-d.hol .s { color: #8a5200; }
+    .cal-d.hol .tag { background: #ffb62e; color: #5a2d00; }
+    .cal-d.out { background: transparent; border-style: dashed; box-shadow: none; opacity: .38; }
+    .cal-d.out:hover { transform: none; box-shadow: none; }
+    .cal-d.today { background: var(--g-brand); border-color: transparent; transform: translateY(-2px); box-shadow: 0 0 0 3px rgba(255, 200, 87, .85), 0 14px 28px rgba(183, 28, 28, .40); animation: cal-ring 2.4s ease-in-out infinite; z-index: 1; }
+    .cal-d.today .n { color: #fff; font-size: 24px; }
+    .cal-d.today .s { color: rgba(255, 255, 255, .88); }
+    .cal-d.today .tag { background: #fff; color: var(--brand-dark); }
+
+    .cal-legend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 14px; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+    .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .cal-legend i { width: 12px; height: 12px; border-radius: 4px; border: 1px solid var(--line-strong); background: #fff; }
+    .cal-legend .l-today { background: var(--g-brand); border-color: transparent; }
+    .cal-legend .l-sun { background: #ffe0dd; }
+    .cal-legend .l-hol { background: #ffd273; border-color: #f0c35a; }
+    .cal-legend .l-out { border-style: dashed; background: transparent; }
+
+    .cal-side { display: grid; gap: 18px; align-content: start; }
+    .cal-box { border: 1px solid var(--line); border-radius: 18px; padding: 15px 15px 14px; background: linear-gradient(180deg, #fff, var(--surface-soft)); }
+    .cal-box h3 { margin: 0 0 11px; font-size: 13px; font-weight: 780; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+    .cal-box h3::before { content: ""; width: 4px; height: 14px; border-radius: 4px; background: var(--g-brand); }
+    .cal-box h3 small { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--muted); }
+    .cal-q { display: grid; grid-template-columns: 30px repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; margin-bottom: 7px; }
+    .cal-q:last-child { margin-bottom: 0; }
+    .cal-q > em { font-style: normal; font-size: 11px; font-weight: 800; color: var(--muted); }
+    .cal-p { position: relative; display: grid; gap: 1px; justify-items: center; padding: 7px 0 6px; border-radius: 12px; cursor: pointer; background: #fff; border: 1px solid var(--line-strong); color: var(--ink-2); transition: .2s ease; }
+    .cal-p b { font-size: 13px; font-weight: 780; }
+    .cal-p small { font-size: 10px; color: var(--muted); font-weight: 600; }
+    .cal-p.five { background: linear-gradient(160deg, #fff8e3, #ffe9b3); border-color: #f0c35a; }
+    .cal-p:hover { transform: translateY(-2px); border-color: #dc8985; box-shadow: 0 8px 16px rgba(120, 20, 24, .12); }
+    .cal-p.on { background: var(--g-brand); border-color: transparent; color: #fff; box-shadow: 0 8px 18px rgba(183, 28, 28, .32); }
+    .cal-p.on small { color: rgba(255, 255, 255, .85); }
+    .cal-p.now::after { content: ""; position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); border: 2px solid #fff; box-shadow: 0 0 0 1px #e8a317; }
+    .cal-hols { display: grid; gap: 7px; max-height: 262px; overflow: auto; padding-right: 2px; }
+    .cal-h { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; background: #fff; border: 1px solid var(--line); }
+    .cal-h time { font-size: 12px; font-weight: 780; color: var(--brand-dark); font-variant-numeric: tabular-nums; }
+    .cal-h span { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+    .cal-h em { display: inline-block; margin-left: 6px; font-style: normal; font-size: 9.5px; font-weight: 800; border-radius: 99px; padding: 1px 7px; background: var(--brand-soft); color: var(--brand); }
+    .cal-h.past { opacity: .5; }
+    .cal-h.view { background: linear-gradient(160deg, #fff8e3, #ffe9b3); border-color: #f0c35a; }
+    .cal-h.next { border-color: var(--brand-light); box-shadow: 0 6px 16px rgba(229, 57, 53, .14); }
+    .cal-empty { font-size: 12px; color: var(--muted); }
+    @keyframes cal-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(229, 57, 53, .18); } 50% { box-shadow: 0 0 0 7px rgba(229, 57, 53, .05); } }
+    @keyframes cal-ring { 0%, 100% { box-shadow: 0 0 0 3px rgba(255, 200, 87, .85), 0 14px 28px rgba(183, 28, 28, .40); } 50% { box-shadow: 0 0 0 6px rgba(255, 200, 87, .35), 0 14px 28px rgba(183, 28, 28, .40); } }
+    @keyframes cal-swap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @media (max-width: 1180px) { .cal-ghost { right: 24px; } .cal-body { grid-template-columns: 1fr; } .cal-side { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 760px) {
+      .cal { border-radius: 20px; }
+      .cal-hero { padding: 22px 18px 60px; }
+      .cal-ghost { font-size: 150px; right: 8px; top: -20px; }
+      .cal-title, .cal-title small { font-size: 34px; }
+      .cal-kpi { min-width: 0; flex: 1 1 96px; padding: 10px 12px; }
+      .cal-kpi b { font-size: 23px; }
+      .cal-tools { padding: 11px 14px; }
+      .cal-body { padding: 14px 10px 18px; gap: 16px; }
+      .cal-grid { grid-template-columns: 46px repeat(7, minmax(0, 1fr)); gap: 4px; }
+      .cal-wk { padding: 6px 4px; align-items: center; text-align: center; border-radius: 11px; }
+      .cal-wk b { font-size: 11px; }
+      .cal-wk small, .cal-d .s, .cal-d .tag { display: none; }
+      .cal-d { min-height: 46px; padding: 6px; border-radius: 11px; }
+      .cal-d .n, .cal-d.today .n { font-size: 14px; }
+      .cal-dh { font-size: 10px; letter-spacing: 0; }
+      .cal-side { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) { .cal-d.today, .cal-today .dot { animation: none; } .cal-body.cal-anim .cal-grid, .cal-body.cal-anim .cal-side { animation: none; } }
   </style>
 </head>
 <body class="auth">
@@ -1590,6 +1717,137 @@
       return renderDashboard();
     }
 
+
+    // ---------- Lịch Coke (445): kỳ 4-4-5 tuần, tuần chạy Thứ 7 → Thứ 6 ----------
+    // Mỗi quý = 4 + 4 + 5 tuần (tháng cuối quý có 5 tuần). Tháng 1 bắt đầu 01/01, tháng 12 kết thúc 31/12.
+    // Ngày bán hàng = trừ Chủ nhật và ngày lễ. Ngày lễ cố định áp dụng mọi năm; lễ âm lịch / nghỉ bù khai báo theo năm bên dưới: [tháng, ngày, tên].
+    const COKE_DAY = 864e5;
+    const COKE_FIXED_HOLIDAYS = [[1, 1, "Tết Dương lịch"], [4, 30, "Giải phóng miền Nam"], [5, 1, "Quốc tế Lao động"], [9, 2, "Quốc khánh"]];
+    const COKE_HOLIDAYS_BY_YEAR = {
+      2026: [[2, 16, "Nghỉ Tết Nguyên đán"], [2, 17, "Nghỉ Tết Nguyên đán"], [2, 18, "Nghỉ Tết Nguyên đán"], [2, 19, "Nghỉ Tết Nguyên đán"], [2, 20, "Nghỉ Tết Nguyên đán"], [4, 26, "Giỗ Tổ Hùng Vương"], [4, 27, "Nghỉ bù Giỗ Tổ"]]
+    };
+    const CK_DOW = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    const CK_DOW_FULL = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+    let cokeView = null;   // { y, m, day } — kỳ đang xem; tự quay về kỳ hiện tại khi sang ngày mới
+
+    const cokeUTC = (y, m, d) => Date.UTC(y, m - 1, d);
+    const cokeDow = t => new Date(t).getUTCDay();
+    const cokeToday = () => { const n = new Date(); return cokeUTC(n.getFullYear(), n.getMonth() + 1, n.getDate()); };
+    const cokeFmt = (t, withYear) => { const d = new Date(t); return String(d.getUTCDate()).padStart(2, "0") + "/" + String(d.getUTCMonth() + 1).padStart(2, "0") + (withYear ? "/" + d.getUTCFullYear() : ""); };
+    function cokeHolidays(y) {
+      const map = new Map();
+      [...COKE_FIXED_HOLIDAYS, ...(COKE_HOLIDAYS_BY_YEAR[y] || [])].forEach(([m, d, name]) => map.set(cokeUTC(y, m, d), name));
+      return map;
+    }
+    function cokePeriods(y) {
+      const jan1 = cokeUTC(y, 1, 1), toFri = (5 - cokeDow(jan1) + 7) % 7, pattern = [4, 4, 5], out = [];
+      let start = jan1;
+      for (let m = 1; m <= 12; m++) {
+        const w = pattern[(m - 1) % 3];
+        let end = m === 1 ? jan1 + (toFri + 28) * COKE_DAY : start + (w * 7 - 1) * COKE_DAY;
+        if (m === 12) end = cokeUTC(y, 12, 31);
+        out.push({ y, m, w, q: Math.ceil(m / 3), start, end });
+        start = end + COKE_DAY;
+      }
+      return out;
+    }
+    const cokePeriodOf = t => cokePeriods(new Date(t).getUTCFullYear()).find(p => t >= p.start && t <= p.end);
+
+    function renderCokeCalendar(anim) {
+      const today = cokeToday();
+      if (!cokeView || cokeView.day !== today) { const cur = cokePeriodOf(today); cokeView = { y: cur.y, m: cur.m, day: today }; }
+      const periods = cokePeriods(cokeView.y), p = periods[cokeView.m - 1], hol = cokeHolidays(p.y), curP = cokePeriodOf(today);
+      let total = 0, done = 0;
+      for (let t = p.start; t <= p.end; t += COKE_DAY) if (cokeDow(t) !== 0 && !hol.has(t)) { total++; if (t <= today) done++; }
+      const inPeriod = today >= p.start && today <= p.end, isCur = curP.y === p.y && curP.m === p.m;
+      const pct = total ? Math.round(done / total * 100) : 0;
+      const gridStart = p.start - ((cokeDow(p.start) + 1) % 7) * COKE_DAY;   // lùi về Thứ 7 gần nhất
+      const rows = Math.ceil(((p.end - gridStart) / COKE_DAY + 1) / 7);
+      const weekNo = inPeriod ? Math.floor((today - gridStart) / COKE_DAY / 7) + 1 : 0;
+      const order = [6, 0, 1, 2, 3, 4, 5];
+
+      let grid = `<div></div>${order.map(d => `<div class="cal-dh${d === 0 ? " sun" : ""}">${CK_DOW[d]}</div>`).join("")}`;
+      for (let r = 0; r < rows; r++) {
+        const ws = Math.max(gridStart + r * 7 * COKE_DAY, p.start), we = Math.min(gridStart + (r * 7 + 6) * COKE_DAY, p.end);
+        grid += `<div class="cal-wk${r + 1 === weekNo ? " now" : ""}"><b>Tuần ${r + 1}</b><small>${cokeFmt(ws)}–${cokeFmt(we)}</small></div>`;
+        for (let c = 0; c < 7; c++) {
+          const t = gridStart + (r * 7 + c) * COKE_DAY, d = new Date(t), dow = d.getUTCDay(), hn = hol.get(t);
+          const out = t < p.start || t > p.end, isToday = t === today, dayNum = d.getUTCDate();
+          const cls = ["cal-d", out ? "out" : "", !out && dow === 0 ? "sun" : "", !out && hn ? "hol" : "", isToday ? "today" : ""].filter(Boolean).join(" ");
+          const sub = hn && !out ? hn : (dayNum === 1 || t === p.start ? `${dayNum}/${d.getUTCMonth() + 1}` : "");
+          const tag = isToday ? '<i class="tag">Hôm nay</i>' : (hn && !out ? '<i class="tag">Lễ</i>' : "");
+          const tip = `${CK_DOW_FULL[dow]}, ${cokeFmt(t, true)}${hn ? " · " + hn : ""}${dow === 0 ? " · Chủ nhật (không bán)" : ""}`;
+          grid += `<div class="${cls}" title="${escapeHtml(tip)}"><span class="n">${dayNum}</span>${tag}${sub ? `<span class="s">${escapeHtml(sub)}</span>` : ""}</div>`;
+        }
+      }
+
+      const quarters = [1, 2, 3, 4].map(q => `<div class="cal-q"><em>Q${q}</em>${periods.filter(x => x.q === q).map(x => `<button type="button" class="cal-p${x.m === p.m ? " on" : ""}${x.w === 5 ? " five" : ""}${x.y === curP.y && x.m === curP.m ? " now" : ""}" data-cal="goto" data-y="${x.y}" data-m="${x.m}" title="${cokeFmt(x.start, true)} → ${cokeFmt(x.end, true)}"><b>T${x.m}</b><small>${x.w} tuần</small></button>`).join("")}</div>`).join("");
+
+      const groups = [];
+      [...hol.entries()].sort((a, b) => a[0] - b[0]).forEach(([t, name]) => {
+        const g = groups[groups.length - 1];
+        if (g && g.name === name && t - g.end === COKE_DAY) g.end = t; else groups.push({ start: t, end: t, name });
+      });
+      const nextIdx = p.y === curP.y ? groups.findIndex(g => g.end >= today) : -1;
+      const holHtml = groups.length ? groups.map((g, i) => {
+        const sameMonth = new Date(g.start).getUTCMonth() === new Date(g.end).getUTCMonth();
+        const date = g.start === g.end ? cokeFmt(g.start) : sameMonth ? `${new Date(g.start).getUTCDate()}–${cokeFmt(g.end)}` : `${cokeFmt(g.start)}–${cokeFmt(g.end)}`;
+        const inView = g.end >= p.start && g.start <= p.end, past = p.y === curP.y && g.end < today;
+        return `<div class="cal-h${past ? " past" : ""}${inView ? " view" : ""}${i === nextIdx ? " next" : ""}"><time>${date}</time><span>${escapeHtml(g.name)}${i === nextIdx ? "<em>Sắp tới</em>" : ""}</span></div>`;
+      }).join("") : '<div class="cal-empty">Chưa khai báo ngày lễ cho năm này.</div>';
+
+      const weekdayNow = CK_DOW_FULL[cokeDow(today)];
+      return `<section class="cal" aria-label="Lịch Coke">
+        <div class="cal-hero">
+          <div class="cal-ghost" aria-hidden="true">${p.m}</div>
+          <div>
+            <div class="cal-eyebrow">Lịch Coke · 4-4-5</div>
+            <h2 class="cal-title">Tháng ${p.m}<small>${p.y}</small></h2>
+            <div class="cal-chips">
+              <span class="cal-chip">Quý ${p.q}</span>
+              <span class="cal-chip">${cokeFmt(p.start, true)} → ${cokeFmt(p.end, true)}</span>
+              <span class="cal-chip${p.w === 5 ? " gold" : ""}">${p.w === 5 ? "★ Cuối quý · 5 tuần" : p.w + " tuần"}</span>
+            </div>
+          </div>
+          <div class="cal-kpis">
+            <div class="cal-kpi"><label>Ngày bán hàng</label><b>${total}</b><span>trừ Chủ nhật & ngày lễ</span></div>
+            <div class="cal-kpi"><label>Tiến độ kỳ</label><b>${done}<em>/${total}</em></b><div class="cal-bar"><i style="width:${pct}%"></i></div></div>
+            <div class="cal-kpi"><label>Tuần hiện tại</label><b>${inPeriod ? weekNo : "—"}<em>/${rows}</em></b><span>Thứ 7 → Thứ 6</span></div>
+          </div>
+        </div>
+        <div class="cal-tools">
+          <span class="cal-today"><i class="dot"></i>Hôm nay: <b>${weekdayNow}, ${cokeFmt(today, true)}</b> · Kỳ ${curP.m}</span>
+          <div class="cal-nav">
+            <button type="button" class="cal-btn" data-cal="prev" aria-label="Kỳ trước">${ICONS.pgPrev}</button>
+            <button type="button" class="cal-btn today" data-cal="today"${isCur ? " disabled" : ""}>Hôm nay</button>
+            <button type="button" class="cal-btn" data-cal="next" aria-label="Kỳ sau">${ICONS.pgNext}</button>
+          </div>
+        </div>
+        <div class="cal-body${anim ? " cal-anim" : ""}">
+          <div class="cal-grid">${grid}</div>
+          <aside class="cal-side">
+            <div class="cal-box"><h3>Cả năm ${p.y}<small>★ = 5 tuần</small></h3>${quarters}</div>
+            <div class="cal-box"><h3>Ngày lễ ${p.y}</h3><div class="cal-hols">${holHtml}</div></div>
+          </aside>
+          <div class="cal-legend"><span><i class="l-today"></i>Hôm nay</span><span><i class="l-sun"></i>Chủ nhật (không bán)</span><span><i class="l-hol"></i>Ngày lễ</span><span><i class="l-out"></i>Ngoài kỳ</span></div>
+        </div>
+      </section>`;
+    }
+    document.addEventListener("click", e => {
+      const b = e.target.closest ? e.target.closest("[data-cal]") : null;
+      if (!b || b.disabled || !cokeView) return;
+      const a = b.dataset.cal;
+      if (a === "today") cokeView = null;
+      else if (a === "goto") cokeView = { ...cokeView, y: +b.dataset.y, m: +b.dataset.m };
+      else {
+        let { y, m } = cokeView; m += a === "next" ? 1 : -1;
+        if (m > 12) { m = 1; y++; } else if (m < 1) { m = 12; y--; }
+        cokeView = { ...cokeView, y, m };
+      }
+      const el = document.querySelector(".cal");
+      if (el) el.outerHTML = renderCokeCalendar(true);
+    });
+
     function renderDashboard() {
       const recent = state.logs.slice(0, 5);
       return `<div class="header-row hero"><div><div class="eyebrow">Workspace overview</div><h2 class="page-title">Xin chào, ${escapeHtml((state.profile.display_name || "bạn").split(" ")[0])}</h2><p class="page-subtitle">Theo dõi nhanh trạng thái dữ liệu và quyền truy cập.</p></div>${isAdmin() ? `<button class="btn btn-light" data-tab="admin">${ICONS.upload} Import masterdata</button>` : ""}</div>
@@ -1599,13 +1857,7 @@
           <div class="stat-card"><div class="stat-label">Quyền của bạn</div><div class="stat-value" style="font-size:20px;margin-top:16px">${escapeHtml(roleLabel(state.profile.role))}</div><div class="stat-note">truy cập đã phê duyệt</div></div>
           <div class="stat-card"><div class="stat-label">Cập nhật gần nhất</div><div class="stat-value" style="font-size:18px;margin-top:17px">${recent[0] ? formatDate(recent[0].created_at).split(",")[0] : "—"}</div><div class="stat-note">${recent[0] ? "import masterdata" : "chưa có lịch sử import"}</div></div>
         </div>
-        <div class="two-col">
-          <section class="panel"><div class="panel-head"><div><h2>Truy cập nhanh</h2><p>Mở trực tiếp bảng dữ liệu cần xử lý.</p></div></div><div class="panel-body" style="display:grid;gap:11px">
-            <button class="table-item" data-hover-icon="arrowUpRight" data-tab="dms"><div><b>DMS Userlist</b><span>${state.counts.dms.toLocaleString("vi-VN")} người dùng • khóa UserName</span></div><span class="go">${ICONS.arrowRight}</span></button>
-            <button class="table-item" data-hover-icon="arrowUpRight" data-tab="central"><div><b>Central User list</b><span>${state.counts.central.toLocaleString("vi-VN")} người dùng • khóa UserName</span></div><span class="go">${ICONS.arrowRight}</span></button>
-          </div></section>
-          <section class="panel"><div class="panel-head"><div><h2>Lịch sử import</h2><p>Những lần cập nhật gần nhất.</p></div></div>${recent.length ? `<div class="table-wrap"><table><thead><tr><th>File</th><th>Thời gian</th><th>Trạng thái</th></tr></thead><tbody>${recent.map(log => `<tr><td><strong>${escapeHtml(log.file_name)}</strong></td><td>${formatDate(log.created_at)}</td><td>${log.status === "success" ? '<span class="badge badge-success">Thành công</span>' : '<span class="badge badge-danger">Lỗi</span>'}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty"><strong>Chưa có lịch sử import</strong>Chỉ Super-admin mới có thể nạp file masterdata.</div>`}</section>
-        </div>`;
+        ${renderCokeCalendar()}`;
     }
 
     // ---------- Bảng dữ liệu: lọc → phân trang → dựng HTML ----------
