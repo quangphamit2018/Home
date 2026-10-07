@@ -1241,6 +1241,25 @@
       .cal-imp-i .d { width: 42px; height: 42px; }
       .cal-imp-i .t small { display: none; }
     }
+    /* ---------- Cột bên cạnh Ngày quan trọng + thẻ tạo Jira ticket ---------- */
+    .cal-side-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+    .cal-side-col .cal-imp { contain: none; flex: 1; min-height: 0; }
+    .cal-imp-i.grn-skip { opacity: .45; }
+    .cal-imp-i.grn-skip .d { filter: grayscale(1); }
+    .cal-jira { border-radius: 22px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 18px 40px rgba(37, 99, 235, .10); overflow: hidden; }
+    .cal-jira-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: linear-gradient(135deg, #eaf2ff 0%, #fff 70%); border-bottom: 1px solid var(--line); }
+    .cal-jira-head h3 { margin: 0; font-size: 15px; font-weight: 800; color: #0b3d91; display: flex; align-items: center; gap: 8px; }
+    .cal-jira-head h3::before { content: "✦"; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 12px; color: #fff; background: #2563eb; box-shadow: 0 6px 12px rgba(37, 99, 235, .25); }
+    .cal-jira-head p { margin: 3px 0 0; font-size: 11.5px; color: var(--muted); }
+    .cal-jira-head svg { width: 18px; height: 18px; color: #2563eb; }
+    .cal-jira-body { padding: 14px 18px; display: grid; gap: 8px; }
+    .cal-jira-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; padding: 7px 11px; border-radius: 10px; background: var(--surface-soft); border: 1px solid var(--line); }
+    .cal-jira-row span { color: var(--muted); font-weight: 700; }
+    .cal-jira-row b { color: var(--ink); font-weight: 800; }
+    .cal-jira-warn { font-size: 11.5px; color: #b45309; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 8px 11px; }
+    .cal-jira-btn { margin-top: 4px; width: 100%; justify-content: center; }
+    .jira-config { display: grid; gap: 10px; }
+    .jira-config .btn { justify-self: start; }
   </style>
 </head>
 <body class="auth">
@@ -1542,7 +1561,7 @@
       page: 1, pageSize: loadPageSize(), progress: {},
       supabase: null, session: null, profile: null, tab: loadKey(TAB_KEY, TABS_OK, "dashboard"), dataset: "dms",
       dms: [], central: [], profiles: [], logs: [], counts: { dms: 0, central: 0, pending: 0 },
-      settings: { maxLicenses: DEFAULT_MAX_LICENSES }, importantDays: [], savingLicense: false,
+      settings: { maxLicenses: DEFAULT_MAX_LICENSES }, importantDays: [], grnOverrides: {}, jiraConfig: {}, savingLicense: false,
       licenseFilter: loadKey(LICENSE_FILTER_KEY, LICENSE_FILTERS_OK, "used"),
       sort: loadJson(SORT_KEY), selected: { dms: new Set(savedSel.dms || []), central: new Set(savedSel.central || []) }, search: "", loading: false, requestSent: false
     };
@@ -1802,6 +1821,8 @@
     // Ngày đánh dấu (không nghỉ, vẫn tính là ngày bán hàng): ngày cố định hằng năm + ngày do Super-admin / Senior-member cấu hình (state.importantDays)
     const COKE_MARKED_FIXED = [];   // (đã chuyển Ngày Văn hóa Việt Nam sang nhóm Ngày lễ không nghỉ bên dưới)
     const IMPORTANT_DAYS_KEY = "important_days";   // lưu ở bảng app_settings (key/value), value = JSON mảng [{id, date:"YYYY-MM-DD", name, repeat:"none"|"weekly"|"yearly", yearly}]
+    const GRN_OVERRIDE_KEY = "grn_overrides";      // value = JSON map {"YYYY-MM": "YYYY-MM-DD"(ghi đè) | "skip"(bỏ)} — Close GRN Module theo kỳ
+    const JIRA_CONFIG_KEY = "jira_config";         // value = JSON {base_url, email, token, project_key, issue_type} — chỉ super-admin ghi, super-admin + senior-member đọc
     const parseImportantDays = v => {
       let a = v;
       if (typeof a === "string") { try { a = JSON.parse(a); } catch (_) { a = []; } }
@@ -1975,7 +1996,19 @@
         else t = t0;
         if (t != null) out.push({ t, name: it.name, kind: "custom", repeat: it.repeat, id: it.id, past: t < today, raw: it });
       });
-      for (const yy of [y, y + 1]) { const g = cokePeriods(yy).map(cokeGrnDay).find(t => t >= today); if (g != null) { out.push({ t: g, name: COKE_GRN_LABEL, kind: "grn" }); break; } }
+      const grnOv = (typeof state !== "undefined" && state.grnOverrides) ? state.grnOverrides : {};
+      let grnDone = false;
+      for (const yy of [y, y + 1]) {
+        for (const p of cokePeriods(yy)) {
+          const g = cokeGrnDay(p), pk = `${p.y}-${String(p.m).padStart(2, "0")}`, ov = grnOv[pk];
+          if (ov === "skip") { if (g >= today && isAdmin()) out.push({ t: g, name: COKE_GRN_LABEL, kind: "grn-skip", periodKey: pk, past: false }); continue; }
+          if (g < today && !ov) continue;
+          const t = (ov && /^\d{4}-\d{2}-\d{2}$/.test(ov)) ? cokeUTC(...ov.split("-").map(Number)) : g;
+          out.push({ t, name: COKE_GRN_LABEL, kind: "grn", periodKey: pk, overridden: !!ov, past: t < today });
+          grnDone = true; break;
+        }
+        if (grnDone) break;
+      }
       return out.sort((a, b) => (!!a.past !== !!b.past) ? (a.past ? 1 : -1) : (a.past ? b.t - a.t : a.t - b.t));
     }
     function renderImportantPanel() {
@@ -1986,12 +2019,14 @@
       const list = items.map(x => {
         const d = new Date(x.t), n = Math.round((x.t - today) / COKE_DAY);
         const left = x.past ? "đã qua" : n === 0 ? "Hôm nay" : n === 1 ? "Ngày mai" : `còn ${n} ngày`;
-        const meta = `${CK_DOW_FULL[d.getUTCDay()]}, ${cokeFmt(x.t, true)}${x.kind === "grn" ? " · Tự động mỗi kỳ" : x.repeat === "yearly" ? " · Hằng năm" : x.repeat === "weekly" ? " · Hằng tuần" : ""}`;
+        const meta = `${CK_DOW_FULL[d.getUTCDay()]}, ${cokeFmt(x.t, true)}${x.kind === "grn-skip" ? " · Đã bỏ" : x.kind === "grn" && x.overridden ? " · Đã ghi đè" : x.kind === "grn" ? " · Tự động mỗi kỳ" : x.repeat === "yearly" ? " · Hằng năm" : x.repeat === "weekly" ? " · Hằng tuần" : ""}`;
         return `<div class="cal-imp-i ${x.kind}${x.past ? " past" : ""}${n === 0 && !x.past ? " now" : ""}">
           <div class="d"><b>${d.getUTCDate()}</b><small>Thg ${d.getUTCMonth() + 1}</small></div>
           <div class="t"><span>${escapeHtml(x.name)}</span><small>${escapeHtml(meta)}</small></div>
           <em class="left${n <= 7 && !x.past ? " soon" : ""}">${left}</em>
           ${editor && x.kind === "custom" ? `<span class="cal-imp-act"><button type="button" class="cal-imp-edit" data-imp="edit" data-id="${escapeHtml(x.id)}" title="Sửa" aria-label="Sửa ${escapeHtml(x.name)}">${ICONS.edit}</button><button type="button" class="cal-imp-del" data-imp="del" data-id="${escapeHtml(x.id)}" data-name="${escapeHtml(x.name)}" title="Xóa" aria-label="Xóa ${escapeHtml(x.name)}">${ICONS.trash}</button></span>` : ""}
+          ${editor && x.kind === "grn" ? `<span class="cal-imp-act"><button type="button" class="cal-imp-edit" data-grn="edit" data-pk="${escapeHtml(x.periodKey)}" data-t="${x.t}" title="Sửa ngày Close GRN" aria-label="Sửa ngày ${escapeHtml(x.name)}">${ICONS.edit}</button><button type="button" class="cal-imp-del" data-grn="del" data-pk="${escapeHtml(x.periodKey)}" data-name="${escapeHtml(x.name)}" title="Bỏ Close GRN kỳ này" aria-label="Bỏ ${escapeHtml(x.name)}">${ICONS.trash}</button></span>` : ""}
+          ${editor && x.kind === "grn-skip" ? `<span class="cal-imp-act"><button type="button" class="cal-imp-edit" data-grn="restore" data-pk="${escapeHtml(x.periodKey)}" title="Khôi phục Close GRN" aria-label="Khôi phục ${escapeHtml(x.name)}">${ICONS.refresh}</button></span>` : ""}
         </div>`;
       }).join("");
       return `<section class="cal-imp" aria-label="Ngày quan trọng">
@@ -2010,7 +2045,7 @@
         ${editor ? "" : '<div class="cal-imp-foot">Chỉ Super-admin được thêm, sửa hoặc xóa ngày quan trọng.</div>'}
       </section>`;
     }
-    const renderCokeRow = anim => `<div class="cal-row">${renderCokeCalendar(anim)}${renderImportantPanel()}</div>`;
+    const renderCokeRow = anim => `<div class="cal-row">${renderCokeCalendar(anim)}${canEdit() ? `<div class="cal-side-col">${renderImportantPanel()}${renderJiraCard()}</div>` : renderImportantPanel()}</div>`;
     function refreshCokeRow() { const el = document.querySelector(".cal-row"); if (el) el.outerHTML = renderCokeRow(); }
 
     // Đọc bản mới nhất từ Supabase rồi mới áp dụng thay đổi → hai người sửa cùng lúc không ghi đè nhau
@@ -2053,6 +2088,119 @@
       }
     });
     document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target?.id === "imp-name") document.querySelector('[data-imp="save"]')?.click(); });
+
+    // ---------- Close GRN Module: ghi đè / bỏ ngày theo kỳ (chỉ Super-admin) ----------
+    async function persistGrnOverride(periodKey, value) {
+      if (!isAdmin()) { toast("Chỉ Super-admin mới được chỉnh ngày Close GRN.", "error"); return false; }
+      const sb = state.supabase;
+      const cur = await sb.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", GRN_OVERRIDE_KEY).maybeSingle();
+      let map = {};
+      if (cur.data?.value) { try { map = typeof cur.data.value === "string" ? JSON.parse(cur.data.value) : cur.data.value; } catch (_) { map = {}; } }
+      if (!map || typeof map !== "object") map = {};
+      if (value === null) delete map[periodKey]; else map[periodKey] = value;
+      const { error } = await sb.from(LICENSE_SETTINGS_TABLE).upsert({ key: GRN_OVERRIDE_KEY, value: JSON.stringify(map), updated_at: new Date().toISOString(), updated_by: state.session?.user?.id }, { onConflict: "key" });
+      if (error) { toast(`Không lưu được: ${error.message}. Hãy kiểm tra RLS app_settings.`, "error"); return false; }
+      state.grnOverrides = map;
+      return true;
+    }
+    function openGrnEditModal(periodKey, currentT) {
+      const modalRoot = $("#modal-root");
+      const iso = new Date(currentT).toISOString().slice(0, 10);
+      modalRoot.innerHTML = `<div class="modal-backdrop" id="grn-modal-bg"><section class="modal" style="max-width:440px"><div class="modal-head"><div><h2>Sửa ngày Close GRN Module</h2><p>Ghi đè ngày tự động cho kỳ ${escapeHtml(periodKey)}</p></div><button class="btn btn-plain" id="grn-close">${ICONS.close}</button></div><div class="modal-body"><div class="field"><label>Ngày khóa GRN mới</label><input type="date" id="grn-date-input" value="${iso}"></div></div><div class="modal-foot"><button class="btn btn-secondary" id="grn-cancel">Hủy</button><button class="btn btn-primary" id="grn-save">Lưu</button></div></section></div>`;
+      const close = () => modalRoot.innerHTML = "";
+      $("#grn-close").addEventListener("click", close);
+      $("#grn-cancel").addEventListener("click", close);
+      $("#grn-modal-bg").addEventListener("click", e => e.target.id === "grn-modal-bg" && close());
+      $("#grn-save").addEventListener("click", async () => {
+        const v = $("#grn-date-input")?.value || "";
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return toast("Hãy chọn ngày hợp lệ.", "error");
+        if (await persistGrnOverride(periodKey, v)) { toast("Đã cập nhật ngày Close GRN.", "success"); close(); refreshCokeRow(); }
+      });
+    }
+    async function deleteGrn(periodKey, name) {
+      const yes = await confirmDialog({ title: "Bỏ Close GRN Module?", message: `Bỏ "${name}" cho kỳ ${periodKey}? Bấm icon khôi phục trên thẻ để hoàn lại.`, confirmText: "Bỏ", danger: true });
+      if (!yes) return;
+      if (await persistGrnOverride(periodKey, "skip")) { toast("Đã bỏ Close GRN cho kỳ này.", "success"); refreshCokeRow(); }
+    }
+    document.addEventListener("click", async e => {
+      const b = e.target.closest ? e.target.closest("[data-grn]") : null;
+      if (!b || b.disabled) return;
+      const a = b.dataset.grn, pk = b.dataset.pk;
+      if (a === "edit") openGrnEditModal(pk, Number(b.dataset.t));
+      else if (a === "del") deleteGrn(pk, b.dataset.name);
+      else if (a === "restore") { if (await persistGrnOverride(pk, null)) { toast("Đã khôi phục Close GRN.", "success"); refreshCokeRow(); } }
+    });
+
+    // ---------- Tạo Jira ticket tự động cho Close GRN Module (Super-admin + Senior-member) ----------
+    function renderJiraCard() {
+      const grn = cokeImportantList(cokeToday()).find(x => x.kind === "grn" && !x.past);
+      const dateStr = grn ? cokeFmt(grn.t, true) : "—";
+      const cfg = state.jiraConfig || {};
+      const hasCfg = !!(cfg.base_url && cfg.email && cfg.token && cfg.project_key);
+      const warn = !hasCfg ? (isAdmin() ? "Chưa cấu hình Jira — vào Quản lý dữ liệu để nhập token." : "Chưa cấu hình Jira — liên hệ Super-admin.") : "";
+      return `<section class="cal-jira" aria-label="Tạo Jira ticket">
+        <div class="cal-jira-head"><div><h3>Tạo Jira ticket</h3><p>Tự động tạo ticket Close GRN Module</p></div>${ICONS.send}</div>
+        <div class="cal-jira-body">
+          <div class="cal-jira-row"><span>Chức năng</span><b>Close GRN Module</b></div>
+          <div class="cal-jira-row"><span>Ngày khóa GRN</span><b>${dateStr}</b></div>
+          <div class="cal-jira-row"><span>Dự án Jira</span><b>${hasCfg ? escapeHtml(cfg.project_key) : "—"}</b></div>
+          ${warn ? `<div class="cal-jira-warn">${escapeHtml(warn)}</div>` : ""}
+          <button type="button" class="btn btn-primary cal-jira-btn" data-jira="create" ${(!hasCfg || !grn) ? "disabled" : ""}>${ICONS.send} Tạo ticket Jira</button>
+        </div>
+      </section>`;
+    }
+    async function createJiraTicket() {
+      if (!canEdit()) return toast("Chỉ Super-admin và Senior-member được tạo Jira ticket.", "error");
+      const cfg = state.jiraConfig;
+      if (!cfg || !cfg.base_url || !cfg.email || !cfg.token || !cfg.project_key) return toast("Chưa cấu hình Jira.", "error");
+      const grn = cokeImportantList(cokeToday()).find(x => x.kind === "grn" && !x.past);
+      if (!grn) return toast("Không tìm thấy ngày Close GRN Module sắp tới.", "error");
+      const dateStr = cokeFmt(grn.t, true).replace(/\//g, "-");
+      const summary = `[DMS] Close GRN Module on ${dateStr}`;
+      const descText = `Hi Vxceed team,\n\nAs requested by our Finance/Business team, please help us schedule a temporary closure of the GRN Module on ${dateStr}, for financial closing purposes.\n\nClosure Time: 06:00 AM (VNT)\nRe-opening Time: 12:00 PM (VNT)\n\nPlease ensure the GRN Module is disabled for all distributors before 06:00 AM and fully restored by 12:00 PM.\n\nKindly confirm once this is scheduled and committed in your system.`;
+      const btn = document.querySelector('[data-jira="create"]');
+      const restore = btn ? btn.innerHTML : null;
+      if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang tạo…`; }
+      try {
+        const base = String(cfg.base_url).replace(/\/$/, "");
+        const body = { fields: { project: { key: cfg.project_key }, summary, description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: descText }] }] }, issuetype: { name: cfg.issue_type || "Task" } } };
+        const res = await fetch(`${base}/rest/api/3/issue`, { method: "POST", headers: { "Authorization": `Basic ${btoa(`${cfg.email}:${cfg.token}`)}`, "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(body) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || `HTTP ${res.status}`);
+        toast(`Đã tạo ticket ${data.key}`, "success");
+        if (data.key) window.open(`${base}/browse/${data.key}`, "_blank", "noopener");
+      } catch (err) {
+        toast(`Tạo Jira ticket thất bại: ${err.message}`, "error");
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = restore; }
+      }
+    }
+    document.addEventListener("click", e => { const b = e.target.closest ? e.target.closest("[data-jira]") : null; if (b && !b.disabled && b.dataset.jira === "create") createJiraTicket(); });
+
+    // ---------- Cấu hình Jira (chỉ Super-admin) ----------
+    function renderJiraAdminPanel() {
+      const c = state.jiraConfig || {};
+      return `<section class="panel" style="margin-bottom:18px"><div class="panel-head"><div><h2>Cấu hình Jira</h2><p>Token Jira dùng để tạo ticket tự động Close GRN Module. Chỉ Super-admin nhìn thấy và chỉnh được.</p></div><span class="badge badge-blue">Super-admin</span></div>
+        <div class="panel-body"><div class="jira-config">
+          <div class="field"><label>Jira base URL</label><input id="jira-base" value="${escapeHtml(c.base_url || "")}" placeholder="https://your-domain.atlassian.net" autocomplete="off"></div>
+          <div class="field"><label>Email API</label><input id="jira-email" type="email" value="${escapeHtml(c.email || "")}" placeholder="you@company.com" autocomplete="off"></div>
+          <div class="field"><label>API Token</label><input id="jira-token" type="password" value="${escapeHtml(c.token || "")}" placeholder="ATATT3xF..." autocomplete="off"></div>
+          <div class="field"><label>Project key</label><input id="jira-project" value="${escapeHtml(c.project_key || "")}" placeholder="PADM2" autocomplete="off"></div>
+          <div class="field"><label>Issue type</label><input id="jira-issuetype" value="${escapeHtml(c.issue_type || "Task")}" placeholder="Task" autocomplete="off"></div>
+          <button type="button" class="btn btn-primary" id="save-jira">Lưu cấu hình Jira</button>
+        </div></div></section>`;
+    }
+    async function saveJiraConfig() {
+      if (!isAdmin()) return toast("Chỉ Super-admin mới được cấu hình Jira.", "error");
+      const cfg = { base_url: ($("#jira-base")?.value || "").trim(), email: ($("#jira-email")?.value || "").trim(), token: ($("#jira-token")?.value || "").trim(), project_key: ($("#jira-project")?.value || "").trim(), issue_type: ($("#jira-issuetype")?.value || "Task").trim() };
+      if (!cfg.base_url || !cfg.email || !cfg.token || !cfg.project_key) return toast("Hãy nhập đủ base URL, email, token, project key.", "error");
+      const { error } = await state.supabase.from(LICENSE_SETTINGS_TABLE).upsert({ key: JIRA_CONFIG_KEY, value: JSON.stringify(cfg), updated_at: new Date().toISOString(), updated_by: state.session?.user?.id }, { onConflict: "key" });
+      if (error) return toast(`Không lưu được: ${error.message}`, "error");
+      state.jiraConfig = cfg;
+      toast("Đã lưu cấu hình Jira.", "success");
+      render();
+    }
+    const parseSettingJson = v => { if (!v) return {}; if (typeof v === "object") return v; try { return JSON.parse(v) || {}; } catch (_) { return {}; } };
 
     function renderDashboard() {
       const recent = state.logs.slice(0, 5);
@@ -2366,6 +2514,7 @@
     function renderAdmin() {
       return `<div class="header-row"><div><div class="eyebrow">Super-admin console</div><h2 class="page-title">Quản lý dữ liệu</h2><p class="page-subtitle">Chỉ Super-admin nhìn thấy khu vực này.</p></div></div>
         ${renderLicenseAdminPanel()}
+        ${renderJiraAdminPanel()}
         <div class="two-col">
           <section class="panel"><div class="panel-head"><div><h2>Import masterdata</h2><p>Upsert theo UserName — bản ghi cũ được cập nhật, bản ghi mới được thêm.</p></div></div><div class="panel-body">
             <div class="import-drop" id="dropzone">${ICONS.upload}<h3>Kéo thả file Excel vào đây</h3><p>Hỗ trợ file .xlsx có hai sheet <b>DMS Userlist</b> và <b>Central User list</b>. Chỉ Super-admin được phép import.</p><label class="btn btn-primary" for="file-input">${ICONS.file} Chọn file Excel</label><input id="file-input" type="file" accept=".xlsx,.xls" class="hidden" /></div>
@@ -2444,6 +2593,7 @@
         const input = $("#max-license-input");
         saveMaxLicenses(input ? input.value : state.settings.maxLicenses);
       });
+      $("#save-jira")?.addEventListener("click", saveJiraConfig);
     }
 
     /* =====================================================================
@@ -3325,6 +3475,14 @@
           state.importantDays = payload.eventType === "DELETE" ? [] : parseImportantDays(payload.new?.value);
           refreshCokeRow();
         })
+        .on("postgres_changes", { event: "*", schema: "public", table: LICENSE_SETTINGS_TABLE, filter: `key=eq.${GRN_OVERRIDE_KEY}` }, (payload) => {
+          state.grnOverrides = payload.eventType === "DELETE" ? {} : parseSettingJson(payload.new?.value);
+          refreshCokeRow();
+        })
+        .on("postgres_changes", { event: "*", schema: "public", table: LICENSE_SETTINGS_TABLE, filter: `key=eq.${JIRA_CONFIG_KEY}` }, (payload) => {
+          state.jiraConfig = payload.eventType === "DELETE" ? {} : parseSettingJson(payload.new?.value);
+          if (document.querySelector(".cal-jira")) refreshCokeRow();
+        })
         .subscribe();
     }
 
@@ -3405,16 +3563,20 @@
       if (state.loading) { reloadQueued = true; return; }      // đang tải: xếp hàng tải lại sau để không mất thay đổi vừa lưu
       setLoading(true);
       try {
-        const [dms, central, profiles, logs, licenseSetting, importantSetting] = await Promise.all([
+        const [dms, central, profiles, logs, licenseSetting, importantSetting, grnSetting, jiraSetting] = await Promise.all([
           fetchAllRows("dms_users"),
           fetchAllRows("central_users"),
           isAdmin() ? state.supabase.from("profiles").select("*").order("created_at", { ascending: false }) : Promise.resolve({ data: [], count: 0 }),
           isAdmin() ? state.supabase.from("import_logs").select("*").order("created_at", { ascending: false }).limit(20) : Promise.resolve({ data: [], count: 0 }),
           // Bảng app_settings có thể chưa được tạo ở Supabase — nếu lỗi, Promise.all bên dưới vẫn xử lý an toàn nhờ optional chaining, chỉ giữ Max Licenses mặc định.
           state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", LICENSE_SETTINGS_KEY).maybeSingle(),
-          state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", IMPORTANT_DAYS_KEY).maybeSingle()   // ngày quan trọng trên lịch Coke
+          state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", IMPORTANT_DAYS_KEY).maybeSingle(),   // ngày quan trọng trên lịch Coke
+          state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", GRN_OVERRIDE_KEY).maybeSingle(),
+          canEdit() ? state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", JIRA_CONFIG_KEY).maybeSingle() : Promise.resolve({ data: null })
         ]);
         if (!importantSetting?.error) state.importantDays = parseImportantDays(importantSetting?.data?.value);
+        state.grnOverrides = grnSetting?.error ? {} : parseSettingJson(grnSetting?.data?.value);
+        state.jiraConfig = jiraSetting?.error ? {} : parseSettingJson(jiraSetting?.data?.value);
         if (dms.error || central.error) toast(`Không tải được đầy đủ dữ liệu: ${(dms.error || central.error).message}`, "error");
         state.dms = dms.data || []; state.central = central.data || []; state.profiles = profiles.data || []; state.logs = logs.data || [];
         state.counts.dms = dms.count ?? state.dms.length; state.counts.central = central.count ?? state.central.length;
