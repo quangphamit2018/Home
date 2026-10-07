@@ -2176,7 +2176,7 @@
       try {
                 const base = String(cfg.base_url || "").replace(/\/+$/, "");
         const proxy = String(cfg.proxy_url || "").trim().replace(/\/+$/, "");
-        let ticketKey = "", browseUrl = "";
+        let ticketKey = "", browseUrl = "", jiraWarnings = [], jiraStatus = "";
         if (proxy) {
           let res;
           try {
@@ -2187,6 +2187,8 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || data.error || `HTTP ${res.status}`);
           ticketKey = data.key || data.issue_key || "";
+          jiraWarnings = Array.isArray(data.warnings) ? data.warnings : [];
+          const stStep = (Array.isArray(data.steps) ? data.steps : []).find(x => /^4\./.test(x)); if (stStep) jiraStatus = stStep.replace(/^4\.\s*Đã chuyển trạng thái\s*→\s*/, "");
           browseUrl = data.browse_url || (ticketKey && base ? `${base}/browse/${ticketKey}` : "");
         } else {
           const body = { fields: { project: { key: cfg.project_key }, summary, description: { type: "doc", version: 1, content: [{ type: "paragraph", content: [{ type: "text", text: descText }] }] }, issuetype: { name: cfg.issue_type || "Task" } } };
@@ -2201,7 +2203,8 @@
           ticketKey = data.key || "";
           browseUrl = ticketKey && base ? `${base}/browse/${ticketKey}` : "";
         }
-        toast(ticketKey ? `Đã tạo ticket ${ticketKey}` : "Đã tạo ticket Jira", "success");
+        toast(ticketKey ? `Đã tạo ticket ${ticketKey}${jiraStatus ? " · " + jiraStatus : ""} thành công` : "Đã tạo ticket Jira thành công", "success");
+        if (jiraWarnings.length) toast("Cảnh báo: " + jiraWarnings.join(" | "), "error");
         if (browseUrl) window.open(browseUrl, "_blank", "noopener");
       } catch (err) {
         toast(err && err.message ? err.message : "Tạo ticket Jira thất bại.", "error");
