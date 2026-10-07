@@ -1195,25 +1195,23 @@
     .cal-row { display: grid; grid-template-columns: minmax(0, 940px) minmax(300px, 440px); gap: 16px; align-items: stretch; margin-bottom: 22px; }
     .cal-row .cal-wrap { margin: 0; max-width: none; }
     .cal-imp { display: flex; flex-direction: column; contain: size; min-height: 0; border-radius: 22px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 24px 54px rgba(140, 18, 24, .12), 0 2px 4px rgba(90, 13, 18, .05); }
-    .cal-imp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: linear-gradient(135deg, #e9f8f6 0%, #fff 70%); border-bottom: 1px solid var(--line); }
-    .cal-imp-head h3 { margin: 0; font-size: 15px; font-weight: 800; color: #0b5f58; display: flex; align-items: center; gap: 8px; }
-    .cal-imp-head h3::before { content: "★"; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 12px; color: #fff; background: linear-gradient(135deg, #20b2a4, #0b6f66); }
+    .cal-imp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: linear-gradient(135deg, var(--brand-soft) 0%, #fff 70%); border-bottom: 1px solid var(--line); }
+    .cal-imp-head h3 { margin: 0; font-size: 15px; font-weight: 800; color: var(--brand-dark); display: flex; align-items: center; gap: 8px; }
+    .cal-imp-head h3::before { content: "★"; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 12px; color: #fff; background: var(--g-brand); box-shadow: 0 6px 12px rgba(183, 28, 28, .25); }
     .cal-imp-head p { margin: 3px 0 0; font-size: 11.5px; color: var(--muted); }
     .cal-imp .cal-btn svg { width: 14px; height: 14px; }
-    .cal-imp .cal-btn.today { display: inline-flex; align-items: center; gap: 5px; background: linear-gradient(135deg, #1fae9f, #0b6f66); box-shadow: 0 8px 18px rgba(15, 143, 132, .28); }
-    .cal-imp .cal-btn.today:hover:not(:disabled) { background: linear-gradient(135deg, #2cc2b2, #0e8176); }
+    .cal-imp .cal-btn.today { display: inline-flex; align-items: center; gap: 5px; }
     .cal-imp-form { display: grid; gap: 9px; padding: 12px 18px 14px; background: var(--surface-soft); border-bottom: 1px solid var(--line); }
     .cal-imp-form[hidden] { display: none; }
+    .cal-imp-form .ttl { font-size: 12px; font-weight: 800; color: var(--brand-dark); }
     .cal-imp-form label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; color: var(--muted); }
-    .cal-imp-form input[type="date"], .cal-imp-form input[type="text"] { height: 36px; padding: 0 11px; border-radius: 10px; border: 1px solid var(--line-strong); background: #fff; font-size: 13px; color: var(--ink); }
-    .cal-imp-form input:focus { outline: none; border-color: #20b2a4; box-shadow: 0 0 0 3px rgba(32, 178, 164, .18); }
-    .cal-imp-form label.chk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 650; color: var(--ink-2); }
-    .cal-imp-form label.chk input { width: 16px; height: 16px; accent-color: #0f8f84; }
+    .cal-imp-form input[type="date"], .cal-imp-form input[type="text"], .cal-imp-form select { height: 36px; padding: 0 11px; border-radius: 10px; border: 1px solid var(--line-strong); background: #fff; font-size: 13px; color: var(--ink); font-family: inherit; }
+    .cal-imp-form input:focus, .cal-imp-form select:focus { outline: none; border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(229, 57, 53, .16); }
     .cal-imp-form .row { display: flex; justify-content: flex-end; gap: 8px; }
     .cal-imp-list { flex: 1; min-height: 0; overflow: auto; display: grid; gap: 8px; align-content: start; padding: 14px 18px; }
-    .cal-imp-i { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto; gap: 11px; align-items: center; padding: 8px 10px; border-radius: 14px; background: #fff; border: 1px solid var(--line); transition: transform .2s ease, box-shadow .2s ease; }
+    .cal-imp-i { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto auto auto; gap: 8px 11px; align-items: center; padding: 8px 10px; border-radius: 14px; background: #fff; border: 1px solid var(--line); transition: transform .2s ease, box-shadow .2s ease; }
     .cal-imp-i:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(120, 20, 24, .10); }
-    .cal-imp-i .d { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(160deg, #e9f8f6, #c6ebe6); color: #0b5f58; line-height: 1; }
+    .cal-imp-i .d { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(160deg, var(--brand-soft), var(--brand-soft-2)); color: var(--brand-dark); line-height: 1; }
     .cal-imp-i .d b { font-size: 18px; font-weight: 800; }
     .cal-imp-i .d small { font-size: 9px; font-weight: 700; margin-top: -8px; }
     .cal-imp-i.grn .d { background: linear-gradient(160deg, #f3efff, #dcd1ff); color: #4527a0; }
@@ -1222,12 +1220,14 @@
     .cal-imp-i .t small { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .cal-imp-i .left { font-style: normal; font-size: 11px; font-weight: 750; color: var(--muted); background: var(--surface-soft); border: 1px solid var(--line); border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
     .cal-imp-i .left.soon { color: #fff; background: var(--g-brand); border-color: transparent; }
-    .cal-imp-i.now { border-color: #20b2a4; box-shadow: 0 0 0 3px rgba(32, 178, 164, .16); }
+    .cal-imp-i.now { border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(229, 57, 53, .14); }
     .cal-imp-i.past { opacity: .5; }
-    .cal-imp-del { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; border: 0; background: transparent; color: var(--muted); cursor: pointer; transition: .2s ease; }
-    .cal-imp-del svg { width: 15px; height: 15px; }
+    .cal-imp-act { display: inline-flex; gap: 2px; }
+    .cal-imp-del, .cal-imp-edit { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; border: 0; background: transparent; color: var(--muted); cursor: pointer; transition: .2s ease; }
+    .cal-imp-del svg, .cal-imp-edit svg { width: 15px; height: 15px; }
+    .cal-imp-edit:hover { background: var(--brand-soft); color: var(--brand); }
     .cal-imp-del:hover { background: var(--danger-soft); color: var(--danger); }
-    .cal-imp-i:not(:has(.cal-imp-del)) { grid-template-columns: 46px minmax(0, 1fr) auto; }
+    .cal-imp-i:not(:has(.cal-imp-act)) { grid-template-columns: 46px minmax(0, 1fr) auto; }
     .cal-imp-foot { padding: 10px 18px 14px; font-size: 11.5px; color: var(--muted); border-top: 1px dashed var(--line-strong); }
     @media (max-width: 1360px) {
       .cal-row { grid-template-columns: minmax(0, 1fr); }
@@ -1237,7 +1237,7 @@
     @media (max-width: 760px) {
       .cal-imp { border-radius: 20px; }
       .cal-imp-head, .cal-imp-list { padding-left: 12px; padding-right: 12px; }
-      .cal-imp-i { grid-template-columns: 42px minmax(0, 1fr) auto auto; gap: 8px; }
+      .cal-imp-i { grid-template-columns: 42px minmax(0, 1fr) auto auto auto; gap: 8px; }
       .cal-imp-i .d { width: 42px; height: 42px; }
       .cal-imp-i .t small { display: none; }
     }
@@ -1790,6 +1790,8 @@
     // Ngày bán hàng = trừ Chủ nhật và ngày lễ. Ngày lễ cố định áp dụng mọi năm; lễ âm lịch / nghỉ bù khai báo theo năm bên dưới: [tháng, ngày, tên].
     const COKE_DAY = 864e5;
     const COKE_FIXED_HOLIDAYS = [[1, 1, "Tết Dương lịch"], [4, 30, "Giải phóng miền Nam"], [5, 1, "Quốc tế Lao động"], [9, 2, "Quốc khánh"]];
+    // Ngày lễ KHÔNG nghỉ: hiển thị trong "Ngày lễ" nhưng vẫn tính là ngày bán hàng (không trừ vào KPI)
+    const COKE_NOOFF_HOLIDAYS = [[11, 24, "Ngày Văn hóa Việt Nam"]];
     const COKE_HOLIDAYS_BY_YEAR = {
       2026: [[2, 16, "Nghỉ Tết Nguyên đán"], [2, 17, "Nghỉ Tết Nguyên đán"], [2, 18, "Nghỉ Tết Nguyên đán"], [2, 19, "Nghỉ Tết Nguyên đán"], [2, 20, "Nghỉ Tết Nguyên đán"], [4, 26, "Giỗ Tổ Hùng Vương"], [4, 27, "Nghỉ bù Giỗ Tổ"]]
     };
@@ -1798,13 +1800,13 @@
     const cokeGridStart = p => p.start - ((cokeDow(p.start) + 1) % 7) * COKE_DAY;   // Thứ 7 đầu tiên của lưới
     const cokeGrnDay = p => cokeGridStart(p) + 9 * COKE_DAY;                          // Thứ 7 tuần 2 (+7) → Thứ Hai (+2)
     // Ngày đánh dấu (không nghỉ, vẫn tính là ngày bán hàng): ngày cố định hằng năm + ngày do Super-admin / Senior-member cấu hình (state.importantDays)
-    const COKE_MARKED_FIXED = [[11, 24, "Ngày Văn hóa Việt Nam"]];
-    const IMPORTANT_DAYS_KEY = "important_days";   // lưu ở bảng app_settings (key/value), value = JSON mảng [{id, date:"YYYY-MM-DD", name, yearly}]
+    const COKE_MARKED_FIXED = [];   // (đã chuyển Ngày Văn hóa Việt Nam sang nhóm Ngày lễ không nghỉ bên dưới)
+    const IMPORTANT_DAYS_KEY = "important_days";   // lưu ở bảng app_settings (key/value), value = JSON mảng [{id, date:"YYYY-MM-DD", name, repeat:"none"|"weekly"|"yearly", yearly}]
     const parseImportantDays = v => {
       let a = v;
       if (typeof a === "string") { try { a = JSON.parse(a); } catch (_) { a = []; } }
       return (Array.isArray(a) ? a : []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.date)) && String(x.name || "").trim())
-        .map(x => ({ id: String(x.id || ""), date: x.date, name: String(x.name).trim().slice(0, 80), yearly: !!x.yearly }));
+        .map(x => { const repeat = ["none", "weekly", "yearly"].includes(x.repeat) ? x.repeat : (x.yearly ? "yearly" : "none"); return { id: String(x.id || ""), date: x.date, name: String(x.name).trim().slice(0, 80), repeat, yearly: repeat === "yearly" }; });
     };
     const cokeCustomDays = () => (typeof state !== "undefined" && Array.isArray(state.importantDays)) ? state.importantDays : [];
     function cokeMarks(y) {
@@ -1812,7 +1814,12 @@
       COKE_MARKED_FIXED.forEach(([m, d, n]) => add(cokeUTC(y, m, d), n));
       cokeCustomDays().forEach(it => {
         const [yy, mm, dd] = it.date.split("-").map(Number);
-        if (it.yearly) { const t = cokeUTC(y, mm, dd); if (new Date(t).getUTCMonth() + 1 === mm) add(t, it.name); }
+        if (it.repeat === "weekly") {
+          const t0 = cokeUTC(yy, mm, dd), ys = cokeUTC(y, 1, 1), ye = cokeUTC(y, 12, 31);
+          let t = t0 >= ys ? t0 : t0 + Math.ceil((ys - t0) / (7 * COKE_DAY)) * 7 * COKE_DAY;
+          for (; t <= ye; t += 7 * COKE_DAY) add(t, it.name);
+        }
+        else if (it.repeat === "yearly") { const t = cokeUTC(y, mm, dd); if (new Date(t).getUTCMonth() + 1 === mm && y >= yy) add(t, it.name); }
         else if (yy === y) add(cokeUTC(yy, mm, dd), it.name);
       });
       return map;
@@ -1828,6 +1835,11 @@
     function cokeHolidays(y) {
       const map = new Map();
       [...COKE_FIXED_HOLIDAYS, ...(COKE_HOLIDAYS_BY_YEAR[y] || [])].forEach(([m, d, name]) => map.set(cokeUTC(y, m, d), name));
+      return map;
+    }
+    function cokeNoOffHolidays(y) {
+      const map = new Map();
+      COKE_NOOFF_HOLIDAYS.forEach(([m, d, name]) => map.set(cokeUTC(y, m, d), name));
       return map;
     }
     function cokePeriods(y) {
@@ -1847,7 +1859,7 @@
     function renderCokeCalendar(anim) {
       const today = cokeToday();
       if (!cokeView || cokeView.day !== today) { const cur = cokePeriodOf(today); cokeView = { y: cur.y, m: cur.m, day: today }; }
-      const periods = cokePeriods(cokeView.y), p = periods[cokeView.m - 1], hol = cokeHolidays(p.y), curP = cokePeriodOf(today);
+      const periods = cokePeriods(cokeView.y), p = periods[cokeView.m - 1], hol = cokeHolidays(p.y), noOff = cokeNoOffHolidays(p.y), holShow = new Map([...noOff, ...hol]), curP = cokePeriodOf(today);
       let total = 0, done = 0;
       for (let t = p.start; t <= p.end; t += COKE_DAY) if (cokeDow(t) !== 0 && !hol.has(t)) { total++; if (t <= today) done++; }
       const inPeriod = today >= p.start && today <= p.end, isCur = curP.y === p.y && curP.m === p.m;
@@ -1862,12 +1874,12 @@
         const ws = Math.max(gridStart + r * 7 * COKE_DAY, p.start), we = Math.min(gridStart + (r * 7 + 6) * COKE_DAY, p.end);
         grid += `<div class="cal-wk${r + 1 === weekNo ? " now" : ""}"><b>Tuần ${r + 1}</b><small>${cokeFmt(ws)}–${cokeFmt(we)}</small></div>`;
         for (let c = 0; c < 7; c++) {
-          const t = gridStart + (r * 7 + c) * COKE_DAY, d = new Date(t), dow = d.getUTCDay(), hn = hol.get(t), mk = marks.get(t);
+          const t = gridStart + (r * 7 + c) * COKE_DAY, d = new Date(t), dow = d.getUTCDay(), hn = holShow.get(t), mk = marks.get(t);
           const out = t < p.start || t > p.end, isToday = t === today, dayNum = d.getUTCDate();
           const cls = ["cal-d", out ? "out" : "", !out && dow === 0 ? "sun" : "", !out && hn ? "hol" : "", !out && mk ? "mark" : "", t === grnT ? "evt" : "", isToday ? "today" : ""].filter(Boolean).join(" ");
           const sub = t === grnT ? COKE_GRN_LABEL : mk && !out ? mk.join(" · ") : hn && !out ? hn : (dayNum === 1 || t === p.start ? `${dayNum}/${d.getUTCMonth() + 1}` : "");
           const tag = isToday ? '<i class="tag">Hôm nay</i>' : t === grnT ? '<i class="tag">GRN</i>' : mk && !out ? '<i class="tag">★</i>' : (hn && !out ? '<i class="tag">Lễ</i>' : "");
-          const tip = `${CK_DOW_FULL[dow]}, ${cokeFmt(t, true)}${hn ? " · " + hn : ""}${t === grnT ? " · " + COKE_GRN_LABEL : ""}${mk ? " · ★ " + mk.join(" · ") : ""}${dow === 0 ? " · Chủ nhật (không bán)" : ""}`;
+          const tip = `${CK_DOW_FULL[dow]}, ${cokeFmt(t, true)}${hn ? " · " + hn + (noOff.has(t) && !hol.has(t) ? " (không nghỉ, vẫn bán hàng)" : "") : ""}${t === grnT ? " · " + COKE_GRN_LABEL : ""}${mk ? " · ★ " + mk.join(" · ") : ""}${dow === 0 ? " · Chủ nhật (không bán)" : ""}`;
           grid += `<div class="${cls}" title="${escapeHtml(tip)}"><span class="n">${dayNum}</span>${tag}${sub ? `<span class="s">${escapeHtml(sub)}</span>` : ""}</div>`;
         }
       }
@@ -1875,7 +1887,7 @@
       const quarters = [1, 2, 3, 4].map(q => `<div class="cal-q"><em>Q${q}</em>${periods.filter(x => x.q === q).map(x => `<button type="button" class="cal-p${x.m === p.m ? " on" : ""}${x.w === 5 ? " five" : ""}${x.y === curP.y && x.m === curP.m ? " now" : ""}" data-cal="goto" data-y="${x.y}" data-m="${x.m}" title="${cokeFmt(x.start, true)} → ${cokeFmt(x.end, true)}"><b>T${x.m}</b><small>${x.w} tuần</small></button>`).join("")}</div>`).join("");
 
       const groups = [];
-      [...hol.entries()].sort((a, b) => a[0] - b[0]).forEach(([t, name]) => {
+      [...holShow.entries()].sort((a, b) => a[0] - b[0]).forEach(([t, name]) => {
         const g = groups[groups.length - 1];
         if (g && g.name === name && t - g.end === COKE_DAY) g.end = t; else groups.push({ start: t, end: t, name });
       });
@@ -1887,9 +1899,10 @@
         return `<div class="cal-h${past ? " past" : ""}${inView ? " view" : ""}${i === nextIdx ? " next" : ""}"><time>${date}</time><span>${escapeHtml(g.name)}${i === nextIdx ? "<em>Sắp tới</em>" : ""}</span></div>`;
       }).join("") : '<div class="cal-empty">Chưa khai báo ngày lễ cho năm này.</div>';
 
-      const periodMarks = [];
-      for (let t = p.start; t <= p.end; t += COKE_DAY) (marks.get(t) || []).forEach(n => periodMarks.push([t, n]));
-      const periodMarkChips = periodMarks.slice(0, 2).map(([t, n]) => `<span class="cal-chip mk">★ ${escapeHtml(n)} · ${cokeFmt(t)}</span>`).join("") + (periodMarks.length > 2 ? `<span class="cal-chip mk">+${periodMarks.length - 2} ngày quan trọng</span>` : "");
+      const periodMarks = new Map();
+      for (let t = p.start; t <= p.end; t += COKE_DAY) (marks.get(t) || []).forEach(n => { if (!periodMarks.has(n)) periodMarks.set(n, []); periodMarks.get(n).push(t); });
+      const pmArr = [...periodMarks.entries()];
+      const periodMarkChips = pmArr.slice(0, 2).map(([n, ts]) => `<span class="cal-chip mk">★ ${escapeHtml(n)} · ${ts.length > 1 ? ts.length + " ngày" : cokeFmt(ts[0])}</span>`).join("") + (pmArr.length > 2 ? `<span class="cal-chip mk">+${pmArr.length - 2} ngày quan trọng</span>` : "");
       const weekdayNow = CK_DOW_FULL[cokeDow(today)];
       return `<div class="cal-wrap${anim ? " cal-anim" : ""}"><section class="cal" aria-label="Lịch Coke">
         <div class="cal-hero">
@@ -1946,34 +1959,39 @@
     });
 
 
-    // ---------- Thẻ "Ngày quan trọng": ai cũng xem được, chỉ Super-admin / Senior-member thêm - xóa ----------
-    let impFormOpen = false;
+    // ---------- Thẻ "Ngày quan trọng": ai cũng xem được, chỉ Super-admin thêm / sửa / xóa (RLS Supabase cũng chặn ở server) ----------
+    let impFormOpen = false, impEditId = null;   // impEditId != null → đang sửa
     const impId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     function cokeImportantList(today) {
       const y = new Date(today).getUTCFullYear(), out = [];
       const nextOcc = (m, d) => { for (let yy = y; yy <= y + 8; yy++) { const t = cokeUTC(yy, m, d); if (new Date(t).getUTCMonth() + 1 === m && t >= today) return t; } return null; };
-      COKE_MARKED_FIXED.forEach(([m, d, n]) => { const t = nextOcc(m, d); if (t != null) out.push({ t, name: n, kind: "builtin", yearly: true }); });
+      COKE_MARKED_FIXED.forEach(([m, d, n]) => { const t = nextOcc(m, d); if (t != null) out.push({ t, name: n, kind: "builtin", repeat: "yearly" }); });
       cokeCustomDays().forEach(it => {
         const [yy, mm, dd] = it.date.split("-").map(Number);
-        const t = it.yearly ? nextOcc(mm, dd) : cokeUTC(yy, mm, dd);
-        if (t != null) out.push({ t, name: it.name, kind: "custom", yearly: it.yearly, id: it.id, past: t < today });
+        const t0 = cokeUTC(yy, mm, dd);
+        let t;
+        if (it.repeat === "weekly") t = t0 >= today ? t0 : t0 + Math.ceil((today - t0) / (7 * COKE_DAY)) * 7 * COKE_DAY;
+        else if (it.repeat === "yearly") t = t0 > today ? t0 : nextOcc(mm, dd);
+        else t = t0;
+        if (t != null) out.push({ t, name: it.name, kind: "custom", repeat: it.repeat, id: it.id, past: t < today, raw: it });
       });
       for (const yy of [y, y + 1]) { const g = cokePeriods(yy).map(cokeGrnDay).find(t => t >= today); if (g != null) { out.push({ t: g, name: COKE_GRN_LABEL, kind: "grn" }); break; } }
       return out.sort((a, b) => (!!a.past !== !!b.past) ? (a.past ? 1 : -1) : (a.past ? b.t - a.t : a.t - b.t));
     }
     function renderImportantPanel() {
-      const today = cokeToday(), editor = canEdit();
+      const today = cokeToday(), editor = isAdmin();
       const items = cokeImportantList(today).filter(x => editor || !x.past);
       const iso = new Date(today).toISOString().slice(0, 10);
+      const editing = impEditId ? cokeCustomDays().find(x => x.id === impEditId) || null : null;
       const list = items.map(x => {
         const d = new Date(x.t), n = Math.round((x.t - today) / COKE_DAY);
         const left = x.past ? "đã qua" : n === 0 ? "Hôm nay" : n === 1 ? "Ngày mai" : `còn ${n} ngày`;
-        const meta = `${CK_DOW_FULL[d.getUTCDay()]}, ${cokeFmt(x.t, true)}${x.kind === "grn" ? " · Tự động mỗi kỳ" : x.yearly ? " · Hằng năm" : ""}`;
+        const meta = `${CK_DOW_FULL[d.getUTCDay()]}, ${cokeFmt(x.t, true)}${x.kind === "grn" ? " · Tự động mỗi kỳ" : x.repeat === "yearly" ? " · Hằng năm" : x.repeat === "weekly" ? " · Hằng tuần" : ""}`;
         return `<div class="cal-imp-i ${x.kind}${x.past ? " past" : ""}${n === 0 && !x.past ? " now" : ""}">
           <div class="d"><b>${d.getUTCDate()}</b><small>Thg ${d.getUTCMonth() + 1}</small></div>
           <div class="t"><span>${escapeHtml(x.name)}</span><small>${escapeHtml(meta)}</small></div>
           <em class="left${n <= 7 && !x.past ? " soon" : ""}">${left}</em>
-          ${editor && x.kind === "custom" ? `<button type="button" class="cal-imp-del" data-imp="del" data-id="${escapeHtml(x.id)}" data-name="${escapeHtml(x.name)}" title="Xóa" aria-label="Xóa ${escapeHtml(x.name)}">${ICONS.trash}</button>` : ""}
+          ${editor && x.kind === "custom" ? `<span class="cal-imp-act"><button type="button" class="cal-imp-edit" data-imp="edit" data-id="${escapeHtml(x.id)}" title="Sửa" aria-label="Sửa ${escapeHtml(x.name)}">${ICONS.edit}</button><button type="button" class="cal-imp-del" data-imp="del" data-id="${escapeHtml(x.id)}" data-name="${escapeHtml(x.name)}" title="Xóa" aria-label="Xóa ${escapeHtml(x.name)}">${ICONS.trash}</button></span>` : ""}
         </div>`;
       }).join("");
       return `<section class="cal-imp" aria-label="Ngày quan trọng">
@@ -1982,13 +2000,14 @@
           ${editor ? `<button type="button" class="cal-btn today" data-imp="toggle">${ICONS.plus} Thêm ngày</button>` : ""}
         </div>
         ${editor ? `<div class="cal-imp-form" id="imp-form"${impFormOpen ? "" : " hidden"}>
-          <label>Ngày<input type="date" id="imp-date" value="${iso}"></label>
-          <label>Nội dung cần chú ý<input type="text" id="imp-name" maxlength="80" placeholder="VD: Kiểm kê kho cuối quý" autocomplete="off"></label>
-          <label class="chk"><input type="checkbox" id="imp-yearly" checked> Lặp lại hằng năm</label>
-          <div class="row"><button type="button" class="cal-btn" data-imp="cancel">Hủy</button><button type="button" class="cal-btn today" data-imp="save">Lưu</button></div>
+          <div class="ttl">${editing ? "Sửa ngày quan trọng" : "Thêm ngày quan trọng"}</div>
+          <label>Ngày${editing && editing.repeat === "weekly" ? " bắt đầu" : ""}<input type="date" id="imp-date" value="${editing ? editing.date : iso}"></label>
+          <label>Nội dung cần chú ý<input type="text" id="imp-name" maxlength="80" placeholder="VD: Kiểm kê kho cuối quý" autocomplete="off" value="${editing ? escapeHtml(editing.name) : ""}"></label>
+          <label>Lặp lại<select id="imp-repeat">${[["none", "Không lặp"], ["weekly", "Hằng tuần (cùng thứ với ngày chọn)"], ["yearly", "Hằng năm"]].map(([v, l]) => `<option value="${v}"${(editing ? editing.repeat : "yearly") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+          <div class="row"><button type="button" class="cal-btn" data-imp="cancel">Hủy</button><button type="button" class="cal-btn today" data-imp="save">${editing ? "Cập nhật" : "Lưu"}</button></div>
         </div>` : ""}
         <div class="cal-imp-list">${list || '<div class="cal-empty">Chưa có ngày quan trọng nào.</div>'}</div>
-        ${editor ? "" : '<div class="cal-imp-foot">Chỉ Super-admin và Senior-member được thêm hoặc xóa ngày quan trọng.</div>'}
+        ${editor ? "" : '<div class="cal-imp-foot">Chỉ Super-admin được thêm, sửa hoặc xóa ngày quan trọng.</div>'}
       </section>`;
     }
     const renderCokeRow = anim => `<div class="cal-row">${renderCokeCalendar(anim)}${renderImportantPanel()}</div>`;
@@ -1996,14 +2015,14 @@
 
     // Đọc bản mới nhất từ Supabase rồi mới áp dụng thay đổi → hai người sửa cùng lúc không ghi đè nhau
     async function persistImportantDays(mutate) {
-      if (!canEdit()) { toast("Chỉ Super-admin và Senior-member mới được cấu hình ngày quan trọng.", "error"); return false; }
+      if (!isAdmin()) { toast("Chỉ Super-admin mới được cấu hình ngày quan trọng.", "error"); return false; }
       const sb = state.supabase;
       const cur = await sb.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", IMPORTANT_DAYS_KEY).maybeSingle();
       if (cur.error) { toast(`Không đọc được cấu hình: ${cur.error.message}`, "error"); return false; }
       const list = mutate(parseImportantDays(cur.data?.value));
       const { error } = await sb.from(LICENSE_SETTINGS_TABLE)
         .upsert({ key: IMPORTANT_DAYS_KEY, value: JSON.stringify(list), updated_at: new Date().toISOString(), updated_by: state.session?.user?.id }, { onConflict: "key" });
-      if (error) { toast(`Không lưu được: ${error.message}. Hãy kiểm tra quyền ghi bảng app_settings cho Senior-member.`, "error"); return false; }
+      if (error) { toast(`Không lưu được: ${error.message}. Hãy kiểm tra chính sách RLS của bảng app_settings (chỉ super-admin được ghi).`, "error"); return false; }
       state.importantDays = list;
       return true;
     }
@@ -2011,21 +2030,26 @@
       const b = e.target.closest ? e.target.closest("[data-imp]") : null;
       if (!b || b.disabled) return;
       const a = b.dataset.imp, form = document.querySelector("#imp-form");
-      if (a === "toggle") { impFormOpen = !impFormOpen; if (form) { form.hidden = !impFormOpen; if (impFormOpen) document.querySelector("#imp-name")?.focus(); } }
-      else if (a === "cancel") { impFormOpen = false; if (form) form.hidden = true; }
+      if (a === "toggle") { impEditId = null; impFormOpen = !impFormOpen; refreshCokeRow(); if (impFormOpen) document.querySelector("#imp-name")?.focus(); }
+      else if (a === "cancel") { impFormOpen = false; impEditId = null; refreshCokeRow(); }
+      else if (a === "edit") { impEditId = b.dataset.id; impFormOpen = true; refreshCokeRow(); document.querySelector("#imp-name")?.focus(); }
       else if (a === "save") {
-        const date = document.querySelector("#imp-date")?.value || "", name = (document.querySelector("#imp-name")?.value || "").trim().replace(/\s+/g, " "), yearly = !!document.querySelector("#imp-yearly")?.checked;
+        const date = document.querySelector("#imp-date")?.value || "", name = (document.querySelector("#imp-name")?.value || "").trim().replace(/\s+/g, " "), repeat = document.querySelector("#imp-repeat")?.value || "none";
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return toast("Hãy chọn ngày hợp lệ.", "error");
         if (!name) return toast("Hãy nhập nội dung cần chú ý.", "error");
+        if (!["none", "weekly", "yearly"].includes(repeat)) return toast("Kiểu lặp không hợp lệ.", "error");
         b.disabled = true;
-        const ok = await persistImportantDays(list => list.some(x => x.date === date && x.name.toLowerCase() === name.toLowerCase() && x.yearly === yearly) ? list : [...list, { id: impId(), date, name, yearly }]);
-        if (ok) { impFormOpen = false; toast("Đã thêm ngày quan trọng.", "success"); refreshCokeRow(); } else b.disabled = false;
+        const editId = impEditId, yearly = repeat === "yearly";
+        const ok = await persistImportantDays(list => editId
+          ? list.map(x => x.id === editId ? { ...x, date, name, repeat, yearly } : x)
+          : (list.some(x => x.date === date && x.name.toLowerCase() === name.toLowerCase() && x.repeat === repeat) ? list : [...list, { id: impId(), date, name, repeat, yearly }]));
+        if (ok) { impFormOpen = false; impEditId = null; toast(editId ? "Đã cập nhật ngày quan trọng." : "Đã thêm ngày quan trọng.", "success"); refreshCokeRow(); } else b.disabled = false;
       }
       else if (a === "del") {
         const id = b.dataset.id;
         const yes = await confirmDialog({ title: "Xóa ngày quan trọng?", message: `Xóa "${b.dataset.name}" khỏi lịch? Mọi người dùng sẽ không còn thấy ngày này.`, confirmText: "Xóa" });
         if (!yes) return;
-        if (await persistImportantDays(list => list.filter(x => x.id !== id))) { toast("Đã xóa.", "success"); refreshCokeRow(); }
+        if (await persistImportantDays(list => list.filter(x => x.id !== id))) { if (impEditId === id) { impEditId = null; impFormOpen = false; } toast("Đã xóa.", "success"); refreshCokeRow(); }
       }
     });
     document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target?.id === "imp-name") document.querySelector('[data-imp="save"]')?.click(); });
