@@ -1049,7 +1049,8 @@
     @media (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: 1fr; } }
   
     /* ---------- Lịch Coke (445) ở Tổng quan ---------- */
-    .cal { margin-bottom: 22px; border-radius: 26px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 26px 56px rgba(140, 18, 24, .17), 0 2px 4px rgba(90, 13, 18, .05); }
+    .cal-wrap { display: grid; grid-template-columns: minmax(0, 660px) 290px; gap: 16px; align-items: start; justify-content: start; margin-bottom: 22px; }
+    .cal { border-radius: 22px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 26px 56px rgba(140, 18, 24, .17), 0 2px 4px rgba(90, 13, 18, .05); }
     .cal-hero {
       position: relative; overflow: hidden; color: #fff; padding: 18px 24px 40px; display: flex; gap: 18px; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;
       background:
@@ -1061,7 +1062,7 @@
       content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 34px; pointer-events: none;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 80' preserveAspectRatio='none'%3E%3Cpath d='M0 50C180 8 360 78 600 42S1020 4 1200 38V80H0Z' fill='%23fff' fill-opacity='.10'/%3E%3Cpath d='M0 62C220 30 400 86 640 56S1000 28 1200 54V80H0Z' fill='%23fff' fill-opacity='.16'/%3E%3Cpath d='M0 50C180 8 360 78 600 42S1020 4 1200 38' fill='none' stroke='%23ffc857' stroke-width='2' stroke-opacity='.85' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
     }
-    .cal-ghost { position: absolute; right: 330px; top: -18px; font-size: 130px; font-weight: 900; line-height: 1; letter-spacing: -.05em; color: rgba(255, 255, 255, .07); pointer-events: none; user-select: none; }
+    .cal-ghost { position: absolute; right: 16px; top: -18px; font-size: 130px; font-weight: 900; line-height: 1; letter-spacing: -.05em; color: rgba(255, 255, 255, .07); pointer-events: none; user-select: none; }
     .cal-hero > *:not(.cal-ghost) { position: relative; z-index: 1; }
     .cal-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #ffdca0; background: rgba(255, 255, 255, .13); border: 1px solid rgba(255, 255, 255, .22); border-radius: 99px; padding: 3px 10px; margin-bottom: 6px; }
     .cal-title { margin: 0; font-size: 30px; line-height: 1.05; font-weight: 800; letter-spacing: -.025em; text-shadow: 0 4px 22px rgba(60, 0, 6, .45); }
@@ -1070,7 +1071,7 @@
     .cal-chip { font-size: 11px; font-weight: 650; padding: 3px 10px; border-radius: 99px; background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .24); color: #fff; }
     .cal-chip.gold { background: linear-gradient(135deg, #ffd978, #ffb62e); border-color: transparent; color: #5a0d12; box-shadow: 0 6px 16px rgba(255, 184, 46, .35); }
     .cal-kpis { display: flex; gap: 8px; flex-wrap: wrap; }
-    .cal-kpi { min-width: 108px; padding: 8px 13px; border-radius: 14px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18); }
+    .cal-kpi { min-width: 96px; padding: 7px 11px; border-radius: 14px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .22); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18); }
     .cal-kpi label { display: block; font-size: 10.5px; font-weight: 650; letter-spacing: .04em; color: rgba(255, 236, 234, .82); }
     .cal-kpi b { display: block; font-size: 22px; font-weight: 800; line-height: 1.15; margin-top: 1px; font-variant-numeric: tabular-nums; }
     .cal-kpi b em { font-style: normal; font-size: 13px; font-weight: 650; opacity: .75; }
@@ -1090,8 +1091,8 @@
     .cal-btn.today:hover:not(:disabled) { background: var(--g-brand-hover); color: #fff; }
     .cal-btn:disabled { opacity: .45; cursor: default; box-shadow: none; }
 
-    .cal-body { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; padding: 14px 20px 16px; }
-    .cal-body.cal-anim .cal-grid, .cal-body.cal-anim .cal-side { animation: cal-swap .45s cubic-bezier(.2, .8, .2, 1) both; }
+    .cal-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 14px 18px 14px; }
+    .cal-wrap.cal-anim .cal-grid, .cal-wrap.cal-anim .cal-side { animation: cal-swap .45s cubic-bezier(.2, .8, .2, 1) both; }
     .cal-grid { display: grid; grid-template-columns: 82px repeat(7, minmax(0, 1fr)); gap: 5px; align-content: start; }
     .cal-dh { text-align: center; font-size: 11px; font-weight: 750; letter-spacing: .05em; color: var(--muted); padding: 2px 0 3px; }
     .cal-dh.sun { color: var(--brand-light); }
@@ -1116,7 +1117,7 @@
     .cal-d.today { background: var(--g-brand); border-color: transparent; transform: translateY(-2px); box-shadow: 0 0 0 3px rgba(255, 200, 87, .85), 0 14px 28px rgba(183, 28, 28, .40); animation: cal-ring 2.4s ease-in-out infinite; z-index: 1; }
     .cal-d.today .n { color: #fff; font-size: 17px; }
     .cal-d.today .s { color: rgba(255, 255, 255, .88); }
-    .cal-d.today .tag { background: #fff; color: var(--brand-dark); }
+    .cal-d.today .tag { background: #fff; color: var(--brand-dark); position: static; align-self: flex-start; }
 
     .cal-legend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 14px; margin-top: 2px; font-size: 11px; color: var(--muted); }
     .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -1142,7 +1143,7 @@
     .cal-p.on { background: var(--g-brand); border-color: transparent; color: #fff; box-shadow: 0 8px 18px rgba(183, 28, 28, .32); }
     .cal-p.on small { color: rgba(255, 255, 255, .85); }
     .cal-p.now::after { content: ""; position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--gold); border: 2px solid #fff; box-shadow: 0 0 0 1px #e8a317; }
-    .cal-hols { display: grid; gap: 5px; max-height: 98px; overflow: auto; padding-right: 2px; }
+    .cal-hols { display: grid; gap: 5px; max-height: 190px; overflow: auto; padding-right: 2px; }
     .cal-h { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; align-items: center; padding: 5px 9px; border-radius: 9px; background: #fff; border: 1px solid var(--line); }
     .cal-h time { font-size: 11px; font-weight: 780; color: var(--brand-dark); font-variant-numeric: tabular-nums; }
     .cal-h span { font-size: 11.5px; color: var(--ink-2); font-weight: 600; }
@@ -1154,7 +1155,7 @@
     @keyframes cal-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(229, 57, 53, .18); } 50% { box-shadow: 0 0 0 7px rgba(229, 57, 53, .05); } }
     @keyframes cal-ring { 0%, 100% { box-shadow: 0 0 0 3px rgba(255, 200, 87, .85), 0 14px 28px rgba(183, 28, 28, .40); } 50% { box-shadow: 0 0 0 6px rgba(255, 200, 87, .35), 0 14px 28px rgba(183, 28, 28, .40); } }
     @keyframes cal-swap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    @media (max-width: 1180px) { .cal-ghost { right: 16px; } .cal-body { grid-template-columns: 1fr; } .cal-side { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 1060px) { .cal-wrap { grid-template-columns: minmax(0, 1fr); } .cal-side { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @media (max-width: 760px) {
       .cal { border-radius: 20px; }
       .cal-hero { padding: 16px 14px 34px; }
@@ -1163,7 +1164,7 @@
       .cal-kpi { min-width: 0; flex: 1 1 96px; padding: 10px 12px; }
       .cal-kpi b { font-size: 19px; }
       .cal-tools { padding: 11px 14px; }
-      .cal-body { padding: 14px 10px 18px; gap: 16px; }
+      .cal-body { padding: 12px 10px 14px; }
       .cal-grid { grid-template-columns: 46px repeat(7, minmax(0, 1fr)); gap: 4px; }
       .cal-wk { padding: 6px 4px; align-items: center; text-align: center; border-radius: 11px; }
       .cal-wk b { font-size: 11px; }
@@ -1173,7 +1174,7 @@
       .cal-dh { font-size: 10px; letter-spacing: 0; }
       .cal-side { grid-template-columns: 1fr; }
     }
-    @media (prefers-reduced-motion: reduce) { .cal-d.today, .cal-today .dot { animation: none; } .cal-body.cal-anim .cal-grid, .cal-body.cal-anim .cal-side { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .cal-d.today, .cal-today .dot { animation: none; } .cal-wrap.cal-anim .cal-grid, .cal-wrap.cal-anim .cal-side { animation: none; } }
   </style>
 </head>
 <body class="auth">
@@ -1797,7 +1798,7 @@
       }).join("") : '<div class="cal-empty">Chưa khai báo ngày lễ cho năm này.</div>';
 
       const weekdayNow = CK_DOW_FULL[cokeDow(today)];
-      return `<section class="cal" aria-label="Lịch Coke">
+      return `<div class="cal-wrap${anim ? " cal-anim" : ""}"><section class="cal" aria-label="Lịch Coke">
         <div class="cal-hero">
           <div class="cal-ghost" aria-hidden="true">${p.m}</div>
           <div>
@@ -1823,15 +1824,15 @@
             <button type="button" class="cal-btn" data-cal="next" aria-label="Kỳ sau">${ICONS.pgNext}</button>
           </div>
         </div>
-        <div class="cal-body${anim ? " cal-anim" : ""}">
+        <div class="cal-body">
           <div class="cal-grid">${grid}</div>
-          <aside class="cal-side">
-            <div class="cal-box"><h3>Cả năm ${p.y}<small>★ = 5 tuần</small></h3>${quarters}</div>
-            <div class="cal-box"><h3>Ngày lễ ${p.y}</h3><div class="cal-hols">${holHtml}</div></div>
-          </aside>
           <div class="cal-legend"><span><i class="l-today"></i>Hôm nay</span><span><i class="l-sun"></i>Chủ nhật (không bán)</span><span><i class="l-hol"></i>Ngày lễ</span><span><i class="l-out"></i>Ngoài kỳ</span></div>
         </div>
-      </section>`;
+      </section>
+      <aside class="cal-side">
+            <div class="cal-box"><h3>Cả năm ${p.y}<small>★ = 5 tuần</small></h3>${quarters}</div>
+            <div class="cal-box"><h3>Ngày lễ ${p.y}</h3><div class="cal-hols">${holHtml}</div></div>
+      </aside></div>`;
     }
     document.addEventListener("click", e => {
       const b = e.target.closest ? e.target.closest("[data-cal]") : null;
@@ -1844,7 +1845,7 @@
         if (m > 12) { m = 1; y++; } else if (m < 1) { m = 12; y--; }
         cokeView = { ...cokeView, y, m };
       }
-      const el = document.querySelector(".cal");
+      const el = document.querySelector(".cal-wrap");
       if (el) el.outerHTML = renderCokeCalendar(true);
     });
 
