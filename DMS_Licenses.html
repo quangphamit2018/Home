@@ -1192,7 +1192,9 @@
     @media (prefers-reduced-motion: reduce) { .cal-d.today, .cal-today .dot { animation: none; } .cal-wrap.cal-anim .cal-grid, .cal-wrap.cal-anim .cal-side { animation: none; } }
   
     /* ---------- Hàng lịch + thẻ Ngày quan trọng ---------- */
-    .cal-row { display: grid; grid-template-columns: minmax(0, 940px) minmax(300px, 440px); gap: 16px; align-items: stretch; margin-bottom: 22px; }
+    .cal-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 420px); gap: 18px; align-items: stretch; margin-bottom: 22px; }
+    @media (max-width: 1080px) { .cal-row { grid-template-columns: 1fr; } .cal-side-col { flex-direction: row; align-items: stretch; } .cal-side-col > * { flex: 1 1 0; min-width: 0; } .cal-side-col .cal-imp { flex: 1 1 0; } }
+    @media (max-width: 680px) { .cal-side-col { flex-direction: column; } .cal-side-col > * { flex: 0 0 auto; } }
     .cal-row .cal-wrap { margin: 0; max-width: none; }
     .cal-imp { display: flex; flex-direction: column; contain: size; min-height: 0; border-radius: 22px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 24px 54px rgba(140, 18, 24, .12), 0 2px 4px rgba(90, 13, 18, .05); }
     .cal-imp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: linear-gradient(135deg, var(--brand-soft) 0%, #fff 70%); border-bottom: 1px solid var(--line); }
@@ -1243,21 +1245,22 @@
     }
     /* ---------- Cột bên cạnh Ngày quan trọng + thẻ tạo Jira ticket ---------- */
     .cal-side-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-    .cal-side-col .cal-imp { contain: none; flex: 1; min-height: 0; }
+    .cal-side-col .cal-imp { contain: none; flex: 1 1 auto; min-height: 0; }
+    .cal-side-col .cal-jira { flex: 0 0 auto; }
     .cal-imp-i.grn-skip { opacity: .45; }
     .cal-imp-i.grn-skip .d { filter: grayscale(1); }
-    .cal-jira { border-radius: 22px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 18px 40px rgba(37, 99, 235, .10); overflow: hidden; }
-    .cal-jira-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: linear-gradient(135deg, #eaf2ff 0%, #fff 70%); border-bottom: 1px solid var(--line); }
+    .cal-jira { border-radius: 22px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 18px 40px rgba(37, 99, 235, .10), 0 2px 6px rgba(15, 23, 42, .04); overflow: hidden; display: flex; flex-direction: column; }
+    .cal-jira-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; background: linear-gradient(135deg, #eaf2ff 0%, #fff 70%); border-bottom: 1px solid var(--line); }
     .cal-jira-head h3 { margin: 0; font-size: 15px; font-weight: 800; color: #0b3d91; display: flex; align-items: center; gap: 8px; }
-    .cal-jira-head h3::before { content: "✦"; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 12px; color: #fff; background: #2563eb; box-shadow: 0 6px 12px rgba(37, 99, 235, .25); }
+    .cal-jira-head h3::before { content: "✦"; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; font-size: 12px; color: #fff; background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 6px 12px rgba(37, 99, 235, .30); }
     .cal-jira-head p { margin: 3px 0 0; font-size: 11.5px; color: var(--muted); }
     .cal-jira-head svg { width: 18px; height: 18px; color: #2563eb; }
-    .cal-jira-body { padding: 14px 18px; display: grid; gap: 8px; }
-    .cal-jira-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; padding: 7px 11px; border-radius: 10px; background: var(--surface-soft); border: 1px solid var(--line); }
+    .cal-jira-body { padding: 16px 18px; display: grid; gap: 9px; }
+    .cal-jira-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; padding: 9px 12px; border-radius: 11px; background: var(--surface-soft); border: 1px solid var(--line); }
     .cal-jira-row span { color: var(--muted); font-weight: 700; }
     .cal-jira-row b { color: var(--ink); font-weight: 800; }
-    .cal-jira-warn { font-size: 11.5px; color: #b45309; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 8px 11px; }
-    .cal-jira-btn { margin-top: 4px; width: 100%; justify-content: center; }
+    .cal-jira-warn { font-size: 11.5px; color: #b45309; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 11px; padding: 9px 12px; }
+    .cal-jira-btn { margin-top: 6px; width: 100%; justify-content: center; }
     .jira-config { display: grid; gap: 10px; }
     .jira-config .btn { justify-self: start; }
   </style>
