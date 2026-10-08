@@ -1264,6 +1264,32 @@
     .jira-config { display: grid; gap: 10px; }
     .jira-config .btn { justify-self: start; }
   
+    /* ---- Chuyển đổi loại CTKM (Slab in Slab / Tactical) ---- */
+    .pro-mode-seg { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 14px; background: #fff; border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: var(--shadow-card); }
+    .pro-mode-seg button { border: 0; background: transparent; color: var(--ink-2); font-weight: 650; font-size: 13px; padding: 8px 18px; border-radius: 9px; display: inline-flex; align-items: center; gap: 7px; transition: .18s; }
+    .pro-mode-seg button svg { width: 15px; height: 15px; }
+    .pro-mode-seg button:hover:not(.on) { background: var(--brand-soft); color: var(--brand-dark); }
+    .pro-mode-seg button.on { color: #fff; background: var(--g-brand); box-shadow: 0 6px 16px rgba(183, 28, 28, .28); }
+    /* ---- Section 4: Tất cả các cột template ---- */
+    .pro-cols { border: 1px solid var(--line); border-radius: 14px; background: #fff; overflow: hidden; }
+    .pro-cols > summary { cursor: pointer; padding: 14px 16px; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; list-style: none; background: linear-gradient(180deg, #fffdfd, #fff7f6); }
+    .pro-cols > summary::-webkit-details-marker { display: none; }
+    .pro-cols > summary em { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff; display: inline-grid; place-items: center; font-size: 12px; }
+    .pro-cols > summary small { font-weight: 500; color: var(--muted); margin-left: 4px; }
+    .pro-cols > summary span.pro-cols-cnt { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-soft); padding: 3px 10px; border-radius: 99px; }
+    .pro-cols-body { padding: 14px 16px 18px; }
+    .pro-col-grp { margin-bottom: 16px; }
+    .pro-col-grp:last-child { margin-bottom: 0; }
+    .pro-col-grp > h4 { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--brand-dark); display: flex; align-items: center; gap: 7px; }
+    .pro-col-grp > h4::before { content: ""; width: 3px; height: 13px; border-radius: 3px; background: var(--g-brand); }
+    .pro-col-grp .pro-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .pro-col-grp .field label { font-size: 11px; }
+    .pro-col-grp .field input, .pro-col-grp .field select { padding: 8px 10px; font-size: 11.5px; }
+    .pro-col-auto { position: relative; }
+    .pro-col-auto::after { content: "auto"; position: absolute; top: -2px; right: -2px; font-size: 8.5px; font-weight: 700; color: var(--success); background: var(--success-soft); padding: 1px 5px; border-radius: 99px; }
+    @media (max-width: 800px) { .pro-col-grp .pro-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 520px) { .pro-col-grp .pro-grid { grid-template-columns: 1fr; } }
+
     .pro-slab { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; background: #fff; }
     .pro-slab-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 700; font-size: 13px; }
     .pro-slab-f { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
@@ -3203,7 +3229,84 @@
     const PRO_I = Object.fromEntries(PRO_COLS.map((c, i) => [c, i]));
     const proSlab = () => ({ from: "", to: "", each: "", disc: "1", q: "", a: "" });
     const PRO_TYPE_OPTS = [["4","4 – Tặng hàng FOC"],["1","1 – Giảm amount (trên line)"],["2","2 – Giảm % (trên line)"],["3","3 – Giảm net price"],["5","5 – Giảm amount (ngoài HĐ)"],["6","6 – Giảm % (ngoài HĐ)"],["8","8 – KM tích điểm"],["10","10 – Giá cố định"],["11","11 – Giảm MRP %"]];
-    const proInit = () => ({ code: "", desc: "", start: adjToday(), end: "", dist: "", uom: "CS", terr: "", seq: "0", excl: "0", rep: "0", apply: "", rb: "1", dm: "1", type: "4", quota: true, slabs: [proSlab()] });
+    const PRO_MODE_KEY = "masterdata_pro_mode";
+    let mdmProMode = loadKey(PRO_MODE_KEY, ["slab", "tactical"], "slab");
+    /* ---- Tất cả các cột template (75 cột) — hiển thị đầy đủ để user điền/điều chỉnh ---- */
+    const PRO_EXTRA_GROUPS = [
+      { name: "Khuyến mãi", cols: [
+        ["ProRata", "auto", "N", "text", null],
+        ["Bundle_Promotion", "auto", "0", "select", [["0","0 – Khuyến mãi bình thường"],["1","1 – Khuyến mãi bundle"]]],
+        ["PromotionQuantity", "auto", "0", "text", null],
+        ["SpecialPromotion", "auto", "", "text", null],
+        ["IOCode", "blank", "", "text", null],
+      ]},
+      { name: "Vùng & nhà phân phối", cols: [
+        ["DistributorCategoryCode1", "blank", "", "text", null],
+        ["DistributorCategoryCode2", "blank", "", "text", null],
+        ["DistributorCategoryCode3", "blank", "", "text", null],
+        ["ExclusionDistributorCodes", "blank", "", "text", null],
+        ["Sales_Organisation", "blank", "", "text", null],
+      ]},
+      { name: "Sản phẩm", cols: [
+        ["Product_Hierarchy", "blank", "", "text", null],
+        ["Brand", "blank", "", "text", null],
+        ["Beverage_Category", "blank", "", "text", null],
+        ["Beverage_Product", "blank", "", "text", null],
+        ["PackType", "blank", "", "text", null],
+        ["Flavor", "blank", "", "text", null],
+        ["CarbonationIndicator", "blank", "", "text", null],
+        ["PackSize", "blank", "", "text", null],
+        ["ProductGroupBasis", "blank", "", "text", null],
+        ["TradeMark", "blank", "", "text", null],
+        ["General_Item_Category_Group", "blank", "", "text", null],
+        ["NumberOfUniqueSKU", "blank", "", "text", null],
+        ["DISPLAYWEIGHTAGE", "blank", "", "text", null],
+      ]},
+      { name: "Outlet / khách hàng", cols: [
+        ["OutletHierarchyName", "blank", "", "text", null],
+        ["OutletCode", "blank", "", "text", null],
+        ["On-offPremise", "blank", "", "text", null],
+        ["PopulatedArea", "blank", "", "text", null],
+        ["Classification", "blank", "", "text", null],
+        ["Category", "blank", "", "text", null],
+        ["CustomerGroup", "blank", "", "text", null],
+        ["CustomerBusienssType", "blank", "", "text", null],
+        ["CustomerKeyAccount", "blank", "", "text", null],
+        ["REDCustomerName", "blank", "", "text", null],
+        ["CustomerType", "blank", "", "text", null],
+        ["CoolerCustomer", "blank", "", "text", null],
+        ["ExclusionCustomerCode", "blank", "", "text", null],
+      ]},
+      { name: "Khác", cols: [
+        ["Digital_Agreement", "blank", "", "text", null],
+        ["QualificationMode", "blank", "", "text", null],
+        ["AmountBasis", "blank", "", "text", null],
+        ["AllowCapQuota", "blank", "", "text", null],
+        ["SourceTags", "blank", "", "text", null],
+        ["ApplyOn_Basket", "blank", "", "text", null],
+        ["CPC", "blank", "", "text", null],
+        ["Exclusion_Group_Code", "blank", "", "text", null],
+        ["Header_Level_Amount_Basis", "blank", "", "text", null],
+        ["Product_Group", "blank", "", "text", null],
+        ["IsConsumer_Promotion", "blank", "", "text", null],
+        ["PromotionQuota", "blank", "", "text", null],
+        ["UseIn_Or", "blank", "", "text", null],
+        ["Volume", "blank", "", "text", null],
+        ["SegmentCode", "blank", "", "text", null],
+        ["AllowPromotionQuota", "blank", "", "text", null],
+        ["FOCInFullBUOMRounding", "blank", "", "text", null],
+      ]},
+    ];
+    const PRO_EXTRA_KEYS = PRO_EXTRA_GROUPS.flatMap(g => g.cols.map(([k]) => k));
+    const PRO_COL_DEFAULTS = Object.fromEntries(PRO_EXTRA_GROUPS.flatMap(g => g.cols.map(([k, , d]) => [k, d])));
+    const proInit = () => ({ code: "", desc: "", start: adjToday(), end: "", dist: "", uom: "CS", terr: "", seq: "0", excl: "0", rep: "0", apply: "", rb: "1", dm: "1", type: "4", quota: true, slabs: [proSlab()], cols: { ...PRO_COL_DEFAULTS }, touched: new Set() });
+    function proSyncAuto() {
+      const P = mdmPro, ptype = Number(P.type);
+      if (!P.touched.has("ProRata")) {
+        const allQ = P.slabs.flatMap(s => proSkus(s.q));
+        P.cols.ProRata = proRataFor(ptype, allQ, P.rb);
+      }
+    }
     function proRataFor(ptype, qSkus, rb) { if (ptype === 4 || ptype === 5 || ptype === 6) return "N"; if (ptype === 2) return "Y"; if (ptype === 1) return String(rb) === "2" ? "N" : (new Set(qSkus).size > 1 ? "Y" : "N"); return "N"; }
     let mdmPro = proInit();
     const proSkus = s => s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
@@ -3311,6 +3414,12 @@
           set("SLABNUM", i + 1); set("SLABFROM", f); set("SLABTO", t); set("DISCOUNT", dc); set("ForEach", e); set("Repeating_Range", Number(P.rep));
           set("ProductGroup", g); set("PromotionQuantity", 0); set("UnitOfMeasure", P.uom.trim()); set("SKUCode", sk(x));
           if (P.terr.trim()) set("Territory", P.terr.trim()); set("DistributorCode", P.dist.trim()); if (P.apply.trim()) set("ApplyCount", Number(P.apply));
+          /* Áp dụng giá trị từ "Tất cả các cột template" — user có thể điều chỉnh mọi cột */
+          const C = P.cols || {};
+          if (String(C.ProRata ?? "").trim() !== "") r[PRO_I.ProRata] = C.ProRata;
+          if (String(C.Bundle_Promotion ?? "").trim() !== "") r[PRO_I.Bundle_Promotion] = Number(C.Bundle_Promotion);
+          if (String(C.PromotionQuantity ?? "").trim() !== "") r[PRO_I.PromotionQuantity] = Number(C.PromotionQuantity);
+          PRO_EXTRA_KEYS.forEach(c => { const v = C[c]; if (v != null && String(v).trim() !== "" && PRO_I[c] != null && !["ProRata","Bundle_Promotion","PromotionQuantity"].includes(c)) r[PRO_I[c]] = String(v).trim(); });
           out.push(r);
         }));
       });
@@ -3340,6 +3449,11 @@
     }
     function proDraw() { $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
     function proMeta() {
+      proSyncAuto();
+      const proRataInput = document.querySelector('[data-pro-col="ProRata"]');
+      if (proRataInput && !mdmPro.touched.has("ProRata")) proRataInput.value = mdmPro.cols.ProRata;
+      const colsCnt = document.querySelector("#pro-cols-cnt");
+      if (colsCnt) { const filled = PRO_EXTRA_KEYS.filter(k => String(mdmPro.cols[k] ?? "").trim() !== "").length; colsCnt.textContent = filled + " / " + PRO_EXTRA_KEYS.length + " cột đã điền"; }
       const v = proParse(), PV = ["SLABNUM", "SLABFROM", "SLABTO", "ForEach", "DISCOUNT", "ProductGroup", "UnitOfMeasure", "SKUCode"];
       document.querySelectorAll("#pro-cfg .field, #pro-adv .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
       document.querySelectorAll("#pro-slabs .pro-slab").forEach(el => {
@@ -3364,7 +3478,7 @@
         if (dirty && !(await confirmDialog({ title: a === "example" ? "Thay bằng ví dụ?" : "Làm mới form?", message: "Dữ liệu đang nhập trong form sẽ bị thay thế.", confirmText: a === "example" ? "Điền ví dụ" : "Làm mới", danger: true }))) return;
         mdmPro = proInit();
         if (a === "example") Object.assign(mdmPro, { code: "HCM_082026_01", desc: "4T Sprite/Fanta (all flavor) 1.5L tặng 1T DASANI/MINERAL 510ML (2EA tặng 1EA)", dist: "0070259604", seq: "555", terr: "VN10VN11", start: "01/11/2026", end: "15/11/2026", uom: "EA", rep: "1", slabs: [{ from: "2", to: "2", each: "2", disc: "1", q: "2016\n2090\n3089\n3433", a: "2717\n2718\n2772" }] });
-        $("#mdm-root").innerHTML = renderPro(); return proDraw();
+        $("#mdm-root").innerHTML = renderPro(); proSyncAuto(); return proDraw();
       }
       proDraw();
     }
@@ -3379,13 +3493,31 @@
       XLSX.writeFile(wb, fileName);
       toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
     }
+    const proModeSeg = () => `<div class="pro-mode-seg"><button type="button" data-pro-mode="slab" class="${mdmProMode === "slab" ? "on" : ""}">📊 Slab in Slab</button><button type="button" data-pro-mode="tactical" class="${mdmProMode === "tactical" ? "on" : ""}">🎯 Tactical</button></div>`;
+    function proColFieldHtml(key, kind, def, type, opts) {
+      const v = mdmPro.cols[key] != null ? mdmPro.cols[key] : "";
+      const autoTag = kind === "auto" ? ' pro-col-auto' : '';
+      if (type === "select") return `<div class="field${autoTag}" data-k="${key}"><label>${key}</label><select data-pro-col="${key}">${opts.map(([o, t]) => `<option value="${o}"${String(v) === o ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
+      return `<div class="field${autoTag}" data-k="${key}"><label>${key}</label><input data-pro-col="${key}" value="${escapeHtml(v)}" placeholder="${kind === "auto" ? "tự điền" : "để trống"}" autocomplete="off"></div>`;
+    }
+    function proColGroupHtml(g) {
+      return `<div class="pro-col-grp"><h4>${g.name}</h4><div class="pro-grid">${g.cols.map(([k, kind, d, t, o]) => proColFieldHtml(k, kind, d, t, o)).join("")}</div></div>`;
+    }
+    function renderProTactical() {
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Chọn loại CTKM để bắt đầu. Tactical — template sẽ được gửi sau.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
+        <div class="panel-body">${proModeSeg()}
+          <div class="empty"><strong>🎯 Tactical — đang chờ template</strong>Template upload dành cho Tactical sẽ được gửi sau. Khi có template, giao diện này sẽ hiển thị đầy đủ các cột tương tự Slab in Slab.</div>
+        </div></section>`;
+    }
     function renderPro() {
+      if (mdmProMode === "tactical") return renderProTactical();
       const P = mdmPro;
       const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><input data-pro="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
       const S = (k, l, key, opts) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><select data-pro="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tạo CTKM tặng hàng (FOC) theo 3 bước, xuất Excel đúng mẫu PromotionUploadTemplateMapping. Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tạo CTKM theo 4 bước, xuất Excel đúng mẫu PromotionUploadTemplateMapping (75 cột). Mọi cột đều hiển thị để bạn điền hoặc điều chỉnh. Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
-        <div class="panel-body"><div class="pro-lay"><div class="pro-main">
+        <div class="panel-body">${proModeSeg()}<div class="pro-lay"><div class="pro-main">
           <div class="pro-card"><h3><em>1</em>Thông tin chương trình</h3>
             <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "PromotionDescription", "PromotionDescription")}${F("dist", "DistributorCode", "DistributorCode", "vd: 0070259604")}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}${S("type", "PromotionTypeCode", "PromotionTypeCode", PRO_TYPE_OPTS)}</div></div>
           <div class="pro-card"><h3><em>2</em>Cấu hình Slab (mức mua)<span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
@@ -3394,6 +3526,7 @@
             ${F("terr", "Territory", "Territory", "vd: VN10VN11")}${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "để trống = không giới hạn")}
             ${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – Không lặp lại"], ["1", "1 – Có lặp lại"]])}${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Có (được hưởng thêm CTKM khác)"], ["1", "1 – Không (chỉ CTKM này)"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Dựa trên số lượng sản phẩm mua"], ["2", "2 – Dựa trên giá trị sản phẩm mua"]])}
             ${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Áp dụng KM trên hóa đơn"], ["2", "2 – Áp dụng KM ngoài hóa đơn"]])}<div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-pro="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu MultiSKU)</label></div></div></details>
+          <details class="pro-card pro-cols" id="pro-cols"><summary><em>4</em>Tất cả các cột template <small>— hiển thị đầy đủ 75 cột, hệ thống tự điền, bạn có thể điều chỉnh</small><span class="pro-cols-cnt" id="pro-cols-cnt"></span></summary><div class="pro-cols-body" id="pro-cols-body">${PRO_EXTRA_GROUPS.map(proColGroupHtml).join("")}</div></details>
         </div>
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="pro-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="pro-pv"></div></div>
@@ -3417,7 +3550,8 @@
       const pg = $("#mdm-page"); if (!pg) return;
       pg.addEventListener("input", e => {
         const t = e.target;
-        if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.type === "checkbox" ? t.checked : t.value; return t.dataset.pro === "type" ? proDraw() : proMeta(); }
+        if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.type === "checkbox" ? t.checked : t.value; if (t.dataset.pro === "type" || t.dataset.pro === "rb") { proSyncAuto(); return proDraw(); } return proMeta(); }
+        if (t.dataset.proCol) { mdmPro.cols[t.dataset.proCol] = t.value; mdmPro.touched.add(t.dataset.proCol); return proMeta(); }
         if (t.dataset.ps) { mdmPro.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.ps] = t.value; return proMeta(); }
         if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
         if (t.dataset.ini) { mdmIni[t.dataset.ini] = t.value; return iniMeta(); }
@@ -3499,6 +3633,7 @@
           if (mdmAdj.rows.some(r => r.item || r.qty) && !(await confirmDialog({ title: "Xóa toàn bộ danh sách?", message: "Tất cả dòng ItemCode / UOM0 đang nhập sẽ bị xóa.", confirmText: "Xóa tất cả", danger: true }))) return;
           mdmAdj.rows = [adjBlank()]; return adjDrawRows([0, "item"]);
         }
+        const pm = e.target.closest("[data-pro-mode]"); if (pm) { mdmProMode = pm.dataset.proMode; saveKey(PRO_MODE_KEY, mdmProMode); pg.querySelectorAll("[data-pro-mode]").forEach(x => x.classList.toggle("on", x === pm)); $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "promo") proDraw(); return; }
         const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
         mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
         pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
