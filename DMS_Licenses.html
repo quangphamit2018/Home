@@ -2965,7 +2965,90 @@
         <p class="adj-tip">💡 Copy 2 cột từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>ItemCode</b> đầu tiên — toàn bộ dòng sẽ tự điền. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu, ô vàng = ItemCode bị trùng.</p>
         <div class="adj-foot"><div class="meta" id="adj-meta"></div><button type="button" id="adj-export" class="btn btn-primary btn-lg">⬇ Xuất CSV (UTF-16 LE BOM)</button></div></div></section>`;
     }
+
+    /* ---- Tạo tồn kho ban đầu: lưới ItemCode + StockQuantity, xuất CSV đúng mẫu 2_CreateFirstInventorySKU.csv ---- */
+    const INI_COLS = ["WarehouseCode", "ItemCode", "SubHierarchyCode", "BaseUOM", "StockQuantity", "DamageStorageLocation", "DamageQuantity", "ProductionDate", "ExpireDate", "PurchasePrice_Each", "PurchasePriceWithTax_Each", "ItemTypeCode", "LBDDate"];
+    const iniBlank = () => ({ item: "", qty: "" });
+    const mdmIni = { wh: "MW001", uom: "CS", type: "1", rows: [iniBlank()] };
+    function iniParse() {
+      const out = [], bad = {}, cfgBad = {}, seen = {}, dup = {};
+      ["wh", "uom", "type"].forEach(k => { if (!mdmIni[k].trim() || /[,"\s]/.test(mdmIni[k].trim())) cfgBad[k] = 1; });
+      let total = 0;
+      mdmIni.rows.forEach((r, i) => {
+        const item = r.item.trim(), qty = r.qty.trim();
+        if (!item && !qty) return;
+        const okItem = !!item && !/[,"\s]/.test(item);
+        const okQty = qty === "" || /^\d+(\.\d+)?$/.test(qty); // để trống = 0
+        if (!okItem || !okQty) { bad[i] = { item: !okItem, qty: !okQty }; return; }
+        const q = qty === "" ? "0" : qty;
+        total += Number(q);
+        if (seen[item] != null) dup[i] = dup[seen[item]] = 1; else seen[item] = i;
+        out.push([mdmIni.wh.trim(), item, "", mdmIni.uom.trim(), q, "", "", "", "", "", "", mdmIni.type.trim(), ""]);
+      });
+      return { out, bad, cfgBad, dup, total, nbad: Object.keys(bad).length, ndup: Object.keys(dup).length, ncfg: Object.keys(cfgBad).length };
+    }
+    function iniRowHtml(r, i) {
+      return `<div class="adj-row" data-r="${i}"><span class="adj-n">${i + 1}</span><input data-c="item" value="${escapeHtml(r.item)}" placeholder="vd: 1122" autocomplete="off" inputmode="numeric"><input data-c="qty" class="num" value="${escapeHtml(r.qty)}" placeholder="để trống = 0" autocomplete="off" inputmode="numeric"><button type="button" class="adj-del" data-ini-del title="Xóa dòng">×</button></div>`;
+    }
+    function iniEnsureTail() { const l = mdmIni.rows[mdmIni.rows.length - 1]; if (!l || l.item.trim() || l.qty.trim()) mdmIni.rows.push(iniBlank()); }
+    function iniDrawRows(focus) {
+      iniEnsureTail();
+      $("#ini-rows").innerHTML = mdmIni.rows.map(iniRowHtml).join("");
+      iniMeta();
+      if (focus) { const el = document.querySelector(`#ini-rows .adj-row[data-r="${focus[0]}"] input[data-c="${focus[1]}"]`); if (el) { el.focus(); el.select(); } }
+    }
+    function iniMeta() {
+      const v = iniParse();
+      document.querySelectorAll("#ini-rows .adj-row").forEach(row => {
+        const i = Number(row.dataset.r), bd = v.bad[i];
+        row.querySelector('[data-c="item"]').classList.toggle("bad", !!(bd && bd.item));
+        row.querySelector('[data-c="qty"]').classList.toggle("bad", !!(bd && bd.qty));
+        row.querySelector('[data-c="item"]').classList.toggle("dup", !!v.dup[i]);
+      });
+      document.querySelectorAll("#ini-cfg .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
+      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng hợp lệ</span>`, `<span class="adj-chip">Tổng tồn ${nf(v.total)}</span>`];
+      if (v.nbad) chips.push(`<span class="adj-chip err">${v.nbad} dòng lỗi</span>`);
+      if (v.ndup) chips.push(`<span class="adj-chip warn">${v.ndup} dòng trùng ItemCode</span>`);
+      $("#ini-chips").innerHTML = chips.join("");
+      $("#ini-export").disabled = !v.out.length || !!v.nbad || !!v.ncfg;
+      $("#ini-meta").innerHTML = `Kho <b>${escapeHtml(mdmIni.wh.trim())}</b> · BaseUOM <b>${escapeHtml(mdmIni.uom.trim())}</b> · ItemTypeCode <b>${escapeHtml(mdmIni.type.trim())}</b> · các cột còn lại để trống đúng mẫu`;
+    }
+    function iniExport() {
+      const v = iniParse(); if (!v.out.length || v.nbad || v.ncfg) return;
+      const text = [INI_COLS, ...v.out].map(r => r.join(",")).join("\r\n") + "\r\n"; // giống file mẫu: CRLF, có xuống dòng cuối
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CreateFirstInventorySKU_${stamp}.csv`;
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" })), download: fileName });
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
+    }
+    function iniPaste(e) {
+      const inp = e.target.closest("#ini-rows input"); if (!inp) return;
+      const txt = (e.clipboardData || window.clipboardData).getData("text").replace(/\r/g, "").replace(/\n+$/, "");
+      const col = inp.dataset.c;
+      if (!/[\t\n]/.test(txt) && !(col === "item" && /\s/.test(txt.trim()))) return;
+      e.preventDefault();
+      let r = Number(inp.closest(".adj-row").dataset.r);
+      const lines = txt.split("\n");
+      lines.forEach((ln, k) => {
+        const row = mdmIni.rows[r + k] || (mdmIni.rows[r + k] = iniBlank());
+        const cells = ln.includes("\t") ? ln.split("\t") : (col === "item" ? ln.trim().split(/[\s,;]+/) : [ln]);
+        if (col === "item") { row.item = (cells[0] || "").trim(); if (cells[1] !== undefined) row.qty = cells[1].trim(); }
+        else row.qty = (cells[0] || "").trim();
+      });
+      iniDrawRows([r + lines.length, col]);
+      toast(`Đã dán ${nf(lines.length)} dòng.`, "success");
+    }
+    function renderIni() {
+      const F = (k, l, ph) => `<div class="field" data-k="${k}"><label>${l}</label><input data-ini="${k}" value="${escapeHtml(mdmIni[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Tạo Tồn Kho Ban Đầu</h2><p>Nhập thông số kho, rồi dán danh sách ItemCode (và số lượng nếu có) vào bảng. Xuất CSV đúng mẫu CreateFirstInventorySKU, sẵn sàng upload.</p></div></div><div class="panel-body">
+        <div class="adj-cfg" id="ini-cfg" style="grid-template-columns:repeat(3,minmax(0,1fr))">${F("wh", "Kho (WarehouseCode)")}${F("uom", "BaseUOM")}${F("type", "ItemTypeCode")}</div>
+        <div class="adj-bar"><h3>Danh sách SKU<small>ItemCode &amp; StockQuantity</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="ini-chips"></div><button type="button" class="btn btn-plain" data-ini-act="add">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-ini-act="clear">Xóa tất cả</button></div></div>
+        <div class="adj-grid"><div class="adj-head"><span style="text-align:center">#</span><span>ItemCode</span><span style="text-align:right">StockQuantity <em>(để trống = 0)</em></span><span></span></div><div id="ini-rows">${mdmIni.rows.map(iniRowHtml).join("")}</div></div>
+        <p class="adj-tip">💡 Copy cột ItemCode (hoặc 2 cột ItemCode + số lượng) từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>ItemCode</b> đầu tiên. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu, ô vàng = ItemCode bị trùng.</p>
+        <div class="adj-foot"><div class="meta" id="ini-meta"></div><button type="button" id="ini-export" class="btn btn-primary btn-lg">⬇ Xuất CSV</button></div></div></section>`;
+    }
     function renderMdmBody() {
+      if (mdmMode === "stock-init") return renderIni();
       if (mdmMode === "stock-adj") return renderAdj();
       const m = MDM_MODES.find(x => x[0] === mdmMode) || MDM_MODES[0];
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>${escapeHtml(m[1])}</h2><p>Chức năng của MDM Team.</p></div></div><div class="panel-body"><div class="empty"><strong>Chức năng đang được xây dựng</strong>Đang chờ mẫu phiếu Excel và quy tắc xử lý cho “${escapeHtml(m[1])}”.</div></div></section>`;
@@ -2980,21 +3063,45 @@
       pg.addEventListener("input", e => {
         const t = e.target;
         if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
+        if (t.dataset.ini) { mdmIni[t.dataset.ini] = t.value; return iniMeta(); }
+        const irow = t.closest("#ini-rows .adj-row");
+        if (irow && t.dataset.c) {
+          mdmIni.rows[Number(irow.dataset.r)][t.dataset.c] = t.value;
+          const il = mdmIni.rows.length - 1;
+          if (Number(irow.dataset.r) === il) { mdmIni.rows.push(iniBlank()); $("#ini-rows").insertAdjacentHTML("beforeend", iniRowHtml(iniBlank(), il + 1)); }
+          return iniMeta();
+        }
         const row = t.closest("#adj-rows .adj-row"); if (!row || !t.dataset.c) return;
         mdmAdj.rows[Number(row.dataset.r)][t.dataset.c] = t.value;
         const last = mdmAdj.rows.length - 1;
         if (Number(row.dataset.r) === last) { mdmAdj.rows.push(adjBlank()); $("#adj-rows").insertAdjacentHTML("beforeend", adjRowHtml(adjBlank(), last + 1)); }
         adjMeta();
       });
-      pg.addEventListener("paste", adjPaste);
+      pg.addEventListener("paste", e => { iniPaste(e); adjPaste(e); });
       pg.addEventListener("keydown", e => {
-        const t = e.target; if (!t.closest || !t.closest("#adj-rows") || !["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) return;
+        const t = e.target;
+        if (t.closest && t.closest("#ini-rows") && ["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) {
+          e.preventDefault();
+          const r = Number(t.closest(".adj-row").dataset.r) + (e.key === "ArrowUp" ? -1 : 1);
+          const el = document.querySelector(`#ini-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
+          return;
+        }
+        if (!t.closest || !t.closest("#adj-rows") || !["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) return;
         e.preventDefault();
         const r = Number(t.closest(".adj-row").dataset.r) + (e.key === "ArrowUp" ? -1 : 1);
         const el = document.querySelector(`#adj-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
       });
       pg.addEventListener("click", async e => {
         if (e.target.closest("#adj-export")) return adjExport();
+        if (e.target.closest("#ini-export")) return iniExport();
+        const idel = e.target.closest("[data-ini-del]");
+        if (idel) { mdmIni.rows.splice(Number(idel.closest(".adj-row").dataset.r), 1); return iniDrawRows(); }
+        const iac = e.target.closest("[data-ini-act]");
+        if (iac) {
+          if (iac.dataset.iniAct === "add") { mdmIni.rows.push(iniBlank()); return iniDrawRows([mdmIni.rows.length - 1, "item"]); }
+          if (mdmIni.rows.some(r => r.item || r.qty) && !(await confirmDialog({ title: "Xóa toàn bộ danh sách?", message: "Tất cả dòng ItemCode / StockQuantity đang nhập sẽ bị xóa.", confirmText: "Xóa tất cả", danger: true }))) return;
+          mdmIni.rows = [iniBlank()]; return iniDrawRows([0, "item"]);
+        }
         const d = e.target.closest("[data-adj-dir]");
         if (d) { mdmAdj.dir = d.dataset.adjDir; $("#mdm-root").innerHTML = renderMdmBody(); adjDrawRows(); return; }
         const del = e.target.closest("[data-adj-del]");
@@ -3008,9 +3115,10 @@
         const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
         mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
         pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
-        $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "stock-adj") adjDrawRows();
+        $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "stock-adj") adjDrawRows(); if (mdmMode === "stock-init") iniDrawRows();
       });
       if (mdmMode === "stock-adj") adjDrawRows();
+      if (mdmMode === "stock-init") iniDrawRows();
     }
     function renderTools() {
       return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools · L1 Team</div><h2 class="page-title">L1 Team</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
