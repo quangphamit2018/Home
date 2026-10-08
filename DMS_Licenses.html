@@ -1302,7 +1302,7 @@
     .pd-tabs button, .pd-chips button { border: 1px solid var(--line-strong); background: #fff; border-radius: 99px; padding: 6px 13px; font-size: 12px; font-weight: 650; color: var(--ink-2); cursor: pointer; }
     .pd-tabs button.on, .pd-chips button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
     .pd-body { flex: 1; overflow-y: auto; padding: 16px 20px 28px; font-size: 12.5px; line-height: 1.6; }
-    #pro-drawer:not([data-tab="dict"]) .pd-dict, #pro-drawer[data-tab="dict"] .pd-guide { display: none; }
+    #pro-drawer:not([data-pd-view="dict"]) .pd-dict, #pro-drawer[data-pd-view="dict"] .pd-guide { display: none; }
     .pd-steps { padding-left: 18px; margin: 0 0 14px; display: grid; gap: 7px; } .pd-body h4 { margin: 16px 0 8px; font-size: 13px; }
     .pd-card { border: 1px solid var(--line); background: var(--surface-soft); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; } .pd-card .btn { margin-top: 8px; }
     .pd-notes { margin: 0; padding-left: 18px; display: grid; gap: 5px; }
@@ -1595,7 +1595,6 @@
     function loadJson(key) { try { const v = JSON.parse(localStorage.getItem(key)); return v && typeof v === "object" ? v : {}; } catch (_) { return {}; } }
     function saveJson(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (_) {} }
     const SEL_KEY = "masterdata_selected", savedSel = loadJson(SEL_KEY);
-    function saveSel() { saveJson(SEL_KEY, { dms: [...state.selected.dms], central: [...state.selected.central] }); }
     const savedSearch = loadJson(SEARCH_KEY);
     function setSearch(v) {
       state.search = v;
@@ -3203,7 +3202,9 @@
     const PRO_COLS = ["DistributorCategoryCode1", "DistributorCategoryCode2", "ExclusionDistributorCodes", "Sales_Organisation", "PromotionCode", "PromotionDescription", "IOCode", "PromotionQuotaCode", "DisbursementMethod", "RangeBasis", "PromotionTypeCode", "ProRata", "Bundle_Promotion", "ExclusionOption", "SequenceNumber", "SpecialPromotion", "StartDate", "EndDate", "SLABNUM", "SLABFROM", "SLABTO", "DISCOUNT", "ForEach", "Repeating_Range", "ProductGroup", "PromotionQuantity", "UnitOfMeasure", "SKUCode", "Product_Hierarchy", "Brand", "Beverage_Category", "Beverage_Product", "PackType", "Flavor", "CarbonationIndicator", "PackSize", "ProductGroupBasis", "TradeMark", "General_Item_Category_Group", "NumberOfUniqueSKU", "DISPLAYWEIGHTAGE", "Territory", "DistributorCode", "OutletHierarchyName", "OutletCode", "On-offPremise", "PopulatedArea", "Classification", "Category", "CustomerGroup", "CustomerBusienssType", "CustomerKeyAccount", "REDCustomerName", "CustomerType", "CoolerCustomer", "ExclusionCustomerCode", "Digital_Agreement", "QualificationMode", "AmountBasis", "AllowCapQuota", "SourceTags", "ApplyCount", "ApplyOn_Basket", "CPC", "Exclusion_Group_Code", "Header_Level_Amount_Basis", "Product_Group", "IsConsumer_Promotion", "PromotionQuota", "UseIn_Or", "Volume", "SegmentCode", "AllowPromotionQuota", "FOCInFullBUOMRounding", "DistributorCategoryCode3"];
     const PRO_I = Object.fromEntries(PRO_COLS.map((c, i) => [c, i]));
     const proSlab = () => ({ from: "", to: "", each: "", disc: "1", q: "", a: "" });
-    const proInit = () => ({ code: "", desc: "", start: adjToday(), end: "", dist: "", uom: "CS", terr: "", seq: "0", excl: "0", rep: "0", apply: "", rb: "1", dm: "1", quota: true, slabs: [proSlab()] });
+    const PRO_TYPE_OPTS = [["4","4 – Tặng hàng FOC"],["1","1 – Giảm amount (trên line)"],["2","2 – Giảm % (trên line)"],["3","3 – Giảm net price"],["5","5 – Giảm amount (ngoài HĐ)"],["6","6 – Giảm % (ngoài HĐ)"],["8","8 – KM tích điểm"],["10","10 – Giá cố định"],["11","11 – Giảm MRP %"]];
+    const proInit = () => ({ code: "", desc: "", start: adjToday(), end: "", dist: "", uom: "CS", terr: "", seq: "0", excl: "0", rep: "0", apply: "", rb: "1", dm: "1", type: "4", quota: true, slabs: [proSlab()] });
+    function proRataFor(ptype, qSkus, rb) { if (ptype === 4 || ptype === 5 || ptype === 6) return "N"; if (ptype === 2) return "Y"; if (ptype === 1) return String(rb) === "2" ? "N" : (new Set(qSkus).size > 1 ? "Y" : "N"); return "N"; }
     let mdmPro = proInit();
     const proSkus = s => s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
     const proNum = s => /^\d+(\.\d+)?$/.test(s.trim()) ? Number(s.trim()) : null;
@@ -3227,8 +3228,8 @@
       ["RangeBasis", "in", "Điều kiện áp dụng", "1 – Dựa trên số lượng sản phẩm mua\n2 – Dựa trên giá trị sản phẩm mua", "1"],
       ["Territory", "in", "Mã vùng", "Mã vùng theo setup trong DMS.", "VN10VN11"],
       ["ApplyCount", "in", "Số đơn hàng áp dụng / outlet", "Số đơn hàng của mỗi outlet mà CTKM được áp dụng. Giá trị hợp lệ là số nguyên (1, 2, 3…). Để trống = unlimited.", "1"],
-      ["PromotionTypeCode", "auto", "Hình thức khuyến mãi", "Áp dụng trên từng đơn hàng:\n1 – Giảm số tiền (amount) trên line đơn hàng\n2 – Giảm phần trăm (percent off) trên line, tính trên đơn giá 1 chai\n3 – Giảm net price trên line\n4 – Tặng hàng khuyến mãi FOC (Free Of Charge)\n——\n5 – Giảm số tiền ngoài hóa đơn\n6 – Giảm phần trăm ngoài hóa đơn\n8 – KM theo chương trình tích điểm\n10 – KM xuống 1 mức giá cố định\n11 – Giảm MRP theo phần trăm\nTool này đang cố định = 4 (tặng hàng FOC).", "4"],
-      ["ProRata", "auto", "Pro-rata", "• KM trên 1 SKU và PromotionTypeCode = 1 → N\n• KM trên nhiều SKU và type = 1 → Y\n• type = 1 và RangeBasis = 2 → N\n• type = 2 → Y\n• type = 4 → N\n• type = 5, 6 → N\nTool tự điền N (vì type 4).", "N"],
+      ["PromotionTypeCode", "auto", "Hình thức khuyến mãi", "Áp dụng trên từng đơn hàng:\n1 – Giảm số tiền (amount) trên line đơn hàng\n2 – Giảm phần trăm (percent off) trên line, tính trên đơn giá 1 chai\n3 – Giảm net price trên line\n4 – Tặng hàng khuyến mãi FOC (Free Of Charge)\n——\n5 – Giảm số tiền ngoài hóa đơn\n6 – Giảm phần trăm ngoài hóa đơn\n8 – KM theo chương trình tích điểm\n10 – KM xuống 1 mức giá cố định\n11 – Giảm MRP theo phần trăm\nTool chọn qua dropdown, mặc định 4 – Tặng hàng FOC.", "4"],
+      ["ProRata", "auto", "Pro-rata", "• KM trên 1 SKU và PromotionTypeCode = 1 → N\n• KM trên nhiều SKU và type = 1 → Y\n• type = 1 và RangeBasis = 2 → N\n• type = 2 → Y\n• type = 4 → N\n• type = 5, 6 → N\nTool tự tính theo PromotionTypeCode.", "N"],
       ["SLABNUM", "auto", "Số thứ tự slab", "Dùng cho step promotion (suất cho outlet đăng ký mặc định là 1). Tool tự đánh 1, 2, 3… theo thứ tự slab.", "1"],
       ["ProductGroup", "auto", "Nhóm sản phẩm", "Q – SP mua\nA – SP tặng\nVí dụ: mua SP A tặng SP B → line setup SP A điền Q, line SP B điền A. Tool tự điền: ô “SKU điều kiện” → Q, ô “SKU tặng” → A.", "Q / A"],
       ["Bundle_Promotion", "auto", "KM bundle cho Pace", "0 – Khuyến mãi bình thường\n1 – Khuyến mãi bundle\nĐể trống hệ thống hiểu là 0. Tool điền 0.", "0"],
@@ -3253,7 +3254,7 @@
           <div class="pd-card"><b>Lặp CTKM</b> — Repeating_Range = 1: mua 5 được KM, đơn có 13 item → hưởng 2 lần.</div>
           <div class="pd-card"><b>Bundle</b> — mua 7 thùng gồm 3 Coke + 4 Fanta: line Coke PromotionQuantity = 3, line Fanta = 4 (tool chưa hỗ trợ bundle).</div>
           <div class="pd-card"><b>Nhóm Q / A</b> — mua SP A tặng SP B: dòng SP A là Q, dòng SP B là A. Nhiều SKU điều kiện = nhiều dòng Q; nhiều SKU tặng = nhiều dòng A.</div>
-          <h4>Lưu ý</h4><ul class="pd-notes"><li>Tool hiện chỉ tạo CTKM <b>tặng hàng FOC (PromotionTypeCode 4)</b>. Các hình thức khác có giải thích trong tab Từ điển.</li><li>Các tùy chọn khác (SequenceNumber, Repeating_Range, ExclusionOption…) nằm ở mục <b>③ Tùy chọn nâng cao</b>, mặc định giữ như mẫu hiện tại.</li></ul>
+          <h4>Lưu ý</h4><ul class="pd-notes"><li>Tool hỗ trợ nhiều loại CTKM qua dropdown <b>PromotionTypeCode</b> (mặc định 4 – Tặng hàng FOC). Các hình thức khác có giải thích trong tab Từ điển.</li><li>Các tùy chọn khác (SequenceNumber, Repeating_Range, ExclusionOption…) nằm ở mục <b>③ Tùy chọn nâng cao</b>, mặc định giữ như mẫu hiện tại.</li></ul>
         </div>
         <div class="pd-body pd-dict"><div class="pd-tools"><input id="pd-q" placeholder="Tìm cột hoặc từ khóa… (vd: lặp, ưu tiên, NPP)" autocomplete="off"><div class="pd-chips"><button type="button" class="on" data-pd-grp="all">Tất cả</button><button type="button" data-pd-grp="in">Bạn nhập</button><button type="button" data-pd-grp="auto">Tool tự điền</button><button type="button" data-pd-grp="blank">Để trống</button></div></div>${items}</div></div>`;
     }
@@ -3263,12 +3264,12 @@
     }
     function proHelp(key) {
       let d = $("#pro-drawer");
-      const sync = () => { d.querySelectorAll("[data-pd-tab]").forEach(x => x.classList.toggle("on", x.dataset.pdTab === d.dataset.tab)); d.querySelectorAll("[data-pd-grp]").forEach(x => x.classList.toggle("on", x.dataset.pdGrp === (d.dataset.grp || "all"))); };
+      const sync = () => { d.querySelectorAll("[data-pd-tab]").forEach(x => x.classList.toggle("on", x.dataset.pdTab === d.dataset.pdView)); d.querySelectorAll("[data-pd-grp]").forEach(x => x.classList.toggle("on", x.dataset.pdGrp === (d.dataset.grp || "all"))); };
       if (!d) {
-        d = document.createElement("aside"); d.id = "pro-drawer"; d.dataset.tab = "guide"; d.innerHTML = proDrawerHtml(); document.body.appendChild(d);
+        d = document.createElement("aside"); d.id = "pro-drawer"; d.dataset.pdView = "guide"; d.innerHTML = proDrawerHtml(); document.body.appendChild(d);
         d.addEventListener("click", e => {
           if (e.target === d || e.target.closest("[data-pd-close]")) return d.classList.remove("on");
-          const t = e.target.closest("[data-pd-tab]"); if (t) { d.dataset.tab = t.dataset.pdTab; sync(); }
+          const t = e.target.closest("[data-pd-tab]"); if (t) { d.dataset.pdView = t.dataset.pdTab; sync(); }
           const f = e.target.closest("[data-pd-grp]"); if (f) { d.dataset.grp = f.dataset.pdGrp; sync(); proDictFilter(); }
           if (e.target.closest("[data-pro-act=example]")) { d.classList.remove("on"); proAct("example"); }
         });
@@ -3277,13 +3278,14 @@
       }
       d.classList.add("on");
       if (key) {
-        d.dataset.tab = "dict"; d.dataset.grp = "all"; $("#pd-q").value = ""; sync(); proDictFilter();
+        d.dataset.pdView = "dict"; d.dataset.grp = "all"; $("#pd-q").value = ""; sync(); proDictFilter();
         const it = d.querySelector(`.pd-item[data-k="${key}"]`);
         if (it) { it.open = true; it.scrollIntoView({ block: "center" }); it.classList.add("flash"); setTimeout(() => it.classList.remove("flash"), 1800); }
       }
     }
     function proParse() {
       const P = mdmPro, out = [], cfgBad = {}, slabBad = {}, issues = [], warns = [], ok = [];
+      const ptype = Number(P.type), foc = ptype === 4;
       const d1 = prcDateSerial(P.start), d2 = prcDateSerial(P.end);
       const bad = (k, msg) => { cfgBad[k] = 1; issues.push({ msg, sel: `[data-pro="${k}"]` }); };
       if (!P.code.trim()) bad("code", "Thiếu PromotionCode");
@@ -3295,14 +3297,14 @@
       const code = P.code.trim(), desc = P.desc.trim() || code, sk = x => (/^\d+$/.test(x) ? Number(x) : x), rng = [];
       P.slabs.forEach((s, i) => {
         const f = proNum(s.from), t = proNum(s.to), e = proNum(s.each), dc = proNum(s.disc), q = proSkus(s.q), a = proSkus(s.a), b = {};
-        [["from", f == null, "SLABFROM phải là số"], ["to", t == null || (f != null && t < f), "SLABTO phải là số và ≥ SLABFROM"], ["each", e == null || e <= 0, "ForEach phải là số > 0"], ["disc", dc == null || dc <= 0, "DISCOUNT phải là số > 0"], ["q", !q.length, "chưa có SKU điều kiện (Q)"], ["a", !a.length, "chưa có SKU tặng (A)"]]
+        [["from", f == null, "SLABFROM phải là số"], ["to", t == null || (f != null && t < f), "SLABTO phải là số và ≥ SLABFROM"], ["each", e == null || e <= 0, "ForEach phải là số > 0"], ["disc", dc == null || dc <= 0, "DISCOUNT phải là số > 0"], ["q", !q.length, "chưa có SKU điều kiện (Q)"], ["a", foc && !a.length, "chưa có SKU tặng (A)"]]
           .forEach(([k, c, m]) => { if (c) { b[k] = 1; issues.push({ msg: `Slab ${i + 1}: ${m}`, sel: `#pro-slabs [data-si="${i}"] [data-ps="${k}"]` }); } });
         if (Object.keys(b).length) { slabBad[i] = b; return; }
         rng.push([i + 1, f, t]);
-        [["Q", q], ["A", a]].forEach(([g, list]) => [...new Set(list)].forEach(x => {
+        (foc ? [["Q", q], ["A", a]] : [["Q", q]]).forEach(([g, list]) => [...new Set(list)].forEach(x => {
           const r = Array(PRO_COLS.length).fill(null), set = (c, v) => { r[PRO_I[c]] = v; };
           set("PromotionCode", code); set("PromotionDescription", desc); if (P.quota) set("PromotionQuotaCode", code);
-          set("DisbursementMethod", Number(P.dm)); set("RangeBasis", Number(P.rb)); set("PromotionTypeCode", 4); set("ProRata", "N"); set("Bundle_Promotion", 0);
+          set("DisbursementMethod", Number(P.dm)); set("RangeBasis", Number(P.rb)); set("PromotionTypeCode", ptype); set("ProRata", proRataFor(ptype, q, P.rb)); set("Bundle_Promotion", 0);
           set("ExclusionOption", Number(P.excl)); set("SequenceNumber", Number(P.seq || 0)); set("StartDate", d1); set("EndDate", d2);
           set("SLABNUM", i + 1); set("SLABFROM", f); set("SLABTO", t); set("DISCOUNT", dc); set("ForEach", e); set("Repeating_Range", Number(P.rep));
           set("ProductGroup", g); set("PromotionQuantity", 0); set("UnitOfMeasure", P.uom.trim()); set("SKUCode", sk(x));
@@ -3314,9 +3316,11 @@
       return { out, cfgBad, slabBad, issues, warns, nbad: Object.keys(slabBad).length, ncfg: Object.keys(cfgBad).length };
     }
     function proSum(s) {
-      const f = s.from.trim(), t = s.to.trim(), e = s.each.trim(), d = s.disc.trim(), u = mdmPro.rb === "2" ? "VND" : mdmPro.uom;
+      const f = s.from.trim(), t = s.to.trim(), e = s.each.trim(), d = s.disc.trim(), u = mdmPro.rb === "2" ? "VND" : mdmPro.uom, nq = new Set(proSkus(s.q)).size, na = new Set(proSkus(s.a)).size;
       if (!f && !t && !e) return "Điền SLABFROM / SLABTO / ForEach để xem diễn giải bằng lời.";
-      return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> trong <b>${new Set(proSkus(s.q)).size}</b> SKU điều kiện → cứ mỗi <b>${escapeHtml(e || "?")}</b> tặng <b>${escapeHtml(d || "?")} EA</b> trong <b>${new Set(proSkus(s.a)).size}</b> SKU tặng`;
+      if (mdmPro.type === "4") return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> trong <b>${nq}</b> SKU điều kiện → cứ mỗi <b>${escapeHtml(e || "?")}</b> tặng <b>${escapeHtml(d || "?")} EA</b> trong <b>${na}</b> SKU tặng`;
+      const unit = mdmPro.type === "2" ? "%" : (mdmPro.rb === "2" ? "VND" : u);
+      return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> trong <b>${nq}</b> SKU → giảm <b>${escapeHtml(d || "?")} ${unit}</b>${e ? ` · cứ mỗi ${escapeHtml(e)} ${u}` : ""}`;
     }
     function proCnt(txt) {
       const l = proSkus(txt), u = new Set(l).size; if (!l.length) return "";
@@ -3324,12 +3328,13 @@
     }
     const H = k => `<button type="button" class="pro-i" data-help="${k}" title="Xem giải thích cột ${k}">i</button>`;
     function proSlabHtml(s, i) {
+      const foc = mdmPro.type === "4";
       const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><input data-ps="${k}" value="${escapeHtml(s[k])}" placeholder="${ph}" autocomplete="off" inputmode="numeric"></div>`;
       const T = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}<span class="pro-cnt" data-cnt="${k}">${proCnt(s[k])}</span></label><textarea data-ps="${k}" placeholder="${ph}" spellcheck="false">${escapeHtml(s[k])}</textarea></div>`;
       return `<div class="pro-slab" data-si="${i}"><div class="pro-slab-h"><span>Slab ${i + 1} <small style="font-weight:500;color:var(--ink-2)">(SLABNUM = ${i + 1})</small></span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Tạo slab mới tiếp theo, giữ nguyên SKU">⧉ Nhân đôi</button>${mdmPro.slabs.length > 1 ? '<button type="button" class="btn btn-plain" data-pro-del>× Xóa</button>' : ""}</span></div>
-        <div class="pro-slab-f">${F("from", "Mua từ", "SLABFROM", "vd: 100")}${F("to", "Đến", "SLABTO", "vd: 299")}${F("each", "Cứ mỗi", "ForEach", "vd: 10")}${F("disc", "Tặng (DISCOUNT)", "DISCOUNT", "vd: 1")}</div>
+        <div class="pro-slab-f">${F("from", "Mua từ", "SLABFROM", "vd: 100")}${F("to", "Đến", "SLABTO", "vd: 299")}${F("each", "Cứ mỗi", "ForEach", "vd: 10")}${F("disc", foc ? "Tặng (DISCOUNT)" : "DISCOUNT", "DISCOUNT", "vd: 1")}</div>
         <div class="pro-sum">${proSum(s)}</div>
-        <div class="pro-slab-t">${T("q", "SKU điều kiện — nhóm Q", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${T("a", "SKU tặng — nhóm A", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862")}</div></div>`;
+        <div class="pro-slab-t">${T("q", "SKU điều kiện — nhóm Q", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${(foc ? T("a", "SKU tặng — nhóm A", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862") : "")}</div></div>`;
     }
     function proDraw() { $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
     function proMeta() {
@@ -3379,8 +3384,8 @@
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tạo CTKM tặng hàng (FOC) theo 3 bước, xuất Excel đúng mẫu PromotionUploadTemplateMapping. Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
         <div class="panel-body"><div class="pro-lay"><div class="pro-main">
-          <div class="pro-card"><h3><em>1</em>Thông tin chương trình<span class="adj-chip" style="margin-left:auto;font-weight:600">Loại: Tặng hàng FOC (4) ${H("PromotionTypeCode")}</span></h3>
-            <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "Tên CTKM (trống = PromotionCode)", "PromotionDescription")}${F("dist", "Mã NPP (DistributorCode)", "DistributorCode", "vd: 0070259604")}${F("start", "Ngày bắt đầu", "StartDate", "dd/mm/yyyy")}${F("end", "Ngày kết thúc", "EndDate", "dd/mm/yyyy")}${S("uom", "Đơn vị (UnitOfMeasure)", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}</div></div>
+          <div class="pro-card"><h3><em>1</em>Thông tin chương trình</h3>
+            <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "Tên CTKM (trống = PromotionCode)", "PromotionDescription")}${F("dist", "Mã NPP (DistributorCode)", "DistributorCode", "vd: 0070259604")}${F("start", "Ngày bắt đầu", "StartDate", "dd/mm/yyyy")}${F("end", "Ngày kết thúc", "EndDate", "dd/mm/yyyy")}${S("uom", "Đơn vị (UnitOfMeasure)", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}${S("type", "Hình thức KM (PromotionTypeCode)", "PromotionTypeCode", PRO_TYPE_OPTS)}</div></div>
           <div class="pro-card"><h3><em>2</em>Slab CTKM <small style="font-weight:500;color:var(--muted)">mua bao nhiêu → tặng bao nhiêu</small><span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
             <p class="adj-tip">💡 Copy cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. Nhiều SKU điều kiện = nhiều dòng Q, nhiều SKU tặng = nhiều dòng A. Nhiều mức mua → bấm <b>Nhân đôi</b> rồi đổi SLABFROM/TO.</p></div>
           <details class="pro-card pro-det" id="pro-adv"><summary><em>3</em>Tùy chọn nâng cao <small>mặc định giữ như mẫu hiện tại — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
@@ -3391,7 +3396,7 @@
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="pro-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="pro-pv"></div></div>
           <button type="button" id="pro-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
-          <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">Cố định: PromotionTypeCode 4 · ProRata N · Bundle_Promotion 0 · các cột còn lại để trống</div></div></aside></div></div></section>`;
+          <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode chọn ở trên · ProRata tự tính theo loại · Bundle_Promotion 0 · các cột còn lại để trống</div></div></aside></div></div></section>`;
     }
     function renderMdmBody() {
       if (mdmMode === "stock-init") return renderIni();
@@ -3410,7 +3415,7 @@
       const pg = $("#mdm-page"); if (!pg) return;
       pg.addEventListener("input", e => {
         const t = e.target;
-        if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.type === "checkbox" ? t.checked : t.value; return proMeta(); }
+        if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.type === "checkbox" ? t.checked : t.value; return t.dataset.pro === "type" ? proDraw() : proMeta(); }
         if (t.dataset.ps) { mdmPro.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.ps] = t.value; return proMeta(); }
         if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
         if (t.dataset.ini) { mdmIni[t.dataset.ini] = t.value; return iniMeta(); }
