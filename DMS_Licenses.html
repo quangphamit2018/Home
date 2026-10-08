@@ -3317,10 +3317,10 @@
     }
     function proSum(s) {
       const f = s.from.trim(), t = s.to.trim(), e = s.each.trim(), d = s.disc.trim(), u = mdmPro.rb === "2" ? "VND" : mdmPro.uom, nq = new Set(proSkus(s.q)).size, na = new Set(proSkus(s.a)).size;
-      if (!f && !t && !e) return "Điền SLABFROM / SLABTO / ForEach để xem diễn giải bằng lời.";
-      if (mdmPro.type === "4") return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> trong <b>${nq}</b> SKU điều kiện → cứ mỗi <b>${escapeHtml(e || "?")}</b> tặng <b>${escapeHtml(d || "?")} EA</b> trong <b>${na}</b> SKU tặng`;
+      if (!f && !t && !e) return "Enter SLABFROM / SLABTO / ForEach to see a plain-language summary.";
+      if (mdmPro.type === "4") return `Buy <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> in <b>${nq}</b> condition SKU(s) → for every <b>${escapeHtml(e || "?")}</b> get <b>${escapeHtml(d || "?")} EA</b> in <b>${na}</b> gift SKU(s)`;
       const unit = mdmPro.type === "2" ? "%" : (mdmPro.rb === "2" ? "VND" : u);
-      return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> trong <b>${nq}</b> SKU → giảm <b>${escapeHtml(d || "?")} ${unit}</b>${e ? ` · cứ mỗi ${escapeHtml(e)} ${u}` : ""}`;
+      return `Buy <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> in <b>${nq}</b> SKU → discount <b>${escapeHtml(d || "?")} ${unit}</b>${e ? ` · for every ${escapeHtml(e)} ${u}` : ""}`;
     }
     function proCnt(txt) {
       const l = proSkus(txt), u = new Set(l).size; if (!l.length) return "";
@@ -3331,10 +3331,10 @@
       const foc = mdmPro.type === "4";
       const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><input data-ps="${k}" value="${escapeHtml(s[k])}" placeholder="${ph}" autocomplete="off" inputmode="numeric"></div>`;
       const T = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}<span class="pro-cnt" data-cnt="${k}">${proCnt(s[k])}</span></label><textarea data-ps="${k}" placeholder="${ph}" spellcheck="false">${escapeHtml(s[k])}</textarea></div>`;
-      return `<div class="pro-slab" data-si="${i}"><div class="pro-slab-h"><span>Slab ${i + 1} <small style="font-weight:500;color:var(--ink-2)">(SLABNUM = ${i + 1})</small></span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Tạo slab mới tiếp theo, giữ nguyên SKU">⧉ Nhân đôi</button>${mdmPro.slabs.length > 1 ? '<button type="button" class="btn btn-plain" data-pro-del>× Xóa</button>' : ""}</span></div>
-        <div class="pro-slab-f">${F("from", "Mua từ", "SLABFROM", "vd: 100")}${F("to", "Đến", "SLABTO", "vd: 299")}${F("each", "Cứ mỗi", "ForEach", "vd: 10")}${F("disc", foc ? "Tặng (DISCOUNT)" : "DISCOUNT", "DISCOUNT", "vd: 1")}</div>
+      return `<div class="pro-slab" data-si="${i}"><div class="pro-slab-h"><span>Slab ${i + 1}</span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Create next slab, keep SKU">⧉ Duplicate</button>${mdmPro.slabs.length > 1 ? '<button type="button" class="btn btn-plain" data-pro-del>× Delete</button>' : ""}</span></div>
+        <div class="pro-slab-f">${F("from", "SLABFROM", "SLABFROM", "vd: 100")}${F("to", "SLABTO", "SLABTO", "vd: 299")}${F("each", "ForEach", "ForEach", "vd: 10")}${F("disc", "DISCOUNT", "DISCOUNT", "vd: 1")}</div>
         <div class="pro-sum">${proSum(s)}</div>
-        <div class="pro-slab-t">${T("q", "SKU điều kiện — nhóm Q", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${(foc ? T("a", "SKU tặng — nhóm A", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862") : "")}</div></div>`;
+        <div class="pro-slab-t">${T("q", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${(foc ? T("a", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862") : "")}</div></div>`;
     }
     function proDraw() { $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
     function proMeta() {
@@ -3385,9 +3385,9 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
         <div class="panel-body"><div class="pro-lay"><div class="pro-main">
           <div class="pro-card"><h3><em>1</em>Thông tin chương trình</h3>
-            <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "Tên CTKM (trống = PromotionCode)", "PromotionDescription")}${F("dist", "Mã NPP (DistributorCode)", "DistributorCode", "vd: 0070259604")}${F("start", "Ngày bắt đầu", "StartDate", "dd/mm/yyyy")}${F("end", "Ngày kết thúc", "EndDate", "dd/mm/yyyy")}${S("uom", "Đơn vị (UnitOfMeasure)", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}${S("type", "Hình thức KM (PromotionTypeCode)", "PromotionTypeCode", PRO_TYPE_OPTS)}</div></div>
-          <div class="pro-card"><h3><em>2</em>Slab CTKM <small style="font-weight:500;color:var(--muted)">mua bao nhiêu → tặng bao nhiêu</small><span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
-            <p class="adj-tip">💡 Copy cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. Nhiều SKU điều kiện = nhiều dòng Q, nhiều SKU tặng = nhiều dòng A. Nhiều mức mua → bấm <b>Nhân đôi</b> rồi đổi SLABFROM/TO.</p></div>
+            <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "PromotionDescription", "PromotionDescription")}${F("dist", "DistributorCode", "DistributorCode", "vd: 0070259604")}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}${S("type", "PromotionTypeCode", "PromotionTypeCode", PRO_TYPE_OPTS)}</div></div>
+          <div class="pro-card"><h3><em>2</em>Slab Configuration<span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Add slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
+            <p class="adj-tip">💡 Copy the SKU column from Excel then <kbd>Ctrl</kbd>+<kbd>V</kbd> into the SKU box. Multiple condition SKUs = multiple Q rows, multiple gift SKUs = multiple A rows. For multiple buy tiers → click <b>Duplicate</b> then change SLABFROM/TO.</p></div>
           <details class="pro-card pro-det" id="pro-adv"><summary><em>3</em>Tùy chọn nâng cao <small>mặc định giữ như mẫu hiện tại — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
             ${F("terr", "Mã vùng (Territory)", "Territory", "vd: VN10VN11")}${F("seq", "Mức ưu tiên (SequenceNumber)", "SequenceNumber")}${F("apply", "Số đơn/outlet (ApplyCount)", "ApplyCount", "trống = không giới hạn")}
             ${S("rep", "Lặp CTKM trong đơn (Repeating_Range)", "Repeating_Range", [["0", "0 – Không lặp"], ["1", "1 – Có lặp"]])}${S("excl", "Hưởng thêm CTKM khác (ExclusionOption)", "ExclusionOption", [["0", "0 – Có"], ["1", "1 – Không"]])}${S("rb", "Điều kiện dựa trên (RangeBasis)", "RangeBasis", [["1", "1 – Số lượng mua"], ["2", "2 – Giá trị mua"]])}
@@ -3396,7 +3396,7 @@
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="pro-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="pro-pv"></div></div>
           <button type="button" id="pro-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
-          <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode chọn ở trên · ProRata tự tính theo loại · Bundle_Promotion 0 · các cột còn lại để trống</div></div></aside></div></div></section>`;
+          <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode selected above · ProRata auto-calculated by type · Bundle_Promotion 0 · remaining columns left blank</div></div></aside></div></div></section>`;
     }
     function renderMdmBody() {
       if (mdmMode === "stock-init") return renderIni();
