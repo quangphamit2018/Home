@@ -1263,7 +1263,15 @@
     .cal-jira-btn { margin-top: 6px; width: 100%; justify-content: center; }
     .jira-config { display: grid; gap: 10px; }
     .jira-config .btn { justify-self: start; }
-  </style>
+  
+    .pro-slab { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; background: #fff; }
+    .pro-slab-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 700; font-size: 13px; }
+    .pro-slab-f { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+    .pro-slab-t { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .pro-slab .field textarea { min-height: 84px; resize: vertical; font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .pro-slab .field.bad input, .pro-slab .field.bad textarea { border-color: var(--danger); background: var(--danger-soft); }
+    @media (max-width: 700px) { .pro-slab-f, .pro-slab-t { grid-template-columns: 1fr; } }
+</style>
 <style>
   /* Ngày quan trọng — luôn gọn trong 3 thẻ cân đối, cuộn bên trong khi có nhiều hơn */
   .cal-imp { contain: none; }
@@ -1791,7 +1799,7 @@
         <aside class="sidebar" id="sidebar">
           <div class="brand"><div class="brand-mark">${ICONS.database}</div><div><strong>Masterdata DMS</strong><small>CCVN data workspace</small></div></div>
           <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.filter(t => t[0] !== "tools_mdm").map(([id, label, icon]) => id === "tools"
-            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? (toolsOpen ? " group-on" : " active") : ""}" data-tools-parent aria-expanded="${toolsOpen}" aria-controls="nav-tools-sub">${icon}<span>${label}</span><svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="nav-sub-wrap${toolsOpen ? "" : " collapsed"}" id="nav-tools-sub"><div class="nav-sub-inner">` + [["tools", "L1 Team"], ["tools_mdm", "MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("") + `</div></div>`
+            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? (toolsOpen ? " group-on" : " active") : ""}" data-tools-parent aria-expanded="${toolsOpen}" aria-controls="nav-tools-sub">${icon}<span>${label}</span><svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="nav-sub-wrap${toolsOpen ? "" : " collapsed"}" id="nav-tools-sub"><div class="nav-sub-inner">` + [["tools", "L1 Team"], ["tools_mdm", "L2 / MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("") + `</div></div>`
             : `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
           <div class="sidebar-foot">
             <div class="user-card">
@@ -2874,7 +2882,7 @@
     }
     // ---------- Công Cụ Hỗ Trợ › MDM Team ----------
     const MDM_KEY = "masterdata_mdm_mode";
-    const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"]];
+    const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"], ["promo", "Cài Đặt CTKM", "plus"]];
     let mdmMode = loadKey(MDM_KEY, MDM_MODES.map(m => m[0]), "stock-init");
     /* ---- Tăng tồn / Giảm tồn: lưới nhập ItemCode + UOM0, xuất CSV UTF-16 LE BOM, không có dòng trống cuối ---- */
     const ADJ_COLS = ["DocumentDate", "AdjustmentDescription", "WareHouseCode", "StorageLocationCode", "ItemCode", "ItemTypeCode", "SubCode", "UOM0", "UOM1", "ProductionDate", "ExpireDate", "Notes", "Reason"];
@@ -3142,15 +3150,75 @@
         <p class="adj-tip">💡 Copy 2 cột ItemCode + Giá từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>ItemCode</b> đầu tiên. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu (giá phải &gt; 0), ô vàng = ItemCode bị trùng.</p>
         <div class="adj-foot"><div class="meta" id="prc-meta"></div><button type="button" id="prc-export" class="btn btn-primary btn-lg">⬇ Xuất Excel (.xlsx)</button></div></div></section>`;
     }
+
+    /* ---- Cài đặt CTKM: xuất XLSX đúng mẫu PromotionUploadTemplateMapping (SKU điều kiện = Q, SKU tặng = A) ---- */
+    const PRO_COLS = ["DistributorCategoryCode1", "DistributorCategoryCode2", "ExclusionDistributorCodes", "Sales_Organisation", "PromotionCode", "PromotionDescription", "IOCode", "PromotionQuotaCode", "DisbursementMethod", "RangeBasis", "PromotionTypeCode", "ProRata", "Bundle_Promotion", "ExclusionOption", "SequenceNumber", "SpecialPromotion", "StartDate", "EndDate", "SLABNUM", "SLABFROM", "SLABTO", "DISCOUNT", "ForEach", "Repeating_Range", "ProductGroup", "PromotionQuantity", "UnitOfMeasure", "SKUCode", "Product_Hierarchy", "Brand", "Beverage_Category", "Beverage_Product", "PackType", "Flavor", "CarbonationIndicator", "PackSize", "ProductGroupBasis", "TradeMark", "General_Item_Category_Group", "NumberOfUniqueSKU", "DISPLAYWEIGHTAGE", "Territory", "DistributorCode", "OutletHierarchyName", "OutletCode", "On-offPremise", "PopulatedArea", "Classification", "Category", "CustomerGroup", "CustomerBusienssType", "CustomerKeyAccount", "REDCustomerName", "CustomerType", "CoolerCustomer", "ExclusionCustomerCode", "Digital_Agreement", "QualificationMode", "AmountBasis", "AllowCapQuota", "SourceTags", "ApplyCount", "ApplyOn_Basket", "CPC", "Exclusion_Group_Code", "Header_Level_Amount_Basis", "Product_Group", "IsConsumer_Promotion", "PromotionQuota", "UseIn_Or", "Volume", "SegmentCode", "AllowPromotionQuota", "FOCInFullBUOMRounding", "DistributorCategoryCode3"];
+    const proSlab = () => ({ from: "", to: "", each: "", disc: "1", q: "", a: "" });
+    const mdmPro = { code: "", desc: "", start: adjToday(), end: "", dist: "", uom: "CS", slabs: [proSlab()] };
+    const proSkus = s => s.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+    const proNum = s => /^\d+(\.\d+)?$/.test(s.trim()) ? Number(s.trim()) : null;
+    function proParse() {
+      const out = [], cfgBad = {}, slabBad = {};
+      const d1 = prcDateSerial(mdmPro.start), d2 = prcDateSerial(mdmPro.end);
+      if (d1 == null) cfgBad.start = 1; if (d2 == null || (d1 != null && d2 < d1)) cfgBad.end = 1;
+      ["code", "dist", "uom"].forEach(k => { if (!mdmPro[k].trim()) cfgBad[k] = 1; });
+      const code = mdmPro.code.trim(), desc = mdmPro.desc.trim() || code, sk = x => (/^\d+$/.test(x) ? Number(x) : x);
+      mdmPro.slabs.forEach((s, i) => {
+        const f = proNum(s.from), t = proNum(s.to), e = proNum(s.each), dc = proNum(s.disc), q = proSkus(s.q), a = proSkus(s.a), b = {};
+        if (f == null) b.from = 1; if (t == null || (f != null && t < f)) b.to = 1;
+        if (e == null || e <= 0) b.each = 1; if (dc == null || dc <= 0) b.disc = 1;
+        if (!q.length) b.q = 1; if (!a.length) b.a = 1;
+        if (Object.keys(b).length) { slabBad[i] = b; return; }
+        [["Q", q], ["A", a]].forEach(([g, list]) => [...new Set(list)].forEach(x => out.push([null, null, null, null, code, desc, null, code, 1, 1, 4, "N", 0, 0, 0, null, d1, d2, i + 1, f, t, dc, e, 0, g, 0, mdmPro.uom.trim(), sk(x), ...Array(14).fill(null), mdmPro.dist.trim(), ...Array(PRO_COLS.length - 43).fill(null)])));
+      });
+      return { out, cfgBad, slabBad, nbad: Object.keys(slabBad).length, ncfg: Object.keys(cfgBad).length };
+    }
+    function proSlabHtml(s, i) {
+      const F = (k, l, ph, ta) => `<div class="field" data-k="${k}"><label>${l}</label>${ta ? `<textarea data-ps="${k}" placeholder="${ph}">${escapeHtml(s[k])}</textarea>` : `<input data-ps="${k}" value="${escapeHtml(s[k])}" placeholder="${ph}" autocomplete="off" inputmode="numeric">`}</div>`;
+      return `<div class="pro-slab" data-si="${i}"><div class="pro-slab-h"><span>Slab ${i + 1} <small style="font-weight:500;color:var(--ink-2)">(SLABNUM = ${i + 1})</small></span>${mdmPro.slabs.length > 1 ? '<button type="button" class="btn btn-plain" data-pro-del>× Xóa slab</button>' : ""}</div>
+        <div class="pro-slab-f">${F("from", "SLABFROM", "vd: 100")}${F("to", "SLABTO", "vd: 299")}${F("each", "ForEach (cứ mỗi …)", "vd: 10")}${F("disc", "DISCOUNT (số lượng tặng)", "vd: 1")}</div>
+        <div class="pro-slab-t">${F("q", "SKU điều kiện — ProductGroup Q (mỗi dòng 1 SKU)", "vd:\n7862\n3459", 1)}${F("a", "SKU tặng — ProductGroup A (mỗi dòng 1 SKU)", "vd:\n7862", 1)}</div></div>`;
+    }
+    function proDraw() { $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
+    function proMeta() {
+      const v = proParse();
+      document.querySelectorAll("#pro-cfg .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
+      document.querySelectorAll("#pro-slabs .pro-slab").forEach(el => { const b = v.slabBad[Number(el.dataset.si)] || {}; el.querySelectorAll(".field").forEach(f => f.classList.toggle("bad", !!b[f.dataset.k])); });
+      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng xuất ra</span>`, `<span class="adj-chip">${mdmPro.slabs.length} slab</span>`];
+      if (v.nbad) chips.push(`<span class="adj-chip err">${v.nbad} slab chưa hợp lệ</span>`);
+      $("#pro-chips").innerHTML = chips.join("");
+      $("#pro-export").disabled = !v.out.length || !!v.nbad || !!v.ncfg;
+    }
+    async function proExport() {
+      const v = proParse(); if (!v.out.length || v.nbad || v.ncfg) return;
+      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
+      const ws = XLSX.utils.aoa_to_sheet([PRO_COLS, ...v.out]);
+      v.out.forEach((_, i) => { ["Q", "R"].forEach(c => { const cell = ws[c + (i + 2)]; if (cell) cell.z = "mm-dd-yy"; }); });
+      ws["!cols"] = PRO_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "PromotionUploadTemplateMapping_");
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Upload_${stamp}.xlsx`; // khác tên file mẫu
+      XLSX.writeFile(wb, fileName);
+      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
+    }
+    function renderPro() {
+      const F = (k, l, ph) => `<div class="field" data-k="${k}"><label>${l}</label><input data-pro="${k}" value="${escapeHtml(mdmPro[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Nhập thông tin CTKM, thêm các slab (mua từ–đến, cứ mỗi … tặng …) và dán danh sách SKU điều kiện / SKU tặng. Xuất Excel đúng mẫu PromotionUploadTemplateMapping, sẵn sàng upload.</p></div></div><div class="panel-body">
+        <div class="adj-cfg" id="pro-cfg" style="grid-template-columns:repeat(3,minmax(0,1fr))">${F("code", "PromotionCode (cũng dùng cho PromotionQuotaCode)", "vd: SIS_MultiSKU_xxx")}${F("desc", "PromotionDescription (để trống = PromotionCode)")}${F("dist", "DistributorCode", "vd: 0070259604")}${F("start", "Ngày bắt đầu (StartDate)", "dd/mm/yyyy")}${F("end", "Ngày kết thúc (EndDate)", "dd/mm/yyyy")}${F("uom", "UnitOfMeasure")}</div>
+        <div class="adj-bar"><h3>Slab CTKM<small>SKU điều kiện (Q) &amp; SKU tặng (A)</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="pro-chips"></div><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm slab</button></div></div>
+        <div id="pro-slabs">${mdmPro.slabs.map(proSlabHtml).join("")}</div>
+        <p class="adj-tip">💡 Nhiều SKU điều kiện = nhiều dòng Q, nhiều SKU tặng = nhiều dòng A (đúng mẫu MultiSKU / MultiFOC). Dán cột SKU từ Excel vào ô SKU. Ô đỏ = chưa hợp lệ.</p>
+        <div class="adj-foot"><div class="meta">Cố định theo mẫu: DisbursementMethod 1 · RangeBasis 1 · PromotionTypeCode 4 · ProRata N · các cột còn lại để trống</div><button type="button" id="pro-export" class="btn btn-primary btn-lg">⬇ Xuất Excel (.xlsx)</button></div></div></section>`;
+    }
     function renderMdmBody() {
       if (mdmMode === "stock-init") return renderIni();
       if (mdmMode === "sku-price") return renderPrc();
+      if (mdmMode === "promo") return renderPro();
       if (mdmMode === "stock-adj") return renderAdj();
       const m = MDM_MODES.find(x => x[0] === mdmMode) || MDM_MODES[0];
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>${escapeHtml(m[1])}</h2><p>Chức năng của MDM Team.</p></div></div><div class="panel-body"><div class="empty"><strong>Chức năng đang được xây dựng</strong>Đang chờ mẫu phiếu Excel và quy tắc xử lý cho “${escapeHtml(m[1])}”.</div></div></section>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>${escapeHtml(m[1])}</h2><p>Chức năng của L2 / MDM Team.</p></div></div><div class="panel-body"><div class="empty"><strong>Chức năng đang được xây dựng</strong>Đang chờ mẫu phiếu Excel và quy tắc xử lý cho “${escapeHtml(m[1])}”.</div></div></section>`;
     }
     function renderMdm() {
-      return `<div id="mdm-page"><div class="header-row"><div><div class="eyebrow">Support tools · MDM Team</div><h2 class="page-title">MDM Team</h2><p class="page-subtitle">Tạo tồn kho ban đầu, tăng/giảm tồn và cài đặt giá cho SKU.</p></div></div>
+      return `<div id="mdm-page"><div class="header-row"><div><div class="eyebrow">Support tools · L2 / MDM Team</div><h2 class="page-title">L2 / MDM Team</h2><p class="page-subtitle">Tạo tồn kho ban đầu, tăng/giảm tồn, cài đặt giá cho SKU và cài đặt CTKM.</p></div></div>
         <div class="tl-seg">${MDM_MODES.map(([k, l, ic]) => `<button type="button" data-mdm-mode="${k}" class="${mdmMode === k ? "on" : ""}">${ICONS[ic]} ${l}</button>`).join("")}</div>
         <div id="mdm-root">${renderMdmBody()}</div></div>`;
     }
@@ -3158,6 +3226,8 @@
       const pg = $("#mdm-page"); if (!pg) return;
       pg.addEventListener("input", e => {
         const t = e.target;
+        if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.value; return proMeta(); }
+        if (t.dataset.ps) { mdmPro.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.ps] = t.value; return proMeta(); }
         if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
         if (t.dataset.ini) { mdmIni[t.dataset.ini] = t.value; return iniMeta(); }
         if (t.dataset.prc) { mdmPrc[t.dataset.prc] = t.value; return prcMeta(); }
@@ -3202,6 +3272,10 @@
         const el = document.querySelector(`#adj-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
       });
       pg.addEventListener("click", async e => {
+        if (e.target.closest("#pro-export")) return proExport();
+        if (e.target.closest("[data-pro-act]")) { mdmPro.slabs.push(proSlab()); return proDraw(); }
+        const proDel = e.target.closest("[data-pro-del]");
+        if (proDel) { mdmPro.slabs.splice(Number(proDel.closest(".pro-slab").dataset.si), 1); return proDraw(); }
         if (e.target.closest("#adj-export")) return adjExport();
         if (e.target.closest("#ini-export")) return iniExport();
         if (e.target.closest("#prc-export")) return prcExport();
@@ -3234,11 +3308,12 @@
         const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
         mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
         pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
-        $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "stock-adj") adjDrawRows(); if (mdmMode === "stock-init") iniDrawRows(); if (mdmMode === "sku-price") prcDrawRows();
+        $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "stock-adj") adjDrawRows(); if (mdmMode === "stock-init") iniDrawRows(); if (mdmMode === "sku-price") prcDrawRows(); if (mdmMode === "promo") proDraw();
       });
       if (mdmMode === "stock-adj") adjDrawRows();
       if (mdmMode === "stock-init") iniDrawRows();
       if (mdmMode === "sku-price") prcDrawRows();
+      if (mdmMode === "promo") proDraw();
     }
     function renderTools() {
       return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools · L1 Team</div><h2 class="page-title">L1 Team</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
