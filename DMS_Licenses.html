@@ -1272,6 +1272,13 @@
   .cal-imp-list::-webkit-scrollbar-thumb { background: rgba(140,18,24,.22); border-radius: 99px; }
   .cal-imp-i { min-height: 74px; }
   @media (min-width: 1081px) { .cal-imp { flex: 0 0 auto; } }
+  /* Super-admin / senior: cal-wrap cao bằng cal-side-col; Member: thẻ Ngày quan trọng co gọn theo nội dung */
+  .cal-row--admin .cal-wrap { display: flex; }
+  .cal-row--admin .cal-wrap > .cal { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .cal-row--admin .cal-body { flex: 1 1 auto; }
+  .cal-row--admin .cal-main { display: flex; flex-direction: column; }
+  .cal-row--admin .cal-grid { flex: 1 1 auto; grid-template-rows: auto repeat(var(--cal-rows, 4), minmax(46px, 1fr)); }
+  .cal-row--member > .cal-imp { align-self: start; }
 </style>
 </head>
 <body class="auth">
@@ -1966,7 +1973,7 @@
         </div>
         <div class="cal-body">
           <div class="cal-main">
-          <div class="cal-grid">${grid}</div>
+          <div class="cal-grid" style="--cal-rows:${rows}">${grid}</div>
           <div class="cal-legend"><span><i class="l-today"></i>Hôm nay</span><span><i class="l-sun"></i>Chủ nhật (không bán)</span><span><i class="l-hol"></i>Ngày lễ</span><span><i class="l-evt"></i>Close GRN</span><span><i class="l-mark"></i>Ngày quan trọng</span><span><i class="l-out"></i>Ngoài kỳ</span></div>
           </div>
       <aside class="cal-side">
@@ -2057,7 +2064,7 @@
         ${editor ? "" : '<div class="cal-imp-foot">Chỉ Super-admin được thêm, sửa hoặc xóa ngày quan trọng.</div>'}
       </section>`;
     }
-    const renderCokeRow = anim => `<div class="cal-row">${renderCokeCalendar(anim)}${canEdit() ? `<div class="cal-side-col">${renderImportantPanel()}${renderJiraCard()}</div>` : renderImportantPanel()}</div>`;
+    const renderCokeRow = anim => `<div class="cal-row ${canEdit() ? "cal-row--admin" : "cal-row--member"}">${renderCokeCalendar(anim)}${canEdit() ? `<div class="cal-side-col">${renderImportantPanel()}${renderJiraCard()}</div>` : renderImportantPanel()}</div>`;
     function refreshCokeRow() { const el = document.querySelector(".cal-row"); if (el) el.outerHTML = renderCokeRow(); }
 
     // Đọc bản mới nhất từ Supabase rồi mới áp dụng thay đổi → hai người sửa cùng lúc không ghi đè nhau
