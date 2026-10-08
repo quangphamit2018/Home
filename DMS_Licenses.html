@@ -3290,7 +3290,7 @@
       const bad = (k, msg) => { cfgBad[k] = 1; issues.push({ msg, sel: `[data-pro="${k}"]` }); };
       if (!P.code.trim()) bad("code", "Thiếu PromotionCode");
       if (!P.dist.trim()) bad("dist", "Thiếu DistributorCode");
-      if (d1 == null) bad("start", "StartDate sai định dạng (dd/mm/yyyy)");
+      if (d1 == null) bad("start", "StartDate sai định dạng (dd/mm/yyyy)"); else { const _nd = new Date(); if (d1 < Date.UTC(_nd.getFullYear(), _nd.getMonth(), _nd.getDate()) / 86400000 + 25569) bad("start", "StartDate không được là ngày trong quá khứ"); }
       if (d2 == null) bad("end", "EndDate sai định dạng (dd/mm/yyyy)"); else if (d1 != null && d2 < d1) bad("end", "EndDate phải ≥ StartDate");
       if (!/^\d+$/.test(P.seq.trim())) bad("seq", "SequenceNumber phải là số nguyên ≥ 0");
       if (P.apply.trim() && !/^[1-9]\d*$/.test(P.apply.trim())) bad("apply", "ApplyCount phải là số nguyên ≥ 1 (hoặc để trống)");
@@ -3361,7 +3361,7 @@
         const dirty = mdmPro.code || mdmPro.dist || mdmPro.slabs.some(s => s.q || s.a || s.from);
         if (dirty && !(await confirmDialog({ title: a === "example" ? "Thay bằng ví dụ?" : "Làm mới form?", message: "Dữ liệu đang nhập trong form sẽ bị thay thế.", confirmText: a === "example" ? "Điền ví dụ" : "Làm mới", danger: true }))) return;
         mdmPro = proInit();
-        if (a === "example") Object.assign(mdmPro, { code: "HCM_082026_01", desc: "4T Sprite/Fanta 1.5L tặng 1T DASANI/MINERAL 510ML (2EA tặng 1EA)", dist: "0070259604", start: "14/08/2026", end: "28/08/2026", uom: "EA", rep: "1", slabs: [{ from: "2", to: "2", each: "2", disc: "1", q: "2016\n2090\n3089\n3433", a: "2717\n2718\n2772" }] });
+        if (a === "example") Object.assign(mdmPro, { code: "HCM_082026_01", desc: "4T Sprite/Fanta 1.5L tặng 1T DASANI/MINERAL 510ML (2EA tặng 1EA)", dist: "0070259604", start: "01/11/2026", end: "15/11/2026", uom: "EA", rep: "1", slabs: [{ from: "2", to: "2", each: "2", disc: "1", q: "2016\n2090\n3089\n3433", a: "2717\n2718\n2772" }] });
         $("#mdm-root").innerHTML = renderPro(); return proDraw();
       }
       proDraw();
@@ -3388,10 +3388,10 @@
             <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "PromotionDescription", "PromotionDescription")}${F("dist", "DistributorCode", "DistributorCode", "vd: 0070259604")}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}${S("type", "PromotionTypeCode", "PromotionTypeCode", PRO_TYPE_OPTS)}</div></div>
           <div class="pro-card"><h3><em>2</em>Slab Configuration<span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Add slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
             <p class="adj-tip">💡 Copy the SKU column from Excel then <kbd>Ctrl</kbd>+<kbd>V</kbd> into the SKU box. Multiple condition SKUs = multiple Q rows, multiple gift SKUs = multiple A rows. For multiple buy tiers → click <b>Duplicate</b> then change SLABFROM/TO.</p></div>
-          <details class="pro-card pro-det" id="pro-adv"><summary><em>3</em>Tùy chọn nâng cao <small>mặc định giữ như mẫu hiện tại — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
-            ${F("terr", "Mã vùng (Territory)", "Territory", "vd: VN10VN11")}${F("seq", "Mức ưu tiên (SequenceNumber)", "SequenceNumber")}${F("apply", "Số đơn/outlet (ApplyCount)", "ApplyCount", "trống = không giới hạn")}
-            ${S("rep", "Lặp CTKM trong đơn (Repeating_Range)", "Repeating_Range", [["0", "0 – Không lặp"], ["1", "1 – Có lặp"]])}${S("excl", "Hưởng thêm CTKM khác (ExclusionOption)", "ExclusionOption", [["0", "0 – Có"], ["1", "1 – Không"]])}${S("rb", "Điều kiện dựa trên (RangeBasis)", "RangeBasis", [["1", "1 – Số lượng mua"], ["2", "2 – Giá trị mua"]])}
-            ${S("dm", "Cách áp dụng (DisbursementMethod)", "DisbursementMethod", [["1", "1 – Trên hóa đơn"], ["2", "2 – Ngoài hóa đơn"]])}<div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-pro="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (theo mẫu MultiSKU)</label></div></div></details>
+          <details class="pro-card pro-det" id="pro-adv" open><summary><em>3</em>Advanced Options <small>keep defaults — usually no change needed</small></summary><div class="pro-grid" style="margin-top:12px">
+            ${F("terr", "Territory", "Territory", "vd: VN10VN11")}${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "blank = no limit")}
+            ${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – No repeat"], ["1", "1 – Repeat"]])}${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Yes"], ["1", "1 – No"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Purchase quantity"], ["2", "2 – Purchase value"]])}
+            ${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – On invoice"], ["2", "2 – Off invoice"]])}<div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-pro="quota" style="width:auto"${P.quota ? " checked" : ""}> Fill = PromotionCode (MultiSKU template)</label></div></div></details>
         </div>
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="pro-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="pro-pv"></div></div>
@@ -3461,6 +3461,7 @@
         const el = document.querySelector(`#adj-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
       });
       pg.addEventListener("click", async e => {
+        if (e.target.closest("#pro-adv > summary")) { e.preventDefault(); return; }
         const hp = e.target.closest("[data-help]"); if (hp) { e.preventDefault(); return proHelp(hp.dataset.help); }
         const pa = e.target.closest("[data-pro-act]"); if (pa) return proAct(pa.dataset.proAct, pa);
         const gt = e.target.closest("[data-goto]"); if (gt) { const el = document.querySelector(gt.dataset.goto); if (el) { el.closest("details") && (el.closest("details").open = true); el.scrollIntoView({ block: "center", behavior: "smooth" }); el.focus(); } return; }
