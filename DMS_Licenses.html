@@ -3317,10 +3317,10 @@
     }
     function proSum(s) {
       const f = s.from.trim(), t = s.to.trim(), e = s.each.trim(), d = s.disc.trim(), u = mdmPro.rb === "2" ? "VND" : mdmPro.uom, nq = new Set(proSkus(s.q)).size, na = new Set(proSkus(s.a)).size;
-      if (!f && !t && !e) return "Enter SLABFROM / SLABTO / ForEach to see a plain-language summary.";
-      if (mdmPro.type === "4") return `Buy <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> in <b>${nq}</b> condition SKU(s) → for every <b>${escapeHtml(e || "?")}</b> get <b>${escapeHtml(d || "?")} EA</b> in <b>${na}</b> gift SKU(s)`;
+      if (!f && !t && !e) return "Nhập SLABFROM / SLABTO / ForEach để xem mô tả tóm tắt.";
+      if (mdmPro.type === "4") return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> của <b>${nq}</b> SKU điều kiện → cứ mỗi <b>${escapeHtml(e || "?")}</b> được tặng <b>${escapeHtml(d || "?")} EA</b> của <b>${na}</b> SKU quà tặng`;
       const unit = mdmPro.type === "2" ? "%" : (mdmPro.rb === "2" ? "VND" : u);
-      return `Buy <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> in <b>${nq}</b> SKU → discount <b>${escapeHtml(d || "?")} ${unit}</b>${e ? ` · for every ${escapeHtml(e)} ${u}` : ""}`;
+      return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> của <b>${nq}</b> SKU → được giảm <b>${escapeHtml(d || "?")} ${unit}</b>${e ? ` · mỗi ${escapeHtml(e)} ${u}` : ""}`;
     }
     function proCnt(txt) {
       const l = proSkus(txt), u = new Set(l).size; if (!l.length) return "";
@@ -3331,7 +3331,7 @@
       const foc = mdmPro.type === "4";
       const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><input data-ps="${k}" value="${escapeHtml(s[k])}" placeholder="${ph}" autocomplete="off" inputmode="numeric"></div>`;
       const T = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}<span class="pro-cnt" data-cnt="${k}">${proCnt(s[k])}</span></label><textarea data-ps="${k}" placeholder="${ph}" spellcheck="false">${escapeHtml(s[k])}</textarea></div>`;
-      return `<div class="pro-slab" data-si="${i}"><div class="pro-slab-h"><span>Slab ${i + 1}</span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Create next slab, keep SKU">⧉ Duplicate</button>${mdmPro.slabs.length > 1 ? '<button type="button" class="btn btn-plain" data-pro-del>× Delete</button>' : ""}</span></div>
+      return `<div class="pro-slab" data-si="${i}"><div class="pro-slab-h"><span>Slab ${i + 1}</span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Tạo slab tiếp theo, giữ nguyên SKU">⧉ Nhân đôi</button>${mdmPro.slabs.length > 1 ? '<button type="button" class="btn btn-plain" data-pro-del>× Xóa</button>' : ""}</span></div>
         <div class="pro-slab-f">${F("from", "SLABFROM", "SLABFROM", "vd: 100")}${F("to", "SLABTO", "SLABTO", "vd: 299")}${F("each", "ForEach", "ForEach", "vd: 10")}${F("disc", "DISCOUNT", "DISCOUNT", "vd: 1")}</div>
         <div class="pro-sum">${proSum(s)}</div>
         <div class="pro-slab-t">${T("q", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${(foc ? T("a", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862") : "")}</div></div>`;
@@ -3386,17 +3386,17 @@
         <div class="panel-body"><div class="pro-lay"><div class="pro-main">
           <div class="pro-card"><h3><em>1</em>Thông tin chương trình</h3>
             <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "PromotionDescription", "PromotionDescription")}${F("dist", "DistributorCode", "DistributorCode", "vd: 0070259604")}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}${S("type", "PromotionTypeCode", "PromotionTypeCode", PRO_TYPE_OPTS)}</div></div>
-          <div class="pro-card"><h3><em>2</em>Slab Configuration<span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Add slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
-            <p class="adj-tip">💡 Sao chép cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. Nhiều SKU điều kiện = nhiều dòng Q, nhiều SKU quà tặng = nhiều dòng A. Với nhiều mức mua → bấm <b>Duplicate</b> rồi đổi SLABFROM/TO.</p></div>
-          <details class="pro-card pro-det" id="pro-adv" open><summary><em>3</em>Advanced Options <small>giữ mặc định — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
-            ${F("terr", "Territory", "Territory", "vd: VN10VN11")}${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "blank = no limit")}
-            ${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – No repeat"], ["1", "1 – Repeat"]])}${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Yes"], ["1", "1 – No"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Purchase quantity"], ["2", "2 – Purchase value"]])}
-            ${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – On invoice"], ["2", "2 – Off invoice"]])}<div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-pro="quota" style="width:auto"${P.quota ? " checked" : ""}> Fill = PromotionCode (MultiSKU template)</label></div></div></details>
+          <div class="pro-card"><h3><em>2</em>Cấu hình Slab (mức mua)<span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
+            <p class="adj-tip">💡 Sao chép cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. Nhiều SKU điều kiện = nhiều dòng Q, nhiều SKU quà tặng = nhiều dòng A. Với nhiều mức mua → bấm <b>Nhân đôi</b> rồi đổi SLABFROM/TO.</p></div>
+          <details class="pro-card pro-det" id="pro-adv" open><summary><em>3</em>Tùy chọn nâng cao <small>giữ mặc định — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
+            ${F("terr", "Territory", "Territory", "vd: VN10VN11")}${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "để trống = không giới hạn")}
+            ${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – Không lặp lại"], ["1", "1 – Có lặp lại"]])}${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Có loại trừ"], ["1", "1 – Không loại trừ"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Theo số lượng mua"], ["2", "2 – Theo giá trị mua"]])}
+            ${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Trên hóa đơn"], ["2", "2 – Ngoài hóa đơn"]])}<div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-pro="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu MultiSKU)</label></div></div></details>
         </div>
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="pro-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="pro-pv"></div></div>
           <button type="button" id="pro-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
-          <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode selected above · ProRata auto-calculated by type · Bundle_Promotion 0 · remaining columns left blank</div></div></aside></div></div></section>`;
+          <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode chọn ở mục 1 · ProRata tự tính theo loại KM · Bundle_Promotion = 0 · các cột còn lại để trống</div></div></aside></div></div></section>`;
     }
     function renderMdmBody() {
       if (mdmMode === "stock-init") return renderIni();
