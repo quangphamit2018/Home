@@ -1249,18 +1249,6 @@
     .cal-side-col .cal-jira { flex: 0 0 auto; }
     .cal-imp-i.grn-skip { opacity: .45; }
     .cal-imp-i.grn-skip .d { filter: grayscale(1); }
-    .cal-jira { border-radius: 22px; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 18px 40px rgba(37, 99, 235, .10), 0 2px 6px rgba(15, 23, 42, .04); overflow: hidden; display: flex; flex-direction: column; }
-    .cal-jira-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 18px; background: linear-gradient(135deg, #eaf2ff 0%, #fff 70%); border-bottom: 1px solid var(--line); }
-    .cal-jira-head h3 { margin: 0; font-size: 15px; font-weight: 800; color: #0b3d91; display: flex; align-items: center; gap: 8px; }
-    .cal-jira-head h3::before { content: "✦"; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; font-size: 12px; color: #fff; background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 6px 12px rgba(37, 99, 235, .30); }
-    .cal-jira-head p { margin: 3px 0 0; font-size: 11.5px; color: var(--muted); }
-    .cal-jira-head svg { width: 18px; height: 18px; color: #2563eb; }
-    .cal-jira-body { padding: 19px 18px 21px; display: grid; gap: 10px; }
-    .cal-jira-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12.5px; padding: 9px 12px; border-radius: 11px; background: var(--surface-soft); border: 1px solid var(--line); }
-    .cal-jira-row span { color: var(--muted); font-weight: 700; }
-    .cal-jira-row b { color: var(--ink); font-weight: 800; }
-    .cal-jira-warn { font-size: 11.5px; color: #b45309; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 11px; padding: 9px 12px; }
-    .cal-jira-btn { margin-top: 6px; width: 100%; justify-content: center; }
     .jira-config { display: grid; gap: 10px; }
     .jira-config .btn { justify-self: start; }
   
@@ -1387,28 +1375,89 @@
   .cal-dl-i .t small { font-size: 11.5px; color: var(--muted); }
   .cal-dl-note { margin: 14px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.6; }
 
-  /* ---------- Thu gọn / mở rộng hai thẻ cột phải (super-admin + senior-member) ---------- */
+  /* =====================================================================
+     Cột phải lịch Coke: thẻ "Ngày quan trọng" + "Tạo Jira ticket"
+     — 1 nút thu gọn chung · thu gọn thành 2 thanh dọc gọn đẹp
+     ===================================================================== */
   .cal-head-act { display: inline-flex; align-items: center; gap: 8px; }
-  .cal-coll { display: inline-grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px; border: 1px solid var(--line-strong); background: linear-gradient(180deg, #fff, #fff8f7); color: var(--brand-dark); cursor: pointer; transition: .2s ease; }
-  .cal-coll:hover { background: var(--g-soft); border-color: #dc8985; }
-  .cal-coll svg { width: 15px; height: 15px; transition: transform .28s ease; }
-  .cal-coll[aria-expanded="true"] svg { transform: rotate(-90deg); }
-  .cal-coll[aria-expanded="false"] svg { transform: rotate(90deg); }
-  .cal-jira .cal-coll { background: linear-gradient(180deg, #fff, #eef4ff); color: #1d4ed8; border-color: #c7d9fb; }
-  .cal-jira .cal-coll:hover { background: #e3edff; border-color: #a9c4f7; }
   .cal-pane-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-  .cal-pane-body[hidden] { display: none; }
+  .cal-side-col { position: relative; }
+  .cal-side-col > .cal-side-toggle { flex: 0 0 auto; }
 
-  /* ---------- Thu gọn cả 2 thẻ: dồn thành thanh dọc sát viền phải (như nav-bar thu gọn) để lịch Coke rộng ra ---------- */
-  @media (min-width: 1081px) {
-    .cal-row--rail { grid-template-columns: minmax(0, 1fr) 76px; }
-    .cal-row--rail .cal-side-col > .cal-imp { flex: 0 0 auto; }
-    .cal-row--rail .cal-imp-head, .cal-row--rail .cal-jira-head { flex-direction: column; align-items: center; justify-content: flex-start; gap: 10px; padding: 14px 6px; }
-    .cal-row--rail .cal-imp-head > div, .cal-row--rail .cal-jira-head > div { writing-mode: vertical-rl; text-orientation: mixed; }
-    .cal-row--rail .cal-imp-head h3, .cal-row--rail .cal-jira-head h3 { font-size: 13.5px; }
-    .cal-row--rail .cal-imp-head p, .cal-row--rail .cal-jira-head p { display: none; }
-    .cal-row--rail .cal-head-act { flex-direction: column; gap: 10px; }
-    .cal-row--rail .cal-imp-head .cal-btn.today { width: 32px; height: 32px; padding: 0; justify-content: center; gap: 0; font-size: 0; }
+  /* --- Nút thu gọn / mở rộng CHUNG --- */
+  .cal-side-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 auto; width: 100%; height: 34px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line-strong); background: linear-gradient(180deg, #fff, #fdf1f0); color: var(--brand-dark); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 14px rgba(120, 20, 24, .10); transition: background .2s ease, border-color .2s ease, box-shadow .2s ease, color .2s ease; }
+  .cal-side-toggle:hover { background: var(--g-brand); border-color: transparent; color: #fff; box-shadow: 0 10px 22px rgba(183, 28, 28, .28); }
+  .cal-side-toggle:focus-visible { outline: 2px solid var(--brand-light); outline-offset: 2px; }
+  .cal-side-toggle svg { width: 15px; height: 15px; flex: 0 0 auto; transform: rotate(-90deg); transition: transform .3s ease; }
+  .cal-side-toggle .t-open { display: none; }
+  .cal-row--rail .cal-side-toggle svg { transform: rotate(90deg); }
+  .cal-row--rail .cal-side-toggle .t-open { display: inline; }
+  .cal-row--rail .cal-side-toggle .t-close { display: none; }
+
+  /* --- Thẻ Ngày quan trọng: tinh chỉnh nhẹ --- */
+  .cal-imp-head { padding: 15px 18px; }
+
+  /* --- Thẻ Tạo Jira ticket (thiết kế lại) --- */
+  .cal-jira { position: relative; border-radius: 22px; background: var(--surface); border: 1px solid #cddcf8; box-shadow: 0 18px 40px rgba(37, 99, 235, .10), 0 2px 6px rgba(15, 23, 42, .04); overflow: hidden; display: flex; flex-direction: column; }
+  .cal-jira-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 15px 18px; background: linear-gradient(135deg, #e6efff 0%, #fff 72%); border-bottom: 1px solid #dbe6fb; }
+  .cal-jira-head h3 { margin: 0; font-size: 15px; font-weight: 800; color: #0b3d91; display: flex; align-items: center; gap: 8px; }
+  .cal-jira-head h3::before { content: "✦"; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; font-size: 12px; color: #fff; background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 6px 12px rgba(37, 99, 235, .30); }
+  .cal-jira-head p { margin: 3px 0 0; font-size: 11.5px; color: var(--muted); }
+  .cal-jira-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 99px; font-size: 11px; font-weight: 800; white-space: nowrap; }
+  .cal-jira-chip i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .cal-jira-chip.ok { color: #067647; background: #ecfdf3; border: 1px solid #abefc6; }
+  .cal-jira-chip.warn { color: #b54708; background: #fffaeb; border: 1px solid #fedf89; }
+  .cal-jira-body { padding: 14px 18px 18px; display: grid; gap: 12px; }
+  .cal-jira-tk { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; gap: 11px; align-items: center; padding: 10px 12px; border-radius: 14px; background: linear-gradient(135deg, #f3f7ff, #fff); border: 1px solid #dbe6fb; }
+  .cal-jira-tk .d { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(160deg, #e8f0ff, #cadcff); color: #0b3d91; line-height: 1; }
+  .cal-jira-tk .d b { font-size: 18px; font-weight: 800; }
+  .cal-jira-tk .d small { font-size: 9px; font-weight: 700; margin-top: -8px; }
+  .cal-jira-tk .t { min-width: 0; display: grid; gap: 2px; }
+  .cal-jira-tk .t span { font-size: 13px; font-weight: 800; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-jira-tk .t small { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-jira-tk .left { font-style: normal; font-size: 11px; font-weight: 750; color: #1d4ed8; background: #e8f0ff; border: 1px solid #c7d9fb; border-radius: 99px; padding: 3px 9px; white-space: nowrap; }
+  .cal-jira-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cal-jira-meta > div { display: grid; gap: 2px; padding: 8px 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--line); min-width: 0; }
+  .cal-jira-meta small { font-size: 10px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); }
+  .cal-jira-meta b { font-size: 13px; font-weight: 800; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-jira-warn { font-size: 11.5px; line-height: 1.5; color: #b45309; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 9px 12px; }
+  .cal-jira .btn.cal-jira-btn { width: 100%; justify-content: center; gap: 8px; height: 42px; border-radius: 12px; border: 0; color: #fff; font-weight: 800; background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 10px 22px rgba(37, 99, 235, .30); transition: transform .2s ease, filter .2s ease, box-shadow .2s ease; }
+  .cal-jira .btn.cal-jira-btn:hover:not(:disabled) { filter: brightness(1.07); transform: translateY(-1px); box-shadow: 0 14px 26px rgba(37, 99, 235, .36); }
+  .cal-jira .btn.cal-jira-btn:disabled { opacity: .5; box-shadow: none; cursor: not-allowed; }
+  .cal-jira .btn.cal-jira-btn svg { width: 16px; height: 16px; }
+
+  /* --- Dạng thu gọn: mỗi thẻ thành 1 "tab" bấm để mở lại --- */
+  .cal-tab { display: none; }
+  .cal-row--rail .cal-side-col > section > :not(.cal-tab) { display: none; }
+  .cal-row--rail .cal-side-col > section { flex: 0 0 auto; cursor: pointer; transition: transform .2s ease, box-shadow .2s ease; }
+  .cal-row--rail .cal-side-col > .cal-imp { background: linear-gradient(180deg, var(--brand-soft) 0%, #fff 85%); }
+  .cal-row--rail .cal-side-col > .cal-jira { background: linear-gradient(180deg, #e6efff 0%, #fff 85%); }
+  .cal-row--rail .cal-side-col > section:hover { transform: translateY(-2px); }
+  .cal-row--rail .cal-tab { display: flex; align-items: center; gap: 12px; width: 100%; height: 100%; padding: 13px 16px; border: 0; background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; animation: calTabIn .32s ease both; }
+  .cal-tab:focus-visible { outline: 2px solid var(--brand-light); outline-offset: -3px; border-radius: 20px; }
+  .cal-tab .ic { display: grid; place-items: center; flex: 0 0 auto; width: 34px; height: 34px; border-radius: 11px; font-size: 15px; color: #fff; background: var(--g-brand); box-shadow: 0 6px 12px rgba(183, 28, 28, .26); }
+  .cal-tab .ic svg { width: 16px; height: 16px; }
+  .cal-jira .cal-tab .ic { background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 6px 12px rgba(37, 99, 235, .32); }
+  .cal-tab .v { flex: 1 1 auto; min-width: 0; font-size: 13.5px; font-weight: 800; color: var(--brand-dark); }
+  .cal-jira .cal-tab .v { color: #0b3d91; }
+  .cal-tab .n { display: inline-grid; place-items: center; flex: 0 0 auto; min-width: 28px; height: 28px; padding: 0 7px; border-radius: 99px; font-size: 12px; font-weight: 800; color: var(--brand-dark); background: #fff; border: 1px solid var(--line-strong); box-shadow: 0 3px 8px rgba(120, 20, 24, .10); }
+  .cal-tab .dot { flex: 0 0 auto; width: 12px; height: 12px; margin: 8px; border-radius: 50%; }
+  .cal-tab .dot.ok { background: #12b76a; box-shadow: 0 0 0 5px rgba(18, 183, 106, .18); }
+  .cal-tab .dot.warn { background: #f79009; box-shadow: 0 0 0 5px rgba(247, 144, 9, .20); }
+  @keyframes calTabIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .cal-row--rail .cal-tab { animation: none; } }
+
+  /* Màn nhỏ (≤1360px): cột phải nằm dưới lịch → nút chung là thanh ngang, tab là thanh ngang xếp dọc */
+  /* Màn rộng (≥1361px): nút chung là "tay nắm" nổi ở mép trái cột phải, thu gọn thành 2 thanh dọc */
+  @media (min-width: 1361px) {
+    .cal-row--rail { grid-template-columns: minmax(0, 1fr) 68px; }
+    .cal-side-col > .cal-side-toggle { position: absolute; z-index: 6; left: -22px; top: 50%; transform: translateY(-50%); width: 26px; height: 96px; flex-direction: column; gap: 8px; padding: 0; border-radius: 13px; }
+    .cal-side-toggle span { writing-mode: vertical-rl; letter-spacing: .3px; }
+    .cal-side-toggle svg, .cal-row--rail .cal-side-toggle svg { transform: none; }
+    .cal-row--rail .cal-side-toggle svg { transform: rotate(180deg); }
+    .cal-row--rail .cal-side-col > section { flex: 1 1 0; min-height: 210px; }
+    .cal-row--rail .cal-tab { flex-direction: column; justify-content: flex-start; gap: 14px; padding: 16px 0 14px; }
+    .cal-row--rail .cal-tab .v { flex: 1 1 auto; writing-mode: vertical-rl; text-align: left; }
   }
   @media (max-width: 760px) { .cal-ev { font-size: 8px; } }
 </style>
@@ -2225,16 +2274,14 @@
           ${editor && x.kind === "grn-skip" ? `<span class="cal-imp-act"><button type="button" class="cal-imp-edit" data-grn="restore" data-pk="${escapeHtml(x.periodKey)}" title="Khôi phục Close GRN" aria-label="Khôi phục ${escapeHtml(x.name)}">${ICONS.refresh}</button></span>` : ""}
         </div>`;
       }).join("");
-      const pane = canEdit(), paneOpen = calPaneOpen.imp;
+      const pane = canEdit();
+      const tab = pane ? calTab("imp", "★", "Ngày quan trọng", `<span class="n" title="${items.length} mục">${items.length}</span>`) : "";
       return `<section class="cal-imp" aria-label="Ngày quan trọng">
         <div class="cal-imp-head">
-          <div><h3>Ngày quan trọng</h3><p>${paneOpen || !pane ? "Những ngày cả team cần chú ý" : `Đang thu gọn · ${items.length} mục`}</p></div>
-          <span class="cal-head-act">
-            ${editor ? `<button type="button" class="cal-btn today" data-imp="toggle">${ICONS.plus} Thêm ngày</button>` : ""}
-            ${pane ? `<button type="button" class="cal-coll" data-coll="imp" aria-expanded="${paneOpen ? "true" : "false"}" title="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Ngày quan trọng" aria-label="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Ngày quan trọng">${ICONS.pgNext}</button>` : ""}
-          </span>
+          <div><h3>Ngày quan trọng</h3><p>Những ngày cả team cần chú ý</p></div>
+          ${editor ? `<span class="cal-head-act"><button type="button" class="cal-btn today" data-imp="toggle">${ICONS.plus} Thêm ngày</button></span>` : ""}
         </div>
-        <div class="cal-pane-body"${pane && !paneOpen ? " hidden" : ""}>
+        <div class="cal-pane-body">
         ${editor ? `<div class="cal-imp-form" id="imp-form"${impFormOpen ? "" : " hidden"}>
           <div class="ttl">${editing ? "Sửa ngày quan trọng" : "Thêm ngày quan trọng"}</div>
           <label>Ngày${editing && editing.repeat === "weekly" ? " bắt đầu" : ""}<input type="date" id="imp-date" value="${editing ? editing.date : iso}"></label>
@@ -2246,26 +2293,40 @@
           <div class="cal-imp-list">${list || '<div class="cal-empty">Chưa có ngày quan trọng nào.</div>'}</div>
           ${editor ? "" : '<div class="cal-imp-foot">Chỉ Super-admin được thêm, sửa hoặc xóa ngày quan trọng.</div>'}
         </div>
+        ${tab}
       </section>`;
     }
+    // Tab hiển thị khi cột phải thu gọn (bấm để mở lại cả 2 thẻ)
+    function calTab(kind, icon, label, badge) {
+      return `<button type="button" class="cal-tab cal-tab--${kind}" data-coll="open" title="Mở rộng · ${label}" aria-label="Mở rộng thẻ ${label}"><span class="ic">${icon}</span><span class="v">${label}</span>${badge}</button>`;
+    }
     const renderCokeRow = anim => {
-      const admin = canEdit(), rail = admin && !calPaneOpen.imp && !calPaneOpen.jira;
-      return `<div class="cal-row ${admin ? "cal-row--admin" : "cal-row--member"}${rail ? " cal-row--rail" : ""}">${renderCokeCalendar(anim)}${admin ? `<div class="cal-side-col">${renderImportantPanel()}${renderJiraCard()}</div>` : renderImportantPanel()}</div>`;
+      const admin = canEdit(), rail = admin && !calSideOpen;
+      const toggle = `<button type="button" class="cal-side-toggle" data-coll="toggle" aria-expanded="${calSideOpen ? "true" : "false"}" title="Thu gọn / mở rộng cả 2 thẻ: Ngày quan trọng và Tạo Jira ticket" aria-label="Thu gọn hoặc mở rộng cả hai thẻ Ngày quan trọng và Tạo Jira ticket">${ICONS.pgNext}<span class="t-close">Thu gọn</span><span class="t-open">Mở rộng</span></button>`;
+      return `<div class="cal-row ${admin ? "cal-row--admin" : "cal-row--member"}${rail ? " cal-row--rail" : ""}">${renderCokeCalendar(anim)}${admin ? `<div class="cal-side-col">${toggle}${renderImportantPanel()}${renderJiraCard()}</div>` : renderImportantPanel()}</div>`;
     };
     function refreshCokeRow() { const el = document.querySelector(".cal-row"); if (el) el.outerHTML = renderCokeRow(); }
 
-    // ---------- Thu gọn / mở rộng 2 thẻ cột phải (super-admin + senior-member) — nhớ trạng thái theo từng máy ----------
-    const CAL_PANE_KEY = "dms_cal_panes";
-    let calPaneOpen = (() => {
-      try { const v = JSON.parse(localStorage.getItem(CAL_PANE_KEY) || "{}"); return { imp: v.imp !== false, jira: v.jira !== false }; }
-      catch (_) { return { imp: true, jira: true }; }
+    // ---------- Thu gọn / mở rộng CẢ 2 thẻ cột phải bằng 1 nút (super-admin + senior-member) — nhớ trạng thái theo từng máy ----------
+    const CAL_PANE_KEY = "dms_cal_panes", CAL_SIDE_KEY = "dms_cal_side";
+    let calSideOpen = (() => {
+      try {
+        const raw = localStorage.getItem(CAL_SIDE_KEY);
+        if (raw != null) return raw !== "0";
+        const v = JSON.parse(localStorage.getItem(CAL_PANE_KEY) || "{}");   // tương thích bản cũ (2 nút riêng)
+        return !(v.imp === false && v.jira === false);
+      } catch (_) { return true; }
     })();
     document.addEventListener("click", e => {
       const b = e.target.closest ? e.target.closest("[data-coll]") : null;
-      if (!b || !(b.dataset.coll in calPaneOpen)) return;
-      calPaneOpen[b.dataset.coll] = !calPaneOpen[b.dataset.coll];
-      try { localStorage.setItem(CAL_PANE_KEY, JSON.stringify(calPaneOpen)); } catch (_) {}
-      refreshCokeRow();
+      const row = b && b.closest(".cal-row");
+      if (!row) return;
+      const mode = b.dataset.coll;
+      calSideOpen = mode === "open" ? true : mode === "close" ? false : !calSideOpen;
+      try { localStorage.setItem(CAL_SIDE_KEY, calSideOpen ? "1" : "0"); } catch (_) {}
+      row.classList.toggle("cal-row--rail", !calSideOpen);
+      row.querySelectorAll(".cal-side-toggle").forEach(t => t.setAttribute("aria-expanded", calSideOpen ? "true" : "false"));
+      if (calSideOpen) row.querySelector(".cal-side-toggle")?.focus({ preventScroll: true });
     });
 
     // Đọc bản mới nhất từ Supabase rồi mới áp dụng thay đổi → hai người sửa cùng lúc không ghi đè nhau
@@ -2285,9 +2346,9 @@
       const b = e.target.closest ? e.target.closest("[data-imp]") : null;
       if (!b || b.disabled) return;
       const a = b.dataset.imp, form = document.querySelector("#imp-form");
-      if (a === "toggle") { calPaneOpen.imp = true; impEditId = null; impFormOpen = !impFormOpen; refreshCokeRow(); if (impFormOpen) document.querySelector("#imp-name")?.focus(); }
+      if (a === "toggle") { calSideOpen = true; impEditId = null; impFormOpen = !impFormOpen; refreshCokeRow(); if (impFormOpen) document.querySelector("#imp-name")?.focus(); }
       else if (a === "cancel") { impFormOpen = false; impEditId = null; refreshCokeRow(); }
-      else if (a === "edit") { calPaneOpen.imp = true; impEditId = b.dataset.id; impFormOpen = true; refreshCokeRow(); document.querySelector("#imp-name")?.focus(); }
+      else if (a === "edit") { calSideOpen = true; impEditId = b.dataset.id; impFormOpen = true; refreshCokeRow(); document.querySelector("#imp-name")?.focus(); }
       else if (a === "save") {
         const date = document.querySelector("#imp-date")?.value || "", name = (document.querySelector("#imp-name")?.value || "").trim().replace(/\s+/g, " "), repeat = document.querySelector("#imp-repeat")?.value || "none", time = document.querySelector("#imp-time")?.value || "";
         if (time && !/^\d{2}:\d{2}$/.test(time)) return toast("Giờ không hợp lệ.", "error");
@@ -2359,16 +2420,29 @@
       const cfg = state.jiraConfig || {};
       const hasCfg = !!cfg.project_key && !!(cfg.proxy_url || (cfg.base_url && cfg.email && cfg.token));
       const warn = !hasCfg ? (isAdmin() ? "Chưa cấu hình Jira — vào Quản lý dữ liệu để nhập token." : "Chưa cấu hình Jira — liên hệ Super-admin.") : "";
-      const paneOpen = calPaneOpen.jira;
+      const today = cokeToday(), ready = hasCfg && !!grn;
+      const gd = grn ? new Date(grn.t) : null, gn = grn ? Math.round((grn.t - today) / COKE_DAY) : null;
+      const left = gn == null ? "" : gn === 0 ? "Hôm nay" : gn === 1 ? "Ngày mai" : `còn ${gn} ngày`;
+      const tab = calTab("jira", ICONS.send, "Tạo Jira ticket", `<span class="dot ${ready ? "ok" : "warn"}" title="${ready ? "Sẵn sàng tạo ticket" : "Chưa sẵn sàng"}"></span>`);
       return `<section class="cal-jira" aria-label="Tạo Jira ticket">
-        <div class="cal-jira-head"><div><h3>Tạo Jira ticket</h3><p>${paneOpen ? "Tự động tạo ticket Close GRN Module" : `Đang thu gọn · ngày khóa ${dateStr}`}</p></div><span class="cal-head-act"><button type="button" class="cal-coll" data-coll="jira" aria-expanded="${paneOpen ? "true" : "false"}" title="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Tạo Jira ticket" aria-label="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Tạo Jira ticket">${ICONS.pgNext}</button>${ICONS.send}</span></div>
-        <div class="cal-jira-body"${paneOpen ? "" : " hidden"}>
-          <div class="cal-jira-row"><span>Chức năng</span><b>Close GRN Module</b></div>
-          <div class="cal-jira-row"><span>Ngày khóa GRN</span><b>${dateStr}</b></div>
-          <div class="cal-jira-row"><span>Dự án Jira</span><b>${hasCfg ? escapeHtml(cfg.project_key) : "—"}</b></div>
-          ${warn ? `<div class="cal-jira-warn">${escapeHtml(warn)}</div>` : ""}
-          <button type="button" class="btn btn-primary cal-jira-btn" data-jira="create" ${(!hasCfg || !grn) ? "disabled" : ""}>${ICONS.send} Tạo ticket Jira</button>
+        <div class="cal-jira-head">
+          <div><h3>Tạo Jira ticket</h3><p>Tự động tạo ticket Close GRN Module</p></div>
+          <span class="cal-jira-chip ${ready ? "ok" : "warn"}"><i></i>${ready ? "Sẵn sàng" : "Chưa sẵn sàng"}</span>
         </div>
+        <div class="cal-jira-body">
+          <div class="cal-jira-tk">
+            <div class="d">${gd ? `<b>${gd.getUTCDate()}</b><small>Thg ${gd.getUTCMonth() + 1}</small>` : "<b>—</b>"}</div>
+            <div class="t"><span>Close GRN Module</span><small>${gd ? `Ngày khóa GRN · ${CK_DOW_FULL[gd.getUTCDay()]}, ${dateStr}` : "Chưa có ngày khóa GRN"}</small></div>
+            ${left ? `<em class="left">${left}</em>` : ""}
+          </div>
+          <div class="cal-jira-meta">
+            <div><small>Dự án Jira</small><b>${hasCfg ? escapeHtml(cfg.project_key) : "—"}</b></div>
+            <div><small>Loại ticket</small><b>${escapeHtml(cfg.issue_type || "Task")}</b></div>
+          </div>
+          ${warn ? `<div class="cal-jira-warn">${escapeHtml(warn)}</div>` : ""}
+          <button type="button" class="btn btn-primary cal-jira-btn" data-jira="create" ${ready ? "" : "disabled"}>${ICONS.send} Tạo ticket Jira</button>
+        </div>
+        ${tab}
       </section>`;
     }
     async function createJiraTicket() {
