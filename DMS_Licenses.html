@@ -1346,7 +1346,7 @@
   .cal-row--admin .cal-body { flex: 1 1 auto; }
   .cal-row--admin .cal-main { display: flex; flex-direction: column; }
   .cal-row--admin .cal-grid { flex: 1 1 auto; grid-template-rows: auto repeat(var(--cal-rows, 4), minmax(62px, 1fr)); }
-  .cal-row--member > .cal-imp { align-self: start; }
+  .cal-row--member > .cal-side-col { align-self: start; }
 
   /* ---------- Lịch Coke: hiện đủ mọi sự kiện trong ngày, mỗi loại một màu, bấm để xem giờ ---------- */
   .cal-d[data-day] { cursor: pointer; }
@@ -1455,9 +1455,9 @@
     .cal-side-toggle span { writing-mode: vertical-rl; letter-spacing: .3px; }
     .cal-side-toggle svg, .cal-row--rail .cal-side-toggle svg { transform: none; }
     .cal-row--rail .cal-side-toggle svg { transform: rotate(180deg); }
-    .cal-row--rail .cal-side-col > section { flex: 1 1 0; min-height: 210px; }
+    .cal-row--rail .cal-side-col > section { flex: 1 1 0; min-height: 252px; }
     .cal-row--rail .cal-tab { flex-direction: column; justify-content: flex-start; gap: 14px; padding: 16px 0 14px; }
-    .cal-row--rail .cal-tab .v { flex: 1 1 auto; writing-mode: vertical-rl; text-align: left; }
+    .cal-row--rail .cal-tab .v { flex: 1 1 auto; writing-mode: vertical-rl; text-align: left; white-space: nowrap; }
   }
   @media (max-width: 760px) { .cal-ev { font-size: 8px; } }
 </style>
@@ -2274,8 +2274,7 @@
           ${editor && x.kind === "grn-skip" ? `<span class="cal-imp-act"><button type="button" class="cal-imp-edit" data-grn="restore" data-pk="${escapeHtml(x.periodKey)}" title="Khôi phục Close GRN" aria-label="Khôi phục ${escapeHtml(x.name)}">${ICONS.refresh}</button></span>` : ""}
         </div>`;
       }).join("");
-      const pane = canEdit();
-      const tab = pane ? calTab("imp", "★", "Ngày quan trọng", `<span class="n" title="${items.length} mục">${items.length}</span>`) : "";
+      const tab = calTab("imp", "★", "Ngày quan trọng", `<span class="n" title="${items.length} mục">${items.length}</span>`);
       return `<section class="cal-imp" aria-label="Ngày quan trọng">
         <div class="cal-imp-head">
           <div><h3>Ngày quan trọng</h3><p>Những ngày cả team cần chú ý</p></div>
@@ -2301,9 +2300,10 @@
       return `<button type="button" class="cal-tab cal-tab--${kind}" data-coll="open" title="Mở rộng · ${label}" aria-label="Mở rộng thẻ ${label}"><span class="ic">${icon}</span><span class="v">${label}</span>${badge}</button>`;
     }
     const renderCokeRow = anim => {
-      const admin = canEdit(), rail = admin && !calSideOpen;
-      const toggle = `<button type="button" class="cal-side-toggle" data-coll="toggle" aria-expanded="${calSideOpen ? "true" : "false"}" title="Thu gọn / mở rộng cả 2 thẻ: Ngày quan trọng và Tạo Jira ticket" aria-label="Thu gọn hoặc mở rộng cả hai thẻ Ngày quan trọng và Tạo Jira ticket">${ICONS.pgNext}<span class="t-close">Thu gọn</span><span class="t-open">Mở rộng</span></button>`;
-      return `<div class="cal-row ${admin ? "cal-row--admin" : "cal-row--member"}${rail ? " cal-row--rail" : ""}">${renderCokeCalendar(anim)}${admin ? `<div class="cal-side-col">${toggle}${renderImportantPanel()}${renderJiraCard()}</div>` : renderImportantPanel()}</div>`;
+      const admin = canEdit(), rail = !calSideOpen;
+      const what = admin ? "cả 2 thẻ: Ngày quan trọng và Tạo Jira ticket" : "thẻ Ngày quan trọng";
+      const toggle = `<button type="button" class="cal-side-toggle" data-coll="toggle" aria-expanded="${calSideOpen ? "true" : "false"}" title="Thu gọn / mở rộng ${what}" aria-label="Thu gọn hoặc mở rộng ${what}">${ICONS.pgNext}<span class="t-close">Thu gọn</span><span class="t-open">Mở rộng</span></button>`;
+      return `<div class="cal-row ${admin ? "cal-row--admin" : "cal-row--member"}${rail ? " cal-row--rail" : ""}">${renderCokeCalendar(anim)}<div class="cal-side-col">${toggle}${renderImportantPanel()}${admin ? renderJiraCard() : ""}</div></div>`;
     };
     function refreshCokeRow() { const el = document.querySelector(".cal-row"); if (el) el.outerHTML = renderCokeRow(); }
 
