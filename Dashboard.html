@@ -4175,13 +4175,20 @@ document.getElementById('reconcileJiraBtn').onclick = async ()=>{
   const setStatus = (msg, cls)=>{ statusEl.className = 'conn-status' + (cls ? ' ' + cls : ''); statusEl.style.display = 'block'; statusEl.textContent = msg; };
   const callReconcile = async (dryRun)=>{
     const qs = dryRun ? 'reconcile=1&dryRun=1' : 'reconcile=1&dryRun=0&force=1'; // force chỉ gửi SAU khi người dùng đã xác nhận số lượng
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/jira-sync?${qs}`, {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/jira-reconcile?${qs}`, {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer '+SUPABASE_ANON_KEY }
     });
     const text = await resp.text();
     let j = null; try{ j = JSON.parse(text); }catch(e){}
     if(!resp.ok || !j || j.error){
       throw new Error(j && j.error ? (j.error + (j.detail ? ' — ' + String(j.detail).slice(0,250) : '')) : ('HTTP ' + resp.status + ' ' + text.slice(0,200)));
+    }
+    // Chốt chặn: phản hồi PHẢI đúng dạng reconcile, nếu không tuyệt đối không đi tiếp (không xóa gì)
+    if(j.mode !== 'reconcile' || typeof j.ghosts !== 'number' || typeof j.jira !== 'number' || typeof j.db !== 'number' || !Array.isArray(j.sample)){
+      throw new Error('Phản hồi không đúng dạng đối soát (mode=' + j.mode + '). Hãy deploy function jira-reconcile rồi thử lại. Chưa xóa gì.');
+    }
+    if(!dryRun && typeof j.deleted !== 'number'){
+      throw new Error('Phản hồi xóa không có số lượng đã xóa. Hãy kiểm tra log function jira-reconcile.');
     }
     return j;
   };
