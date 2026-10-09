@@ -2625,21 +2625,27 @@
     const QUARTER_COLS = ["UserName", "Description", "EmployeeCode", "EmployeeName", "Email", "RoleName", "TerritoryHierarchy", "IsActive"];
     const QUARTER_KEYS = ["username", "description", "employee_code", "employee_name", "email", "role_name", "territory_hierarchy", "is_active"];
     const QUARTER_WIDTHS = [10.43, 46.29, 15, 27.86, 34.29, 29.29, 25, 8.14];
+    // ---------- Template Quý (DMS Userlist): đúng 9 cột như mẫu 08_Oct_DT.xlsx ----------
+    const DMS_QUARTER_COLS = ["Region Code", "Region", "DTACTIVESTATUS", "Tenant", "USERACTIVESTATUS", "UserName", "ExpireDate", "Email", "RoleName"];
+    const DMS_QUARTER_KEYS = ["region_code", "region", "dt_active_status", "tenant", "user_active_status", "username", "expire_date", "email", "role_name"];
+    const DMS_QUARTER_WIDTHS = [12.57, 19.57, 16.71, 11, 19.29, 15, 22, 40.86, 20];
     const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     // Hộp chọn loại template: trả về "normal" | "quarter" | null (hủy)
-    function chooseExportTemplate(count) {
+    function chooseExportTemplate(count, isDms = false) {
       return new Promise(resolve => {
         const root = $("#confirm-root");
         const onKey = e => { if (e.key === "Escape") close(null); };
         const close = r => { document.removeEventListener("keydown", onKey); root.innerHTML = ""; resolve(r); };
-        const warn = state.licenseFilter !== "used" ? `<p class="xt-note">Đang xem "${state.licenseFilter === "unused" ? "Không đủ điều kiện" : "Tất cả"}". Template Quý thường dùng với bộ lọc <b>Đủ điều kiện license</b> — hãy kiểm tra lại trước khi xuất.</p>` : "";
+        const qCols = isDms ? DMS_QUARTER_COLS : QUARTER_COLS, nCols = (isDms ? DMS_FIELDS : CENTRAL_FIELDS).length;
+        const normalDesc = isDms ? `Đầy đủ ${nCols} cột như hiện tại (gồm LastLoginTime, CreatedDateTime…).` : `Đầy đủ ${nCols} cột như hiện tại (gồm ngày sinh, ngày vào làm, lần đăng nhập…).`;
+        const warn = isDms ? (state.dmsLicenseFilter !== "dt" ? `<p class="xt-note">Đang xem "${state.dmsLicenseFilter === "it" ? "License IT" : "Tất cả"}". Template Quý thường dùng với bộ lọc <b>License DT</b> — hãy kiểm tra lại trước khi xuất.</p>` : "") : state.licenseFilter !== "used" ? `<p class="xt-note">Đang xem "${state.licenseFilter === "unused" ? "Không đủ điều kiện" : "Tất cả"}". Template Quý thường dùng với bộ lọc <b>Đủ điều kiện license</b> — hãy kiểm tra lại trước khi xuất.</p>` : "";
         root.innerHTML = `<div class="modal-backdrop confirm-backdrop" id="xt-backdrop"><section class="modal confirm-modal xt-modal" role="dialog" aria-modal="true" aria-label="Chọn loại template xuất Excel">
           <h2>Xuất Excel — chọn template</h2>
           <p class="xt-sub">Sẽ xuất ${nf(count)} dòng đang hiển thị.</p>
           <div class="xt-opts">
-            <button type="button" class="xt-opt" data-xt="normal"><span class="ic">${ICONS.xlsx}</span><span><b>Template thường</b><small>Đầy đủ ${CENTRAL_FIELDS.length} cột như hiện tại (gồm ngày sinh, ngày vào làm, lần đăng nhập…).</small></span><em>${CENTRAL_FIELDS.length} cột</em></button>
-            <button type="button" class="xt-opt q" data-xt="quarter"><span class="ic">${ICONS.xlsx}</span><span><b>Template Quý</b><small>${QUARTER_COLS.join(", ")}.</small></span><em>${QUARTER_COLS.length} cột</em></button>
+            <button type="button" class="xt-opt" data-xt="normal"><span class="ic">${ICONS.xlsx}</span><span><b>Template thường</b><small>${normalDesc}</small></span><em>${nCols} cột</em></button>
+            <button type="button" class="xt-opt q" data-xt="quarter"><span class="ic">${ICONS.xlsx}</span><span><b>Template Quý</b><small>${qCols.join(", ")}.</small></span><em>${qCols.length} cột</em></button>
           </div>
           ${warn}
           <div class="xt-foot"><button type="button" class="btn btn-secondary" id="xt-cancel">Hủy</button></div>
@@ -2678,20 +2684,42 @@
       }
     }
 
+    // Ghi file Template Quý của DMS Userlist: Sheet1, 9 cột như 08_Oct_DT.xlsx; mọi ô là chữ (@), tiêu đề đậm tô màu, viền mảnh
+    async function exportDmsQuarter(rows, fileName) {
+      await loadLib("exceljs").catch(() => loadLib("xlsx"));
+      const aoa = rows.map(r => DMS_QUARTER_KEYS.map(k => { const val = r[k]; return val == null || String(val).trim() === "" ? null : String(val); }));
+      if (window.ExcelJS) {
+        const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("Sheet1");
+        const side = { style: "thin" }, border = { top: side, left: side, bottom: side, right: side };
+        const hdr = ws.addRow(DMS_QUARTER_COLS);
+        hdr.eachCell(c => { c.font = { name: "Aptos Narrow", size: 11, bold: true }; c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2CEEF" } }; c.border = border; c.numFmt = "@"; });
+        aoa.forEach(vals => ws.addRow(vals).eachCell({ includeEmpty: true }, c => { c.font = { name: "Aptos Narrow", size: 11 }; c.border = border; c.numFmt = "@"; }));
+        DMS_QUARTER_WIDTHS.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+        ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: DMS_QUARTER_COLS.length } };
+        const buf = await wb.xlsx.writeBuffer();
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: XLSX_MIME })), download: fileName });
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      } else {
+        const ws = XLSX.utils.aoa_to_sheet([DMS_QUARTER_COLS, ...aoa.map(r => r.map(x => x ?? ""))]);
+        ws["!cols"] = DMS_QUARTER_WIDTHS.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1"); XLSX.writeFile(wb, fileName);
+      }
+    }
+
     // Xuất dữ liệu đang được lọc (theo ô tìm kiếm) của tab hiện tại ra file Excel (.xlsx)
     async function exportExcel() {
       try { await loadLib("xlsx"); } catch (_) { toast("Không tải được thư viện xuất Excel.", "error"); return; }
       const v = getDatasetView();
       if (!v.filtered.length) { toast("Không có dữ liệu để xuất.", "error"); return; }
       let tpl = "normal";
-      if (!v.isDms) { tpl = await chooseExportTemplate(v.filtered.length); if (!tpl) return; }   // Central: chọn Template thường / Template Quý
+      tpl = await chooseExportTemplate(v.filtered.length, v.isDms); if (!tpl) return;   // Central & DMS: chọn Template thường / Template Quý
       const btn = $("#export-excel");
       const restore = btn ? btn.innerHTML : null;
       if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang xuất…`; }
       try {
         if (tpl === "quarter") {
-          const fileName = `Central_TemplateQuy_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xlsx`;
-          await exportCentralQuarter(v.filtered, fileName);
+          const fileName = `${v.isDms ? "DMS" : "Central"}_TemplateQuy_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xlsx`;
+          await (v.isDms ? exportDmsQuarter : exportCentralQuarter)(v.filtered, fileName);
           toast(`Đã xuất ${nf(v.filtered.length)} dòng (Template Quý) ra "${fileName}".`, "success");
           setTimeout(() => flashIcon($("#export-excel"), "check"), 0);
           return;
@@ -2776,12 +2804,12 @@
       const rows = v.filtered.filter(r => sel.has(r.username));
       if (!rows.length) return toast("Không có dòng nào được chọn để xuất.", "error");
       let tpl = "normal";
-      if (!v.isDms) { tpl = await chooseExportTemplate(rows.length); if (!tpl) return; }
+      tpl = await chooseExportTemplate(rows.length, v.isDms); if (!tpl) return;
       try { await loadLib("xlsx"); } catch (_) { return toast("Không tải được thư viện xuất Excel.", "error"); }
       try {
         if (tpl === "quarter") {
-          const fileName = `Central_TemplateQuy_dachon_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xlsx`;
-          await exportCentralQuarter(rows, fileName);
+          const fileName = `${v.isDms ? "DMS" : "Central"}_TemplateQuy_dachon_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xlsx`;
+          await (v.isDms ? exportDmsQuarter : exportCentralQuarter)(rows, fileName);
           return toast(`Đã xuất ${nf(rows.length)} dòng đã chọn (Template Quý).`, "success");
         }
         const header = v.fields.map(([, label]) => label);
@@ -2885,7 +2913,7 @@
           <div class="toolbar-right">
             <span class="loading${state.loading ? "" : " hidden"}" data-loading><i class="spinner"></i><span data-loading-text>${loadingText()}</span></span>
             <span class="badge badge-blue" id="row-badge">${rowBadgeText(v)}</span>
-            <button class="btn btn-excel" data-hover-icon="download" id="export-excel" title="Xuất dữ liệu đang hiển thị ra file Excel${v.isDms ? "" : " (chọn Template thường hoặc Template Quý)"}">${ICONS.xlsx} Xuất Excel</button>
+            <button class="btn btn-excel" data-hover-icon="download" id="export-excel" title="Xuất dữ liệu đang hiển thị ra file Excel (chọn Template thường hoặc Template Quý)">${ICONS.xlsx} Xuất Excel</button>
             <button class="btn btn-secondary" id="refresh-data"${state.loading ? " disabled" : ""}><span class="btn-icon${state.loading ? " spin" : ""}">${ICONS.refresh}</span> Làm mới</button>
           </div>
         </div>
