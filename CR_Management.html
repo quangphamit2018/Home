@@ -6147,36 +6147,78 @@ button:active mi-icon > svg{ transform:scale(.9); }
 @media (prefers-reduced-motion: reduce){ *,*::before,*::after{ animation-duration:.01ms !important; transition-duration:.01ms !important; scroll-behavior:auto !important; } }
 </style>
 
-<!-- Enterprise UI Refinement (Pass 07) — sinh từ src/styles/cr-refinement.css. Chi lop CSS trinh bay, khong doi logic. -->
+<!-- Enterprise UI & Motion Refinement (Pass 08) - sinh tu src/styles/cr-refinement.css. Chi lop CSS trinh bay + chuyen dong, khong doi logic nghiep vu. -->
 <style id="cr-refinement">
 /* ==========================================================================
-   ENTERPRISE UI REFINEMENT — PASS 07  (CSS-only, additive)
+   CR MANAGEMENT — ENTERPRISE UI & MOTION REFINEMENT — PASS 08
    --------------------------------------------------------------------------
-   Lớp tinh chỉnh giao diện DUY NHẤT của đợt nâng cấp này, được nạp SAU toàn bộ
-   stylesheet gốc của ứng dụng (xem <link id="cr-refinement-css"> trong
-   cr-workspace.html).
+   File này là NGUỒN DUY NHẤT của lớp tinh chỉnh. Nó được nhúng vào cuối
+   cascade của trang app (sau 8 stylesheet gốc), nên chỉ được phép chạm vào:
 
-   Nguyên tắc bắt buộc:
-     • Chỉ chạm vào thuộc tính TRÌNH BÀY: màu, viền, bóng đổ, kiểu chữ, trạng
-       thái tương tác, chuyển động.
-     • KHÔNG đổi display / position / z-index / overflow / kích thước layout,
-       không đổi cấu trúc DOM, không đổi selector hay ID mà JavaScript dùng.
-     • Không ghi đè token gốc của hệ thống; chỉ bổ sung token mới tiền tố --ref-.
-     • Mọi selector ở đây đều đã tồn tại trong ứng dụng — không sinh class mới.
+     ✓ TRÌNH BÀY  : màu, viền, bóng đổ, kiểu chữ, bán kính, trạng thái tương tác
+     ✓ CHUYỂN ĐỘNG: transition / animation (ưu tiên transform + opacity)
+
+     ✗ KHÔNG đổi  : JS, dữ liệu, API, ID, tên class, cấu trúc DOM, cơ chế
+                    mở/đóng (.show / .is-active / .detail-opening), nghiệp vụ.
+
+   --------------------------------------------------------------------------
+   ĐỐI CHIẾU HỆ THỐNG GỐC (audit trước khi viết bất kỳ rule nào)
+   --------------------------------------------------------------------------
+   Token gốc đã có và ĐƯỢC TÁI SỬ DỤNG (không định nghĩa lại, không alias trùng):
+     --duration-fast 120ms · --duration-base 180ms · --duration-slow 260ms
+     --ease-standard cubic-bezier(.4,0,.2,1)      → micro-interaction, hover, focus
+     --ease-decel    cubic-bezier(.2,.9,.3,1)     → entrance của panel/overlay
+     --transition-panel | --transition-hover | --transition-focus | --transition-active
+     --shadow-sm | --shadow-md | --shadow-lg | --shadow-floating
+     --radius-sm|md|lg|xl · --accent #3fd0c9 · --warning #f2b84b · --danger #ee6b74
+   ⇒ KHÔNG thêm token motion mới. Hệ gốc đã đủ và đang dùng đúng chỗ; thêm
+     token song song chỉ tạo hai nguồn sự thật cho cùng một nhịp.
+
+   Keyframe gốc: 40 tên, KHÔNG có tên nào bị khai báo trùng ⇒ không cần gộp.
+   Lớp này chỉ:
+     • định nghĩa lại (giữ nguyên tên) wsMarkGlow / wsBgPulse để thu biên độ,
+     • thêm đúng 1 keyframe mới refShimmer (thay vòng lặp background-position
+       của skeleton bằng transform).
+
+   --------------------------------------------------------------------------
+   CHANGELOG PASS 07 → PASS 08
+   --------------------------------------------------------------------------
+   1. Xung đột cascade đã xử lý
+      • `transition: all` của app (3 chỗ: .cr-filter-trigger, .cr-dropdown-trigger,
+        .dlprog-cancel) → thay bằng danh sách thuộc tính trình bày cụ thể.
+      • Easing micro-interaction: gom về một danh sách hẹp thay vì rải rác.
+   2. Animation
+      • Skeleton: bỏ vòng lặp background-position (+will-change) → shimmer chạy
+        bằng transform, chỉ compositor.
+      • Loading: 6 chuyển động đồng thời → 4; vòng phụ đứng yên; thu biên độ
+        wsMarkGlow/wsBgPulse; nhịp thanh tiến trình không xác định chậm & dịu hơn.
+      • Toast: thống nhất nhịp vào 360/300ms → 260ms, nhịp ra về token gốc.
+      • Modal: panel nổi dài hơn overlay một bậc (180 → 260ms) cho cảm giác
+        "mở ra" có chủ đích; overlay giữ nguyên nhịp gốc.
+      • Drawer: giữ nguyên hệ transition gốc (đã đúng token) — chỉ thêm
+        overscroll-behavior để nội dung dài không kéo cuộn cả workspace.
+   3. Bề mặt
+      • Chuẩn hoá hairline/radius/shadow cho toàn bộ bề mặt nội dung sáng,
+        gồm cả khu vực chưa được phủ ở Pass 07 (BRD, import, stat tile).
+      • KPI: thêm dấu nhấn 1 hairline ngữ nghĩa để quét số liệu nhanh hơn.
+      • Overlay (modal/drawer): bóng đổ tông xanh lạnh, đồng bộ với bề mặt sáng.
+   4. Thiết bị không hỗ trợ hover: chặn hiệu ứng nâng/hover transform.
+   5. Reduced motion: rule tối thiểu, tự bảo đảm cho hiệu ứng của lớp này
+      (app đã có kill-switch toàn cục ở stylesheet morphicons-smooth).
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   1. TOKEN BỔ SUNG — vật liệu bề mặt sáng, vòng focus, nhịp chuyển động
+   1. TOKEN BỔ SUNG — chỉ thuộc bề mặt sáng (app chưa token hoá nhóm này)
    -------------------------------------------------------------------------- */
 :root{
-  /* Hairline cho bề mặt sáng (workspace trắng) */
+  /* Hairline cho workspace nội dung sáng */
   --ref-line:              #d9e4ec;
   --ref-line-strong:       #c4d6e0;
   --ref-line-soft:         #e9eff4;
-  --ref-wash:              #f1f8f8;  /* nền hàng bảng khi hover */
-  --ref-head-bg:           #f7fafc;  /* dải header bảng / panel head */
+  --ref-wash:              #f1f8f8;   /* nền hàng bảng khi hover */
+  --ref-head-bg:           #f7fafc;   /* dải header bảng / thanh công cụ */
 
-  /* Bóng đổ nền sáng: dùng tông xanh lạnh thay vì đen — sạch, không bị "bùn" */
+  /* Bóng đổ tông xanh lạnh: sạch, không bị "bùn" như bóng đen trên nền trắng */
   --ref-card-shadow:       0 1px 1px rgba(16,42,67,.04),
                            0 10px 22px -18px rgba(16,42,67,.28);
   --ref-card-shadow-hover: 0 1px 1px rgba(16,42,67,.05),
@@ -6184,19 +6226,14 @@ button:active mi-icon > svg{ transform:scale(.9); }
   --ref-float-shadow:      0 1px 1px rgba(16,42,67,.05),
                            0 24px 50px -26px rgba(16,42,67,.40);
 
-  /* Vòng focus 2 lớp, tương ứng hai bề mặt */
+  /* Vòng focus 2 lớp, tương ứng hai bề mặt (sáng / tối) */
   --ref-ring:              0 0 0 3px rgba(63,208,201,.30);
   --ref-ring-light:        0 0 0 3px rgba(14,154,148,.16);
-
-  /* Nhịp chuyển động */
-  --ref-ease:              cubic-bezier(.22,.8,.28,1);
 }
 
 /* --------------------------------------------------------------------------
    2. CHROME TOÀN CỤC — cuộn, chọn văn bản, chữ số, focus
    -------------------------------------------------------------------------- */
-html{ text-rendering:optimizeLegibility; }
-
 /* Thanh cuộn: mảnh, bo tròn, ăn theo tông của từng bề mặt */
 ::-webkit-scrollbar{ width:11px; height:11px; }
 ::-webkit-scrollbar-thumb{
@@ -6224,15 +6261,17 @@ html{ text-rendering:optimizeLegibility; }
 ::selection{ background: rgba(63,208,201,.30); color:#ffffff; }
 .view ::selection{ background: rgba(14,154,148,.20); color:#0a1e33; }
 
-/* Chữ số dạng cột (tabular) — bảng dữ liệu, KPI, badge, mã CR đọc thẳng hàng */
-thead th, tbody td, .kpi-value, .stat-tile-value, .substat-value,
-.list-panel-count, .id-chip, td.cell-id, .badge, .doc-status,
-.nav-item .count, .t-message, .recent-id{ font-variant-numeric: tabular-nums; }
+/* Chữ số dạng cột: bảng dữ liệu, KPI, mã CR đọc thẳng hàng */
+thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
+.badge, .doc-status, .nav-item .count, .t-message, .recent-id{
+  font-variant-numeric: tabular-nums;
+}
 
 /* Vòng focus rõ ràng, không làm nhảy bố cục (chỉ box-shadow) */
 .btn:focus-visible, .icon-btn:focus-visible, .nav-item:focus-visible,
 .tab-btn:focus-visible, .cr-dropdown-trigger:focus-visible,
-.gsearch-item:focus-visible, .cr-card:focus-visible, .recent-item:focus-visible{
+.cr-filter-trigger:focus-visible, .gsearch-item:focus-visible,
+.cr-card:focus-visible, .recent-item:focus-visible{
   outline:none;
   box-shadow: var(--ref-ring);
 }
@@ -6243,24 +6282,40 @@ thead th, tbody td, .kpi-value, .stat-tile-value, .substat-value,
 }
 
 /* --------------------------------------------------------------------------
-   3. WORKSPACE SÁNG — nền sạch hơn, phân tầng rõ hơn
+   3. WORKSPACE — chiều sâu vừa đủ, không gây nhiễu
    -------------------------------------------------------------------------- */
 .view{
   background:
-    radial-gradient(1100px 380px at 10% -12%, rgba(14,154,148,.05), transparent 72%),
-    linear-gradient(180deg, #ffffff 0%, #f5f9fa 55%, #eef5f6 100%);
+    radial-gradient(1100px 360px at 8% -14%, rgba(14,154,148,.045), transparent 70%),
+    linear-gradient(180deg, #ffffff 0%, #f6fafb 58%, #eef5f6 100%);
 }
 
 .view h1, .view h2, .view h3, .view h4{ letter-spacing:-.014em; }
 
 /* --------------------------------------------------------------------------
-   4. PANEL / CARD / KPI — vật liệu bề mặt sáng
+   4. BỀ MẶT NỘI DUNG — một hệ vật liệu duy nhất cho mọi khu vực nghiệp vụ
    -------------------------------------------------------------------------- */
-.view .panel, .view .list-panel, .view .cr-card{
+.view .panel,
+.view .list-panel,
+.view .cr-card,
+.view .kpi-card,
+.view .stat-tile,
+.brd-workspace,
+.brd-card,
+.import-stat{
   border-color: var(--ref-line);
   box-shadow: var(--ref-card-shadow);
 }
-.view .list-panel-head{
+
+/* Pill nhỏ: chỉ cần một lớp bóng mảnh, không nổi như card */
+.view .substat-pill{ box-shadow: 0 1px 1px rgba(16,42,67,.045); }
+
+/* Hàng trong danh sách dài: chỉ đồng bộ đường phân cách */
+.view .recent-item{ border-bottom-color: var(--ref-line-soft); }
+
+/* Dải tiêu đề / thanh công cụ của panel dùng chung một tông */
+.view .list-panel-head,
+.brd-toolbar{
   background: var(--ref-head-bg);
   border-bottom-color: var(--ref-line);
 }
@@ -6268,22 +6323,21 @@ thead th, tbody td, .kpi-value, .stat-tile-value, .substat-value,
 .view .list-panel-count{ letter-spacing:.005em; }
 .view .list-panel-count b{ letter-spacing:-.01em; }
 
-.view .kpi-card{
-  border-color: var(--ref-line);
-  box-shadow: var(--ref-card-shadow);
-}
+/* KPI: một hairline ngữ nghĩa ở mép trên để quét số liệu nhanh hơn */
+.view .kpi-card{ box-shadow: inset 0 2px 0 var(--ref-line-soft), var(--ref-card-shadow); }
 .view .kpi-card:hover{
-  border-color: var(--ref-line-strong);
-  box-shadow: var(--ref-card-shadow-hover);
+  box-shadow: inset 0 2px 0 var(--ref-line-strong), var(--ref-card-shadow-hover);
 }
+.view .kpi-card.accent{ box-shadow: inset 0 2px 0 var(--accent), var(--ref-card-shadow); }
+.view .kpi-card.accent:hover{ box-shadow: inset 0 2px 0 var(--accent), var(--ref-card-shadow-hover); }
+.view .kpi-card.info{ box-shadow: inset 0 2px 0 var(--info), var(--ref-card-shadow); }
+.view .kpi-card.info:hover{ box-shadow: inset 0 2px 0 var(--info), var(--ref-card-shadow-hover); }
 .view .kpi-card .kpi-label{ letter-spacing:.01em; }
 .view .kpi-card .kpi-value{ letter-spacing:-.02em; }
-
-.view .stat-tile, .view .substat-pill{ box-shadow: var(--ref-card-shadow); }
 .view .cr-card:active{ background:#f7fbfc; }
 
 /* --------------------------------------------------------------------------
-   5. BẢNG DỮ LIỆU — quét thông tin nhanh hơn, phân cách sắc nét hơn
+   5. BẢNG DỮ LIỆU — rõ ràng, ổn định, không thêm chuyển động khi đọc dữ liệu
    -------------------------------------------------------------------------- */
 .view thead th{
   background: var(--ref-head-bg);
@@ -6311,9 +6365,9 @@ thead th, tbody td, .kpi-value, .stat-tile-value, .substat-value,
 .view #crTable td.cell-title{ box-shadow: inset -1px 0 0 var(--ref-line-soft); }
 .view #crTable tbody tr:hover td.cell-check{ box-shadow: inset 2px 0 0 rgba(14,154,148,.55); }
 
-/* Hàng đang mở chi tiết: trước đây các cột ghim bị tô navy đậm (#163a4a) trong
-   khi hàng vẫn là nền sáng -> chữ đậm trên nền đậm, khó đọc. Nay đồng bộ theo
-   đúng tông teal của bề mặt sáng. Chỉ áp dụng trong .view; bề mặt tối giữ nguyên. */
+/* Hàng đang mở chi tiết: app tô riêng các cột ghim bằng navy đậm (#163a4a)
+   trong khi hàng còn lại là nền sáng ⇒ chữ đậm trên nền đậm, khó đọc. Lớp này
+   đồng bộ các cột ghim về đúng tông teal của bề mặt sáng. Bề mặt tối giữ nguyên. */
 .view tbody tr.detail-selected{
   background: linear-gradient(90deg, rgba(14,154,148,.10), rgba(14,154,148,.03) 46%, transparent 92%);
   box-shadow: inset 3px 0 0 #0e9a94,
@@ -6328,15 +6382,15 @@ thead th, tbody td, .kpi-value, .stat-tile-value, .substat-value,
 .view #crTable tbody tr.detail-selected td.cell-title,
 .view tbody tr.detail-selected td.cell-actions{ background:#eaf6f5; }
 
-/* Cột mã CR và ô Note */
 .view td.cell-id{ letter-spacing:.01em; }
 .view .note-clamp{ line-height:1.5; }
 
 /* --------------------------------------------------------------------------
-   6. NÚT & ĐIỀU KHIỂN — vật liệu, phân cấp, trạng thái
+   6. ĐIỀU KHIỂN — vật liệu, phân cấp, trạng thái
    -------------------------------------------------------------------------- */
 .btn{ letter-spacing:.005em; box-shadow: inset 0 1px 0 rgba(255,255,255,.10); }
 .btn:disabled{ opacity:.45; box-shadow:none; }
+.btn:active{ transform: translateY(1px); }
 
 .btn-primary{
   box-shadow: inset 0 1px 0 rgba(255,255,255,.30),
@@ -6385,21 +6439,35 @@ thead th, tbody td, .kpi-value, .stat-tile-value, .substat-value,
 .view .filter-chip:hover{ background:#ffffff; border-color: var(--ref-line-strong); }
 .view .chip-clear:hover{ background: rgba(208,82,82,.10); }
 
-/* Tab: chuyển trạng thái mượt, mốc active rõ */
-.tab-btn{
-  transition: color var(--duration-base) var(--ease-standard),
-              border-color var(--duration-base) var(--ease-standard),
-              background var(--duration-base) var(--ease-standard);
-}
-.tab-btn:hover{ color: var(--text); }
-
 /* --------------------------------------------------------------------------
-   7. FORM / Ô NHẬP LIỆU — trạng thái hover, focus, disabled
-   -------------------------------------------------------------------------- */
+   7. XUNG ĐỘT CASCADE — thay `transition: all` bằng danh sách cụ thể
+   --------------------------------------------------------------------------
+   `transition: all` khiến mọi thuộc tính (kể cả thuộc tính layout do trạng
+   thái khác đặt) đều bị nội suy, gây nhịp không kiểm soát. Ba rule dưới đây
+   giữ nguyên selector gốc của app, chỉ thu hẹp về đúng các thuộc tính mà
+   trạng thái hover/focus của chính chúng thực sự thay đổi. */
+.cr-filter-trigger{
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              box-shadow   var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard),
+              color        var(--duration-fast) var(--ease-standard);
+}
+.cr-dropdown-trigger{
+  transition: border-color var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+.dlprog-cancel{
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+
+/* Ô nhập liệu: focus rõ, hover nhẹ, disabled/readonly không gây nhầm */
 .field input, .field textarea, .field select,
 .search-box input, .status-create input{
   transition: border-color var(--duration-fast) var(--ease-standard),
-              background var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard),
               box-shadow var(--duration-fast) var(--ease-standard);
 }
 .field input:focus, .field textarea:focus, .field select:focus{ box-shadow: var(--ref-ring); }
@@ -6415,44 +6483,158 @@ thead th, tbody td, .kpi-value, .stat-tile-value, .substat-value,
   background:#ffffff;
   box-shadow: var(--ref-ring-light);
 }
-.search-box input::placeholder, .field input::placeholder, .field textarea::placeholder{ color: var(--text-muted); opacity:.9; }
+.search-box input::placeholder, .field input::placeholder, .field textarea::placeholder{
+  color: var(--text-muted); opacity:.9;
+}
 
 /* --------------------------------------------------------------------------
-   8. SIDEBAR / TOPBAR — chỉ tinh chỉnh chi tiết nhỏ, giữ nguyên bố cục
+   8. OVERLAY — drawer / modal / thanh cuộn bên trong
    -------------------------------------------------------------------------- */
-.nav-item .count{ letter-spacing:.01em; }
-.topbar .sub{ letter-spacing:.005em; }
+/* Panel nổi dài hơn overlay một bậc: overlay 180ms, panel 260ms ⇒ cảm giác
+   "mở ra" có chủ đích. Overlay giữ nguyên nhịp gốc của app. */
+.modal{
+  transition: transform var(--duration-slow) var(--ease-decel);
+  border-color: var(--ref-line);
+  box-shadow: var(--ref-float-shadow);
+}
 
-/* --------------------------------------------------------------------------
-   9. MODAL / OVERLAY — chiều sâu và độ tách nền
-   -------------------------------------------------------------------------- */
+/* Bóng đổ overlay: đồng bộ với bề mặt sáng, bớt "nặng" của bóng đen thuần */
 .modal-overlay{
   background:
-    radial-gradient(120% 85% at 50% 0%, rgba(8,24,40,.55), rgba(3,10,18,.80));
+    radial-gradient(120% 85% at 50% 0%, rgba(8,24,40,.52), rgba(3,10,18,.74));
 }
-.view .modal{ border-color: var(--ref-line); box-shadow: var(--ref-float-shadow); }
+.drawer{ border-left-color: var(--ref-line); box-shadow: var(--ref-float-shadow); }
+
+/* Nội dung dài trong drawer/modal không kéo cuộn cả workspace phía sau */
+.drawer-body, .modal-body{ overscroll-behavior: contain; }
 
 /* --------------------------------------------------------------------------
-   10. TRẠNG THÁI DỮ LIỆU — empty / loading / skeleton / badge
-   -------------------------------------------------------------------------- */
-.view .empty-state svg{ color:#b3c6d2; }
-.empty-state h4, .error-state h4{ letter-spacing:-.012em; }
-.badge{ letter-spacing:.005em; }
-.view .skeleton{ background: rgba(10,30,51,.06); }
+   9. NHỊP EASING CHO NHÓM TƯƠNG TÁC
+   --------------------------------------------------------------------------
+   Chỉ chỉnh ĐƯỜNG CONG (không đổi danh sách thuộc tính hay duration mà app đã
+   đặt) để mọi micro-interaction cùng một nhịp. Trước Pass 08 nhóm này bị chia
+   giữa `ease`, `.2s ease` và cubic-bezier tuỳ chỗ. */
+.btn, .icon-btn, .tab-btn, .filter-chip, .cr-filter-trigger, .cr-dropdown-trigger,
+.cr-card, .kpi-card, .stat-tile, .substat-pill, .recent-item, .brd-card{
+  transition-timing-function: var(--ease-standard);
+}
+
+/* --------------------------------------------------------------------------
+   10. LOADING SCREEN — 6 chuyển động đồng thời ⇒ 4, biên độ dịu hơn
+   --------------------------------------------------------------------------
+   Giữ nguyên tên keyframe gốc (không sinh tên mới làm cùng nhiệm vụ):
+     • wsSpin    : vòng quay chính, giữ nguyên hình dạng, chậm lại cho êm mắt
+     • wsMarkGlow: định nghĩa lại — biên độ .8→1.15 ⇒ .94→1.04
+     • wsBgPulse : định nghĩa lại — biên độ .92→1.06 ⇒ .98→1.02
+     • wsTrackSlide: giữ nguyên, chỉ chậm lại; đây là thanh KHÔNG XÁC ĐỊNH
+       (không giả lập % tiến độ) nên vẫn hợp lệ làm chỉ báo hoạt động. */
+.ws-r-prog-o{ animation: wsSpin 2.8s linear infinite; }
+.ws-r-prog-i{ animation:none; opacity:.5; }
+.ws-loading-mark-glow{ animation: wsMarkGlow 3.4s var(--ease-standard) infinite; }
+.ws-loading-bg{ animation: wsBgPulse 6s var(--ease-standard) infinite; }
+.ws-loading-track-fill{
+  animation: wsTrackSlide 2.6s var(--ease-standard) infinite;
+  filter: drop-shadow(0 0 5px rgba(63,208,201,.30));
+}
+@keyframes wsMarkGlow{
+  0%,100%{ transform:scale(.94); opacity:.55; }
+  50%    { transform:scale(1.04); opacity:.8; }
+}
+@keyframes wsBgPulse{
+  0%,100%{ transform:translate(-50%,-50%) scale(.98); opacity:.72; }
+  50%    { transform:translate(-50%,-50%) scale(1.02); opacity:.9; }
+}
+
+/* --------------------------------------------------------------------------
+   11. SKELETON — shimmer bằng transform thay vì background-position
+   --------------------------------------------------------------------------
+   Bản gốc animate `background-position` (kèm will-change) ⇒ mỗi frame phải
+   repaint. Bản này giữ nguyên màu nền gốc, chuyển phần sáng sang một lớp
+   ::after chạy bằng transform (chỉ compositor). */
+.skeleton{
+  position:relative;
+  overflow:hidden;
+  background-color: var(--skeleton-base, #e7eff2);
+  background-image:none;
+  animation:none;
+  will-change:auto;
+}
+.skeleton::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(100deg,
+    transparent 20%,
+    var(--skeleton-shine, rgba(255,255,255,.7)) 50%,
+    transparent 80%);
+  transform: translateX(-100%);
+  animation: refShimmer 1.8s var(--ease-standard) infinite;
+}
+@keyframes refShimmer{
+  from{ transform: translateX(-100%); }
+  to  { transform: translateX(100%); }
+}
+
+/* Spinner dùng chung keyframe `spin` của app — chỉ đồng bộ nhịp */
 .view .spinner{ border-color: rgba(10,30,51,.12); border-top-color:#0e9a94; }
 
 /* --------------------------------------------------------------------------
-   11. MOTION — nhịp mượt hơn cho các thành phần tương tác chính
+   12. PHẢN HỒI — toast, badge, offline banner
    -------------------------------------------------------------------------- */
-.btn, .icon-btn, .tab-btn, .filter-chip, .cr-card, .kpi-card,
-.stat-tile, .substat-pill, .recent-item, .list-panel, .nav-item{
-  transition-timing-function: var(--ref-ease);
+/* Thống nhất nhịp vào: app đang dùng 360ms (.toast) và 300ms (.offline-banner)
+   cho cùng một keyframe toastEnter, nhịp ra 220ms với hai easing khác nhau. */
+.toast{ animation-duration: var(--duration-slow); }
+.toast.is-closing,
+.offline-banner.is-closing{
+  animation-duration: var(--duration-base);
+  animation-timing-function: var(--ease-standard);
+}
+.badge{ letter-spacing:.005em; }
+
+/* --------------------------------------------------------------------------
+   13. EMPTY / ERROR STATE
+   -------------------------------------------------------------------------- */
+.view .empty-state svg{ color:#b3c6d2; }
+.empty-state h4, .error-state h4{ letter-spacing:-.012em; }
+
+/* --------------------------------------------------------------------------
+   14. THIẾT BỊ KHÔNG HỖ TRỢ HOVER
+   --------------------------------------------------------------------------
+   Ứng dụng chạy desktop là chính; trên thiết bị cảm ứng, `:hover` dễ bị "dính"
+   và giữ nguyên trạng thái nâng/hover sau khi chạm. Chỉ chặn phần CHUYỂN ĐỘNG
+   nâng lên — phản hồi màu/viền và trạng thái :active vẫn giữ. */
+@media (hover: none){
+  .topbar .search-box input:hover,
+  .topbar .icon-btn:hover,
+  .topbar .mobile-nav-toggle:hover,
+  .brd-card:hover,
+  .view .kpi-card:hover,
+  .view .cr-card:hover,
+  .view .stat-tile:hover,
+  .view .substat-pill:hover,
+  .view .recent-item:hover,
+  .toast:hover{ transform:none; }
 }
 
+/* --------------------------------------------------------------------------
+   15. REDUCED MOTION
+   --------------------------------------------------------------------------
+   App đã có kill-switch toàn cục (stylesheet morphicons-smooth:
+   animation-duration/transition-duration .01ms !important). Lớp này thêm rule
+   tối thiểu để tự bảo đảm cho hiệu ứng do chính nó tạo, đồng thời GIỮ phản hồi
+   trạng thái: màu, viền và focus vẫn đổi tức thời. */
 @media (prefers-reduced-motion: reduce){
-  .view, .btn, .icon-btn, .tab-btn, .filter-chip, .cr-card, .kpi-card,
-  .stat-tile, .substat-pill, .recent-item{ transition:none; }
+  .skeleton::after{ animation:none; background:none; }
+  .btn:active, .btn-primary:active{ transform:none; }
+  .view .kpi-card:hover, .brd-card:hover, .toast:hover{ transform:none; }
 }
+
+/* --------------------------------------------------------------------------
+   16. DẤU KIỂM TRA PARSE
+   --------------------------------------------------------------------------
+   Rule cuối cùng của lớp. Nếu dấu này không xuất hiện trong CSSOM, nghĩa là
+   stylesheet đã lỗi cú pháp ở đâu đó phía trên và bị trình duyệt cắt bỏ. */
+.__ref-motion-probe{ --ref-probe:1; }
 </style>
 </head>
 <body>
