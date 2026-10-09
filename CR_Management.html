@@ -1596,6 +1596,10 @@ td.cell-id .id-chip{
   .export-selection-modal .modal-foot > *{ width:100%; }
   .export-selection-modal .modal-foot .btn{ width:auto; }
 }
+/* ---- Modal "Chọn Test Case ID" (dùng chung style .export-cr-option) ---- */
+.tc-sel-cr{ color:#9aa6b2; font-weight:600; font-size:10.5px; margin-left:4px; }
+.tc-sel-pf{ margin-top:2px; }
+.tc-sel-pf .badge{ font-size:10px; padding:2px 7px; }
 /* ---- Modal sắp xếp ảnh evidence trước khi tải báo cáo -------------------- */
 .evidence-arrange-modal{ max-width:1060px; }
 .evidence-arrange-modal .modal-head{ align-items:flex-start; padding:20px 24px 16px; background:linear-gradient(180deg,#ffffff,#f6fbfb); }
@@ -7259,6 +7263,7 @@ button:active mi-icon > svg{ transform:scale(.9); }
 <div class="modal-overlay" id="importModalOverlay" role="dialog" aria-modal="true"></div>
 <div class="modal-overlay" id="exportSelectionOverlay" role="dialog" aria-modal="true"></div>
 <div class="modal-overlay" id="evidenceArrangeOverlay" role="dialog" aria-modal="true"></div>
+<div class="modal-overlay" id="testCaseSelectOverlay" role="dialog" aria-modal="true"></div>
 
 <div class="drawer-overlay" id="drawerOverlay" role="presentation"></div>
 <div class="drawer" id="crDrawer"></div>
@@ -10654,13 +10659,145 @@ function openExportSelectionModal(mode, src = null){
       if(wantsUat){
         const idSet = new Set(selectedCrIds.map(id=>String(id)));
         const tcForArrange = exTcList().filter(t=>idSet.has(String(t.cr_id)));
-        openEvidenceArrangeModal(tcForArrange, plan=>downloadProgressReport(selectedCrIds, reportType, plan));
+        // Bước chọn Test Case ID trước khi tải ảnh — chỉ load ảnh của các TC
+        // được chọn để giảm thời gian chờ (thay vì tải toàn bộ TC của CR).
+        if(!tcForArrange.length){
+          openEvidenceArrangeModal(tcForArrange, plan=>downloadProgressReport(selectedCrIds, reportType, plan));
+        } else {
+          openTestCaseSelectModal(tcForArrange, chosenTcs=>{
+            const chosenIds = new Set(chosenTcs.map(t=>String(t.id)));
+            openEvidenceArrangeModal(chosenTcs, plan=>downloadProgressReport(selectedCrIds, reportType, plan, chosenIds));
+          });
+        }
       } else {
         downloadProgressReport(selectedCrIds, reportType);
       }
     }
     else downloadEvidenceImagesZip(selectedCrIds);
   });
+  render();
+  search.focus();
+}
+
+/* --------------------------------------------------------------------------
+   Modal "Chọn Test Case ID" — bước trung gian giữa "Chọn CR" và "Sắp xếp ảnh
+   evidence". Chỉ những Test Case được tick mới được tải ảnh ở bước sau, giúp
+   giảm thời gian chờ khi một CR có nhiều Test Case nhưng chỉ cần xuất một vài.
+   Mặc định tick tất cả (giữ nguyên hành vi cũ nếu người dùng không lọc).
+-------------------------------------------------------------------------- */
+function testCaseSelectModalTemplate(){
+  return `
+    <div class="modal modal-lg export-selection-modal">
+      <div class="modal-head">
+        <div>
+          <h3>Chọn Test Case ID</h3>
+          <div class="sub">Bỏ chọn các Test Case không cần thiết để tải ảnh nhanh hơn.</div>
+        </div>
+        <button class="modal-close" id="testCaseSelectClose" type="button" aria-label="Đóng"><mi-icon name="x" size="1em" stroke-width="2.2"></mi-icon></button>
+      </div>
+      <div class="modal-body">
+        <div class="export-selection-intro">
+          <mi-icon name="info" stroke-width="1.8"></mi-icon>
+          <span>Chỉ ảnh evidence của các Test Case được chọn mới được tải ở bước sau. Mặc định chọn tất cả.</span>
+        </div>
+        <div class="export-selection-toolbar">
+          <strong>Danh sách Test Case</strong>
+          <div class="export-selection-actions">
+            <button class="btn btn-ghost btn-sm" id="testCaseSelectAll" type="button">Chọn tất cả</button>
+            <button class="btn btn-ghost btn-sm" id="testCaseSelectNone" type="button">Bỏ chọn</button>
+          </div>
+        </div>
+        <input class="export-selection-search" id="testCaseSelectSearch" type="search"
+          placeholder="Tìm theo Test Case ID, scenario hoặc CR ID..." autocomplete="off">
+        <div class="export-selection-list" id="testCaseSelectList"></div>
+      </div>
+      <div class="modal-foot">
+        <span class="export-selection-selected" id="testCaseSelectCount">Đã chọn 0 Test Case</span>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" id="testCaseSelectCancel" type="button">Hủy</button>
+          <button class="btn btn-primary" id="testCaseSelectConfirm" type="button">Tiếp tục</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openTestCaseSelectModal(tcList, onConfirm){
+  const overlay = $("#testCaseSelectOverlay");
+  if(!overlay){ onConfirm(tcList || []); return; }
+  const list = (tcList || []).filter(tc=>tc && tc.id);
+  if(!list.length){ onConfirm([]); return; }
+  // Mặc định chọn tất cả → giữ nguyên hành vi cũ nếu người dùng không lọc.
+  const selected = new Set(list.map(tc=>String(tc.id)));
+  overlay.innerHTML = testCaseSelectModalTemplate();
+  overlay.classList.add("show");
+
+  const close = ()=>{
+    overlay.classList.remove("show");
+    overlay.innerHTML = "";
+    overlay.onclick = null;
+  };
+  const listBox = $("#testCaseSelectList", overlay);
+  const search = $("#testCaseSelectSearch", overlay);
+  const count = $("#testCaseSelectCount", overlay);
+  const confirmBtn = $("#testCaseSelectConfirm", overlay);
+
+  const render = ()=>{
+    const query = String(search.value || "").trim().toLowerCase();
+    const visible = list.filter(tc=>{
+      if(!query) return true;
+      return [tc.test_case_id, tc.scenario, tc.cr_id, tc.pass_fail]
+        .some(v=>String(v || "").toLowerCase().includes(query));
+    });
+    listBox.innerHTML = visible.length ? visible.map(tc=>{
+      const id = String(tc.id);
+      const tcId = tc.test_case_id || "Test Case";
+      const scenario = tc.scenario || "";
+      const crId = tc.cr_id || "";
+      return `
+        <label class="export-cr-option">
+          <input type="checkbox" data-tc-id="${esc(id)}" ${selected.has(id) ? "checked" : ""}>
+          <span class="export-cr-copy">
+            <span class="export-cr-id">${esc(tcId)}<span class="tc-sel-cr">· ${esc(crId)}</span></span>
+            <span class="export-cr-name" title="${esc(scenario)}">${esc(scenario || "—")}</span>
+            <span class="tc-sel-pf">${badge("pass_fail", tc.pass_fail)}</span>
+          </span>
+        </label>`;
+    }).join("") : `<div class="export-selection-empty">Không tìm thấy Test Case phù hợp với từ khóa.</div>`;
+    const selectedCount = selected.size;
+    count.textContent = `Đã chọn ${selectedCount} / ${list.length} Test Case`;
+    confirmBtn.disabled = selectedCount === 0;
+    confirmBtn.textContent = `Tiếp tục (${selectedCount})`;
+  };
+
+  listBox.addEventListener("change", event=>{
+    const checkbox = event.target.closest("[data-tc-id]");
+    if(!checkbox) return;
+    const id = checkbox.dataset.tcId;
+    if(checkbox.checked) selected.add(id); else selected.delete(id);
+    const selectedCount = selected.size;
+    count.textContent = `Đã chọn ${selectedCount} / ${list.length} Test Case`;
+    confirmBtn.disabled = selectedCount === 0;
+    confirmBtn.textContent = `Tiếp tục (${selectedCount})`;
+  });
+  search.addEventListener("input", render);
+  $("#testCaseSelectAll", overlay).addEventListener("click", ()=>{
+    list.forEach(tc=>selected.add(String(tc.id))); render();
+  });
+  $("#testCaseSelectNone", overlay).addEventListener("click", ()=>{
+    selected.clear(); render();
+  });
+  $("#testCaseSelectClose", overlay).addEventListener("click", close);
+  $("#testCaseSelectCancel", overlay).addEventListener("click", close);
+  overlay.onclick = event=>{ if(event.target === overlay) close(); };
+  confirmBtn.addEventListener("click", ()=>{
+    if(!selected.size) return;
+    const chosen = list.filter(tc=>selected.has(String(tc.id)));
+    close();
+    onConfirm(chosen);
+  });
+  // Esc đóng modal.
+  const onKey = event=>{ if(event.key === "Escape"){ event.preventDefault(); close(); document.removeEventListener("keydown", onKey, true); } };
+  document.addEventListener("keydown", onKey, true);
   render();
   search.focus();
 }
@@ -12440,7 +12577,7 @@ function reportWhiteHeaderText(ws, lastColumn){
   });
 }
 
-async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all", evidencePlan = null){
+async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all", evidencePlan = null, tcIdFilter = null){
   // evidencePlan: Map<testcaseId, string[]> — danh sách ID ảnh evidence THEO
   // THỨ TỰ người dùng đã sắp xếp ở modal "Sắp xếp ảnh evidence". Ảnh không
   // nằm trong danh sách bị loại khỏi báo cáo. null = giữ thứ tự mặc định.
@@ -12476,6 +12613,12 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     const selectedTcList = (wantUat || wantCrLog) ? exTcList().filter(testcase=>
       !selectedIdSet || selectedIdSet.has(String(testcase.cr_id))
     ) : [];
+    // evidenceTcList: chỉ các Test Case người dùng chọn ở bước "Chọn Test Case
+    // ID" (nếu có). Không có tcIdFilter (luồng cũ / CR_Log-only) thì giữ nguyên
+    // toàn bộ TC của CR — đảm bảo không đổi kết quả các sheet khác.
+    const evidenceTcList = tcIdFilter
+      ? selectedTcList.filter(t=>tcIdFilter.has(String(t.id)))
+      : selectedTcList;
     const selectedRelList = wantRelease ? exRelList().filter(record=>
       !selectedIdSet || selectedIdSet.has(String(record.cr_id))
     ) : [];
@@ -12509,8 +12652,8 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     let maxImageDisplayWidth = 0;
     if(wantUat){
       let evidenceDoneCount = 0;
-      DLProgress.setProgress(5, `Đang tải ảnh evidence 0/${selectedTcList.length} Test Case...`);
-      await Promise.all(selectedTcList.map(async testcase=>{
+      DLProgress.setProgress(5, `Đang tải ảnh evidence 0/${evidenceTcList.length} Test Case...`);
+      await Promise.all(evidenceTcList.map(async testcase=>{
         let files = testcase.id ? await exFetchTcAttachments(testcase.id) : [];
         if(evidencePlan && evidencePlan.has(String(testcase.id))){
           const order = evidencePlan.get(String(testcase.id));
@@ -12532,8 +12675,8 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
         // 5%-70%: tỉ lệ theo số Test Case đã tải xong ảnh evidence (bước tốn
         // thời gian nhất của cả báo cáo).
         DLProgress.setProgress(
-          5 + (evidenceDoneCount / selectedTcList.length) * 65,
-          `Đang tải ảnh evidence ${evidenceDoneCount}/${selectedTcList.length} Test Case...`
+          5 + (evidenceDoneCount / evidenceTcList.length) * 65,
+          `Đang tải ảnh evidence ${evidenceDoneCount}/${evidenceTcList.length} Test Case...`
         );
       }));
     }
@@ -12691,7 +12834,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
       uatColumns,
       { defaultWidth:20, specialWidths:uatSpecialWidths }
     );
-    selectedTcList.forEach((testcase, index)=>{
+    evidenceTcList.forEach((testcase, index)=>{
       const evidence = evidenceMap.get(String(testcase.id)) || { files:[], images:[] };
       const row = uatSheet.addRow([]);
       uatColumns.forEach((column, columnIndex)=>{
@@ -12718,7 +12861,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
         });
       });
     });
-    reportAddTable(uatSheet, "UatEvidenceTable", 5 + selectedTcList.length, uatColumns.length);
+    reportAddTable(uatSheet, "UatEvidenceTable", 5 + evidenceTcList.length, uatColumns.length);
     }
 
     if(wantRelease){
@@ -12781,7 +12924,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     setTimeout(()=>URL.revokeObjectURL(url), 1000);
     const summaryParts = [];
     summaryParts.push(`${selectedCrList.length} CR`);
-    if(wantUat) summaryParts.push(`${selectedTcList.length} test case`);
+    if(wantUat) summaryParts.push(`${evidenceTcList.length} test case`);
     if(wantRelease) summaryParts.push(`${selectedRelList.length} release`);
     DLProgress.setProgress(100, "Hoàn tất!");
     toast(`Đã tải báo cáo (${reportOption.label}) gồm ${summaryParts.join(", ")}.`, "ok");
