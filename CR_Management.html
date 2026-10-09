@@ -8003,6 +8003,20 @@ function esc(str){
     .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
     .replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
+// So sánh tự nhiên: "CR_019" < "CR_100", "TC002" < "TC010" — dùng để sắp xếp
+// danh sách CR / Test Case cho dễ nhìn trong các modal lựa chọn.
+function natChunk(s){ return String(s||"").match(/\d+|\D+/g) || []; }
+function natCmp(a, b){
+  const ca = natChunk(a), cb = natChunk(b);
+  const n = Math.min(ca.length, cb.length);
+  for(let i=0;i<n;i++){
+    const x = ca[i], y = cb[i];
+    const xn = /^\d+$/.test(x), yn = /^\d+$/.test(y);
+    if(xn && yn){ const d = parseInt(x,10) - parseInt(y,10); if(d) return d; }
+    else if(x !== y) return x < y ? -1 : 1;
+  }
+  return ca.length - cb.length;
+}
 // ---------------------------------------------------------------------------
 // Múi giờ hiển thị CỐ ĐỊNH cho toàn bộ web app: Giờ Việt Nam (UTC+7), không
 // phụ thuộc múi giờ hệ điều hành của máy đang mở trình duyệt. Trước đây các
@@ -10560,7 +10574,8 @@ function openExportSelectionModal(mode, src = null){
   const isReport = mode === "report";
   const overlay = $("#exportSelectionOverlay");
   if(!overlay) return;
-  const crs = exCrList().filter(cr=>String(cr.cr_id || "").trim());
+  const crs = exCrList().filter(cr=>String(cr.cr_id || "").trim())
+    .sort((a,b)=> natCmp(a.cr_id, b.cr_id));
   if(!crs.length){
     toast("Chưa có CR để lựa chọn.", "info");
     return;
@@ -10724,7 +10739,8 @@ function testCaseSelectModalTemplate(){
 function openTestCaseSelectModal(tcList, onConfirm){
   const overlay = $("#testCaseSelectOverlay");
   if(!overlay){ onConfirm(tcList || []); return; }
-  const list = (tcList || []).filter(tc=>tc && tc.id);
+  const list = (tcList || []).filter(tc=>tc && tc.id)
+    .sort((a,b)=> natCmp(a.test_case_id, b.test_case_id) || natCmp(a.cr_id, b.cr_id));
   if(!list.length){ onConfirm([]); return; }
   // Mặc định chọn tất cả → giữ nguyên hành vi cũ nếu người dùng không lọc.
   const selected = new Set(list.map(tc=>String(tc.id)));
