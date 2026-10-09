@@ -1668,6 +1668,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
             <span class="slider"></span>
           </label>
         </div>
+        <button type="button" id="clearFiltersBtn" class="btn-export" style="width:100%;margin-top:8px;" title="Đặt lại toàn bộ bộ lọc: ngày, Application, Agent, Status, Breached và ô tìm kiếm">✕ Xóa tất cả bộ lọc</button>
       </div>
     </div>
   </div>
@@ -3395,10 +3396,28 @@ function restoreFilterState(){
   return true;
 }
 
+/* Xóa mọi filter ngay tại chỗ (không reload): khoảng ngày về toàn bộ dữ liệu, Application/Agent/Status chọn hết,
+   tắt 2 công tắc Breached, xóa ô tìm kiếm của bảng và các ô tìm trong dropdown, về trang 1. */
 document.getElementById('clearFiltersBtn')?.addEventListener('click', ()=>{
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
-  try{ history.replaceState(null, '', location.pathname); }catch(e){}
-  location.reload();
+  restoring = true; // chặn ghi state trung gian trong lúc đang reset
+  dateFrom.value = fmtDate(minDate);
+  dateTo.value = fmtDate(maxDate);
+  syncSliderFromDates();
+  appDDApi.setChecked(appSet);
+  agentDDApi.setChecked(agentSet);
+  statusDDApi.setChecked(statusSet);
+  ['app','agent','status'].forEach(prefix=>{
+    const ddSearch = document.getElementById(prefix+'Search');
+    if(ddSearch){ ddSearch.value = ''; ddSearch.dispatchEvent(new Event('input')); }
+  });
+  document.getElementById('tableSearch').value = '';
+  document.getElementById('frBreachedChk').checked = false;
+  document.getElementById('ttrBreachedChk').checked = false;
+  restoring = false;
+  currentPage = 1;
+  refresh();
+  saveFilterState(); // ghi lại state sạch vào localStorage + URL
+  if(typeof showToast === 'function') showToast('Đã xóa tất cả bộ lọc.', 'success');
 });
 
 /* ============ Admin login (mật khẩu, lưu qua RPC bảo mật trên Supabase) ============ */
