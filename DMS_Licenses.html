@@ -486,6 +486,21 @@
     .confirm-icon.info { background: var(--g-soft); color: var(--brand); box-shadow: 0 10px 24px rgba(183, 28, 28, .16); }
     .confirm-title { margin: 0 0 9px; font-size: 16.5px; font-weight: 760; color: var(--ink); letter-spacing: -.01em; }
     .confirm-msg { margin: 0 0 24px; font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+    /* ---------- Hộp chọn loại template khi xuất Excel (Central User list) ---------- */
+    .xt-modal { width: min(470px, 100%); padding: 26px 24px 20px; }
+    .xt-modal h2 { margin: 0 0 4px; font-size: 18px; font-weight: 800; color: var(--ink); }
+    .xt-modal .xt-sub { margin: 0 0 16px; font-size: 12.5px; color: var(--muted); }
+    .xt-opts { display: grid; gap: 10px; }
+    .xt-opt { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--line-strong); background: #fff; cursor: pointer; font: inherit; color: inherit; transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+    .xt-opt:hover, .xt-opt:focus-visible { outline: none; border-color: var(--brand-light); box-shadow: 0 10px 22px rgba(120, 20, 24, .12); transform: translateY(-1px); }
+    .xt-opt .ic { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; color: #fff; background: var(--g-brand); box-shadow: 0 6px 12px rgba(183, 28, 28, .22); }
+    .xt-opt.q .ic { background: linear-gradient(135deg, #a02b93, #7a1f70); box-shadow: 0 6px 12px rgba(122, 31, 112, .26); }
+    .xt-opt .ic svg { width: 20px; height: 20px; }
+    .xt-opt b { display: block; font-size: 14px; font-weight: 800; color: var(--ink); }
+    .xt-opt small { display: block; margin-top: 2px; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+    .xt-opt em { font-style: normal; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: var(--surface-soft); border: 1px solid var(--line); white-space: nowrap; color: var(--brand-dark); }
+    .xt-note { margin: 12px 0 0; padding: 9px 12px; border-radius: 11px; font-size: 11.5px; line-height: 1.5; color: #b45309; background: #fff7ed; border: 1px solid #fed7aa; }
+    .xt-foot { display: flex; justify-content: flex-end; margin-top: 14px; }
     .confirm-actions { display: flex; gap: 10px; }
     .confirm-actions .btn { flex: 1; padding: 11px 14px; }
     .btn-outline-danger { background: #fff; border-color: var(--line-strong); color: var(--danger); }
@@ -2586,15 +2601,81 @@
       return state.search.trim() ? `${nf(v.total)} kết quả / ${nf(v.rows.length)} dòng` : `${nf(v.rows.length)} dòng`;
     }
 
+    // ---------- Template Quý (Central User list): đúng 8 cột như mẫu 08_Oct_Central.xlsx ----------
+    const QUARTER_COLS = ["UserName", "Description", "EmployeeCode", "EmployeeName", "Email", "RoleName", "TerritoryHierarchy", "IsActive"];
+    const QUARTER_KEYS = ["username", "description", "employee_code", "employee_name", "email", "role_name", "territory_hierarchy", "is_active"];
+    const QUARTER_WIDTHS = [10.43, 46.29, 15, 27.86, 34.29, 29.29, 25, 8.14];
+    const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    // Hộp chọn loại template: trả về "normal" | "quarter" | null (hủy)
+    function chooseExportTemplate(count) {
+      return new Promise(resolve => {
+        const root = $("#confirm-root");
+        const onKey = e => { if (e.key === "Escape") close(null); };
+        const close = r => { document.removeEventListener("keydown", onKey); root.innerHTML = ""; resolve(r); };
+        const warn = state.licenseFilter !== "used" ? `<p class="xt-note">Đang xem "${state.licenseFilter === "unused" ? "Không đủ điều kiện" : "Tất cả"}". Template Quý thường dùng với bộ lọc <b>Đủ điều kiện license</b> — hãy kiểm tra lại trước khi xuất.</p>` : "";
+        root.innerHTML = `<div class="modal-backdrop confirm-backdrop" id="xt-backdrop"><section class="modal confirm-modal xt-modal" role="dialog" aria-modal="true" aria-label="Chọn loại template xuất Excel">
+          <h2>Xuất Excel — chọn template</h2>
+          <p class="xt-sub">Sẽ xuất ${nf(count)} dòng đang hiển thị.</p>
+          <div class="xt-opts">
+            <button type="button" class="xt-opt" data-xt="normal"><span class="ic">${ICONS.xlsx}</span><span><b>Template thường</b><small>Đầy đủ ${CENTRAL_FIELDS.length} cột như hiện tại (gồm ngày sinh, ngày vào làm, lần đăng nhập…).</small></span><em>${CENTRAL_FIELDS.length} cột</em></button>
+            <button type="button" class="xt-opt q" data-xt="quarter"><span class="ic">${ICONS.xlsx}</span><span><b>Template Quý</b><small>${QUARTER_COLS.join(", ")}.</small></span><em>${QUARTER_COLS.length} cột</em></button>
+          </div>
+          ${warn}
+          <div class="xt-foot"><button type="button" class="btn btn-secondary" id="xt-cancel">Hủy</button></div>
+        </section></div>`;
+        document.addEventListener("keydown", onKey);
+        $("#xt-backdrop").addEventListener("click", e => { if (e.target.id === "xt-backdrop") close(null); });
+        $("#xt-cancel").addEventListener("click", () => close(null));
+        root.querySelectorAll("[data-xt]").forEach(b => b.addEventListener("click", () => close(b.dataset.xt)));
+        root.querySelector('[data-xt="normal"]')?.focus();
+      });
+    }
+
+    // Ghi file Template Quý: Sheet1, tiêu đề đậm tô màu, viền mảnh, độ rộng cột theo mẫu
+    async function exportCentralQuarter(rows, fileName) {
+      await loadLib("exceljs").catch(() => loadLib("xlsx"));
+      const asNum = x => { const t = String(x).trim(); return /^[1-9]\d{0,14}$/.test(t) ? Number(t) : t; };   // UserName/EmployeeCode dạng số → ghi số (như mẫu), mã có số 0 đầu hoặc chữ → giữ chữ
+      const aoa = rows.map(r => QUARTER_KEYS.map(k => {
+        const val = r[k];
+        if (val == null || String(val).trim() === "") return null;
+        return (k === "username" || k === "employee_code") ? asNum(val) : String(val);
+      }));
+      if (window.ExcelJS) {
+        const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("Sheet1");
+        const side = { style: "thin" }, border = { top: side, left: side, bottom: side, right: side };
+        const hdr = ws.addRow(QUARTER_COLS);
+        hdr.eachCell(c => { c.font = { name: "Aptos Narrow", size: 11, bold: true }; c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2CEEF" } }; c.border = border; });
+        aoa.forEach(vals => ws.addRow(vals).eachCell({ includeEmpty: true }, (c, i) => { c.font = { name: "Aptos Narrow", size: 11 }; c.border = border; if (i === QUARTER_COLS.length) c.numFmt = "@"; }));
+        QUARTER_WIDTHS.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+        const buf = await wb.xlsx.writeBuffer();
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: XLSX_MIME })), download: fileName });
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      } else {
+        const ws = XLSX.utils.aoa_to_sheet([QUARTER_COLS, ...aoa.map(r => r.map(x => x ?? ""))]);
+        ws["!cols"] = QUARTER_WIDTHS.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1"); XLSX.writeFile(wb, fileName);
+      }
+    }
+
     // Xuất dữ liệu đang được lọc (theo ô tìm kiếm) của tab hiện tại ra file Excel (.xlsx)
     async function exportExcel() {
       try { await loadLib("xlsx"); } catch (_) { toast("Không tải được thư viện xuất Excel.", "error"); return; }
       const v = getDatasetView();
       if (!v.filtered.length) { toast("Không có dữ liệu để xuất.", "error"); return; }
+      let tpl = "normal";
+      if (!v.isDms) { tpl = await chooseExportTemplate(v.filtered.length); if (!tpl) return; }   // Central: chọn Template thường / Template Quý
       const btn = $("#export-excel");
       const restore = btn ? btn.innerHTML : null;
       if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang xuất…`; }
       try {
+        if (tpl === "quarter") {
+          const fileName = `Central_TemplateQuy_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xlsx`;
+          await exportCentralQuarter(v.filtered, fileName);
+          toast(`Đã xuất ${nf(v.filtered.length)} dòng (Template Quý) ra "${fileName}".`, "success");
+          setTimeout(() => flashIcon($("#export-excel"), "check"), 0);
+          return;
+        }
         const header = v.fields.map(([, label]) => label);
         const rowsAoa = v.filtered.map(row => v.fields.map(([key]) => row[key] ?? ""));
         const ws = XLSX.utils.aoa_to_sheet([header, ...rowsAoa]);
@@ -2674,8 +2755,15 @@
       const v = getDatasetView(), sel = selSet();
       const rows = v.filtered.filter(r => sel.has(r.username));
       if (!rows.length) return toast("Không có dòng nào được chọn để xuất.", "error");
+      let tpl = "normal";
+      if (!v.isDms) { tpl = await chooseExportTemplate(rows.length); if (!tpl) return; }
       try { await loadLib("xlsx"); } catch (_) { return toast("Không tải được thư viện xuất Excel.", "error"); }
       try {
+        if (tpl === "quarter") {
+          const fileName = `Central_TemplateQuy_dachon_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.xlsx`;
+          await exportCentralQuarter(rows, fileName);
+          return toast(`Đã xuất ${nf(rows.length)} dòng đã chọn (Template Quý).`, "success");
+        }
         const header = v.fields.map(([, label]) => label);
         const ws = XLSX.utils.aoa_to_sheet([header, ...rows.map(row => v.fields.map(([key]) => row[key] ?? ""))]);
         ws["!cols"] = header.map(h => ({ wch: Math.min(Math.max(String(h).length + 4, 14), 34) }));
@@ -2765,7 +2853,7 @@
           <div class="toolbar-right">
             <span class="loading${state.loading ? "" : " hidden"}" data-loading><i class="spinner"></i><span data-loading-text>${loadingText()}</span></span>
             <span class="badge badge-blue" id="row-badge">${rowBadgeText(v)}</span>
-            <button class="btn btn-excel" data-hover-icon="download" id="export-excel" title="Xuất dữ liệu đang hiển thị ra file Excel">${ICONS.xlsx} Xuất Excel</button>
+            <button class="btn btn-excel" data-hover-icon="download" id="export-excel" title="Xuất dữ liệu đang hiển thị ra file Excel${v.isDms ? "" : " (chọn Template thường hoặc Template Quý)"}">${ICONS.xlsx} Xuất Excel</button>
             <button class="btn btn-secondary" id="refresh-data"${state.loading ? " disabled" : ""}><span class="btn-icon${state.loading ? " spin" : ""}">${ICONS.refresh}</span> Làm mới</button>
           </div>
         </div>
