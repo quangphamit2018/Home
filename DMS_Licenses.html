@@ -1207,7 +1207,7 @@
     .cal-imp-form[hidden] { display: none; }
     .cal-imp-form .ttl { font-size: 12px; font-weight: 800; color: var(--brand-dark); }
     .cal-imp-form label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; color: var(--muted); }
-    .cal-imp-form input[type="date"], .cal-imp-form input[type="text"], .cal-imp-form select { height: 36px; padding: 0 11px; border-radius: 10px; border: 1px solid var(--line-strong); background: #fff; font-size: 13px; color: var(--ink); font-family: inherit; }
+    .cal-imp-form input[type="date"], .cal-imp-form input[type="time"], .cal-imp-form input[type="text"], .cal-imp-form select { height: 36px; padding: 0 11px; border-radius: 10px; border: 1px solid var(--line-strong); background: #fff; font-size: 13px; color: var(--ink); font-family: inherit; }
     .cal-imp-form input:focus, .cal-imp-form select:focus { outline: none; border-color: var(--brand-light); box-shadow: 0 0 0 3px rgba(229, 57, 53, .16); }
     .cal-imp-form .row { display: flex; justify-content: flex-end; gap: 8px; }
     .cal-imp-list { flex: 1; min-height: 0; overflow: auto; display: grid; gap: 8px; align-content: start; padding: 14px 18px; }
@@ -1359,6 +1359,46 @@
   .cal-row--admin .cal-main { display: flex; flex-direction: column; }
   .cal-row--admin .cal-grid { flex: 1 1 auto; grid-template-rows: auto repeat(var(--cal-rows, 4), minmax(46px, 1fr)); }
   .cal-row--member > .cal-imp { align-self: start; }
+
+  /* ---------- Lịch Coke: hiện đủ mọi sự kiện trong ngày, mỗi loại một màu, bấm để xem giờ ---------- */
+  .cal-d[data-day] { cursor: pointer; }
+  .cal-d[data-day]:focus-visible { outline: 2px solid var(--brand-light); outline-offset: 2px; }
+  .cal-evs { display: grid; gap: 2px; margin-top: 3px; min-width: 0; }
+  .cal-ev { display: flex; align-items: center; gap: 3px; min-width: 0; font-size: 8.6px; font-weight: 700; line-height: 1.35; padding: 1px 4px; border-radius: 5px; border-left: 3px solid currentColor; background: #f2f4f7; color: #475467; }
+  .cal-ev i { flex: 0 0 auto; width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+  .cal-ev time { flex: 0 0 auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .cal-ev b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cal-ev.grn { color: #5b34d6; background: #f1ecff; }
+  .cal-ev.imp { color: #0b6f66; background: #e4f7f4; }
+  .cal-ev.hol { color: #8a5200; background: #fff3d6; }
+  .cal-d.evt .cal-ev.grn, .cal-d.mark .cal-ev.imp, .cal-d.hol .cal-ev.hol { background: #fff; }
+  .cal-d.today .cal-ev { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+  .cal-legend-hint { color: var(--brand-dark); font-weight: 750; }
+
+  /* ---------- Hộp chi tiết sự kiện của một ngày ---------- */
+  .cal-dl { display: grid; gap: 8px; }
+  .cal-dl-i { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 12px; background: var(--surface-soft); border: 1px solid var(--line); border-left: 4px solid #98a2b3; }
+  .cal-dl-i.grn { border-left-color: #6a47d8; background: #f8f5ff; }
+  .cal-dl-i.imp { border-left-color: #0f8f84; background: #eefbf9; }
+  .cal-dl-i.hol { border-left-color: #ffb62e; background: #fffaf0; }
+  .cal-dl-i .k { flex: 0 0 auto; min-width: 62px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: #fff; border: 1px solid var(--line); font-style: normal; font-size: 11.5px; font-weight: 800; color: var(--brand-dark); font-variant-numeric: tabular-nums; }
+  .cal-dl-i .t { min-width: 0; display: grid; gap: 3px; }
+  .cal-dl-i .t span { font-size: 13.5px; font-weight: 750; color: var(--ink); }
+  .cal-dl-i .t small { font-size: 11.5px; color: var(--muted); }
+  .cal-dl-note { margin: 14px 0 0; font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+
+  /* ---------- Thu gọn / mở rộng hai thẻ cột phải (super-admin + senior-member) ---------- */
+  .cal-head-act { display: inline-flex; align-items: center; gap: 8px; }
+  .cal-coll { display: inline-grid; place-items: center; width: 30px; height: 30px; flex: 0 0 auto; border-radius: 9px; border: 1px solid var(--line-strong); background: linear-gradient(180deg, #fff, #fff8f7); color: var(--brand-dark); cursor: pointer; transition: .2s ease; }
+  .cal-coll:hover { background: var(--g-soft); border-color: #dc8985; }
+  .cal-coll svg { width: 15px; height: 15px; transition: transform .28s ease; }
+  .cal-coll[aria-expanded="true"] svg { transform: rotate(-90deg); }
+  .cal-coll[aria-expanded="false"] svg { transform: rotate(90deg); }
+  .cal-jira .cal-coll { background: linear-gradient(180deg, #fff, #eef4ff); color: #1d4ed8; border-color: #c7d9fb; }
+  .cal-jira .cal-coll:hover { background: #e3edff; border-color: #a9c4f7; }
+  .cal-pane-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .cal-pane-body[hidden] { display: none; }
+  @media (max-width: 760px) { .cal-ev { font-size: 8px; } }
 </style>
 </head>
 <body class="auth">
@@ -1918,30 +1958,41 @@
     const cokeGrnDay = p => cokeGridStart(p) + 9 * COKE_DAY;                          // Thứ 7 tuần 2 (+7) → Thứ Hai (+2)
     // Ngày đánh dấu (không nghỉ, vẫn tính là ngày bán hàng): ngày cố định hằng năm + ngày do Super-admin / Senior-member cấu hình (state.importantDays)
     const COKE_MARKED_FIXED = [];   // (đã chuyển Ngày Văn hóa Việt Nam sang nhóm Ngày lễ không nghỉ bên dưới)
-    const IMPORTANT_DAYS_KEY = "important_days";   // lưu ở bảng app_settings (key/value), value = JSON mảng [{id, date:"YYYY-MM-DD", name, repeat:"none"|"weekly"|"yearly", yearly}]
+    const IMPORTANT_DAYS_KEY = "important_days";   // lưu ở bảng app_settings (key/value), value = JSON mảng [{id, date:"YYYY-MM-DD", name, repeat:"none"|"weekly"|"yearly", yearly, time:"HH:MM"|""}]
     const GRN_OVERRIDE_KEY = "grn_overrides";      // value = JSON map {"YYYY-MM": "YYYY-MM-DD"(ghi đè) | "skip"(bỏ)} — Close GRN Module theo kỳ
     const JIRA_CONFIG_KEY = "jira_config";         // value = JSON {base_url, email, token, project_key, issue_type} — chỉ super-admin ghi, super-admin + senior-member đọc
     const parseImportantDays = v => {
       let a = v;
       if (typeof a === "string") { try { a = JSON.parse(a); } catch (_) { a = []; } }
       return (Array.isArray(a) ? a : []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.date)) && String(x.name || "").trim())
-        .map(x => { const repeat = ["none", "weekly", "yearly"].includes(x.repeat) ? x.repeat : (x.yearly ? "yearly" : "none"); return { id: String(x.id || ""), date: x.date, name: String(x.name).trim().slice(0, 80), repeat, yearly: repeat === "yearly" }; });
+        .map(x => { const repeat = ["none", "weekly", "yearly"].includes(x.repeat) ? x.repeat : (x.yearly ? "yearly" : "none"); const time = /^\d{2}:\d{2}$/.test(String(x.time || "")) ? String(x.time) : ""; return { id: String(x.id || ""), date: x.date, name: String(x.name).trim().slice(0, 80), repeat, yearly: repeat === "yearly", time }; });
     };
     const cokeCustomDays = () => (typeof state !== "undefined" && Array.isArray(state.importantDays)) ? state.importantDays : [];
     function cokeMarks(y) {
-      const map = new Map(), add = (t, n) => { if (!map.has(t)) map.set(t, []); map.get(t).push(n); };
-      COKE_MARKED_FIXED.forEach(([m, d, n]) => add(cokeUTC(y, m, d), n));
+      const map = new Map(), add = (t, n, time) => { if (!map.has(t)) map.set(t, []); map.get(t).push({ name: n, time: time || "" }); };
+      COKE_MARKED_FIXED.forEach(([m, d, n]) => add(cokeUTC(y, m, d), n, ""));
       cokeCustomDays().forEach(it => {
         const [yy, mm, dd] = it.date.split("-").map(Number);
         if (it.repeat === "weekly") {
           const t0 = cokeUTC(yy, mm, dd), ys = cokeUTC(y, 1, 1), ye = cokeUTC(y, 12, 31);
           let t = t0 >= ys ? t0 : t0 + Math.ceil((ys - t0) / (7 * COKE_DAY)) * 7 * COKE_DAY;
-          for (; t <= ye; t += 7 * COKE_DAY) add(t, it.name);
+          for (; t <= ye; t += 7 * COKE_DAY) add(t, it.name, it.time);
         }
-        else if (it.repeat === "yearly") { const t = cokeUTC(y, mm, dd); if (new Date(t).getUTCMonth() + 1 === mm && y >= yy) add(t, it.name); }
-        else if (yy === y) add(cokeUTC(yy, mm, dd), it.name);
+        else if (it.repeat === "yearly") { const t = cokeUTC(y, mm, dd); if (new Date(t).getUTCMonth() + 1 === mm && y >= yy) add(t, it.name, it.time); }
+        else if (yy === y) add(cokeUTC(yy, mm, dd), it.name, it.time);
       });
       return map;
+    }
+    // Sự kiện của một ngày: ngày lễ · Close GRN · ngày quan trọng — mỗi loại một màu, kèm giờ (trống = cả ngày)
+    const CK_EV_TYPE = { grn: "Close GRN Module", imp: "Ngày quan trọng", hol: "Ngày lễ" };
+    const CK_EV_SHORT = { grn: "GRN", imp: "★", hol: "Lễ" };
+    const cokeEvTime = e => e.time || "Cả ngày";
+    function cokeDayEvents(t, ctx) {
+      const out = [], hn = ctx.holShow.get(t);
+      if (hn) out.push({ type: "hol", name: hn, time: "", note: (ctx.noOff.has(t) && !ctx.hol.has(t)) ? "Không nghỉ, vẫn tính ngày bán hàng" : "Ngày lễ, không bán hàng" });
+      if (t === ctx.grnT) out.push({ type: "grn", name: COKE_GRN_LABEL, time: "", note: "Khóa chức năng GRN để kiểm kê kho" });
+      (ctx.marks.get(t) || []).forEach(e => out.push({ type: "imp", name: e.name, time: e.time, note: "" }));
+      return out.sort((a, b) => (a.time && b.time) ? a.time.localeCompare(b.time) : a.time ? -1 : b.time ? 1 : 0);
     }
     const CK_DOW = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
     const CK_DOW_FULL = ["Chủ nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
@@ -1996,10 +2047,11 @@
           const t = gridStart + (r * 7 + c) * COKE_DAY, d = new Date(t), dow = d.getUTCDay(), hn = holShow.get(t), mk = marks.get(t);
           const out = t < p.start || t > p.end, isToday = t === today, dayNum = d.getUTCDate();
           const cls = ["cal-d", out ? "out" : "", !out && dow === 0 ? "sun" : "", !out && hn ? "hol" : "", !out && mk ? "mark" : "", t === grnT ? "evt" : "", isToday ? "today" : ""].filter(Boolean).join(" ");
-          const sub = t === grnT ? COKE_GRN_LABEL : mk && !out ? mk.join(" · ") : hn && !out ? hn : (dayNum === 1 || t === p.start ? `${dayNum}/${d.getUTCMonth() + 1}` : "");
-          const tag = isToday ? '<i class="tag">Hôm nay</i>' : t === grnT ? '<i class="tag">GRN</i>' : mk && !out ? '<i class="tag">★</i>' : (hn && !out ? '<i class="tag">Lễ</i>' : "");
-          const tip = `${CK_DOW_FULL[dow]}, ${cokeFmt(t, true)}${hn ? " · " + hn + (noOff.has(t) && !hol.has(t) ? " (không nghỉ, vẫn bán hàng)" : "") : ""}${t === grnT ? " · " + COKE_GRN_LABEL : ""}${mk ? " · ★ " + mk.join(" · ") : ""}${dow === 0 ? " · Chủ nhật (không bán)" : ""}`;
-          grid += `<div class="${cls}" title="${escapeHtml(tip)}"><span class="n">${dayNum}</span>${tag}${sub ? `<span class="s">${escapeHtml(sub)}</span>` : ""}</div>`;
+          const evs = out ? [] : cokeDayEvents(t, { holShow, grnT, marks, noOff, hol });
+          const sub = out || evs.length ? "" : (dayNum === 1 || t === p.start ? `${dayNum}/${d.getUTCMonth() + 1}` : "");
+          const tag = isToday ? '<i class="tag">Hôm nay</i>' : evs.length ? `<i class="tag">${evs.length > 1 ? evs.length + " sự kiện" : CK_EV_SHORT[evs[0].type]}</i>` : "";
+          const tip = [`${CK_DOW_FULL[dow]}, ${cokeFmt(t, true)}`, ...evs.map(e => `${cokeEvTime(e)} · ${e.name}`), dow === 0 ? "Chủ nhật (không bán)" : "", out ? "Ngoài kỳ" : ""].filter(Boolean).join(" · ");
+          grid += `<div class="${cls}"${out ? "" : ` data-day="${t}" role="button" tabindex="0"`} title="${escapeHtml(tip)}"><span class="n">${dayNum}</span>${tag}${evs.length ? `<div class="cal-evs">${evs.map(e => `<span class="cal-ev ${e.type}"><i></i>${e.time ? `<time>${e.time}</time>` : ""}<b>${escapeHtml(e.name)}</b></span>`).join("")}</div>` : sub ? `<span class="s">${escapeHtml(sub)}</span>` : ""}</div>`;
         }
       }
 
@@ -2019,7 +2071,7 @@
       }).join("") : '<div class="cal-empty">Chưa khai báo ngày lễ cho năm này.</div>';
 
       const periodMarks = new Map();
-      for (let t = p.start; t <= p.end; t += COKE_DAY) (marks.get(t) || []).forEach(n => { if (!periodMarks.has(n)) periodMarks.set(n, []); periodMarks.get(n).push(t); });
+      for (let t = p.start; t <= p.end; t += COKE_DAY) (marks.get(t) || []).forEach(e => { const n = e.name; if (!periodMarks.has(n)) periodMarks.set(n, []); periodMarks.get(n).push(t); });
       const pmArr = [...periodMarks.entries()];
       const periodMarkChips = pmArr.slice(0, 2).map(([n, ts]) => `<span class="cal-chip mk">★ ${escapeHtml(n)} · ${ts.length > 1 ? ts.length + " ngày" : cokeFmt(ts[0])}</span>`).join("") + (pmArr.length > 2 ? `<span class="cal-chip mk">+${pmArr.length - 2} ngày quan trọng</span>` : "");
       const weekdayNow = CK_DOW_FULL[cokeDow(today)];
@@ -2043,7 +2095,7 @@
           </div>
         </div>
         <div class="cal-tools">
-          <span class="cal-today"><i class="dot"></i>Hôm nay: <b>${weekdayNow}, ${cokeFmt(today, true)}</b> · Kỳ ${curP.m}${grnToday ? ` <span class="cal-alert">Hôm nay: ${COKE_GRN_LABEL}</span>` : ""}${markToday.length ? ` <span class="cal-alert mk">★ Hôm nay: ${escapeHtml(markToday.join(" · "))}</span>` : ""}</span>
+          <span class="cal-today"><i class="dot"></i>Hôm nay: <b>${weekdayNow}, ${cokeFmt(today, true)}</b> · Kỳ ${curP.m}${grnToday ? ` <span class="cal-alert">Hôm nay: ${COKE_GRN_LABEL}</span>` : ""}${markToday.length ? ` <span class="cal-alert mk">★ Hôm nay: ${escapeHtml(markToday.map(x => x.name + (x.time ? " " + x.time : "")).join(" · "))}</span>` : ""}</span>
           <div class="cal-nav">
             <button type="button" class="cal-btn" data-cal="prev" aria-label="Kỳ trước">${ICONS.pgPrev}</button>
             <button type="button" class="cal-btn today" data-cal="today"${isCur ? " disabled" : ""}>Hôm nay</button>
@@ -2053,7 +2105,7 @@
         <div class="cal-body">
           <div class="cal-main">
           <div class="cal-grid" style="--cal-rows:${rows}">${grid}</div>
-          <div class="cal-legend"><span><i class="l-today"></i>Hôm nay</span><span><i class="l-sun"></i>Chủ nhật (không bán)</span><span><i class="l-hol"></i>Ngày lễ</span><span><i class="l-evt"></i>Close GRN</span><span><i class="l-mark"></i>Ngày quan trọng</span><span><i class="l-out"></i>Ngoài kỳ</span></div>
+          <div class="cal-legend"><span><i class="l-today"></i>Hôm nay</span><span><i class="l-sun"></i>Chủ nhật (không bán)</span><span><i class="l-hol"></i>Ngày lễ</span><span><i class="l-evt"></i>Close GRN</span><span><i class="l-mark"></i>Ngày quan trọng</span><span><i class="l-out"></i>Ngoài kỳ</span><span class="cal-legend-hint">Bấm vào một ngày để xem chi tiết từng sự kiện</span></div>
           </div>
       <aside class="cal-side">
             <div class="cal-box"><h3>Cả năm ${p.y}<small>★ = 5 tuần</small></h3>${quarters}</div>
@@ -2077,6 +2129,40 @@
       if (el) el.outerHTML = renderCokeCalendar(true);
     });
 
+    // ---------- Bấm (hoặc Enter) vào một ngày để xem đầy đủ sự kiện kèm giờ ----------
+    function openCokeDay(t) {
+      const p = cokePeriodOf(t), hol = cokeHolidays(p.y), noOff = cokeNoOffHolidays(p.y), holShow = new Map([...noOff, ...hol]);
+      const marks = cokeMarks(p.y), grnT = cokeGrnDay(p), gridStart = cokeGridStart(p);
+      const dow = cokeDow(t), today = cokeToday();
+      const evs = cokeDayEvents(t, { holShow, grnT, marks, noOff, hol });
+      const weekNo = Math.floor((t - gridStart) / COKE_DAY / 7) + 1;
+      const off = dow === 0 || (hol.has(t) && !noOff.has(t));
+      const body = evs.length
+        ? `<div class="cal-dl">${evs.map(e => `<div class="cal-dl-i ${e.type}"><em class="k">${cokeEvTime(e)}</em><div class="t"><span>${escapeHtml(e.name)}</span><small>${escapeHtml(CK_EV_TYPE[e.type] || "")}${e.note ? " · " + escapeHtml(e.note) : ""}</small></div></div>`).join("")}</div>`
+        : '<div class="cal-empty">Ngày này không có sự kiện nào.</div>';
+      const modalRoot = $("#modal-root");
+      modalRoot.innerHTML = `<div class="modal-backdrop" id="calday-bg"><section class="modal" style="max-width:460px">
+        <div class="modal-head"><div><h2>${CK_DOW_FULL[dow]}, ${cokeFmt(t, true)}</h2><p>Tuần ${weekNo} · Kỳ T${p.m}/${p.y} · ${off ? "Không bán" : "Ngày bán hàng"}${t === today ? " · Hôm nay" : ""}</p></div><button class="btn btn-plain" id="calday-close" aria-label="Đóng">${ICONS.close}</button></div>
+        <div class="modal-body">${body}<p class="cal-dl-note">${off ? (dow === 0 ? "Chủ nhật — không bán hàng." : "Ngày lễ — không bán hàng.") : "Màu sự kiện: Close GRN (tím) · Ngày quan trọng (xanh ngọc) · Ngày lễ (vàng)."}</p></div>
+        <div class="modal-foot"><button class="btn btn-secondary" id="calday-done">Đóng</button></div>
+      </section></div>`;
+      const close = () => modalRoot.innerHTML = "";
+      $("#calday-close").addEventListener("click", close);
+      $("#calday-done").addEventListener("click", close);
+      $("#calday-bg").addEventListener("click", e => e.target.id === "calday-bg" && close());
+    }
+    document.addEventListener("click", e => {
+      const cell = e.target.closest ? e.target.closest(".cal-d[data-day]") : null;
+      if (cell) openCokeDay(Number(cell.dataset.day));
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const cell = e.target && e.target.closest ? e.target.closest(".cal-d[data-day]") : null;
+      if (!cell) return;
+      e.preventDefault();
+      openCokeDay(Number(cell.dataset.day));
+    });
+
 
     // ---------- Thẻ "Ngày quan trọng": ai cũng xem được, chỉ Super-admin thêm / sửa / xóa (RLS Supabase cũng chặn ở server) ----------
     let impFormOpen = false, impEditId = null;   // impEditId != null → đang sửa
@@ -2092,7 +2178,7 @@
         if (it.repeat === "weekly") t = t0 >= today ? t0 : t0 + Math.ceil((today - t0) / (7 * COKE_DAY)) * 7 * COKE_DAY;
         else if (it.repeat === "yearly") t = t0 > today ? t0 : nextOcc(mm, dd);
         else t = t0;
-        if (t != null) out.push({ t, name: it.name, kind: "custom", repeat: it.repeat, id: it.id, past: t < today, raw: it });
+        if (t != null) out.push({ t, name: it.name, kind: "custom", repeat: it.repeat, id: it.id, past: t < today, time: it.time || "", raw: it });
       });
       const grnOv = (typeof state !== "undefined" && state.grnOverrides) ? state.grnOverrides : {};
       let grnDone = false;
@@ -2117,7 +2203,7 @@
       const list = items.map(x => {
         const d = new Date(x.t), n = Math.round((x.t - today) / COKE_DAY);
         const left = x.past ? "đã qua" : n === 0 ? "Hôm nay" : n === 1 ? "Ngày mai" : `còn ${n} ngày`;
-        const meta = `${CK_DOW_FULL[d.getUTCDay()]}, ${cokeFmt(x.t, true)}${x.kind === "grn-skip" ? " · Đã bỏ" : x.kind === "grn" && x.overridden ? " · Đã ghi đè" : x.kind === "grn" ? " · Tự động mỗi kỳ" : x.repeat === "yearly" ? " · Hằng năm" : x.repeat === "weekly" ? " · Hằng tuần" : ""}`;
+        const meta = `${CK_DOW_FULL[d.getUTCDay()]}, ${cokeFmt(x.t, true)}${x.time ? " · " + x.time : ""}${x.kind === "grn-skip" ? " · Đã bỏ" : x.kind === "grn" && x.overridden ? " · Đã ghi đè" : x.kind === "grn" ? " · Tự động mỗi kỳ" : x.repeat === "yearly" ? " · Hằng năm" : x.repeat === "weekly" ? " · Hằng tuần" : ""}`;
         return `<div class="cal-imp-i ${x.kind}${x.past ? " past" : ""}${n === 0 && !x.past ? " now" : ""}">
           <div class="d"><b>${d.getUTCDate()}</b><small>Thg ${d.getUTCMonth() + 1}</small></div>
           <div class="t"><span>${escapeHtml(x.name)}</span><small>${escapeHtml(meta)}</small></div>
@@ -2127,24 +2213,45 @@
           ${editor && x.kind === "grn-skip" ? `<span class="cal-imp-act"><button type="button" class="cal-imp-edit" data-grn="restore" data-pk="${escapeHtml(x.periodKey)}" title="Khôi phục Close GRN" aria-label="Khôi phục ${escapeHtml(x.name)}">${ICONS.refresh}</button></span>` : ""}
         </div>`;
       }).join("");
+      const pane = canEdit(), paneOpen = calPaneOpen.imp;
       return `<section class="cal-imp" aria-label="Ngày quan trọng">
         <div class="cal-imp-head">
-          <div><h3>Ngày quan trọng</h3><p>Những ngày cả team cần chú ý</p></div>
-          ${editor ? `<button type="button" class="cal-btn today" data-imp="toggle">${ICONS.plus} Thêm ngày</button>` : ""}
+          <div><h3>Ngày quan trọng</h3><p>${paneOpen || !pane ? "Những ngày cả team cần chú ý" : `Đang thu gọn · ${items.length} mục`}</p></div>
+          <span class="cal-head-act">
+            ${editor ? `<button type="button" class="cal-btn today" data-imp="toggle">${ICONS.plus} Thêm ngày</button>` : ""}
+            ${pane ? `<button type="button" class="cal-coll" data-coll="imp" aria-expanded="${paneOpen ? "true" : "false"}" title="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Ngày quan trọng" aria-label="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Ngày quan trọng">${ICONS.pgNext}</button>` : ""}
+          </span>
         </div>
+        <div class="cal-pane-body"${pane && !paneOpen ? " hidden" : ""}>
         ${editor ? `<div class="cal-imp-form" id="imp-form"${impFormOpen ? "" : " hidden"}>
           <div class="ttl">${editing ? "Sửa ngày quan trọng" : "Thêm ngày quan trọng"}</div>
           <label>Ngày${editing && editing.repeat === "weekly" ? " bắt đầu" : ""}<input type="date" id="imp-date" value="${editing ? editing.date : iso}"></label>
+          <label>Giờ bắt đầu (không bắt buộc)<input type="time" id="imp-time" value="${editing ? editing.time || "" : ""}"></label>
           <label>Nội dung cần chú ý<input type="text" id="imp-name" maxlength="80" placeholder="VD: Kiểm kê kho cuối quý" autocomplete="off" value="${editing ? escapeHtml(editing.name) : ""}"></label>
           <label>Lặp lại<select id="imp-repeat">${[["none", "Không lặp"], ["weekly", "Hằng tuần (cùng thứ với ngày chọn)"], ["yearly", "Hằng năm"]].map(([v, l]) => `<option value="${v}"${(editing ? editing.repeat : "yearly") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
           <div class="row"><button type="button" class="cal-btn" data-imp="cancel">Hủy</button><button type="button" class="cal-btn today" data-imp="save">${editing ? "Cập nhật" : "Lưu"}</button></div>
         </div>` : ""}
-        <div class="cal-imp-list">${list || '<div class="cal-empty">Chưa có ngày quan trọng nào.</div>'}</div>
-        ${editor ? "" : '<div class="cal-imp-foot">Chỉ Super-admin được thêm, sửa hoặc xóa ngày quan trọng.</div>'}
+          <div class="cal-imp-list">${list || '<div class="cal-empty">Chưa có ngày quan trọng nào.</div>'}</div>
+          ${editor ? "" : '<div class="cal-imp-foot">Chỉ Super-admin được thêm, sửa hoặc xóa ngày quan trọng.</div>'}
+        </div>
       </section>`;
     }
     const renderCokeRow = anim => `<div class="cal-row ${canEdit() ? "cal-row--admin" : "cal-row--member"}">${renderCokeCalendar(anim)}${canEdit() ? `<div class="cal-side-col">${renderImportantPanel()}${renderJiraCard()}</div>` : renderImportantPanel()}</div>`;
     function refreshCokeRow() { const el = document.querySelector(".cal-row"); if (el) el.outerHTML = renderCokeRow(); }
+
+    // ---------- Thu gọn / mở rộng 2 thẻ cột phải (super-admin + senior-member) — nhớ trạng thái theo từng máy ----------
+    const CAL_PANE_KEY = "dms_cal_panes";
+    let calPaneOpen = (() => {
+      try { const v = JSON.parse(localStorage.getItem(CAL_PANE_KEY) || "{}"); return { imp: v.imp !== false, jira: v.jira !== false }; }
+      catch (_) { return { imp: true, jira: true }; }
+    })();
+    document.addEventListener("click", e => {
+      const b = e.target.closest ? e.target.closest("[data-coll]") : null;
+      if (!b || !(b.dataset.coll in calPaneOpen)) return;
+      calPaneOpen[b.dataset.coll] = !calPaneOpen[b.dataset.coll];
+      try { localStorage.setItem(CAL_PANE_KEY, JSON.stringify(calPaneOpen)); } catch (_) {}
+      refreshCokeRow();
+    });
 
     // Đọc bản mới nhất từ Supabase rồi mới áp dụng thay đổi → hai người sửa cùng lúc không ghi đè nhau
     async function persistImportantDays(mutate) {
@@ -2163,19 +2270,20 @@
       const b = e.target.closest ? e.target.closest("[data-imp]") : null;
       if (!b || b.disabled) return;
       const a = b.dataset.imp, form = document.querySelector("#imp-form");
-      if (a === "toggle") { impEditId = null; impFormOpen = !impFormOpen; refreshCokeRow(); if (impFormOpen) document.querySelector("#imp-name")?.focus(); }
+      if (a === "toggle") { calPaneOpen.imp = true; impEditId = null; impFormOpen = !impFormOpen; refreshCokeRow(); if (impFormOpen) document.querySelector("#imp-name")?.focus(); }
       else if (a === "cancel") { impFormOpen = false; impEditId = null; refreshCokeRow(); }
-      else if (a === "edit") { impEditId = b.dataset.id; impFormOpen = true; refreshCokeRow(); document.querySelector("#imp-name")?.focus(); }
+      else if (a === "edit") { calPaneOpen.imp = true; impEditId = b.dataset.id; impFormOpen = true; refreshCokeRow(); document.querySelector("#imp-name")?.focus(); }
       else if (a === "save") {
-        const date = document.querySelector("#imp-date")?.value || "", name = (document.querySelector("#imp-name")?.value || "").trim().replace(/\s+/g, " "), repeat = document.querySelector("#imp-repeat")?.value || "none";
+        const date = document.querySelector("#imp-date")?.value || "", name = (document.querySelector("#imp-name")?.value || "").trim().replace(/\s+/g, " "), repeat = document.querySelector("#imp-repeat")?.value || "none", time = document.querySelector("#imp-time")?.value || "";
+        if (time && !/^\d{2}:\d{2}$/.test(time)) return toast("Giờ không hợp lệ.", "error");
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return toast("Hãy chọn ngày hợp lệ.", "error");
         if (!name) return toast("Hãy nhập nội dung cần chú ý.", "error");
         if (!["none", "weekly", "yearly"].includes(repeat)) return toast("Kiểu lặp không hợp lệ.", "error");
         b.disabled = true;
         const editId = impEditId, yearly = repeat === "yearly";
         const ok = await persistImportantDays(list => editId
-          ? list.map(x => x.id === editId ? { ...x, date, name, repeat, yearly } : x)
-          : (list.some(x => x.date === date && x.name.toLowerCase() === name.toLowerCase() && x.repeat === repeat) ? list : [...list, { id: impId(), date, name, repeat, yearly }]));
+          ? list.map(x => x.id === editId ? { ...x, date, name, repeat, yearly, time } : x)
+          : (list.some(x => x.date === date && x.name.toLowerCase() === name.toLowerCase() && x.repeat === repeat) ? list : [...list, { id: impId(), date, name, repeat, yearly, time }]));
         if (ok) { impFormOpen = false; impEditId = null; toast(editId ? "Đã cập nhật ngày quan trọng." : "Đã thêm ngày quan trọng.", "success"); refreshCokeRow(); } else b.disabled = false;
       }
       else if (a === "del") {
@@ -2185,7 +2293,7 @@
         if (await persistImportantDays(list => list.filter(x => x.id !== id))) { if (impEditId === id) { impEditId = null; impFormOpen = false; } toast("Đã xóa.", "success"); refreshCokeRow(); }
       }
     });
-    document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target?.id === "imp-name") document.querySelector('[data-imp="save"]')?.click(); });
+    document.addEventListener("keydown", e => { if (e.key === "Enter" && ["imp-name", "imp-time"].includes(e.target?.id)) document.querySelector('[data-imp="save"]')?.click(); });
 
     // ---------- Close GRN Module: ghi đè / bỏ ngày theo kỳ (chỉ Super-admin) ----------
     async function persistGrnOverride(periodKey, value) {
@@ -2236,9 +2344,10 @@
       const cfg = state.jiraConfig || {};
       const hasCfg = !!cfg.project_key && !!(cfg.proxy_url || (cfg.base_url && cfg.email && cfg.token));
       const warn = !hasCfg ? (isAdmin() ? "Chưa cấu hình Jira — vào Quản lý dữ liệu để nhập token." : "Chưa cấu hình Jira — liên hệ Super-admin.") : "";
+      const paneOpen = calPaneOpen.jira;
       return `<section class="cal-jira" aria-label="Tạo Jira ticket">
-        <div class="cal-jira-head"><div><h3>Tạo Jira ticket</h3><p>Tự động tạo ticket Close GRN Module</p></div>${ICONS.send}</div>
-        <div class="cal-jira-body">
+        <div class="cal-jira-head"><div><h3>Tạo Jira ticket</h3><p>${paneOpen ? "Tự động tạo ticket Close GRN Module" : `Đang thu gọn · ngày khóa ${dateStr}`}</p></div><span class="cal-head-act"><button type="button" class="cal-coll" data-coll="jira" aria-expanded="${paneOpen ? "true" : "false"}" title="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Tạo Jira ticket" aria-label="${paneOpen ? "Thu gọn" : "Mở rộng"} thẻ Tạo Jira ticket">${ICONS.pgNext}</button>${ICONS.send}</span></div>
+        <div class="cal-jira-body"${paneOpen ? "" : " hidden"}>
           <div class="cal-jira-row"><span>Chức năng</span><b>Close GRN Module</b></div>
           <div class="cal-jira-row"><span>Ngày khóa GRN</span><b>${dateStr}</b></div>
           <div class="cal-jira-row"><span>Dự án Jira</span><b>${hasCfg ? escapeHtml(cfg.project_key) : "—"}</b></div>
