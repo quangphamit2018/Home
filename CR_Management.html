@@ -5213,6 +5213,14 @@ body.detail-nav-visible .modal-overlay.full .modal-head{
   font-size:11.5px; color:#93a7b5; font-style:italic;
   min-height:16px; transition:opacity .3s ease;
 }
+.dlprog-cancel{
+  margin-top:14px; padding:8px 22px;
+  font-size:13px; font-weight:700; color:#e4434b;
+  background:#fdecec; border:1px solid #f5c2c6; border-radius:999px;
+  cursor:pointer; transition:all .18s ease;
+}
+.dlprog-cancel:hover:not(:disabled){ background:#fbd5d6; border-color:#e9a9ad; }
+.dlprog-cancel:disabled{ opacity:.6; cursor:default; }
 @media (max-width:480px){
   .dlprog-card{ padding:22px 18px 18px; border-radius:16px; }
 }
@@ -8173,8 +8181,9 @@ const FILE_ICON = {
    giúp người dùng thấy trực quan tiến trình thay vì màn hình đứng im.
 --------------------------------------------------------------------------- */
 const DLProgress = (function(){
-  let overlay = null, cardTitleEl, stepEl, fillEl, pctEl, tipEl;
+  let overlay = null, cardTitleEl, stepEl, fillEl, pctEl, tipEl, cancelBtnEl;
   let tipTimer = null, closeTimer = null;
+  let cancelled = false;
   const TIPS = [
     "Đang pha trà chờ dữ liệu về nhé ☕",
     "Sắp xong rồi, ráng thêm chút nữa nha 🚀",
@@ -8198,6 +8207,7 @@ const DLProgress = (function(){
         <div class="dlprog-bar-track"><div class="dlprog-bar-fill" id="dlprogFill"></div></div>
         <div class="dlprog-pct" id="dlprogPct">0%</div>
         <div class="dlprog-tip" id="dlprogTip"></div>
+        <button type="button" class="dlprog-cancel" id="dlprogCancel">Hủy</button>
       </div>`;
     document.body.appendChild(overlay);
     cardTitleEl = $("#dlprogTitle", overlay);
@@ -8205,6 +8215,8 @@ const DLProgress = (function(){
     fillEl = $("#dlprogFill", overlay);
     pctEl = $("#dlprogPct", overlay);
     tipEl = $("#dlprogTip", overlay);
+    cancelBtnEl = $("#dlprogCancel", overlay);
+    cancelBtnEl.addEventListener("click", requestCancel);
   }
   function startTips(){
     stopTips();
@@ -8215,9 +8227,18 @@ const DLProgress = (function(){
   }
   function stopTips(){ if(tipTimer){ clearInterval(tipTimer); tipTimer = null; } }
   // title: tiêu đề overlay (vd "Đang tải báo cáo Excel")
+  function requestCancel(){
+    ensureDom();
+    if(cancelled) return;
+    cancelled = true;
+    if(cancelBtnEl){ cancelBtnEl.disabled = true; cancelBtnEl.textContent = "Đang hủy..."; }
+    if(stepEl) stepEl.textContent = "Đang dừng quá trình...";
+  }
   function open(title){
     ensureDom();
     if(closeTimer){ clearTimeout(closeTimer); closeTimer = null; }
+    cancelled = false;
+    if(cancelBtnEl){ cancelBtnEl.disabled = false; cancelBtnEl.textContent = "Hủy"; }
     cardTitleEl.textContent = title || "Đang xử lý...";
     fillEl.classList.remove("indeterminate");
     fillEl.style.width = "0%";
@@ -8245,9 +8266,13 @@ const DLProgress = (function(){
   function close(delay=350){
     if(!overlay) return;
     stopTips();
-    closeTimer = setTimeout(()=> overlay.classList.remove("show"), delay);
+    closeTimer = setTimeout(()=>{
+      overlay.classList.remove("show");
+      if(cancelBtnEl){ cancelBtnEl.disabled = false; cancelBtnEl.textContent = "Hủy"; }
+    }, delay);
   }
-  return { open, setProgress, setIndeterminate, close };
+  function isCancelled(){ return cancelled; }
+  return { open, setProgress, setIndeterminate, close, isCancelled, requestCancel };
 })();
 
 /* ---------------------------------------------------------------------------
@@ -11184,6 +11209,10 @@ async function downloadEvidenceImagesZip(selectedCrIds = null){
     let failedCount = 0;
 
     for(let index = 0; index < records.length; index++){
+      if(DLProgress.isCancelled()){
+        toast("Đã hủy tải ảnh evidence.", "info");
+        return;
+      }
       const { testcase, file } = records[index];
       setLabel(`Đang tải ${index + 1}/${records.length}...`);
       DLProgress.setProgress((index / records.length) * 80, `Đang tải ảnh ${index + 1}/${records.length}...`);
@@ -12670,6 +12699,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
       let evidenceDoneCount = 0;
       DLProgress.setProgress(5, `Đang tải ảnh evidence 0/${evidenceTcList.length} Test Case...`);
       await Promise.all(evidenceTcList.map(async testcase=>{
+        if(DLProgress.isCancelled()) return;
         let files = testcase.id ? await exFetchTcAttachments(testcase.id) : [];
         if(evidencePlan && evidencePlan.has(String(testcase.id))){
           const order = evidencePlan.get(String(testcase.id));
@@ -12695,6 +12725,10 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
           `Đang tải ảnh evidence ${evidenceDoneCount}/${evidenceTcList.length} Test Case...`
         );
       }));
+    }
+    if(DLProgress.isCancelled()){
+      toast("Đã hủy tạo báo cáo.", "info");
+      return;
     }
     maxImageCount = Math.max(maxImageCount, 1);
     const evidenceColumnWidth = maxImageDisplayWidth
@@ -14616,6 +14650,11 @@ async function downloadAttachment(url, fileName, triggerEl){
       while(true){
         const { done, value } = await reader.read();
         if(done) break;
+        if(DLProgress.isCancelled()){
+          try{ reader.cancel(); }catch(_){}
+          toast("Đã hủy tải file.", "info");
+          return;
+        }
         chunks.push(value);
         receivedBytes += value.length;
         DLProgress.setProgress(
