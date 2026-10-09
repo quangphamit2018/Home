@@ -3346,18 +3346,18 @@
     ];
     const pdHtml = t => escapeHtml(t).replace(/\n/g, "<br>");
     function proDrawerHtml() {
-      const G = { in: "Bạn nhập", auto: "Tool tự điền", blank: "Để trống" };
+      const G = { in: "Bạn nhập", auto: "Tool tự điền", blank: "Để trống" }, TAC = mdmProMode === "tactical";
       const items = PRO_DICT.map(([k, g, t, b, ex]) => `<details class="pd-item" data-k="${escapeHtml(k)}" data-g="${g}"><summary><code>${escapeHtml(k)}</code><span>${escapeHtml(t)}</span><em class="pd-tag ${g}">${G[g]}</em></summary><div class="pd-b">${pdHtml(b)}${ex ? `<div class="pd-ex">Ví dụ: <b>${escapeHtml(ex)}</b></div>` : ""}</div></details>`).join("");
       return `<div class="pd"><div class="pd-h"><div><h3>Hướng dẫn cài đặt CTKM</h3><p>Theo file Promotion Data Dictionary</p></div><button type="button" class="btn btn-plain" data-pd-close>✕ Đóng</button></div>
         <div class="pd-tabs"><button type="button" class="on" data-pd-tab="guide">Cách setup</button><button type="button" data-pd-tab="dict">Từ điển cột (${PRO_DICT.length})</button></div>
         <div class="pd-body pd-guide">
-          <ol class="pd-steps"><li><b>Thông tin chương trình</b> — nhập PromotionCode, NPP, ngày bắt đầu/kết thúc, đơn vị.</li><li><b>Slab</b> — “Mua từ … đến …, cứ mỗi … tặng …”. Nhiều mức mua thì thêm slab (nút <b>Nhân đôi</b> giữ nguyên SKU).</li><li><b>Dán SKU</b> — copy cột SKU từ Excel dán vào ô <b>SKU điều kiện (Q)</b> và <b>SKU tặng (A)</b>, mỗi dòng 1 SKU.</li><li><b>Kiểm tra</b> — đọc câu diễn giải dưới mỗi slab, xem checklist và bảng xem trước bên phải; bấm vào mục đỏ để nhảy tới ô lỗi.</li><li><b>Xuất Excel</b> — file đúng mẫu PromotionUploadTemplateMapping, đủ 75 cột như 2 file Test02/Test04, sẵn sàng upload.</li></ol>
+          ${TAC ? tacGuideHtml() : ""}<div ${TAC ? "hidden" : ""}><ol class="pd-steps"><li><b>Thông tin chương trình</b> — nhập PromotionCode, NPP, ngày bắt đầu/kết thúc, đơn vị.</li><li><b>Slab</b> — “Mua từ … đến …, cứ mỗi … tặng …”. Nhiều mức mua thì thêm slab (nút <b>Nhân đôi</b> giữ nguyên SKU).</li><li><b>Dán SKU</b> — copy cột SKU từ Excel dán vào ô <b>SKU điều kiện (Q)</b> và <b>SKU tặng (A)</b>, mỗi dòng 1 SKU.</li><li><b>Kiểm tra</b> — đọc câu diễn giải dưới mỗi slab, xem checklist và bảng xem trước bên phải; bấm vào mục đỏ để nhảy tới ô lỗi.</li><li><b>Xuất Excel</b> — file đúng mẫu PromotionUploadTemplateMapping, đủ 75 cột như 2 file Test02/Test04, sẵn sàng upload.</li></ol>
           <h4>Ví dụ trong data dictionary</h4>
           <div class="pd-card"><b>Mua 2 EA Sprite/Fanta 1.5L tặng 1 EA DASANI/Mineral 510ML</b><br>PromotionCode <code>HCM_082026_01</code> · 14/08/2026 → 28/08/2026 · SLABFROM 2 · SLABTO 2 · DISCOUNT 1 · Repeating_Range 1 · SKU mua (Q): 2016, 2090, 3089 … · SKU tặng (A): 2717, 2718 …<br><small>Khi điền vào form, tool đặt ngày 01/11/2026 → 15/11/2026 vì StartDate không được ở quá khứ; các giá trị khác y như ví dụ (kèm SequenceNumber 555, Territory VN10VN11).</small><br><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ này vào form</button></div>
           <div class="pd-card"><b>Lặp CTKM</b> — Repeating_Range = 1: mua 5 được KM, đơn có 13 item → hưởng 2 lần.</div>
           <div class="pd-card"><b>Bundle</b> — mua 7 thùng gồm 3 Coke + 4 Fanta: line Coke PromotionQuantity = 3, line Fanta = 4 (tool chưa hỗ trợ bundle).</div>
           <div class="pd-card"><b>Nhóm Q / A</b> — mua SP A tặng SP B: dòng SP A là Q, dòng SP B là A. Nhiều SKU điều kiện = nhiều dòng Q; nhiều SKU tặng = nhiều dòng A.</div>
-          <h4>Lưu ý</h4><ul class="pd-notes"><li>Tool hỗ trợ nhiều loại CTKM qua dropdown <b>PromotionTypeCode</b> (mặc định 4 – Tặng hàng FOC). Các hình thức khác có giải thích trong tab Từ điển.</li><li>Các tùy chọn khác (SequenceNumber, Repeating_Range, ExclusionOption…) nằm ở mục <b>③ Tùy chọn nâng cao</b>, mặc định giữ như mẫu hiện tại.</li></ul>
+          <h4>Lưu ý</h4><ul class="pd-notes"><li>Tool hỗ trợ nhiều loại CTKM qua dropdown <b>PromotionTypeCode</b> (mặc định 4 – Tặng hàng FOC). Các hình thức khác có giải thích trong tab Từ điển.</li><li>Các tùy chọn khác (SequenceNumber, Repeating_Range, ExclusionOption…) nằm ở mục <b>③ Tùy chọn nâng cao</b>, mặc định giữ như mẫu hiện tại.</li></ul></div>
         </div>
         <div class="pd-body pd-dict"><div class="pd-tools"><input id="pd-q" placeholder="Tìm cột hoặc từ khóa… (vd: lặp, ưu tiên, NPP)" autocomplete="off"><div class="pd-chips"><button type="button" class="on" data-pd-grp="all">Tất cả</button><button type="button" data-pd-grp="in">Bạn nhập</button><button type="button" data-pd-grp="auto">Tool tự điền</button><button type="button" data-pd-grp="blank">Để trống</button></div></div>${items}</div></div>`;
     }
@@ -3445,8 +3445,10 @@
         <div class="pro-sum">${proSum(s)}</div>
         <div class="pro-slab-t">${T("q", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${(foc ? T("a", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862") : "")}</div></div>`;
     }
-    function proDraw() { $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
+    function proDraw() {
+      if (mdmProMode === "tactical") return tacDraw(); $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
     function proMeta() {
+      if (mdmProMode === "tactical") return tacMeta();
       proSyncAuto();
       const proRataInput = document.querySelector('[data-pro-col="ProRata"]');
       if (proRataInput && !mdmPro.touched.has("ProRata")) proRataInput.value = mdmPro.cols.ProRata;
@@ -3468,6 +3470,7 @@
     }
     async function proAct(a, el) {
       if (!$("#mdm-root")) return;
+      if (mdmProMode === "tactical") return tacAct(a, el);
       if (a === "help") return proHelp();
       if (a === "add") mdmPro.slabs.push(proSlab());
       else if (a === "dup") { const i = Number(el.closest(".pro-slab").dataset.si), s = mdmPro.slabs[i], n = proNum(s.to); mdmPro.slabs.splice(i + 1, 0, { ...s, from: n == null ? "" : String(n + 1), to: "" }); }
@@ -3501,12 +3504,156 @@
     function proColGroupHtml(g) {
       return `<div class="pro-col-grp"><h4>${g.name}</h4><div class="pro-grid">${g.cols.map(([k, kind, d, t, o]) => proColFieldHtml(k, kind, d, t, o)).join("")}</div></div>`;
     }
+    /* ---- CTKM Tactical: mẫu PROMOTIONbosung_CP_OCT26.xlsx (67 cột). Mỗi SKU × mỗi vùng/NPP = 1 dòng = 1 PromotionCode riêng, 1 slab (SLABFROM = SLABTO), ProductGroup = Q ---- */
+    const TAC_COLS = ["Sales_Organisation", "PromotionCode", "PromotionDescription", "IOCode", "PromotionQuotaCode", "DisbursementMethod", "RangeBasis", "PromotionTypeCode", "ProRata", "Bundle_Promotion", "ExclusionOption", "SequenceNumber", "SpecialPromotion", "StartDate", "EndDate", "SLABNUM", "SLABFROM", "SLABTO", "DISCOUNT", "Repeating_Range", "ProductGroup", "PromotionQuantity", "UnitOfMeasure", "SKUCode", "Product_Hierarchy", "Brand", "Beverage_Category", "Beverage_Product", "PackType", "Flavor", "CarbonationIndicator", "PackSize", "Product_Group", "TradeMark", "General_Item_Category_Group", "NumberOfUniqueSKU", "DISPLAYWEIGHTAGE", "Territory", "DistributorCode", "OutletHierarchyName", "OutletCode", "On-offPremise", "PopulatedArea", "Classification", "Category", "CustomerGroup", "CustomerBusienssType", "CustomerKeyAccount", "REDCustomerName", "CustomerType", "CoolerCustomer", "ExclusionCustomerCode", "Digital_Agreement", "QualificationMode", "ProductGroupBasis", "AmountBasis", "AllowCapQuota", "SourceTags", "ApplyCount", "ApplyOn_Basket", "CPC", "Exclusion_Group_Code", "Header_Level_Amount_Basis", "IsConsumer_Promotion", "PromotionQuota", "UseIn_Or", "Volume"];
+    const TAC_I = Object.fromEntries(TAC_COLS.map((c, i) => [c, i]));
+    const TAC_TYPE_OPTS = PRO_TYPE_OPTS.filter(([v]) => v !== "4" && v !== "8");
+    const TAC_NUM = new Set(["Bundle_Promotion", "PromotionQuantity", "SpecialPromotion", "ApplyCount"]);
+    const TAC_EXTRA_GROUPS = PRO_EXTRA_GROUPS.map(g => ({ name: g.name, cols: g.cols.filter(([k]) => TAC_I[k] != null).map(c => (c[0] === "SpecialPromotion" ? [c[0], c[1], "1", c[3], c[4]] : c)) })).filter(g => g.cols.length);
+    const TAC_EXTRA_KEYS = TAC_EXTRA_GROUPS.flatMap(g => g.cols.map(([k]) => k));
+    const TAC_COL_DEFAULTS = Object.fromEntries(TAC_EXTRA_GROUPS.flatMap(g => g.cols.map(([k, , d]) => [k, d])));
+    const tacGroup = () => ({ desc: "", qty: "", disc: "", sku: "", scope: "terr", sv: "", pfx: "", n0: "" });
+    const tacInit = () => ({ pfx: "", n0: "1", start: adjToday(), end: "", uom: "EA", type: "1", seq: "555", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, groups: [tacGroup()], cols: { ...TAC_COL_DEFAULTS }, touched: new Set() });
+    let mdmTac = tacInit();
+    const tacList = s => [...new Set(proSkus(s))];
+    function tacSyncAuto() { const P = mdmTac; if (!P.touched.has("ProRata")) P.cols.ProRata = proRataFor(Number(P.type), ["x"], P.rb); }
+    function tacParse() {
+      tacSyncAuto();
+      const P = mdmTac, out = [], cfgBad = {}, gBad = {}, ginfo = {}, issues = [], warns = [], codes = new Set(), dupCodes = new Set(), seen = new Map();
+      const ptype = Number(P.type), d1 = prcDateSerial(P.start), d2 = prcDateSerial(P.end);
+      const bad = (k, msg) => { cfgBad[k] = 1; issues.push({ msg, sel: `[data-tac="${k}"]` }); };
+      if (d1 == null) bad("start", "StartDate sai định dạng (dd/mm/yyyy)"); else { const _nd = new Date(); if (d1 < Date.UTC(_nd.getFullYear(), _nd.getMonth(), _nd.getDate()) / 86400000 + 25569) bad("start", "StartDate không được là ngày trong quá khứ"); }
+      if (d2 == null) bad("end", "EndDate sai định dạng (dd/mm/yyyy)"); else if (d1 != null && d2 < d1) bad("end", "EndDate phải ≥ StartDate");
+      if (!/^\d+$/.test(P.n0.trim())) bad("n0", "Số bắt đầu của mã phải là số nguyên ≥ 0");
+      if (!/^\d+$/.test(P.seq.trim())) bad("seq", "SequenceNumber phải là số nguyên ≥ 0");
+      if (P.apply.trim() && !/^[1-9]\d*$/.test(P.apply.trim())) bad("apply", "ApplyCount phải là số nguyên ≥ 1 (hoặc để trống)");
+      let counter = /^\d+$/.test(P.n0.trim()) ? Number(P.n0.trim()) : 0;
+      P.groups.forEach((g, i) => {
+        const q = proNum(g.qty), dc = proNum(g.disc), skus = tacList(g.sku), tg = tacList(g.sv), pfx = g.pfx.trim() || P.pfx.trim(), own = g.pfx.trim() !== "" || g.n0.trim() !== "", b = {};
+        const n0ok = g.n0.trim() === "" || /^\d+$/.test(g.n0.trim());
+        [["qty", q == null || q <= 0, "SLABFROM = SLABTO phải là số > 0"], ["disc", dc == null || dc <= 0 || (ptype === 2 && dc > 100), ptype === 2 ? "DISCOUNT (%) phải là số trong khoảng 0–100" : "DISCOUNT phải là số > 0"], ["sku", !skus.length, "chưa có SKU"], ["sv", !tg.length, g.scope === "dist" ? "chưa có DistributorCode" : "chưa có Territory"], ["pfx", !pfx, "thiếu tiền tố PromotionCode (nhập ở mục 1 hoặc ô mã riêng của nhóm)"], ["n0", !n0ok, "Số bắt đầu mã riêng phải là số nguyên ≥ 0"]]
+          .forEach(([k, c, m]) => { if (c) { b[k] = 1; issues.push({ msg: `Nhóm ${i + 1}: ${m}`, sel: `#tac-groups [data-gi="${i}"] [data-tg="${k}"]` }); } });
+        if (Object.keys(b).length) { gBad[i] = b; return; }
+        let n = own ? (g.n0.trim() === "" ? 1 : Number(g.n0.trim())) : counter, cnt = 0, first = "", last = "";
+        skus.forEach(x => tg.forEach(t => {
+          const code = pfx + n++; if (!first) first = code; last = code; cnt++;
+          if (codes.has(code)) dupCodes.add(code); codes.add(code);
+          const key = `${g.scope}|${t}|${x}`; if (seen.has(key) && seen.get(key) !== i) { if (warns.length < 6) warns.push(`SKU ${x} trùng phạm vi ${t} ở Nhóm ${seen.get(key) + 1} và Nhóm ${i + 1}`); } else seen.set(key, i);
+          const r = Array(TAC_COLS.length).fill(null), set = (c, v) => { r[TAC_I[c]] = v; };
+          set("PromotionCode", code); set("PromotionDescription", g.desc.trim() || code); if (P.quota) set("PromotionQuotaCode", code);
+          set("DisbursementMethod", Number(P.dm)); set("RangeBasis", Number(P.rb)); set("PromotionTypeCode", ptype); set("ProRata", proRataFor(ptype, [x], P.rb)); set("Bundle_Promotion", 0);
+          set("ExclusionOption", Number(P.excl)); set("SequenceNumber", Number(P.seq || 0)); set("StartDate", d1); set("EndDate", d2);
+          set("SLABNUM", 1); set("SLABFROM", q); set("SLABTO", q); set("DISCOUNT", dc); set("Repeating_Range", Number(P.rep));
+          set("ProductGroup", "Q"); set("PromotionQuantity", 0); set("UnitOfMeasure", P.uom.trim()); set("SKUCode", /^\d+$/.test(x) ? Number(x) : x);
+          set(g.scope === "dist" ? "DistributorCode" : "Territory", t);
+          if (P.apply.trim()) set("ApplyCount", Number(P.apply));
+          const C = P.cols || {};
+          if (String(C.ProRata ?? "").trim() !== "") r[TAC_I.ProRata] = C.ProRata;
+          TAC_EXTRA_KEYS.forEach(c => { if (c === "ProRata") return; const v = C[c]; if (v != null && String(v).trim() !== "" && TAC_I[c] != null) r[TAC_I[c]] = TAC_NUM.has(c) && /^\d+$/.test(String(v).trim()) ? Number(String(v).trim()) : String(v).trim(); });
+          out.push(r);
+        }));
+        if (!own) counter = n;
+        ginfo[i] = { n: cnt, first, last };
+      });
+      if (dupCodes.size) issues.push({ msg: `Trùng PromotionCode (${[...dupCodes].slice(0, 3).join(", ")}${dupCodes.size > 3 ? "…" : ""}) — đổi tiền tố / số bắt đầu`, sel: `[data-tac="pfx"]` });
+      return { out, cfgBad, gBad, ginfo, issues, warns };
+    }
+    function tacCnt(txt, label) { const l = proSkus(txt), u = new Set(l).size; if (!l.length) return ""; return `${nf(u)} ${label}${l.length > u ? ` · <span style="color:var(--warning)">${l.length - u} trùng (tự loại)</span>` : ""}`; }
+    function tacSum(g, inf) {
+      const q = g.qty.trim(), d = g.disc.trim(), P = mdmTac, u = P.rb === "2" ? "VND" : P.uom, nk = tacList(g.sku).length, nt = tacList(g.sv).length, tl = g.scope === "dist" ? "NPP" : "vùng";
+      if (!q && !d) return "Nhập số lượng mua (SLABFROM = SLABTO) và DISCOUNT để xem mô tả tóm tắt.";
+      const disc = ["1", "5"].includes(P.type) ? `giảm <b>${escapeHtml(d || "?")} VND</b>` : ["2", "6", "11"].includes(P.type) ? `giảm <b>${escapeHtml(d || "?")} %</b>` : `DISCOUNT = <b>${escapeHtml(d || "?")}</b>`;
+      let s = `Mua <b>${escapeHtml(q || "?")} ${u}</b> của mỗi SKU → ${disc}`;
+      if (nk && nt) s += ` · <b>${nf(nk)}</b> SKU × <b>${nf(nt)}</b> ${tl} = <b>${nf(nk * nt)}</b> dòng`;
+      if (inf && inf.n) s += ` · mã <code>${escapeHtml(inf.first)}</code>${inf.n > 1 ? ` → <code>${escapeHtml(inf.last)}</code>` : ""}`;
+      return s;
+    }
+    function tacGroupHtml(g, i) {
+      const F = (k, l, key, ph, st) => `<div class="field" data-k="${k}"${st ? ` style="${st}"` : ""}><label>${l}${key ? H(key) : ""}</label><input data-tg="${k}" value="${escapeHtml(g[k])}" placeholder="${ph}" autocomplete="off"></div>`;
+      const dist = g.scope === "dist";
+      return `<div class="pro-slab" data-gi="${i}"><div class="pro-slab-h"><span>Nhóm ${i + 1}</span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Tạo nhóm mới, giữ phạm vi & số liệu, xóa danh sách SKU">⧉ Nhân đôi</button>${mdmTac.groups.length > 1 ? '<button type="button" class="btn btn-plain" data-tac-del>× Xóa</button>' : ""}</span></div>
+        <div class="pro-slab-f">${F("desc", "PromotionDescription", "PromotionDescription", "vd: 6 lon Coke ZERO giảm 11k (để trống = lấy theo PromotionCode)", "grid-column:1/-1")}${F("qty", "SLABFROM = SLABTO", "SLABFROM", "vd: 6")}${F("disc", "DISCOUNT", "DISCOUNT", "vd: 11000")}${F("pfx", "Tiền tố mã riêng", "", "trống = dùng chung")}${F("n0", "Số bắt đầu riêng", "", "trống = nối tiếp")}</div>
+        <div class="pro-sum">${tacSum(g, null)}</div>
+        <div class="pro-slab-t"><div class="field" data-k="sku"><label>SKUCode (ProductGroup = Q)${H("SKUCode")}<span class="pro-cnt" data-cnt="sku">${tacCnt(g.sku, "SKU")}</span></label><textarea data-tg="sku" placeholder="Dán SKU, mỗi dòng 1 SKU&#10;1533&#10;1537" spellcheck="false">${escapeHtml(g.sku)}</textarea></div>
+        <div class="field" data-k="sv"><label>${dist ? "DistributorCode" : "Territory"}${H(dist ? "DistributorCode" : "Territory")}<span class="pro-cnt" data-cnt="sv">${tacCnt(g.sv, dist ? "NPP" : "vùng")}</span></label><select data-tg="scope" style="margin-bottom:6px"><option value="terr"${dist ? "" : " selected"}>Áp dụng theo Territory (mã vùng)</option><option value="dist"${dist ? " selected" : ""}>Áp dụng theo DistributorCode (NPP)</option></select><textarea data-tg="sv" style="min-height:52px" placeholder="${dist ? "Mỗi dòng 1 NPP&#10;0084000460" : "Mỗi dòng 1 mã vùng&#10;VN10VN13"}" spellcheck="false">${escapeHtml(g.sv)}</textarea></div></div></div>`;
+    }
+    function tacColFieldHtml(key, kind, def, type, opts) {
+      const v = mdmTac.cols[key] != null ? mdmTac.cols[key] : "", autoTag = kind === "auto" ? " pro-col-auto" : "";
+      if (type === "select") return `<div class="field${autoTag}" data-k="${key}"><label>${key}</label><select data-tac-col="${key}">${opts.map(([o, t]) => `<option value="${o}"${String(v) === o ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
+      return `<div class="field${autoTag}" data-k="${key}"><label>${key}</label><input data-tac-col="${key}" value="${escapeHtml(v)}" placeholder="${kind === "auto" ? "tự điền" : "để trống"}" autocomplete="off"></div>`;
+    }
+    const tacColGroupHtml = g => `<div class="pro-col-grp"><h4>${g.name}</h4><div class="pro-grid">${g.cols.map(([k, kind, d, t, o]) => tacColFieldHtml(k, kind, d, t, o)).join("")}</div></div>`;
+    function tacDraw() { $("#tac-groups").innerHTML = mdmTac.groups.map(tacGroupHtml).join(""); tacMeta(); }
+    function tacMeta() {
+      const v = tacParse(), P = mdmTac, PV = ["PromotionCode", "SLABFROM", "SLABTO", "DISCOUNT", "ProductGroup", "SKUCode", "Territory", "DistributorCode"];
+      const prc = document.querySelector('[data-tac-col="ProRata"]'); if (prc && !P.touched.has("ProRata")) prc.value = P.cols.ProRata;
+      const cc = document.querySelector("#tac-cols-cnt"); if (cc) cc.textContent = TAC_EXTRA_KEYS.filter(k => String(P.cols[k] ?? "").trim() !== "").length + " / " + TAC_EXTRA_KEYS.length + " cột đã điền";
+      document.querySelectorAll("#tac-cfg .field, #tac-adv .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
+      document.querySelectorAll("#tac-groups .pro-slab").forEach(el => {
+        const i = Number(el.dataset.gi), b = v.gBad[i] || {}, g = P.groups[i];
+        el.querySelectorAll(".field").forEach(f => f.classList.toggle("bad", !!b[f.dataset.k]));
+        el.querySelector(".pro-sum").innerHTML = tacSum(g, v.ginfo[i]); el.querySelector('[data-cnt="sku"]').innerHTML = tacCnt(g.sku, "SKU"); el.querySelector('[data-cnt="sv"]').innerHTML = tacCnt(g.sv, g.scope === "dist" ? "NPP" : "vùng");
+      });
+      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng xuất ra</span>`, `<span class="adj-chip">${P.groups.length} nhóm</span>`];
+      if (v.issues.length) chips.push(`<span class="adj-chip err">${v.issues.length} lỗi</span>`);
+      $("#tac-chips").innerHTML = chips.join("");
+      $("#tac-issues").innerHTML = v.issues.map(x => `<li data-goto='${x.sel}'>✖ ${escapeHtml(x.msg)}</li>`).join("") + v.warns.map(w => `<li class="w">⚠ ${escapeHtml(w)}</li>`).join("") + (!v.issues.length ? `<li class="ok">✔ Dữ liệu hợp lệ, sẵn sàng xuất file</li>` : "");
+      $("#tac-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 8).map(r => `<tr>${PV.map(c => `<td>${r[TAC_I[c]] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 8 ? `<div class="pro-more">… và ${nf(v.out.length - 8)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — điền nhóm, SKU và phạm vi để xem trước.</div>`;
+      $("#tac-export").disabled = !v.out.length || !!v.issues.length;
+    }
+    async function tacAct(a, el) {
+      if (a === "help") return proHelp();
+      if (a === "add") mdmTac.groups.push(tacGroup());
+      else if (a === "dup") { const i = Number(el.closest(".pro-slab").dataset.gi); mdmTac.groups.splice(i + 1, 0, { ...mdmTac.groups[i], sku: "" }); }
+      else {
+        const dirty = mdmTac.pfx || mdmTac.end || mdmTac.groups.some(g => g.sku || g.sv || g.qty || g.disc || g.desc);
+        if (dirty && !(await confirmDialog({ title: a === "example" ? "Thay bằng ví dụ?" : "Làm mới form?", message: "Dữ liệu đang nhập trong form sẽ bị thay thế.", confirmText: a === "example" ? "Điền ví dụ" : "Làm mới", danger: true }))) return;
+        mdmTac = tacInit();
+        if (a === "example") { const e = new Date(); e.setDate(e.getDate() + 21); Object.assign(mdmTac, { pfx: "CP_261008_update", n0: "1", end: [String(e.getDate()).padStart(2, "0"), String(e.getMonth() + 1).padStart(2, "0"), e.getFullYear()].join("/"), groups: [
+          { desc: "6 lon Coke ZERO giảm 11k", qty: "6", disc: "11000", sku: "1533\n1537\n1545\n1546", scope: "terr", sv: "VN10VN13", pfx: "", n0: "" },
+          { desc: "1T Coke 320ml giảm 11k", qty: "24", disc: "11000", sku: "4216", scope: "dist", sv: "0084000460\n0084000467\n0084000541\n0084000570", pfx: "CP_261008update_", n0: "8000" }] }); }
+        $("#mdm-root").innerHTML = renderPro(); return tacDraw();
+      }
+      tacDraw();
+    }
+    async function tacExport() {
+      const v = tacParse(); if (!v.out.length || v.issues.length) return;
+      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
+      const ws = XLSX.utils.aoa_to_sheet([TAC_COLS, ...v.out]);
+      ["StartDate", "EndDate"].forEach(c => { const col = XLSX.utils.encode_col(TAC_I[c]); v.out.forEach((_, i) => { const cell = ws[col + (i + 2)]; if (cell) cell.z = "mm-dd-yy"; }); });
+      ws["!cols"] = TAC_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Tactical_${stamp}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
+    }
+    function tacGuideHtml() {
+      return `<ol class="pd-steps"><li><b>Thông tin chung</b> — nhập tiền tố PromotionCode (vd <code>CP_261008_update</code>) và số bắt đầu, ngày bắt đầu/kết thúc, đơn vị. Mã mỗi dòng = tiền tố + số tăng dần (1, 2, 3…).</li><li><b>Nhóm CTKM</b> — mỗi nhóm có chung mô tả, số lượng mua (SLABFROM = SLABTO) và DISCOUNT. Mỗi mức giảm khác nhau = 1 nhóm (bấm <b>Nhân đôi</b> để tạo nhanh).</li><li><b>Dán SKU và phạm vi</b> — mỗi SKU × mỗi Territory (hoặc mỗi NPP) ra 1 dòng với 1 PromotionCode riêng, đúng như file mẫu PROMOTIONbosung_CP_OCT26.</li><li><b>Kiểm tra</b> — đọc câu diễn giải dưới mỗi nhóm, xem checklist và bảng xem trước; bấm vào mục đỏ để nhảy tới ô lỗi.</li><li><b>Xuất Excel</b> — file đủ 67 cột theo mẫu Tactical, sheet <code>Sheet1</code>, sẵn sàng upload.</li></ol>
+        <h4>Ví dụ theo file mẫu</h4>
+        <div class="pd-card"><b>Territory:</b> 6 lon Coke ZERO giảm 11k — SLABFROM = SLABTO = 6, DISCOUNT 11000, Territory VN10VN13, mỗi SKU 1 dòng (mã <code>CP_261008_update1…</code>).<br><b>NPP:</b> 1T Coke 320ml giảm 11k — SLABFROM = SLABTO = 24, SKU 4216 × 4 DistributorCode, mã riêng <code>CP_261008update_8000…8003</code> (dùng ô “Tiền tố mã riêng” và “Số bắt đầu riêng”).<br><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ này vào form</button></div>
+        <h4>Lưu ý</h4><ul class="pd-notes"><li>Mẫu Tactical không có cột ForEach và chỉ có dòng ProductGroup = Q, nên tool chỉ hỗ trợ các hình thức giảm (không có 4 – Tặng hàng FOC, 8 – Tích điểm).</li><li>Giá trị mặc định theo file mẫu: PromotionTypeCode 1, SequenceNumber 555, Repeating_Range 1, SpecialPromotion 1, ProRata N, PromotionQuotaCode để trống.</li></ul>`;
+    }
     function renderProTactical() {
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Chọn loại CTKM để bắt đầu. Tactical — template sẽ được gửi sau.</p></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
-        <div class="panel-body">${proModeSeg()}
-          <div class="empty"><strong>🎯 Tactical — đang chờ template</strong>Template upload dành cho Tactical sẽ được gửi sau. Khi có template, giao diện này sẽ hiển thị đầy đủ các cột tương tự Slab in Slab.</div>
-        </div></section>`;
+      const P = mdmTac;
+      const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${key ? H(key) : ""}</label><input data-tac="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+      const S = (k, l, key, opts) => `<div class="field" data-k="${k}"><label>${l}${key ? H(key) : ""}</label><select data-tac="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tactical: mỗi SKU × mỗi vùng/NPP = 1 PromotionCode, xuất Excel đúng mẫu Tactical (67 cột). Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
+        <div class="panel-body">${proModeSeg()}<div class="pro-lay"><div class="pro-main">
+          <div class="pro-card"><h3><em>1</em>Thông tin chung</h3>
+            <div class="pro-grid" id="tac-cfg">${F("pfx", "Tiền tố PromotionCode", "PromotionCode", "vd: CP_261008_update")}${F("n0", "Số bắt đầu của mã", "", "vd: 1")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("type", "PromotionTypeCode", "PromotionTypeCode", TAC_TYPE_OPTS)}</div></div>
+          <div class="pro-card"><h3><em>2</em>Nhóm CTKM (số lượng mua &amp; mức giảm)<span class="adj-chips" id="tac-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm nhóm</button></h3><div id="tac-groups">${P.groups.map(tacGroupHtml).join("")}</div>
+            <p class="adj-tip">💡 Sao chép cột SKU (hoặc cột mã vùng / NPP) từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô tương ứng, mỗi dòng 1 giá trị. Nhiều SKU × nhiều vùng/NPP = mỗi tổ hợp 1 dòng và 1 PromotionCode. Nhóm có tiền tố/số bắt đầu riêng sẽ đánh số mã độc lập với các nhóm còn lại.</p></div>
+          <details class="pro-card pro-det" id="tac-adv" open><summary><em>3</em>Tùy chọn nâng cao <small>giữ mặc định theo file mẫu — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
+            ${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "để trống = không giới hạn")}${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – Không lặp lại"], ["1", "1 – Có lặp lại"]])}
+            ${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Có (được hưởng thêm CTKM khác)"], ["1", "1 – Không (chỉ CTKM này)"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Dựa trên số lượng sản phẩm mua"], ["2", "2 – Dựa trên giá trị sản phẩm mua"]])}${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Áp dụng KM trên hóa đơn"], ["2", "2 – Áp dụng KM ngoài hóa đơn"]])}
+            <div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-tac="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu Tactical để trống)</label></div></div></details>
+          <details class="pro-card pro-cols" id="tac-cols"><summary><em>4</em>Tất cả các cột template <small>— các cột còn lại trong 67 cột, hệ thống tự điền, bạn có thể điều chỉnh</small><span class="pro-cols-cnt" id="tac-cols-cnt"></span></summary><div class="pro-cols-body">${TAC_EXTRA_GROUPS.map(tacColGroupHtml).join("")}</div></details>
+        </div>
+        <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="tac-issues"></ul></div>
+          <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="tac-pv"></div></div>
+          <button type="button" id="tac-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
+          <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">Mỗi dòng: SLABNUM = 1 · SLABFROM = SLABTO · ProductGroup = Q · Bundle_Promotion = 0 · ProRata tự tính theo loại KM</div></div></aside></div></div></section>`;
     }
     function renderPro() {
       if (mdmProMode === "tactical") return renderProTactical();
@@ -3551,6 +3698,9 @@
         if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.type === "checkbox" ? t.checked : t.value; if (t.dataset.pro === "type" || t.dataset.pro === "rb") { proSyncAuto(); return proDraw(); } return proMeta(); }
         if (t.dataset.proCol) { mdmPro.cols[t.dataset.proCol] = t.value; mdmPro.touched.add(t.dataset.proCol); return proMeta(); }
         if (t.dataset.ps) { mdmPro.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.ps] = t.value; return proMeta(); }
+        if (t.dataset.tac) { mdmTac[t.dataset.tac] = t.type === "checkbox" ? t.checked : t.value; return tacMeta(); }
+        if (t.dataset.tacCol) { mdmTac.cols[t.dataset.tacCol] = t.value; mdmTac.touched.add(t.dataset.tacCol); return tacMeta(); }
+        if (t.dataset.tg) { mdmTac.groups[Number(t.closest(".pro-slab").dataset.gi)][t.dataset.tg] = t.value; return t.dataset.tg === "scope" ? tacDraw() : tacMeta(); }
         if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
         if (t.dataset.ini) { mdmIni[t.dataset.ini] = t.value; return iniMeta(); }
         if (t.dataset.prc) { mdmPrc[t.dataset.prc] = t.value; return prcMeta(); }
@@ -3600,6 +3750,9 @@
         const pa = e.target.closest("[data-pro-act]"); if (pa) return proAct(pa.dataset.proAct, pa);
         const gt = e.target.closest("[data-goto]"); if (gt) { const el = document.querySelector(gt.dataset.goto); if (el) { el.closest("details") && (el.closest("details").open = true); el.scrollIntoView({ block: "center", behavior: "smooth" }); el.focus(); } return; }
         if (e.target.closest("#pro-export")) return proExport();
+        if (e.target.closest("#tac-export")) return tacExport();
+        const tacDel = e.target.closest("[data-tac-del]");
+        if (tacDel) { mdmTac.groups.splice(Number(tacDel.closest(".pro-slab").dataset.gi), 1); return tacDraw(); }
         const proDel = e.target.closest("[data-pro-del]");
         if (proDel) { mdmPro.slabs.splice(Number(proDel.closest(".pro-slab").dataset.si), 1); return proDraw(); }
         if (e.target.closest("#adj-export")) return adjExport();
@@ -3631,7 +3784,7 @@
           if (mdmAdj.rows.some(r => r.item || r.qty) && !(await confirmDialog({ title: "Xóa toàn bộ danh sách?", message: "Tất cả dòng ItemCode / UOM0 đang nhập sẽ bị xóa.", confirmText: "Xóa tất cả", danger: true }))) return;
           mdmAdj.rows = [adjBlank()]; return adjDrawRows([0, "item"]);
         }
-        const pm = e.target.closest("[data-pro-mode]"); if (pm) { mdmProMode = pm.dataset.proMode; saveKey(PRO_MODE_KEY, mdmProMode); pg.querySelectorAll("[data-pro-mode]").forEach(x => x.classList.toggle("on", x === pm)); $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "promo") proDraw(); return; }
+        const pm = e.target.closest("[data-pro-mode]"); if (pm) { mdmProMode = pm.dataset.proMode; saveKey(PRO_MODE_KEY, mdmProMode); { const dr = $("#pro-drawer"); if (dr) dr.remove(); } pg.querySelectorAll("[data-pro-mode]").forEach(x => x.classList.toggle("on", x === pm)); $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "promo") proDraw(); return; }
         const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
         mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
         pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
