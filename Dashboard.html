@@ -1521,6 +1521,9 @@ https://github.com/nodeca/pako/blob/main/LICENSE
         <div class="modal-actions" style="margin-top:0;">
           <button class="btn-primary btn-lg" id="syncJiraBtn" style="flex:1;">🔄 Đồng bộ dữ liệu Jira ngay (real-time)</button>
         </div>
+        <div class="modal-actions" style="margin-top:8px;">
+          <button class="btn-secondary btn-lg" id="reconcileJiraBtn" style="flex:1;" title="So sánh với Jira và xóa khỏi Supabase những ticket đã bị xóa/chuyển project trên Jira">🧹 Quét &amp; xóa ticket đã bị xóa trên Jira</button>
+        </div>
         <div class="conn-status" id="syncStatus"></div>
         <details class="cfg-details">
           <summary>Cơ chế đồng bộ, lưu trữ Token và lưu ý CORS</summary>
@@ -4163,6 +4166,54 @@ document.getElementById('syncJiraBtn').onclick = ()=>{
 
 document.getElementById('publicSyncBtn').onclick = ()=>{
   runJiraSync(document.getElementById('publicSyncBtn'), document.getElementById('publicSyncStatus'), 'ok', 'err');
+};
+
+/* Đối soát ticket đã xóa trên Jira: (1) dry-run liệt kê -> (2) xác nhận -> (3) xóa thật -> (4) nạp lại dashboard */
+document.getElementById('reconcileJiraBtn').onclick = async ()=>{
+  const btn = document.getElementById('reconcileJiraBtn');
+  const statusEl = document.getElementById('syncStatus');
+  const setStatus = (msg, cls)=>{ statusEl.className = 'conn-status' + (cls ? ' ' + cls : ''); statusEl.style.display = 'block'; statusEl.textContent = msg; };
+  const callReconcile = async (dryRun)=>{
+    const qs = dryRun ? 'reconcile=1&dryRun=1' : 'reconcile=1&dryRun=0&force=1'; // force chỉ gửi SAU khi người dùng đã xác nhận số lượng
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/jira-sync?${qs}`, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer '+SUPABASE_ANON_KEY }
+    });
+    const text = await resp.text();
+    let j = null; try{ j = JSON.parse(text); }catch(e){}
+    if(!resp.ok || !j || j.error){
+      throw new Error(j && j.error ? (j.error + (j.detail ? ' — ' + String(j.detail).slice(0,250) : '')) : ('HTTP ' + resp.status + ' ' + text.slice(0,200)));
+    }
+    return j;
+  };
+  btn.disabled = true;
+  try{
+    setStatus('Đang so sánh danh sách ticket giữa Jira và Supabase...');
+    const pv = await callReconcile(true);
+    if(!pv.ghosts){
+      setStatus(`Không có ticket nào bị xóa trên Jira. Jira: ${pv.jira.toLocaleString('vi-VN')} · Supabase: ${pv.db.toLocaleString('vi-VN')}.`, 'ok');
+      return;
+    }
+    const pct = pv.db ? (pv.ghosts / pv.db * 100) : 0;
+    const sample = pv.sample.slice(0, 15).join(', ') + (pv.ghosts > 15 ? ', …' : '');
+    const warn = pct > 10 ? ` CẢNH BÁO: chiếm ${pct.toFixed(1).replace('.', ',')}% dữ liệu — hãy kiểm tra kỹ trước khi xóa.` : '';
+    const ok = await showConfirmModal(
+      `Có ${pv.ghosts.toLocaleString('vi-VN')} ticket đã bị xóa (hoặc chuyển project) trên Jira nhưng vẫn còn trong Supabase (Jira: ${pv.jira.toLocaleString('vi-VN')}, Supabase: ${pv.db.toLocaleString('vi-VN')}). Ví dụ: ${sample}.${warn} Xóa chúng khỏi Supabase?`,
+      { title: 'Xóa ticket đã bị xóa trên Jira', okText: 'Xóa khỏi Supabase', danger: true }
+    );
+    if(!ok){ setStatus(`Đã hủy. Chưa xóa gì (phát hiện ${pv.ghosts.toLocaleString('vi-VN')} ticket cần xóa).`); return; }
+    setStatus(`Đang xóa ${pv.ghosts.toLocaleString('vi-VN')} ticket...`);
+    const res = await callReconcile(false);
+    setStatus(`Đã xóa ${res.deleted.toLocaleString('vi-VN')} ticket khỏi Supabase. Đang tải lại dashboard...`);
+    const fresh = await fetchAllTicketsFromSupabase();
+    applyNewData(fresh);
+    setStatus(`Đã xóa ${res.deleted.toLocaleString('vi-VN')} ticket đã bị xóa trên Jira. Dashboard hiện có ${fresh.length.toLocaleString('vi-VN')} ticket.`, 'ok');
+    showToast(`Đã xóa ${res.deleted.toLocaleString('vi-VN')} ticket không còn trên Jira.`, 'success');
+  }catch(e){
+    setStatus('Đối soát thất bại: ' + e.message, 'err');
+    showToast('Đối soát ticket đã xóa thất bại.', 'error');
+  }finally{
+    btn.disabled = false;
+  }
 };
 
 document.getElementById('changePwBtn').onclick = async ()=>{
