@@ -1401,6 +1401,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   .aa-cron-desc{ margin-top:6px; color:var(--ink-2); font-size:12.5px; }
   .aa-cron-meta{ margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); color:var(--ink-2); font-size:12px; }
   .aa-chip small em{ font-style:normal; color:var(--accent); font-weight:700; }
+  /* Account riêng + comment tự động */
+  .aa-acct-status{ margin:0 0 14px; padding:9px 12px; border-radius:9px; font-size:12.5px; font-weight:600; line-height:1.5; border:1px solid var(--line); background:#f5f7fa; color:var(--ink-2); }
+  .aa-acct-status.ok{ background:var(--ok-bg); border-color:var(--ok-line); color:#1a5e2b; }
+  .aa-acct-status.warn{ background:var(--warn-bg); border-color:var(--warn-line); color:#5c4500; }
+  .aa-acct-msg{ margin-top:12px; padding:9px 12px; border-radius:9px; font-size:12.5px; line-height:1.5; display:none; }
+  .aa-acct-msg.ok{ display:block; background:var(--ok-bg); border:1px solid var(--ok-line); color:#1a5e2b; }
+  .aa-acct-msg.err{ display:block; background:var(--danger-bg); border:1px solid var(--danger-line); color:var(--danger); }
+  .aa-acct-msg.info{ display:block; background:#f5f7fa; border:1px solid var(--line); color:var(--ink-2); }
+  .aa-cmt-head{ display:flex; align-items:center; gap:10px; margin:0 0 8px; flex-wrap:wrap; }
+  .aa-cmt-head .us-label{ margin:0; }
+  .aa-cmt-head .switch input:checked + .slider{ background-color:#28a745; }
+  .aa-cmt-time{ width:120px !important; min-height:34px !important; }
+  textarea.aa-textarea{ width:100%; min-height:84px; padding:9px 12px; border:1.5px solid #c3d1de; border-radius:9px; background:#fff; color:var(--ink); font:inherit; font-size:13px; line-height:1.5; box-sizing:border-box; resize:vertical; }
+  textarea.aa-textarea:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 4px var(--accent-ring); }
+  .aa-acct-btns{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
 
   @media (max-width:900px){
     .aa-grid{ grid-template-columns:1fr; }
@@ -2098,6 +2113,55 @@ https://github.com/nodeca/pako/blob/main/LICENSE
               <input type="number" class="us-input" id="aaMaxPerRun" min="1" max="500" step="1" value="50">
               <p class="us-help" style="margin:4px 0 0;">Chặn giao hàng loạt ngoài ý muốn. Phần vượt giới hạn sẽ xử lý ở lần sau.</p>
             </div>
+          </div>
+        </div>
+
+        <div class="aa-grid">
+          <!-- Account Jira riêng -->
+          <div class="aa-box">
+            <div class="aa-box-title">Tài khoản Jira thực hiện Auto Assign</div>
+            <p class="us-help">Việc quét, giao ticket và comment đều thực hiện bằng tài khoản này, không dùng token chung ở hộp thoại "Cấu hình Token".
+              Tài khoản cần có quyền Browse, Assign và Add comments trên project.</p>
+            <div class="aa-acct-status warn" id="aaAcctStatus">Đang tải...</div>
+            <div class="us-field" style="margin-bottom:12px;">
+              <label class="us-label" for="aaAcctEmail">Email tài khoản Jira</label>
+              <input type="text" class="us-input" id="aaAcctEmail" placeholder="ten.tai.khoan@coca-cola.com.vn" autocomplete="off">
+            </div>
+            <div class="us-field">
+              <label class="us-label" for="aaAcctToken">API Token</label>
+              <div class="input-wrap">
+                <input type="password" class="us-input" id="aaAcctToken" placeholder="Dán API Token của tài khoản này" autocomplete="new-password">
+                <button type="button" class="pw-toggle" data-target="aaAcctToken" aria-label="Hiện / ẩn API Token" title="Hiện / ẩn API Token"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              </div>
+              <p class="us-help" style="margin:4px 0 0;">Để nguyên ô token nếu chỉ đổi email — token đã lưu được giữ lại (hiển thị dạng che).</p>
+            </div>
+            <div class="aa-acct-btns">
+              <button type="button" class="us-btn us-btn-secondary" id="aaAcctTestBtn">🔌 Kiểm tra kết nối</button>
+              <button type="button" class="us-btn us-btn-primary" id="aaAcctSaveBtn">💾 Lưu account</button>
+            </div>
+            <div class="aa-acct-msg" id="aaAcctMsg"></div>
+          </div>
+
+          <!-- Comment tự động -->
+          <div class="aa-box">
+            <div class="aa-box-title">Comment tự động</div>
+            <p class="us-help">Gửi bằng account riêng ở bên cạnh. Lưu cùng nút "Lưu cấu hình" bên dưới.</p>
+
+            <div class="aa-cmt-head">
+              <label class="switch"><input type="checkbox" id="aaCmtAssignOn" checked><span class="slider"></span></label>
+              <span class="us-label">Comment ngay khi giao ticket</span>
+            </div>
+            <textarea class="aa-textarea" id="aaCmtAssignText" rows="3" spellcheck="false"></textarea>
+
+            <div class="aa-cmt-head" style="margin-top:16px;">
+              <label class="switch"><input type="checkbox" id="aaCmtDailyOn" checked><span class="slider"></span></label>
+              <span class="us-label">Nhắc hằng ngày lúc</span>
+              <input type="time" class="us-input aa-cmt-time" id="aaCmtDailyTime" value="09:00">
+            </div>
+            <textarea class="aa-textarea" id="aaCmtDailyText" rows="3" spellcheck="false"></textarea>
+            <p class="us-help" style="margin:6px 0 0;">Nhắc cho ticket do Auto Assign giao từ hôm trước trở đi và chưa Done; mỗi ticket tối đa 1 comment / ngày.
+              Ticket đã Done sẽ tự ngừng nhắc. Chỉ chạy khi job Auto Assign đang bật.</p>
+            <div class="aa-opt" id="aaCmtInfo" style="margin-top:8px;"></div>
           </div>
         </div>
 
@@ -6053,10 +6117,13 @@ async function aaOnTabOpen(){
       await aaLoadSyncSchedule();
       const ok = await aaLoadConfig();
       if(ok){ aaLoadedOnce = true; await aaLoadLog(); }
+      await aaLoadAccount();
+      await aaLoadCommentCfg(false);
     } else {
       await aaLoadSyncSchedule();        // đọc lại lịch sync thật (phòng khi cron vừa được đổi)
       aaRenderState(aaSavedCfg || {});   // cập nhật lại "lần chạy kế tiếp" theo giờ hiện tại
       await aaLoadLog();
+      await aaLoadCommentCfg(true);      // chỉ làm mới dòng "lần nhắc gần nhất", không ghi đè nội dung đang sửa
     }
   }catch(e){
     aaSetAlert('Không kết nối được Supabase: ' + e.message + '. Kiểm tra mạng rồi mở lại tab này.', 'err');
@@ -6081,6 +6148,11 @@ async function aaSave(){
   if(enabled && !days.length){ aaSetAlert('Hãy chọn ít nhất 1 ngày trong tuần.', 'err'); return; }
   const status = aaEl('aaStatusName').value.trim(), gField = aaEl('aaGroupField').value.trim(), gValue = aaEl('aaGroupValue').value.trim();
   if(!status || !gField || !gValue){ aaSetAlert('Status, tên field nhóm và giá trị không được để trống.', 'err'); return; }
+  if(aaCmtSupported){
+    if(aaEl('aaCmtAssignOn').checked && !aaEl('aaCmtAssignText').value.trim()){ aaSetAlert('Nội dung comment khi giao ticket không được để trống.', 'err'); return; }
+    if(aaEl('aaCmtDailyOn').checked && !aaEl('aaCmtDailyText').value.trim()){ aaSetAlert('Nội dung comment hằng ngày không được để trống.', 'err'); return; }
+    if(!/^([01]?\d|2[0-3]):[0-5]\d$/.test(aaEl('aaCmtDailyTime').value)){ aaSetAlert('Giờ nhắc hằng ngày không hợp lệ.', 'err'); return; }
+  }
   const sel = aaEl('aaAssignee');
   const accountId = sel.value;
   const opt = sel.selectedOptions[0];
@@ -6124,7 +6196,22 @@ async function aaSave(){
     }
     if(r.status === 401 || r.status === 403){ aaSetAlert('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.', 'err'); return; }
     if(!r.ok || r.data !== true){ aaSetAlert('Lưu thất bại: ' + aaErrMsg(r), 'err'); return; }
+    let cmtErr = '';
+    if(aaCmtSupported){
+      const rc = await rpc('auto_assign_save_comment_cfg', {
+        session_token: token,
+        p_on_assign_enabled: aaEl('aaCmtAssignOn').checked, p_on_assign_text: aaEl('aaCmtAssignText').value.trim(),
+        p_daily_enabled: aaEl('aaCmtDailyOn').checked, p_daily_time: aaEl('aaCmtDailyTime').value, p_daily_text: aaEl('aaCmtDailyText').value.trim()
+      });
+      if(!rc.ok || rc.data !== true) cmtErr = aaErrMsg(rc);
+    }
     await aaLoadConfig();   // đọc lại từ server để chắc chắn form khớp dữ liệu đã lưu
+    if(aaCmtSupported && !cmtErr) await aaLoadCommentCfg(false);
+    if(cmtErr){
+      aaDirty = true;       // cấu hình comment chưa lưu được -> giữ trạng thái "chưa lưu"
+      aaSetAlert('Đã lưu cấu hình Auto Assign, NHƯNG lưu cấu hình comment thất bại: ' + cmtErr, 'err');
+      return;
+    }
     aaSetAlert(enabled ? 'Đã lưu. Job Auto Assign đang BẬT.' : 'Đã lưu. Job Auto Assign đang TẮT.', 'ok');
     showToast('Đã lưu cấu hình Auto Assign', 'success');
   }catch(e){
@@ -6181,7 +6268,7 @@ async function aaCallEdge(mode){
     }
     aaRenderResult(data, mode);
     if(mode === 'run'){
-      const msg = 'Đã giao ' + data.assigned + '/' + data.found + ' ticket' + (data.failed ? ' — ' + data.failed + ' lỗi' : '') + '.';
+      const msg = 'Đã giao ' + data.assigned + '/' + data.found + ' ticket' + (data.failed ? ' — ' + data.failed + ' lỗi' : '') + (data.commented ? ', đã comment ' + data.commented : '') + (data.commentFailed ? ', ' + data.commentFailed + ' comment lỗi' : '') + '.';
       aaSetAlert(msg, data.failed ? 'err' : 'ok');
       showToast(msg, data.failed ? 'error' : 'success');
       await aaLoadLog();
@@ -6197,16 +6284,17 @@ function aaRenderResult(data, mode){
   aaEl('aaResultPanel').style.display = '';
   aaEl('aaResultTitle').textContent = mode === 'run' ? 'Kết quả chạy ngay' : 'Kết quả xem trước';
   aaEl('aaResultMeta').textContent = mode === 'run'
-    ? 'Tìm thấy ' + data.found + ' · đã giao ' + data.assigned + ' · lỗi ' + data.failed + (data.assignee ? ' · người nhận: ' + data.assignee : '')
+    ? 'Tìm thấy ' + data.found + ' · đã giao ' + data.assigned + ' · lỗi ' + data.failed + (data.commented != null ? ' · đã comment ' + data.commented : '') + (data.assignee ? ' · người nhận: ' + data.assignee : '')
     : 'Sẽ giao ' + data.found + ' ticket' + (data.assignee ? ' cho ' + data.assignee : '') + ' nếu chạy thật.';
   aaEl('aaResultJql').innerHTML = '<b>JQL:</b> <code class="us-code">' + aaEsc(data.jql) + '</code>' +
-    (data.truncated ? '<div class="aa-warn">Còn ticket vượt giới hạn mỗi lần chạy — phần còn lại sẽ xử lý ở lần sau.</div>' : '');
+    (data.truncated ? '<div class="aa-warn">Còn ticket vượt giới hạn mỗi lần chạy — phần còn lại sẽ xử lý ở lần sau.</div>' : '') +
+    (data.commentNote ? '<div class="aa-warn">' + aaEsc(data.commentNote) + '</div>' : '');
   const body = aaEl('aaResultBody');
   if(!data.items || !data.items.length){ body.innerHTML = '<tr><td colspan="3" class="us-empty">Không có ticket nào thoả điều kiện.</td></tr>'; return; }
   body.innerHTML = data.items.map(it => {
     let badge;
     if(it.ok === null || it.ok === undefined) badge = '<span class="us-pill" style="background:#e6f0fd;color:#1456a0;">Sẽ giao</span>';
-    else if(it.ok) badge = '<span class="us-pill ok">Đã giao</span>';
+    else if(it.ok) badge = '<span class="us-pill ok">Đã giao</span>' + aaCmtBadge(it);
     else badge = '<span class="us-pill err" title="' + aaEsc(it.error || '') + '">Lỗi</span>' + (it.error ? ' <span class="aa-err-text">' + aaEsc(it.error) + '</span>' : '');
     return '<tr><td><code class="us-code">' + aaEsc(it.key) + '</code></td><td>' + aaEsc(it.summary) + '</td><td>' + badge + '</td></tr>';
   }).join('');
@@ -6246,7 +6334,7 @@ function aaToggleDetail(btn){
   const list = items.length
     ? '<ul class="aa-detail-list">' + items.map(it =>
         '<li><code class="us-code">' + aaEsc(it.key) + '</code> ' + aaEsc(it.summary) + ' ' +
-        (it.ok ? '<span class="us-pill ok">Đã giao</span>' : '<span class="us-pill err">Lỗi</span> <span class="aa-err-text">' + aaEsc(it.error || '') + '</span>') + '</li>').join('') + '</ul>'
+        (it.ok ? '<span class="us-pill ok">Đã giao</span>' + aaCmtBadge(it) : '<span class="us-pill err">Lỗi</span> <span class="aa-err-text">' + aaEsc(it.error || '') + '</span>') + '</li>').join('') + '</ul>'
     : '<div class="aa-opt">Không có ticket nào trong lần chạy này.</div>';
   const d = document.createElement('tr');
   d.className = 'aa-detail-row';
@@ -6258,7 +6346,157 @@ function aaToggleDetail(btn){
   btn.textContent = 'Ẩn';
 }
 
+/* ---------- Account Jira riêng + Comment tự động ---------- */
+let aaCmtSupported = true;       // false khi chưa chạy auto_assign_account_comment.sql
+let aaAcctSaved = null;          // { configured, jira_email, token_masked }
+let aaAcctTokenDirty = false;    // true khi người dùng thực sự gõ vào ô token (server chỉ trả token đã che)
+
+function aaCmtBadge(it){
+  if(it.commented === true) return ' <span class="us-pill" style="background:#e6f0fd;color:#1456a0;">Đã comment</span>';
+  if(it.commented === false) return ' <span class="us-pill err" title="' + aaEsc(it.comment_error || '') + '">Comment lỗi</span> <span class="aa-err-text">' + aaEsc(it.comment_error || '') + '</span>';
+  return '';
+}
+
+function aaAcctMsg(msg, type){
+  const el = aaEl('aaAcctMsg');
+  if(!msg){ el.className = 'aa-acct-msg'; el.textContent = ''; return; }
+  el.className = 'aa-acct-msg ' + (type || 'info'); el.textContent = msg;
+}
+
+function aaAcctRenderStatus(){
+  const el = aaEl('aaAcctStatus');
+  if(!aaCmtSupported){
+    el.className = 'aa-acct-status warn';
+    el.textContent = 'Chưa cài phần server cho account riêng & comment — chạy file auto_assign_account_comment.sql trong Supabase SQL Editor rồi mở lại tab này.';
+    ['aaAcctEmail', 'aaAcctToken', 'aaAcctTestBtn', 'aaAcctSaveBtn', 'aaCmtAssignOn', 'aaCmtAssignText', 'aaCmtDailyOn', 'aaCmtDailyTime', 'aaCmtDailyText']
+      .forEach(id => { aaEl(id).disabled = true; });
+    return;
+  }
+  ['aaAcctEmail', 'aaAcctToken', 'aaAcctTestBtn', 'aaAcctSaveBtn', 'aaCmtAssignOn', 'aaCmtAssignText', 'aaCmtDailyOn', 'aaCmtDailyTime', 'aaCmtDailyText']
+    .forEach(id => { aaEl(id).disabled = false; });
+  if(aaAcctSaved && aaAcctSaved.configured){
+    el.className = 'aa-acct-status ok';
+    el.textContent = 'Đang dùng account riêng: ' + aaAcctSaved.jira_email;
+  } else {
+    el.className = 'aa-acct-status warn';
+    el.textContent = 'Chưa lưu account riêng — Auto Assign đang dùng token chung và CHƯA gửi comment (comment chỉ gửi bằng account riêng).';
+  }
+}
+
+async function aaLoadAccount(){
+  const token = getSessionToken(); if(!token) return;
+  try{
+    const r = await rpc('auto_assign_get_account', { session_token: token });
+    if(aaIsMissingServer(r)){ aaCmtSupported = false; aaAcctRenderStatus(); return; }
+    if(!r.ok || !Array.isArray(r.data) || !r.data[0]){
+      aaEl('aaAcctStatus').className = 'aa-acct-status warn';
+      aaEl('aaAcctStatus').textContent = 'Không tải được account riêng: ' + aaErrFull(r);
+      return;
+    }
+    aaCmtSupported = true;
+    aaAcctSaved = r.data[0];
+    aaEl('aaAcctEmail').value = aaAcctSaved.jira_email || '';
+    aaEl('aaAcctToken').value = aaAcctSaved.token_masked || '';
+    aaAcctTokenDirty = false;
+    aaAcctRenderStatus();
+  }catch(e){
+    aaEl('aaAcctStatus').className = 'aa-acct-status warn';
+    aaEl('aaAcctStatus').textContent = 'Lỗi kết nối Supabase khi tải account riêng: ' + e.message;
+  }
+}
+
+async function aaAcctSave(){
+  const token = getSessionToken();
+  if(!token){ aaAcctMsg('Phiên đăng nhập Admin đã hết hạn, vui lòng đăng nhập lại.', 'err'); return; }
+  const email = aaEl('aaAcctEmail').value.trim();
+  const newTok = aaAcctTokenDirty ? aaEl('aaAcctToken').value.trim() : '';
+  if(!email){ aaAcctMsg('Hãy nhập email tài khoản Jira.', 'err'); return; }
+  if(!(aaAcctSaved && aaAcctSaved.configured) && !newTok){ aaAcctMsg('Hãy nhập API token.', 'err'); return; }
+  aaAcctMsg('Đang lưu...', 'info');
+  ['aaAcctSaveBtn', 'aaAcctTestBtn'].forEach(id => { aaEl(id).disabled = true; });
+  try{
+    const r = await rpc('auto_assign_save_account', { session_token: token, p_email: email, p_token: newTok || null });
+    if(aaIsMissingServer(r)){ aaCmtSupported = false; aaAcctRenderStatus(); aaAcctMsg('Chưa cài phần server — chạy file auto_assign_account_comment.sql.', 'err'); return; }
+    if(r.status === 401 || r.status === 403){ aaAcctMsg('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.', 'err'); return; }
+    if(!r.ok || r.data !== true){ aaAcctMsg('Lưu thất bại: ' + aaErrMsg(r), 'err'); return; }
+    await aaLoadAccount();
+    aaAcctMsg('Đã lưu account. Từ lần chạy kế tiếp, Auto Assign dùng account này.', 'ok');
+    showToast('Đã lưu account Auto Assign', 'success');
+  }catch(e){
+    aaAcctMsg('Lỗi kết nối Supabase: ' + e.message, 'err');
+  }finally{
+    if(aaCmtSupported) ['aaAcctSaveBtn', 'aaAcctTestBtn'].forEach(id => { aaEl(id).disabled = false; });
+  }
+}
+
+/* Kiểm tra qua Edge Function (server-side) — gọi thẳng Jira từ trình duyệt sẽ bị CORS chặn */
+async function aaAcctTest(){
+  const token = getSessionToken();
+  if(!token){ aaAcctMsg('Phiên đăng nhập Admin đã hết hạn, vui lòng đăng nhập lại.', 'err'); return; }
+  const email = aaEl('aaAcctEmail').value.trim();
+  const typedTok = aaAcctTokenDirty ? aaEl('aaAcctToken').value.trim() : '';   // không gõ token mới -> server dùng token đã lưu
+  if(!email){ aaAcctMsg('Hãy nhập email tài khoản Jira.', 'err'); return; }
+  if(!typedTok && !(aaAcctSaved && aaAcctSaved.configured)){ aaAcctMsg('Hãy nhập API token.', 'err'); return; }
+  aaAcctMsg('Đang kiểm tra kết nối Jira...', 'info');
+  ['aaAcctSaveBtn', 'aaAcctTestBtn'].forEach(id => { aaEl(id).disabled = true; });
+  try{
+    const resp = await fetch(SUPABASE_URL + '/functions/v1/' + AA_EDGE_FUNCTION, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'test_account', session_token: token, email: email, token: typedTok })
+    });
+    const data = await resp.json().catch(() => null);
+    if(resp.status === 404){ aaAcctMsg('Edge Function "' + AA_EDGE_FUNCTION + '" chưa được deploy (hoặc sai tên).', 'err'); return; }
+    if(resp.status === 400 && data && /mode không hợp lệ/.test(data.error || '')){ aaAcctMsg('Edge Function đang chạy bản cũ — hãy deploy lại file index.ts mới.', 'err'); return; }
+    if(resp.status === 401){ aaAcctMsg('Bị từ chối (401): ' + ((data && (data.error || data.message)) || 'phiên đăng nhập hết hạn'), 'err'); return; }
+    if(!data || !data.ok){ aaAcctMsg('Kiểm tra thất bại: ' + ((data && (data.error || data.detail)) || ('HTTP ' + resp.status)), 'err'); return; }
+    aaAcctMsg('Kết nối thành công. Đăng nhập với: ' + (data.displayName || data.emailAddress || email) + (data.emailAddress && data.displayName ? ' (' + data.emailAddress + ')' : ''), 'ok');
+  }catch(e){
+    aaAcctMsg('Lỗi kết nối Edge Function: ' + e.message, 'err');
+  }finally{
+    if(aaCmtSupported) ['aaAcctSaveBtn', 'aaAcctTestBtn'].forEach(id => { aaEl(id).disabled = false; });
+  }
+}
+
+const AA_CMT_DEFAULT_ASSIGN = 'Hi Team\nMDM nhận tin và đang kiểm tra nhé\nCảm ơn';
+const AA_CMT_DEFAULT_DAILY = 'Hi Team\nMDM vẫn đang trong quá trình kiểm tra và xử lí, mong team thông cảm\nCảm ơn';
+
+function aaCmtRenderInfo(c){
+  const el = aaEl('aaCmtInfo');
+  if(!c || !c.daily_last_at){ el.textContent = 'Chưa có lần nhắc hằng ngày nào.'; return; }
+  el.textContent = 'Lần nhắc gần nhất: ' + new Date(c.daily_last_at).toLocaleString('vi-VN') + (c.daily_last_result ? ' — ' + c.daily_last_result : '');
+}
+
+async function aaLoadCommentCfg(infoOnly){
+  const token = getSessionToken(); if(!token) return;
+  try{
+    const r = await rpc('auto_assign_get_comment_cfg', { session_token: token });
+    if(aaIsMissingServer(r)){ aaCmtSupported = false; aaAcctRenderStatus(); return; }
+    if(!r.ok || !Array.isArray(r.data) || !r.data[0]){ aaEl('aaCmtInfo').textContent = 'Không tải được cấu hình comment: ' + aaErrFull(r); return; }
+    const c = r.data[0];
+    aaCmtRenderInfo(c);
+    if(infoOnly) return;
+    aaApplying = true;
+    try{
+      aaEl('aaCmtAssignOn').checked = !!c.on_assign_enabled;
+      aaEl('aaCmtAssignText').value = c.on_assign_text || AA_CMT_DEFAULT_ASSIGN;
+      aaEl('aaCmtDailyOn').checked = !!c.daily_enabled;
+      aaEl('aaCmtDailyTime').value = c.daily_time || '09:00';
+      aaEl('aaCmtDailyText').value = c.daily_text || AA_CMT_DEFAULT_DAILY;
+    } finally { aaApplying = false; }
+  }catch(e){
+    aaEl('aaCmtInfo').textContent = 'Lỗi kết nối Supabase khi tải cấu hình comment: ' + e.message;
+  }
+}
+
 /* ---------- Gắn sự kiện ---------- */
+aaEl('aaCmtAssignText').value = AA_CMT_DEFAULT_ASSIGN;      // giá trị hiển thị tạm trước khi tải từ server
+aaEl('aaCmtDailyText').value = AA_CMT_DEFAULT_DAILY;
+['aaCmtAssignText', 'aaCmtDailyText', 'aaCmtDailyTime'].forEach(id => aaEl(id).addEventListener('input', aaMarkDirty));
+['aaCmtAssignOn', 'aaCmtDailyOn'].forEach(id => aaEl(id).addEventListener('change', aaMarkDirty));
+aaEl('aaAcctToken').addEventListener('input', () => { aaAcctTokenDirty = true; });
+aaEl('aaAcctSaveBtn').addEventListener('click', aaAcctSave);
+aaEl('aaAcctTestBtn').addEventListener('click', aaAcctTest);
 aaEl('aaSrcCronBtn').addEventListener('click', () => { aaSetSource('cron'); aaMarkDirty(); aaRenderPreview(); });
 aaEl('aaSrcManualBtn').addEventListener('click', () => { aaSetSource('manual'); aaMarkDirty(); aaRenderPreview(); });
 aaEl('aaModeFixedBtn').addEventListener('click', () => { aaSetMode('fixed'); aaMarkDirty(); aaRenderPreview(); });
