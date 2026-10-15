@@ -2234,6 +2234,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
           <button class="us-btn us-btn-primary us-btn-lg" id="aaSaveBtn">💾 Lưu cấu hình</button>
           <button class="us-btn us-btn-secondary us-btn-lg" id="aaDryRunBtn">🔍 Xem trước (không gán)</button>
           <button class="us-btn us-btn-secondary us-btn-lg" id="aaRunNowBtn">▶ Chạy ngay</button>
+          <button class="us-btn us-btn-secondary us-btn-lg" id="aaBackfillBtn" title="Comment bù cho các ticket đã giao nhưng chưa có comment lúc giao">💬 Comment bù ticket sót</button>
         </div>
         <div id="aaAlert" class="us-alert" style="display:none;"></div>
       </div>
@@ -6221,7 +6222,7 @@ async function aaSave(){
 
 function aaBusyOn(on){
   aaBusy = on;
-  ['aaSaveBtn', 'aaDryRunBtn', 'aaRunNowBtn'].forEach(id => { aaEl(id).disabled = on; });
+  ['aaSaveBtn', 'aaDryRunBtn', 'aaRunNowBtn', 'aaBackfillBtn'].forEach(id => { aaEl(id).disabled = on; });
 }
 
 /* ---------- Xem trước / Chạy ngay (gọi Edge Function, dùng cấu hình ĐÃ LƯU) ---------- */
@@ -6277,6 +6278,73 @@ async function aaCallEdge(mode){
     }
   }catch(e){
     aaSetAlert('Lỗi kết nối Edge Function: ' + e.message + ' — thường do Edge Function chưa deploy hoặc bị chặn CORS; hãy xem tab Logs của function trên Supabase.', 'err');
+  }finally{ aaBusyOn(false); }
+}
+
+/* ---------- Comment bù cho ticket đã giao nhưng chưa có comment (first_comment_at rỗng) ---------- */
+async function aaBackfillCall(mode, token){
+  const resp = await fetch(SUPABASE_URL + '/functions/v1/' + AA_EDGE_FUNCTION, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: mode, session_token: token })
+  });
+  const data = await resp.json().catch(() => null);
+  return { resp, data };
+}
+
+function aaRenderBackfill(data, done){
+  aaEl('aaResultPanel').style.display = '';
+  aaEl('aaResultTitle').textContent = done ? 'Kết quả comment bù' : 'Ticket sót comment';
+  aaEl('aaResultMeta').textContent = done
+    ? 'Đã comment ' + data.commented + '/' + data.found + ' · lỗi ' + data.failed + (data.skippedClosed ? ' · bỏ qua ' + data.skippedClosed + ' ticket đã đóng' : '')
+    : 'Có ' + data.found + ' ticket chưa có comment lúc giao' + (data.skippedClosed ? ' (bỏ qua ' + data.skippedClosed + ' ticket đã đóng)' : '') + '.';
+  aaEl('aaResultJql').innerHTML = '<b>Nguồn:</b> bảng <code class="us-code">auto_assign_tracked</code> (first_comment_at rỗng, chưa đóng)' +
+    (data.more ? '<div class="aa-warn">Còn ticket vượt giới hạn mỗi lần — bấm nút lần nữa để xử lý tiếp.</div>' : '');
+  const body = aaEl('aaResultBody');
+  if(!data.items || !data.items.length){ body.innerHTML = '<tr><td colspan="3" class="us-empty">Không có ticket nào cần comment bù.</td></tr>'; return; }
+  body.innerHTML = data.items.map(it => {
+    let badge;
+    if(it.ok === null || it.ok === undefined) badge = '<span class="us-pill" style="background:#e6f0fd;color:#1456a0;">Sẽ comment</span>';
+    else if(it.ok) badge = '<span class="us-pill ok">Đã comment</span>';
+    else badge = '<span class="us-pill err" title="' + aaEsc(it.error || '') + '">Lỗi</span>' + (it.error ? ' <span class="aa-err-text">' + aaEsc(it.error) + '</span>' : '');
+    return '<tr><td><code class="us-code">' + aaEsc(it.key) + '</code></td><td>' + aaEsc(it.summary) + '</td><td>' + badge + '</td></tr>';
+  }).join('');
+  aaEl('aaResultPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function aaBackfill(){
+  const token = getSessionToken();
+  if(!token){ aaSetAlert('Phiên đăng nhập Admin đã hết hạn, vui lòng đăng nhập lại.', 'err'); return; }
+  if(aaDirty){
+    aaSetAlert('Bạn có thay đổi chưa lưu. Hãy bấm "Lưu cấu hình" trước — comment bù dùng nội dung đã lưu trên server.', 'err');
+    return;
+  }
+  aaBusyOn(true);
+  try{
+    aaSetAlert('Đang tìm ticket đã giao nhưng chưa có comment...', 'info');
+    let { resp, data } = await aaBackfillCall('backfill_dry', token);
+    if(resp.status === 404){ aaSetAlert('Edge Function "' + AA_EDGE_FUNCTION + '" chưa deploy bản mới (chưa có chế độ backfill).', 'err'); return; }
+    if(resp.status === 400 && data && /mode không hợp lệ/.test(data.error || '')){ aaSetAlert('Edge Function đang là bản cũ, chưa hỗ trợ comment bù — hãy deploy lại file jira-auto-assign mới.', 'err'); return; }
+    if(!resp.ok || !data || !data.ok){ aaSetAlert('Thất bại: ' + ((data && (data.error || data.detail || data.message)) || ('HTTP ' + resp.status)), 'err'); return; }
+    aaRenderBackfill(data, false);
+    if(!data.found){
+      aaSetAlert('Không có ticket nào cần comment bù' + (data.skippedClosed ? ' (' + data.skippedClosed + ' ticket đã ở trạng thái đóng nên bỏ qua).' : '.'), 'info');
+      return;
+    }
+    const ok = await showConfirmModal(
+      'Gửi comment cho ' + data.found + ' ticket đã giao nhưng chưa có comment?\n\nNội dung là "Comment ngay khi giao ticket" đã lưu, gửi bằng account riêng của Auto Assign.\nMỗi ticket chỉ được comment bù 1 lần.',
+      { title: 'Comment bù ticket sót', okText: 'Gửi comment' }
+    );
+    if(!ok){ aaSetAlert('Đã huỷ. Chưa có comment nào được gửi.', 'info'); return; }
+    aaSetAlert('Đang gửi comment lên Jira...', 'info');
+    ({ resp, data } = await aaBackfillCall('backfill', token));
+    if(!resp.ok || !data || !data.ok){ aaSetAlert('Thất bại: ' + ((data && (data.error || data.detail || data.message)) || ('HTTP ' + resp.status)), 'err'); return; }
+    aaRenderBackfill(data, true);
+    const msg = 'Đã comment bù ' + data.commented + '/' + data.found + ' ticket' + (data.failed ? ' — ' + data.failed + ' lỗi (xem chi tiết bên dưới)' : '') + (data.more ? '. Còn ticket, bấm nút lần nữa.' : '.');
+    aaSetAlert(msg, data.failed ? 'err' : 'ok');
+    showToast(msg, data.failed ? 'error' : 'success');
+  }catch(e){
+    aaSetAlert('Lỗi kết nối Edge Function: ' + e.message, 'err');
   }finally{ aaBusyOn(false); }
 }
 
@@ -6511,6 +6579,7 @@ aaEl('aaDays').addEventListener('change', () => { aaMarkDirty(); aaRenderPreview
 aaEl('aaSaveBtn').addEventListener('click', aaSave);
 aaEl('aaDryRunBtn').addEventListener('click', () => aaCallEdge('dry_run'));
 aaEl('aaRunNowBtn').addEventListener('click', () => aaCallEdge('run'));
+aaEl('aaBackfillBtn').addEventListener('click', aaBackfill);
 aaEl('aaRefreshLogBtn').addEventListener('click', aaLoadLog);
 aaEl('aaLogBody').addEventListener('click', (e) => { const b = e.target.closest('.aa-toggle'); if(b) aaToggleDetail(b); });
 aaRenderCronInfo();
