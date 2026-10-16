@@ -1022,9 +1022,11 @@ table.resizable.fixed td{overflow:hidden}
 .jk-free{display:block;color:var(--muted);border-top:1px dashed var(--line);border-radius:0 0 8px 8px;margin-top:2px}
 .jk-empty,.jk-foot{padding:8px 10px;font-size:11px;color:var(--muted)}
 .jk-foot{border-top:1px solid var(--line);margin-top:2px}
-.jk-hint{font-size:10.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jk-hint{font-size:10.5px;color:var(--muted);line-height:1.35}
 .jk-hint.ok{color:#1e7e34}
 .jk-hint.warn{color:#8a6100}
+.field.is-auto>span:first-child::after{content:" · tự động từ Jira";color:#1e7e34;font-weight:600;text-transform:none;letter-spacing:0}
+.field.is-auto :is(input,select){background:#f1f6f3;color:#41505f;opacity:.9}
 </style>
 </head>
 <body>
@@ -1072,6 +1074,7 @@ table.resizable.fixed td{overflow:hidden}
         <div class="nav-label">Quản trị</div>
         <nav class="nav-list" aria-label="Quản trị">
           <button class="nav-btn" data-tab="members"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span><span>Thành viên</span><span class="nav-count alert" id="pendingCount"></span></button>
+          <button class="nav-btn" data-tab="recycle"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M6.5 7l.8 13h9.4l.8-13"/></svg></span><span>Thùng rác</span><span class="nav-count" id="navRecycle"></span></button>
         </nav>
       </div>
     </div>
@@ -1803,12 +1806,13 @@ const TAB_META = {
   risks: ["Rủi ro & deadline", "RISK CONTROL", "Quá hạn, sắp đến hạn, ticket ì, blocked, chưa giao và thiếu mốc thời gian."],
   reports: ["Báo cáo", "REPORTING", "Số liệu theo kỳ được tính từ dữ liệu thật, kèm xuất CSV."],
   activity: ["Lịch sử hoạt động", "AUDIT TRAIL", "Thay đổi nội bộ trên backlog và task, được ghi tại database."],
+  recycle: ["Thùng rác", "RECYCLE BIN", "Backlog và task đã xoá. Chỉ super_admin xem, khôi phục hoặc xoá vĩnh viễn."],
   members: ["Thành viên", "ACCESS CONTROL", "Phê duyệt yêu cầu và kiểm tra quyền truy cập workspace."]
 };
 function renderShell(){
   if (!state.session || !state.member || state.member.status !== "approved") return;
   updateUserHeader();
-  if (state.tab === "members" && !isAdmin()) state.tab = "overview";
+  if ((state.tab === "members" || state.tab === "recycle") && !isAdmin()) state.tab = "overview";
   const meta = TAB_META[state.tab] || TAB_META.overview;
   $("#crumbTitle").textContent = meta[0];
   $("#pageEyebrow").textContent = meta[1];
@@ -1822,7 +1826,7 @@ function setActions(markup){ $("#pageActions").innerHTML = markup || ""; }
 const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 function tabDataReady(){
   const t = state.tab, d = state.settled;
-  if (t === "activity") return true;
+  if (t === "activity" || t === "recycle") return true;
   if (t === "members") return !!d.members;
   if (t === "backlogs" || t === "tasks") return !!(d.backlogs && d.tasks && d.directory);
   return !!(d.tickets && d.backlogs && d.tasks && d.directory);
@@ -1866,6 +1870,7 @@ function renderActivePage(){
   else if (state.tab === "risks") renderRisks();
   else if (state.tab === "reports") renderReports();
   else if (state.tab === "activity") renderActivity();
+  else if (state.tab === "recycle") renderRecycle();
   else renderMembers();
   if (animate) animatePage();
 }
@@ -1875,6 +1880,7 @@ function paintCount(el, value, alert){
   el.classList.toggle("alert", !!alert);
 }
 function paintNavCounts(){
+  if (isAdmin() && state.recycle === undefined) { state.recycle = null; loadRecycle().catch(function(){}); }
   const items = allItems();
   paintCount($("#navTickets"), items.filter(function(i){ return i.kind === "ticket" && i.statusGroup !== "done"; }).length, false);
   paintCount($("#navBacklogs"), items.filter(function(i){ return i.kind === "backlog" && i.statusGroup !== "done"; }).length, false);
@@ -3431,10 +3437,9 @@ function openRecord(kind, id, preset){
     f += formField("target_date", "Deadline (target)", "date", existing.target_date || existing.due_date);
     f += formField("actual_start_date", "Bắt đầu thực tế", "date", existing.actual_start_date);
     f += formField("completed_date", "Ngày hoàn thành", "date", existing.completed_date);
-    f += formField("estimated_effort", "Effort ước tính (giờ)", "number", existing.estimated_effort);
     f += formField("actual_effort", "Effort thực tế (giờ)", "number", existing.actual_effort);
     f += formField("progress", "Tiến độ (%)", "number", existing.progress == null ? 0 : existing.progress);
-    f += formField("jira_key", "Jira key liên kết", "jirakey", existing.jira_key, null, false, "Gõ hoặc chọn ticket, ví dụ: PROJ-123");
+    f += formField("jira_key", "Jira key liên kết", "jirakey", existing.jira_key, null, false, "Gõ để tìm và chọn ticket Jira");
     f += formField("blocked_reason", "Lý do bị chặn", "text", existing.blocked_reason, null, true, "Nên ghi khi trạng thái là Blocked (không bắt buộc)");
     f += formField("description", "Mô tả", "textarea", existing.description, null, true, "Mục tiêu, phạm vi, kết quả mong đợi…");
   } else {
@@ -3454,7 +3459,7 @@ function openRecord(kind, id, preset){
     f += formField("description", "Mô tả", "textarea", existing.description, null, true, "Chi tiết, tiêu chí hoàn thành…");
   }
   $("#recordFields").innerHTML = f;
-  $$("#recordFields input[data-jk]").forEach(jkHint);
+  $$("#recordFields input[data-jk]").forEach(function(i){ jkHint(i); jkApply(i); });
   $("#recordDialog").showModal();
 }
 function cleanText(v){
@@ -3484,7 +3489,6 @@ function buildPayload(kind, data){
       target_date: cleanDay(data.target_date),
       actual_start_date: cleanDay(data.actual_start_date),
       completed_date: cleanDay(data.completed_date),
-      estimated_effort: cleanNum(data.estimated_effort),
       actual_effort: cleanNum(data.actual_effort),
       progress: cleanNum(data.progress),
       blocked_reason: cleanText(data.blocked_reason),
@@ -3537,10 +3541,10 @@ function jkSearch(q){
 }
 function jkHint(input){
   const el = input.closest(".jk").querySelector(".jk-hint"), v = input.value.trim();
-  if (!v) { el.className = "jk-hint"; el.textContent = "Chọn từ danh sách Jira tickets hoặc tự nhập mã; có thể để trống."; return; }
+  if (!v) { el.className = "jk-hint"; el.textContent = "Chỉ chọn mã có trong Jira tickets; có thể để trống."; return; }
   const t = jkTickets().find(function(x){ return x.code.toLowerCase() === v.toLowerCase(); });
   if (t) { el.className = "jk-hint ok"; el.textContent = "✓ " + t.title; }
-  else { el.className = "jk-hint warn"; el.textContent = "Mã chưa có trong Jira tickets — vẫn lưu bình thường."; }
+  else { el.className = "jk-hint warn"; el.textContent = "Mã không có trong Jira tickets — hãy chọn từ danh sách."; }
 }
 function jkRender(input, keepActive){
   const list = input.closest(".jk").querySelector(".jk-list"), q = input.value.trim();
@@ -3548,8 +3552,7 @@ function jkRender(input, keepActive){
   let h = rows.map(function(t){
     return '<div class="jk-item" role="option" data-key="' + escAttr(t.code) + '"><b>' + esc(t.code) + '</b><span class="jk-sum">' + esc(t.title) + '</span><em>' + esc([t.status, t.ownerName].filter(Boolean).join(" · ")) + '</em></div>';
   }).join("");
-  if (q && !exact) h += '<div class="jk-item jk-free" role="option" data-key="' + escAttr(q.toUpperCase()) + '">Dùng mã “<b>' + esc(q.toUpperCase()) + '</b>” (nhập tay)</div>';
-  if (!h) h = '<div class="jk-empty">Chưa có Jira tickets để gợi ý — bạn vẫn có thể nhập mã.</div>';
+  if (!h) h = '<div class="jk-empty">Không có ticket nào khớp.</div>';
   else h += '<div class="jk-foot">' + (q ? "Kết quả khớp" : "Ticket cập nhật gần đây") + " · gõ để lọc theo mã, tiêu đề, người xử lý</div>";
   list.innerHTML = h;
   list.dataset.active = keepActive ? list.dataset.active || "-1" : "-1";
@@ -3560,8 +3563,23 @@ function jkClose(input){
   const list = input.closest(".jk").querySelector(".jk-list");
   list.hidden = true; input.setAttribute("aria-expanded", "false");
 }
+function jkApply(input){
+  const form = input.closest("#recordFields"); if (!form) return;
+  const kind = state.editing && state.editing.kind;
+  const t = input.value ? jkTickets().find(function(x){ return x.code.toLowerCase() === input.value.toLowerCase(); }) : null;
+  const created = t ? (dayKey(t.created) || "") : "";
+  const done = t && t.statusGroup === "done" ? (dayKey(t.actualEnd) || dayKey(t.updated) || "") : "";
+  const map = { done: "done", blocked: "blocked", progress: "in_progress", todo: kind === "backlog" ? "planned" : "todo" };
+  [["start_date", created], ["completed_date", done], ["status", t ? (map[t.statusGroup] || "") : ""]].forEach(function(p){
+    const el = form.querySelector('[name="' + p[0] + '"]'); if (!el) return;
+    const on = !!p[1];
+    if (on) el.value = p[1];
+    el.inert = on;
+    const f = el.closest(".field"); if (f) f.classList.toggle("is-auto", on);
+  });
+}
 function jkPick(input, key){
-  input.value = key; jkClose(input); jkHint(input);
+  input.value = key; jkClose(input); jkHint(input); jkApply(input);
 }
 function jkMove(input, dir){
   const list = input.closest(".jk").querySelector(".jk-list"), items = list.querySelectorAll(".jk-item");
@@ -3577,8 +3595,10 @@ document.addEventListener("click", function(e){ if (e.target.matches && e.target
 document.addEventListener("input", function(e){ if (e.target.matches && e.target.matches("input[data-jk]")) { jkRender(e.target); jkHint(e.target); } });
 document.addEventListener("focusout", function(e){
   if (!(e.target.matches && e.target.matches("input[data-jk]"))) return;
-  const v = e.target.value.trim(); e.target.value = /^[A-Za-z][A-Za-z0-9_]*-\d+$/.test(v) ? v.toUpperCase() : v;
-  jkClose(e.target); jkHint(e.target);
+  const v = e.target.value.trim(), hit = jkTickets().find(function(x){ return x.code.toLowerCase() === v.toLowerCase(); });
+  if (hit) e.target.value = hit.code;
+  else if (v && jkTickets().length) { e.target.value = ""; toast("Chỉ được chọn mã có trong Jira tickets", "error"); }
+  jkClose(e.target); jkHint(e.target); jkApply(e.target);
 });
 document.addEventListener("mousedown", function(e){
   const it = e.target.closest && e.target.closest(".jk-item");
@@ -3598,6 +3618,11 @@ document.addEventListener("keydown", function(e){
 });
 function validatePayload(kind, payload){
   /* Không có trường bắt buộc: chỉ chuẩn hoá dữ liệu, không chặn lưu. */
+  if (payload.jira_key && jkTickets().length) {
+    const hit = jkTickets().find(function(x){ return x.code.toLowerCase() === payload.jira_key.toLowerCase(); });
+    if (!hit) return "Jira key phải là mã có trong Jira tickets.";
+    payload.jira_key = hit.code;
+  }
   if (!payload.title) payload.title = kind === "backlog" ? "(Backlog chưa đặt tên)" : "(Task chưa đặt tên)";
   if (kind === "backlog" && payload.progress != null) payload.progress = Math.min(100, Math.max(0, payload.progress));
   return "";
@@ -3648,15 +3673,57 @@ async function saveRecord(event){
     btn.textContent = "Lưu";
   }
 }
+/* ============================ THÙNG RÁC (super_admin) ============================ */
+const RECYCLE_TABLE = "jtm_recycle_bin";
+async function loadRecycle(){
+  state.recycle = { loading: true };
+  const r = await state.client.from(RECYCLE_TABLE).select("id,entity_type,entity_id,title,jira_key,data,deleted_by,deleted_at").order("deleted_at", { ascending: false }).limit(500);
+  state.recycle = r.error ? { error: r.error.message, rows: [] } : { rows: r.data || [] };
+  paintCount($("#navRecycle"), state.recycle.rows.length, false);
+  if (state.tab === "recycle" && !userIsBusy()) renderRecycle();
+}
+function renderRecycle(){
+  setActions('<button class="btn" data-action="refresh-recycle">' + icon("refresh") + 'Làm mới</button>');
+  state.listPaint = null;
+  const rb = state.recycle;
+  if (!rb || rb.loading) { $("#pageContent").innerHTML = '<div class="notice">Đang tải thùng rác…</div>'; if (!rb) loadRecycle(); return; }
+  if (rb.error) { $("#pageContent").innerHTML = '<div class="notice error">Không đọc được thùng rác: ' + esc(rb.error) + '. Hãy chạy file rls-and-recycle-bin.sql trong Supabase.</div>'; return; }
+  const rows = rb.rows.map(function(x){ return { id: x.id, kind: "recycle", statusGroup: "done", x: {}, raw: x }; });
+  const nb = rows.filter(function(r){ return r.raw.entity_type === "backlog"; }).length;
+  const who = function(id){ const p = state.directory.find(function(d){ return d.user_id === id; }); return p ? (p.full_name || p.email) : "—"; };
+  $("#pageContent").innerHTML =
+    '<div class="grid stats">' + statCard({ label: "Tổng mục đã xoá", num: rows.length, note: "Tối đa 500 mục gần nhất", tone: "red", icon: "trash" }) +
+    statCard({ label: "Backlog", num: nb, note: "Có thể khôi phục", tone: "blue", icon: "trend" }) +
+    statCard({ label: "Task", num: rows.length - nb, note: "Có thể khôi phục", tone: "green", icon: "check" }) + "</div>" +
+    panel({ title: "Dữ liệu đã xoá", sub: "Chỉ super_admin nhìn thấy mục này (RLS trong database)", tight: true, body: dataTable({
+      scope: "recycle", rows: rows, emptyTitle: "Thùng rác trống", emptyNote: "Các backlog và task bị xoá sẽ xuất hiện tại đây",
+      cols: [
+        { label: "Tên", render: function(r){ return '<span class="primary-cell">' + esc(r.raw.title || "(không tên)") + '</span>' + (r.raw.jira_key ? '<span class="cell-sub">' + esc(r.raw.jira_key) + "</span>" : ""); } },
+        { label: "Loại", render: function(r){ return r.raw.entity_type === "backlog" ? "Backlog" : "Task"; } },
+        { label: "Người xoá", render: function(r){ return esc(who(r.raw.deleted_by)); } },
+        { label: "Thời điểm xoá", cls: "nowrap", render: function(r){ return esc(fmtStamp(r.raw.deleted_at)); } },
+        { label: "", render: function(r){ return '<div class="row-actions"><button class="btn small primary" data-action="restore-recycle" data-id="' + escAttr(r.id) + '">Khôi phục</button><button class="btn small danger" data-action="purge-recycle" data-id="' + escAttr(r.id) + '">Xoá vĩnh viễn</button></div>'; } }
+      ] }) });
+}
+async function recycleAct(kind, id){
+  const row = state.recycle && state.recycle.rows.find(function(x){ return x.id === id; });
+  if (!row) return;
+  if (kind === "purge" && !confirm("Xoá vĩnh viễn “" + (row.title || "") + "”? Không thể hoàn tác.")) return;
+  const r = await state.client.rpc(kind === "restore" ? "jtm_restore_deleted" : "jtm_purge_deleted", { p_id: id });
+  if (r.error) { toast((kind === "restore" ? "Không khôi phục được: " : "Không xoá được: ") + r.error.message, "error"); return; }
+  toast(kind === "restore" ? "Đã khôi phục" : "Đã xoá vĩnh viễn", "good");
+  await loadRecycle();
+  if (kind === "restore") await loadAll({ only: ["backlogs", "tasks"] });
+}
 async function deleteRecord(kind, id){
   const list = kind === "backlog" ? state.backlogs : state.tasks;
   const row = list.find(function(x){ return x.id === id; });
   if (!row) return;
-  if (!confirm("Xoá “" + row.title + "”? Thao tác này không thể hoàn tác.")) return;
+  if (!confirm("Xoá “" + row.title + "”?\nMục sẽ được chuyển vào Thùng rác (chỉ super_admin khôi phục được).")) return;
   const r = await state.client.from(kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE).delete().eq("id", id);
   if (r.error) { toast("Không thể xoá: " + r.error.message, "error"); return; }
   closeDrawer();
-  toast("Đã xoá mục", "good");
+  toast("Đã chuyển vào Thùng rác", "good");
   await loadAll({ only: ["backlogs", "tasks"] });
 }
 async function patchItem(kind, id, patch, message){
@@ -5148,6 +5215,9 @@ document.addEventListener("click", async function(event){
   }
   if (action === "edit-backlog") { openRecord("backlog", id); return; }
   if (action === "edit-task") { openRecord("task", id); return; }
+  if (action === "restore-recycle") { await recycleAct("restore", id); return; }
+  if (action === "purge-recycle") { await recycleAct("purge", id); return; }
+  if (action === "refresh-recycle") { state.recycle = null; renderRecycle(); return; }
   if (action === "delete-backlog") { await deleteRecord("backlog", id); return; }
   if (action === "delete-task") { await deleteRecord("task", id); return; }
   if (action === "archive-backlog") { archiveBacklog(id); return; }
