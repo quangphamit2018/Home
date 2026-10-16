@@ -1027,6 +1027,36 @@ table.resizable.fixed td{overflow:hidden}
 .jk-hint.warn{color:#8a6100}
 .field.is-auto>span:first-child::after{content:" · tự động từ Jira";color:#1e7e34;font-weight:600;text-transform:none;letter-spacing:0}
 .field.is-auto :is(input,select){background:#f1f6f3;color:#41505f;opacity:.9}
+
+/* ---------- Toast thành công / lỗi / thông tin ---------- */
+.toast-stack[popover]{position:fixed;inset:auto 18px 18px auto;margin:0;padding:0;border:0;background:transparent;overflow:visible;width:min(400px,92vw);color:inherit}
+@media(max-width:760px){.toast-stack[popover]{inset:auto 12px 12px 12px;width:auto}}
+.toast{position:relative;display:flex;align-items:flex-start;gap:11px;background:#fff;color:var(--ink);border:1px solid var(--line);border-left:4px solid #64748b;border-radius:12px;padding:11px 12px 13px 12px;box-shadow:0 14px 34px -12px rgba(16,26,40,.45);overflow:hidden;font-size:12.8px;line-height:1.45}
+.toast .t-ic{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;background:#64748b;margin-top:1px}
+.toast .t-msg{flex:1;min-width:0;word-break:break-word}
+.toast .t-x{flex:none;border:0;background:transparent;color:var(--muted);font-size:17px;line-height:1;cursor:pointer;padding:0 2px}
+.toast .t-x:hover{color:var(--ink)}
+.toast::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:currentColor;opacity:.35;transform-origin:left;animation:toastBar var(--ms,3600ms) linear forwards}
+@keyframes toastBar{to{transform:scaleX(0)}}
+.toast.good{border-left-color:#16a34a;background:#f3fbf6;color:#14532d}.toast.good .t-ic{background:#16a34a}
+.toast.error{border-left-color:#dc2626;background:#fff5f5;color:#7f1d1d}.toast.error .t-ic{background:#dc2626}
+.toast.info{border-left-color:#356ee6}.toast.info .t-ic{background:#356ee6}
+.toast.good .t-msg,.toast.error .t-msg{color:var(--ink)}
+/* ---------- Hộp xác nhận ---------- */
+.jd-confirm{border:0;border-radius:16px;padding:20px 22px 16px;width:min(420px,92vw);box-shadow:0 30px 70px -20px rgba(16,26,40,.55);color:var(--ink);display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.jd-confirm::backdrop{background:rgba(16,26,40,.45);backdrop-filter:blur(2px)}
+.jd-confirm[open]{animation:pop .18s ease-out}
+.jc-ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:#e8f0ff;color:#2458d8}
+.jc-ic.danger{background:#fdecea;color:#dc2626}
+.jc-body h3{margin:2px 0 4px;font-size:15px;letter-spacing:-.2px}
+.jc-body p{margin:0;color:var(--muted);font-size:12.8px;line-height:1.5}
+.jc-act{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+.btn.jc-danger{background:#dc2626;border-color:#dc2626;color:#fff}.btn.jc-danger:hover{background:#b91c1c;border-color:#b91c1c}
+/* ---------- Live badge ---------- */
+.live-badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:#168162;background:#e8f6ee;border:1px solid #bfe5d0;border-radius:99px;padding:3px 9px}
+.live-badge[hidden]{display:none}
+.live-badge i{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:livePulse 1.8s ease-out infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}100%{box-shadow:0 0 0 7px rgba(34,197,94,0)}}
 </style>
 </head>
 <body>
@@ -1093,6 +1123,7 @@ table.resizable.fixed td{overflow:hidden}
       <div class="crumb"><span class="crumb-lead">Workspace <span class="crumb-sep">/</span> </span><strong id="crumbTitle">Tổng quan</strong></div>
       <div class="page-actions" id="pageActions"></div>
       <div class="top-right">
+        <span class="live-badge" id="liveBadge" hidden title="Dữ liệu cập nhật tức thời giữa các thành viên"><i></i>Live</span>
         <span class="sync-fresh" id="syncFresh" style="display:none"><span class="dot"></span><span id="syncFreshLabel"></span></span>
         <button class="public-sync-btn" id="syncJiraBtn" type="button" data-action="sync-jira" title="Lấy dữ liệu Jira mới nhất về Jira Desk"><span class="sync-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/></svg></span><span class="sync-label" id="syncJiraLabel">Đồng bộ</span></button>
         <span class="user-chip" id="topUser"></span>
@@ -1165,7 +1196,7 @@ table.resizable.fixed td{overflow:hidden}
   </form>
 </dialog>
 
-<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+<div class="toast-stack" id="toastStack" popover="manual" aria-live="polite"></div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -1260,16 +1291,48 @@ function valueOf(row, names){
 function toast(message, type){
   const stack = $("#toastStack");
   if (!stack) return;
+  try { stack.hidePopover(); } catch (e) {}
   while (stack.children.length >= 4) stack.firstChild.remove();
   const el = document.createElement("div");
-  el.className = "toast " + (type || "");
+  el.className = "toast " + (type || "info");
   el.setAttribute("role", type === "error" ? "alert" : "status");
-  el.textContent = message;
-  stack.appendChild(el);
-  setTimeout(function(){
+  el.innerHTML = '<span class="t-ic">' + (type === "good" ? "✓" : type === "error" ? "!" : "i") + '</span><span class="t-msg"></span><button type="button" class="t-x" aria-label="Đóng">×</button>';
+  el.querySelector(".t-msg").textContent = message;
+  const ms = type === "error" ? 6500 : 3600;
+  el.style.setProperty("--ms", ms + "ms");
+  const kill = function(){
+    if (el.classList.contains("leaving")) return;
     el.classList.add("leaving");
-    setTimeout(function(){ el.remove(); }, 240);
-  }, type === "error" ? 5200 : 3400);
+    setTimeout(function(){ el.remove(); if (!stack.children.length) { try { stack.hidePopover(); } catch (e) {} } }, 240);
+  };
+  el.querySelector(".t-x").onclick = kill;
+  stack.appendChild(el);
+  try { stack.showPopover(); } catch (e) {}   /* popover = lớp trên cùng, không bị hộp thoại che */
+  setTimeout(kill, ms);
+}
+/* Hộp xác nhận đẹp thay cho confirm() của trình duyệt. Dòng đầu = tiêu đề, phần còn lại = mô tả. */
+function jdConfirm(message){
+  return new Promise(function(resolve){
+    const lines = String(message).split("\n"), danger = /^(Xoá|Từ chối)/.test(lines[0]);
+    const d = document.createElement("dialog");
+    d.className = "jd-confirm";
+    d.innerHTML = '<div class="jc-ic ' + (danger ? "danger" : "") + '">' + (danger ? "!" : "?") + '</div><div class="jc-body"><h3></h3><p></p></div>' +
+      '<div class="jc-act"><button type="button" class="btn" data-v="0">Huỷ</button><button type="button" class="btn jc-ok' + (danger ? " jc-danger" : " primary") + '" data-v="1"></button></div>';
+    d.querySelector("h3").textContent = lines[0];
+    d.querySelector("p").textContent = lines.slice(1).join(" ");
+    if (lines.length < 2) d.querySelector("p").remove();
+    d.querySelector(".jc-ok").textContent = danger ? (/^Từ chối/.test(lines[0]) ? "Từ chối" : "Xoá") : "Đồng ý";
+    let result = false;
+    d.addEventListener("click", function(e){
+      const v = e.target.closest && e.target.closest("[data-v]");
+      if (v) { result = v.dataset.v === "1"; d.close(); }
+      else if (e.target === d) d.close();
+    });
+    d.addEventListener("close", function(){ d.remove(); resolve(result); });
+    document.body.appendChild(d);
+    d.showModal();
+    (danger ? d.querySelector('[data-v="0"]') : d.querySelector(".jc-ok")).focus();
+  });
 }
 function initials(value){
   const words = String(value || "").trim().split(/\s+/).filter(Boolean);
@@ -1737,6 +1800,7 @@ async function loadSessionNow(session, force){
   loadAll({ initial: true });
 }
 async function logout(){
+  stopRealtime();
   if (state.client) { try { await state.client.auth.signOut(); } catch (e) {} }
   state.session = null;
   state.member = null;
@@ -2171,6 +2235,7 @@ async function loadAll(opts){
   const touchesWork = !opts.only || opts.only.indexOf("backlogs") >= 0 || opts.only.indexOf("tasks") >= 0;
   if (touchesWork && state.loaded.activity) { try { await loadActivity(true); } catch (e) { state.errors.activity = e.message; } }
   if (initial) state.syncing = false;
+  if (initial && approvedNow()) startRealtime();
   if (approvedNow()) {
     if (initial && !state.skeletonShown) paintNavCounts();
     else renderShell();
@@ -2808,7 +2873,7 @@ async function saveCurrentFilter(scope, name, shared){
 async function deleteSavedFilter(id){
   const row = state.saved.find(function(s){ return s.id === id; });
   if (!row) return;
-  if (!confirm("Xoá bộ lọc “" + row.name + "”?")) return;
+  if (!(await jdConfirm("Xoá bộ lọc “" + row.name + "”?"))) return;
   const r = await state.client.from(FILTER_TABLE).delete().eq("id", id);
   if (r.error) { toast("Không xoá được bộ lọc: " + r.error.message, "error"); return; }
   await loadSavedFilters();
@@ -3628,6 +3693,7 @@ function validatePayload(kind, payload){
   return "";
 }
 async function saveRecord(event){
+  state.ownWriteAt = Date.now();
   event.preventDefault();
   if (!state.editing) return;
   const kind = state.editing.kind;
@@ -3638,7 +3704,7 @@ async function saveRecord(event){
   if (invalid) { toast(invalid, "error"); return; }
   if (kind === "task" && !state.editing.id) {
     const dup = state.tasks.find(function(t){ return norm(t.title) === norm(payload.title); });
-    if (dup && payload.title.charAt(0) !== "(" && !confirm("Đã có task cùng tên: “" + dup.title + "”. Vẫn tạo mới?")) return;
+    if (dup && payload.title.charAt(0) !== "(" && !(await jdConfirm("Đã có task cùng tên: “" + dup.title + "”. Vẫn tạo mới?"))) return;
   }
   const table = kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE;
   const btn = $("#recordSubmit");
@@ -3675,6 +3741,54 @@ async function saveRecord(event){
 }
 /* ============================ THÙNG RÁC (super_admin) ============================ */
 const RECYCLE_TABLE = "jtm_recycle_bin";
+/* ============================ REAL-TIME (Supabase Realtime) ============================ */
+const RT = { ch: null, pending: new Set(), timer: null, toastAt: 0, subscribedOnce: false, hiddenAt: 0, errAt: 0 };
+function liveBadge(on){ const b = $("#liveBadge"); if (b) b.hidden = !on; }
+function startRealtime(){
+  if (RT.ch || !state.client || !state.client.channel) return;
+  const ch = state.client.channel("jtm-live");
+  [[BACKLOG_TABLE, "backlogs"], [TASK_TABLE, "tasks"], [TICKET_TABLE, "tickets"], [MEMBER_TABLE, "members"], [ACTIVITY_TABLE, "activity"], [RECYCLE_TABLE, "recycle"]].forEach(function(p){
+    ch.on("postgres_changes", { event: "*", schema: "public", table: p[0] }, function(){ rtQueue(p[1]); });
+  });
+  ch.subscribe(function(status){
+    if (status === "SUBSCRIBED") {
+      liveBadge(true);
+      if (RT.subscribedOnce) { rtQueue("backlogs"); rtQueue("tasks"); }   /* kết nối lại: đồng bộ phần đã lỡ */
+      RT.subscribedOnce = true;
+    } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+      liveBadge(false);
+      if (status !== "CLOSED" && Date.now() - RT.errAt > 30000) { RT.errAt = Date.now(); toast("Mất kết nối real-time, đang thử kết nối lại…", "error"); }
+    }
+  });
+  RT.ch = ch;
+}
+function stopRealtime(){
+  if (RT.ch && state.client) { try { state.client.removeChannel(RT.ch); } catch (e) {} }
+  RT.ch = null; RT.subscribedOnce = false; RT.pending.clear(); clearTimeout(RT.timer); liveBadge(false);
+}
+function rtQueue(key){
+  RT.pending.add(key);
+  clearTimeout(RT.timer);
+  RT.timer = setTimeout(rtFlush, RT.pending.has("tickets") ? 2500 : 500);
+}
+async function rtFlush(){
+  if (!approvedNow()) return;
+  if (userIsBusy()) { RT.timer = setTimeout(rtFlush, 1500); return; }   /* đang gõ hoặc mở form: chờ xong rồi mới cập nhật */
+  const keys = Array.from(RT.pending); RT.pending.clear();
+  const only = keys.filter(function(k){ return ["tickets", "backlogs", "tasks", "members"].indexOf(k) >= 0; });
+  try {
+    if (only.length) await loadAll({ only: only });
+    else if (keys.indexOf("activity") >= 0 && state.loaded.activity) { await loadActivity(true); if (state.tab === "activity") renderShell(); }
+    if (keys.indexOf("recycle") >= 0 && isAdmin()) await loadRecycle();
+    const byOthers = (keys.indexOf("backlogs") >= 0 || keys.indexOf("tasks") >= 0) && Date.now() - (state.ownWriteAt || 0) > 4000;
+    if (byOthers && Date.now() - RT.toastAt > 10000) { RT.toastAt = Date.now(); toast("Dữ liệu vừa được cập nhật bởi thành viên khác", "info"); }
+  } catch (e) {}
+}
+document.addEventListener("visibilitychange", function(){
+  if (document.hidden) { RT.hiddenAt = Date.now(); return; }
+  if (RT.ch && RT.hiddenAt && Date.now() - RT.hiddenAt > 60000) { rtQueue("backlogs"); rtQueue("tasks"); }
+});
+
 async function loadRecycle(){
   state.recycle = { loading: true };
   const r = await state.client.from(RECYCLE_TABLE).select("id,entity_type,entity_id,title,jira_key,data,deleted_by,deleted_at").order("deleted_at", { ascending: false }).limit(500);
@@ -3706,9 +3820,10 @@ function renderRecycle(){
       ] }) });
 }
 async function recycleAct(kind, id){
+  state.ownWriteAt = Date.now();
   const row = state.recycle && state.recycle.rows.find(function(x){ return x.id === id; });
   if (!row) return;
-  if (kind === "purge" && !confirm("Xoá vĩnh viễn “" + (row.title || "") + "”? Không thể hoàn tác.")) return;
+  if (kind === "purge" && !(await jdConfirm("Xoá vĩnh viễn “" + (row.title || "") + "”? Không thể hoàn tác."))) return;
   const r = await state.client.rpc(kind === "restore" ? "jtm_restore_deleted" : "jtm_purge_deleted", { p_id: id });
   if (r.error) { toast((kind === "restore" ? "Không khôi phục được: " : "Không xoá được: ") + r.error.message, "error"); return; }
   toast(kind === "restore" ? "Đã khôi phục" : "Đã xoá vĩnh viễn", "good");
@@ -3716,10 +3831,11 @@ async function recycleAct(kind, id){
   if (kind === "restore") await loadAll({ only: ["backlogs", "tasks"] });
 }
 async function deleteRecord(kind, id){
+  state.ownWriteAt = Date.now();
   const list = kind === "backlog" ? state.backlogs : state.tasks;
   const row = list.find(function(x){ return x.id === id; });
   if (!row) return;
-  if (!confirm("Xoá “" + row.title + "”?\nMục sẽ được chuyển vào Thùng rác (chỉ super_admin khôi phục được).")) return;
+  if (!(await jdConfirm("Xoá “" + row.title + "”?\nMục sẽ được chuyển vào Thùng rác (chỉ super_admin khôi phục được)."))) return;
   const r = await state.client.from(kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE).delete().eq("id", id);
   if (r.error) { toast("Không thể xoá: " + r.error.message, "error"); return; }
   closeDrawer();
@@ -3727,6 +3843,7 @@ async function deleteRecord(kind, id){
   await loadAll({ only: ["backlogs", "tasks"] });
 }
 async function patchItem(kind, id, patch, message){
+  state.ownWriteAt = Date.now();
   const table = kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE;
   const r = await state.client.from(table).update(patch).eq("id", id);
   if (r.error) { toast("Không cập nhật được: " + r.error.message, "error"); return false; }
@@ -3735,8 +3852,8 @@ async function patchItem(kind, id, patch, message){
   if (message) toast(message, "good");
   return true;
 }
-function archiveBacklog(id){
-  if (!confirm("Lưu trữ backlog này? Dữ liệu vẫn được giữ lại và có thể xem qua bộ lọc Lưu trữ.")) return;
+async function archiveBacklog(id){
+  if (!(await jdConfirm("Lưu trữ backlog này? Dữ liệu vẫn được giữ lại và có thể xem qua bộ lọc Lưu trữ."))) return;
   patchItem("backlog", id, { status: "archived" }, "Đã lưu trữ backlog").then(function(){ loadAll({ only: ["backlogs", "tasks"] }); });
 }
 
@@ -4442,7 +4559,7 @@ function initTimelineDrag(){
     if (!current.moved || !current.days) return;
     const item = withBlockedSince(allItems()).find(function(i){ return i.kind === current.kind && i.id === current.id; });
     if (!item) return;
-    if (!confirm("Dời “" + item.title + "” thêm " + (current.days > 0 ? "+" : "") + current.days + " ngày?")) { renderShell(); return; }
+    if (!(await jdConfirm("Dời “" + item.title + "” thêm " + (current.days > 0 ? "+" : "") + current.days + " ngày?"))) { renderShell(); return; }
     const ok = await rescheduleItem(item, current.days);
     if (ok) {
       if (state.loaded.activity) { try { await loadActivity(true); } catch (e) {} }
@@ -4931,7 +5048,7 @@ function renderMembers(){
 async function reviewMember(id, approve){
   const m = state.members.find(function(x){ return x.user_id === id; });
   if (!m) return;
-  if (!approve && !confirm("Từ chối yêu cầu của " + m.email + "?")) return;
+  if (!approve && !(await jdConfirm("Từ chối yêu cầu của " + m.email + "?"))) return;
   const r = await state.client.rpc("jtm_review_member", { p_user_id: id, p_approve: approve });
   if (r.error) { toast("Không thể cập nhật quyền: " + r.error.message, "error"); return; }
   toast(approve ? "Đã duyệt thành viên" : "Đã từ chối yêu cầu", "good");
