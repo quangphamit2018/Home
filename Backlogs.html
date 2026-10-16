@@ -34,7 +34,7 @@ svg{flex:none}
 .gate-foot{color:var(--muted);font-size:11.5px;margin-top:16px;line-height:1.55}
 .gate-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
 .gate-actions .btn{flex:1 1 auto;justify-content:center}
-.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:12px 16px;font-weight:650;font-size:13.5px;transition:.16s;box-shadow:var(--shadow-sm)}
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:11px;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:12px 16px;font-weight:650;font-size:13.5px;transition:background-color .16s,border-color .16s,color .16s,box-shadow .16s,transform .16s,opacity .16s;box-shadow:var(--shadow-sm)}
 .google-btn:hover{border-color:#c9d2dc;transform:translateY(-1px)}
 .google-g{height:22px;width:22px;border-radius:50%;background:conic-gradient(from -45deg,#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
 .loading{display:flex;align-items:center;gap:11px;color:var(--muted);font-size:13px;padding:16px 0 6px}
@@ -53,7 +53,7 @@ svg{flex:none}
 .nav-group+.nav-group{margin-top:16px}
 .nav-label{padding:0 11px 7px;color:#8290a0;font-size:9.5px;font-weight:700;letter-spacing:1.25px;text-transform:uppercase}
 .nav-list{display:grid;gap:3px}
-.nav-btn{border:0;background:transparent;color:#b5c0cb;text-align:left;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:11px;font-size:13px;font-weight:600;transition:.16s;width:100%}
+.nav-btn{border:0;background:transparent;color:#b5c0cb;text-align:left;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:11px;font-size:13px;font-weight:600;transition:background-color .16s,border-color .16s,color .16s,box-shadow .16s,transform .16s,opacity .16s;width:100%}
 .nav-btn:hover{background:#1b2734;color:#fff}
 .nav-btn.active{background:#263751;color:#fff;box-shadow:inset 3px 0 #86a9ff}
 .nav-icon{width:18px;height:18px;display:grid;place-items:center;color:inherit}
@@ -70,7 +70,7 @@ svg{flex:none}
 .side-user-name{font-size:12.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .side-user-email{color:#8794a3;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .main{margin-left:252px;min-height:100vh;display:flex;flex-direction:column}
-.topbar{position:sticky;top:0;z-index:4;background:rgba(244,246,247,.88);backdrop-filter:blur(9px);border-bottom:1px solid var(--line);padding:0 30px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.topbar{position:sticky;top:0;z-index:4;background:rgba(244,246,247,.97);border-bottom:1px solid var(--line);padding:0 30px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .crumb{font-size:12.5px;color:var(--muted)}
 .crumb-sep{padding:0 7px;color:#b1b9bf}
 .crumb strong{color:var(--ink);font-weight:650}
@@ -85,7 +85,7 @@ svg{flex:none}
 .page-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 /* ---------- controls ---------- */
-.btn{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:9px 13px;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:650;color:var(--ink);transition:.15s;box-shadow:var(--shadow-sm);text-decoration:none}
+.btn{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:9px 13px;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:650;color:var(--ink);transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s,opacity .15s;box-shadow:var(--shadow-sm);text-decoration:none}
 .btn:hover{border-color:#cfd8e2;transform:translateY(-1px)}
 .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .btn.primary:hover{background:var(--blue-dark);border-color:var(--blue-dark)}
@@ -96,7 +96,7 @@ svg{flex:none}
 .btn.text:hover{background:var(--blue-soft);transform:none}
 .btn.small{padding:6px 10px;font-size:11.5px;border-radius:9px}
 .btn.icon{padding:7px}
-.icon-btn{border:1px solid transparent;background:transparent;border-radius:9px;padding:7px;display:grid;place-items:center;color:var(--muted);transition:.15s}
+.icon-btn{border:1px solid transparent;background:transparent;border-radius:9px;padding:7px;display:grid;place-items:center;color:var(--muted);transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s,opacity .15s}
 .icon-btn:hover{background:#eef1f4;color:var(--ink)}
 .icon-btn.dark{color:#93a1b0}
 .icon-btn.dark:hover{background:#1b2734;color:#fff}
@@ -115,7 +115,7 @@ select{cursor:pointer;appearance:none;background-image:linear-gradient(45deg,tra
 .search-ico svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9}
 .toolbar-sep{width:1px;height:22px;background:var(--line)}
 .chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-.chip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--muted);transition:.15s;white-space:nowrap}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--muted);transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s,opacity .15s;white-space:nowrap}
 .chip:hover{border-color:#cfd8e2;color:var(--ink)}
 .chip.active{background:var(--ink);border-color:var(--ink);color:#fff}
 .chip .c-count{opacity:.7;font-weight:700;margin-left:5px}
@@ -130,7 +130,7 @@ select{cursor:pointer;appearance:none;background-image:linear-gradient(45deg,tra
 .stats.three{grid-template-columns:repeat(3,minmax(0,1fr))}
 .cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.stat-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow-sm);position:relative;transition:.16s;text-align:left}
+.stat-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:15px 16px;box-shadow:var(--shadow-sm);position:relative;transition:background-color .16s,border-color .16s,color .16s,box-shadow .16s,transform .16s,opacity .16s;text-align:left}
 button.stat-card{cursor:pointer;width:100%}
 button.stat-card:hover{border-color:#cfd8e2;transform:translateY(-2px);box-shadow:var(--shadow)}
 .stat-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:11.5px;font-weight:650;letter-spacing:.2px}
@@ -215,7 +215,7 @@ tbody tr.hoverable:hover{background:#fafbfc}
 
 /* ---------- dialog / drawer ---------- */
 .dialog{border:0;border-radius:18px;padding:0;max-width:min(820px,94vw);width:100%;box-shadow:var(--shadow);background:var(--paper);color:var(--ink)}
-.dialog::backdrop{background:rgba(19,28,39,.5);backdrop-filter:blur(2px)}
+.dialog::backdrop{background:rgba(19,28,39,.5)}
 .dialog-inner{padding:22px 24px 20px}
 .dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
 .dialog-title{font-size:16.5px;font-weight:730}
@@ -224,7 +224,7 @@ tbody tr.hoverable:hover{background:#fafbfc}
 .form-grid .full{grid-column:1/-1}
 .form-grid textarea{min-height:78px;resize:vertical}
 .dialog-foot{display:flex;justify-content:flex-end;gap:9px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
-.drawer-scrim{position:fixed;inset:0;background:rgba(19,28,39,.42);opacity:0;pointer-events:none;transition:.22s;z-index:8}
+.drawer-scrim{position:fixed;inset:0;background:rgba(19,28,39,.42);opacity:0;pointer-events:none;transition:background-color .22s,border-color .22s,color .22s,box-shadow .22s,transform .22s,opacity .22s;z-index:8}
 .drawer-scrim.open{opacity:1;pointer-events:auto}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--paper);box-shadow:var(--shadow);transform:translateX(102%);transition:transform .26s cubic-bezier(.32,.72,.28,1);z-index:9;display:flex;flex-direction:column}
 .drawer.open{transform:none}
@@ -406,6 +406,41 @@ tbody tr.hoverable:hover{background:#fafbfc}
 }
 @media(max-width:460px){
   .stats,.stats.five,.stats.three{grid-template-columns:1fr}
+}
+
+/* ---------- chuyển động mượt, skeleton ---------- */
+html{scroll-behavior:auto}
+.gate-card{animation:gateIn .34s cubic-bezier(.22,.7,.2,1) both}
+@keyframes gateIn{from{opacity:0;transform:translateY(12px) scale(.985)}}
+.panel{content-visibility:auto;contain-intrinsic-size:auto 340px}
+.btn:active,.google-btn:active,.nav-btn:active{transform:scale(.97)}
+.toast{animation:toastIn .26s cubic-bezier(.22,.7,.2,1)}
+.toast.leaving{animation:toastOut .22s ease-in forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px) scale(.97)}}
+@keyframes toastOut{to{opacity:0;transform:translateX(24px)}}
+.dialog[open]{animation:dialogIn .24s cubic-bezier(.22,.7,.2,1)}
+.dialog[open]::backdrop{animation:fadeIn .2s ease-out}
+@keyframes dialogIn{from{opacity:0;transform:translateY(14px) scale(.98)}}
+@keyframes fadeIn{from{opacity:0}}
+.sk{position:relative;overflow:hidden;border-radius:7px;background:#eceff3;height:12px}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);animation:skMove 1.25s ease-in-out infinite}
+@keyframes skMove{to{transform:translateX(100%)}}
+.sk-wrap{pointer-events:none}
+.sk-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.sk-card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm)}
+.sk-s{width:46%}
+.sk-n{height:26px;width:34%;margin:14px 0 10px;border-radius:8px}
+.sk-m{width:72%;height:10px}
+.sk-panel{content-visibility:visible}
+.sk-head{display:flex;justify-content:space-between;align-items:center;padding:16px 17px;border-bottom:1px solid var(--line)}
+.sk-t{width:180px;height:14px}
+.sk-tool{width:110px;height:28px;border-radius:9px}
+.sk-row{display:flex;align-items:center;gap:16px;padding:15px 17px;border-bottom:1px solid var(--grid)}
+.sk-row:last-child{border-bottom:0}
+.sk-pill{width:64px;flex:none;height:20px;border-radius:99px}
+@media(max-width:900px){.sk-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
 </style>
 </head>
@@ -632,11 +667,18 @@ function valueOf(row, names){
   return "";
 }
 function toast(message, type){
+  const stack = $("#toastStack");
+  if (!stack) return;
+  while (stack.children.length >= 4) stack.firstChild.remove();
   const el = document.createElement("div");
   el.className = "toast " + (type || "");
+  el.setAttribute("role", type === "error" ? "alert" : "status");
   el.textContent = message;
-  $("#toastStack").appendChild(el);
-  setTimeout(function(){ el.remove(); }, 4600);
+  stack.appendChild(el);
+  setTimeout(function(){
+    el.classList.add("leaving");
+    setTimeout(function(){ el.remove(); }, 240);
+  }, type === "error" ? 5200 : 3400);
 }
 function initials(value){
   const words = String(value || "").trim().split(/\s+/).filter(Boolean);
@@ -850,6 +892,7 @@ function blankFilters(kind){
 }
 const state = {
   client: null,
+  settled: {}, syncing: false, dataStarted: false, skeletonShown: false, lastPaintedTab: null,
   session: null,
   member: null,
   tab: "overview",
@@ -928,6 +971,7 @@ function configCard(){
     '</div>';
 }
 let authUrlError = "";
+let loginIntent = false;
 function readAuthUrlError(){
   try {
     const q = new URLSearchParams(location.search);
@@ -985,7 +1029,7 @@ async function adoptSessionFromStorage(){
   const r = await state.client.auth.getSession();
   if (r.data && r.data.session) {
     stopLoginPoll();
-    await loadSession(r.data.session, true);
+    await loadSession(r.data.session);
     return true;
   }
   return false;
@@ -1011,6 +1055,7 @@ async function signInGoogle(){
     options: { redirectTo: redirect, skipBrowserRedirect: true, queryParams: { prompt: "select_account" } }
   });
   if (result.error || !result.data || !result.data.url) { toast("Google login: " + ((result.error && result.error.message) || "không lấy được URL đăng nhập"), "error"); return; }
+  loginIntent = true;
   try { localStorage.setItem(LOGIN_MARK, String(Date.now())); } catch (e) {}
   const w = 500, h = 650;
   const left = Math.max(0, Math.round((window.screenX || 0) + ((window.outerWidth || 1000) - w) / 2));
@@ -1046,6 +1091,7 @@ function showApp(){
   if (shell) shell.style.display = "block";
   updateUserHeader();
   renderShell();
+  if (shell && shell.animate && !REDUCED_MOTION) shell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: "ease-out" });
 }
 let sessionChain = Promise.resolve();
 function loadSession(session, force){
@@ -1060,7 +1106,7 @@ async function loadSessionNow(session, force){
   if (!session) { showGate(); return; }
   /* Tránh nhấp nháy / tải lặp khi Supabase phát lại sự kiện SIGNED_IN lúc đổi tab */
   if (!force && state.member && state.member.user_id === uid) {
-    if (state.member.status === "approved" && state.loaded.backlogs) { updateUserHeader(); return; }
+    if (state.member.status === "approved" && state.dataStarted) { updateUserHeader(); return; }
     if (state.member.status !== "approved") return;
   }
   showGate();
@@ -1081,8 +1127,13 @@ async function loadSessionNow(session, force){
   }
   state.member = r.data;
   if (r.data.status !== "approved") { renderPending(); return; }
-  await loadAll();
+  /* Vào app ngay, dữ liệu đồng bộ nền với skeleton */
+  const justLoggedIn = loginIntent;
+  loginIntent = false;
+  resetData();
   showApp();
+  if (justLoggedIn) toast("Đăng nhập thành công", "good");
+  loadAll({ initial: true });
 }
 async function logout(){
   if (state.client) { try { await state.client.auth.signOut(); } catch (e) {} }
@@ -1090,9 +1141,13 @@ async function logout(){
   state.member = null;
   state.tab = "overview";
   state.focusMember = null;
+  resetData();
+  try { closeDrawer(); } catch (e) {}
   showGate();
+  toast("Đã đăng xuất", "good");
 }
 async function bootstrap(){
+  try { loginIntent = /[?&]code=/.test(location.search) || /access_token=/.test(location.hash); } catch (e) {}
   readAuthUrlError();
   if (!connect()) { showGate(); return; }
   const r = await state.client.auth.getSession();
@@ -1108,6 +1163,7 @@ async function bootstrap(){
       if (event === "SIGNED_OUT" || !session) {
         state.session = null;
         state.member = null;
+        resetData();
         showGate();
       } else {
         loadSession(session);
@@ -1165,8 +1221,44 @@ function renderShell(){
   paintNavCounts();
 }
 function setActions(markup){ $("#pageActions").innerHTML = markup || ""; }
+const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+function tabDataReady(){
+  const t = state.tab, d = state.settled;
+  if (t === "activity") return true;
+  if (t === "members") return !!d.members;
+  if (t === "backlogs" || t === "tasks") return !!(d.backlogs && d.tasks && d.directory);
+  return !!(d.tickets && d.backlogs && d.tasks && d.directory);
+}
+function userIsBusy(){
+  const a = document.activeElement;
+  return !!((a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) || document.querySelector("dialog[open]"));
+}
+function renderSkeleton(){
+  state.skeletonShown = true;
+  setActions("");
+  const card = '<div class="sk-card"><div class="sk sk-s"></div><div class="sk sk-n"></div><div class="sk sk-m"></div></div>';
+  let rows = "";
+  for (let i = 0; i < 7; i++) rows += '<div class="sk-row"><div class="sk" style="flex:' + (i % 2 ? 2.4 : 3) + '"></div><div class="sk" style="flex:1"></div><div class="sk" style="flex:1"></div><div class="sk sk-pill"></div></div>';
+  $("#pageContent").innerHTML = '<div class="sk-wrap" aria-busy="true" aria-label="Đang đồng bộ dữ liệu">' +
+    '<div class="sk-stats">' + card + card + card + card + '</div>' +
+    '<div class="panel sk-panel"><div class="sk-head"><div class="sk sk-t"></div><div class="sk sk-tool"></div></div>' + rows + '</div></div>';
+}
+function animatePage(){
+  if (REDUCED_MOTION) return;
+  const host = $("#pageContent");
+  if (!host || !host.animate) return;
+  const kids = Array.prototype.slice.call(host.children, 0, 8);
+  kids.forEach(function(el, i){
+    el.animate([{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }],
+      { duration: 320, delay: i * 40, easing: "cubic-bezier(.22,.7,.2,1)", fill: "backwards" });
+  });
+}
 function renderActivePage(){
   state.listPaint = null;
+  if (!tabDataReady()) { renderSkeleton(); state.lastPaintedTab = null; return; }
+  const animate = state.skeletonShown || state.lastPaintedTab !== state.tab;
+  state.skeletonShown = false;
+  state.lastPaintedTab = state.tab;
   if (state.tab === "overview") renderOverview();
   else if (state.tab === "tickets") renderTickets();
   else if (state.tab === "backlogs") renderBacklogs();
@@ -1177,6 +1269,7 @@ function renderActivePage(){
   else if (state.tab === "reports") renderReports();
   else if (state.tab === "activity") renderActivity();
   else renderMembers();
+  if (animate) animatePage();
 }
 function paintCount(el, value, alert){
   if (!el) return;
@@ -1301,25 +1394,51 @@ async function loadEntityHistory(type, id){
   if (r.error) throw r.error;
   return r.data || [];
 }
-async function loadAll(){
-  state.errors = {};
-  const jobs = await Promise.allSettled([loadTickets(), loadBacklogs(), loadTasks(), loadDirectory()]);
-  const names = ["tickets", "backlogs", "tasks", "directory"];
-  jobs.forEach(function(job, i){
-    if (job.status === "rejected") {
-      state.errors[names[i]] = String((job.reason && job.reason.message) || job.reason);
-      if (names[i] === "tickets") state.tickets = [];
-      if (names[i] === "backlogs") state.backlogs = [];
-      if (names[i] === "tasks") state.tasks = [];
-      if (names[i] === "directory") state.directory = [];
-    }
+const LOADERS = { tickets: loadTickets, backlogs: loadBacklogs, tasks: loadTasks, directory: loadDirectory, members: loadMembers, saved: loadSavedFilters };
+function resetData(){
+  state.tickets = []; state.backlogs = []; state.tasks = []; state.directory = []; state.members = []; state.activity = []; state.saved = [];
+  state.loaded = { tickets: false, backlogs: false, tasks: false, directory: false, members: false, activity: false, saved: false };
+  state.settled = {}; state.errors = {};
+  state.dataStarted = false; state.syncing = false; state.skeletonShown = false; state.lastPaintedTab = null;
+}
+function approvedNow(){ return !!(state.session && state.member && state.member.status === "approved"); }
+/* opts.initial: lần tải đầu sau khi vào app (hiện skeleton, vẽ ngay khi đủ dữ liệu cho tab đang mở).
+   opts.only: chỉ tải lại một số nguồn (sau khi lưu/xoá không cần tải lại hàng chục nghìn ticket). */
+async function loadAll(opts){
+  opts = opts || {};
+  const initial = !!opts.initial;
+  const names = opts.only || ["tickets", "backlogs", "tasks", "directory", "members", "saved"];
+  if (initial) { state.settled = {}; state.syncing = true; }
+  state.dataStarted = true;
+  names.forEach(function(n){ delete state.errors[n]; });
+  const jobs = names.map(function(name){
+    return Promise.resolve().then(function(){ return LOADERS[name](); }).catch(function(e){
+      if (name !== "saved") state.errors[name] = String((e && e.message) || e);
+      if (name === "tickets") state.tickets = [];
+      if (name === "backlogs") state.backlogs = [];
+      if (name === "tasks") state.tasks = [];
+      if (name === "directory") state.directory = [];
+    }).then(function(){
+      state.settled[name] = true;
+      if (!initial || !approvedNow()) return;
+      if (state.skeletonShown && tabDataReady()) renderShell();
+      else if (name === "tickets" && (state.tab === "backlogs" || state.tab === "tasks") && !userIsBusy()) renderShell();
+      else paintNavCounts();
+    });
   });
-  if (isAdmin()) {
-    try { await loadMembers(); } catch (e) { state.errors.members = e.message; }
+  await Promise.all(jobs);
+  const touchesWork = !opts.only || opts.only.indexOf("backlogs") >= 0 || opts.only.indexOf("tasks") >= 0;
+  if (touchesWork && state.loaded.activity) { try { await loadActivity(true); } catch (e) { state.errors.activity = e.message; } }
+  if (initial) state.syncing = false;
+  if (approvedNow()) {
+    if (initial && !state.skeletonShown) paintNavCounts();
+    else renderShell();
   }
-  try { await loadSavedFilters(); } catch (e) {}
-  if (state.loaded.activity) { try { await loadActivity(true); } catch (e) { state.errors.activity = e.message; } }
-  if (state.session && state.member && state.member.status === "approved") renderShell();
+  if (initial) {
+    const failed = Object.keys(state.errors);
+    if (failed.length) toast("Đã vào workspace, nhưng chưa tải được: " + failed.join(", "), "error");
+    else toast("Đã đồng bộ dữ liệu", "good");
+  }
 }
 async function refreshData(silent){
   const btn = $('[data-action="refresh"]');
@@ -2550,7 +2669,7 @@ async function saveRecord(event){
     $("#recordDialog").close();
     state.editing = null;
     toast(kind === "backlog" ? "Đã lưu backlog" : "Đã lưu task", "good");
-    await loadAll();
+    await loadAll({ only: ["backlogs", "tasks"] });
   } catch (e) {
     toast("Không thể lưu: " + e.message, "error");
   } finally {
@@ -2567,7 +2686,7 @@ async function deleteRecord(kind, id){
   if (r.error) { toast("Không thể xoá: " + r.error.message, "error"); return; }
   closeDrawer();
   toast("Đã xoá mục", "good");
-  await loadAll();
+  await loadAll({ only: ["backlogs", "tasks"] });
 }
 async function patchItem(kind, id, patch, message){
   const table = kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE;
@@ -2580,7 +2699,7 @@ async function patchItem(kind, id, patch, message){
 }
 function archiveBacklog(id){
   if (!confirm("Lưu trữ backlog này? Dữ liệu vẫn được giữ lại và có thể xem qua bộ lọc Lưu trữ.")) return;
-  patchItem("backlog", id, { status: "archived" }, "Đã lưu trữ backlog").then(function(){ loadAll(); });
+  patchItem("backlog", id, { status: "archived" }, "Đã lưu trữ backlog").then(function(){ loadAll({ only: ["backlogs", "tasks"] }); });
 }
 
 /* ---------------- BACKLOGS ---------------- */
@@ -3767,7 +3886,7 @@ async function reviewMember(id, approve){
   const r = await state.client.rpc("jtm_review_member", { p_user_id: id, p_approve: approve });
   if (r.error) { toast("Không thể cập nhật quyền: " + r.error.message, "error"); return; }
   toast(approve ? "Đã duyệt thành viên" : "Đã từ chối yêu cầu", "good");
-  await loadAll();
+  await loadAll({ only: ["directory", "members"] });
 }
 
 /* ---------------- điều khiển sự kiện ---------------- */
@@ -3865,8 +3984,9 @@ document.addEventListener("click", async function(event){
       if (tab === "activity" && !state.loaded.activity) {
         loadActivity(true).then(function(){ renderShell(); }).catch(function(e){ toast("Không tải được lịch sử: " + e.message, "error"); });
       }
-      renderShell();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      $$(".nav-btn").forEach(function(n){ n.classList.toggle("active", n.dataset.tab === tab); });
+      requestAnimationFrame(function(){ renderShell(); });
+      window.scrollTo({ top: 0, behavior: "auto" });
     }
     return;
   }
@@ -3912,13 +4032,13 @@ document.addEventListener("click", async function(event){
     const row = state.tasks.find(function(t){ return t.id === id; });
     if (row && !row.actual_start_date) patch.actual_start_date = todayKey();
     const ok = await patchItem("task", id, patch, "Đã đánh dấu hoàn thành");
-    if (ok) await loadAll();
+    if (ok) await loadAll({ only: ["backlogs", "tasks"] });
     return;
   }
   if (action === "quick-done") {
     const kind = actionEl.dataset.kind;
     const ok = await patchItem(kind, id, quickDone(kind, id), "Đã đánh dấu hoàn thành");
-    if (ok) { closeDrawer(); await loadAll(); }
+    if (ok) { closeDrawer(); await loadAll({ only: ["backlogs", "tasks"] }); }
     return;
   }
   if (action === "approve-member") { await reviewMember(id, true); return; }
