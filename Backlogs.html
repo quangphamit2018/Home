@@ -1008,6 +1008,23 @@ table.resizable.fixed td{overflow:hidden}
   .topbar .page-actions .btn{flex:none;justify-content:center;padding:0 10px}
   .topbar .public-sync-btn{padding:0 4px}
 }
+
+/* ---------- Jira key combobox ---------- */
+.jk-box{position:relative}
+.jk-box input{width:100%;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.jk-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;max-height:260px;overflow-y:auto;background:var(--paper,#fff);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px -12px rgba(16,26,40,.35);padding:4px}
+.jk-list[hidden]{display:none}
+.jk-item{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"k s" "k m";column-gap:10px;align-items:center;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12.5px}
+.jk-item b{grid-area:k;font-weight:750;color:var(--blue-dark,#2458d8);white-space:nowrap}
+.jk-sum{grid-area:s;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.jk-item em{grid-area:m;font-style:normal;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jk-item:hover,.jk-item.on{background:var(--blue-soft,#eaf1ff)}
+.jk-free{display:block;color:var(--muted);border-top:1px dashed var(--line);border-radius:0 0 8px 8px;margin-top:2px}
+.jk-empty,.jk-foot{padding:8px 10px;font-size:11px;color:var(--muted)}
+.jk-foot{border-top:1px solid var(--line);margin-top:2px}
+.jk-hint{font-size:10.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jk-hint.ok{color:#1e7e34}
+.jk-hint.warn{color:#8a6100}
 </style>
 </head>
 <body>
@@ -3372,6 +3389,11 @@ function formField(name, label, type, value, opts, full, placeholder, hint){
   else if (type === "select") control = '<select name="' + name + '">' + (opts || []).map(function(o){
     return '<option value="' + escAttr(o.value) + '"' + (String(value == null ? "" : value) === String(o.value) ? " selected" : "") + ">" + esc(o.label) + "</option>";
   }).join("") + "</select>";
+  else if (type === "jirakey") {
+    return '<div class="field jk' + (full ? " full" : "") + '"><span>' + esc(label) + '</span>' +
+      '<div class="jk-box"><input name="' + name + '" type="text" data-jk autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false" value="' + escAttr(value == null ? "" : value) + '" placeholder="' + escAttr(placeholder || "") + '"><div class="jk-list" role="listbox" hidden></div></div>' +
+      '<span class="jk-hint"></span></div>';
+  }
   else control = '<input name="' + name + '" type="' + type + '" value="' + escAttr(type === "date" ? (dayKey(value) || "") : (value == null ? "" : value)) + '" placeholder="' + escAttr(placeholder || "") + '"' + (type === "number" ? ' step="any" min="0"' : "") + ">";
   return '<label class="field' + (full ? " full" : "") + '"><span>' + esc(label) + "</span>" + control +
     (hint ? '<span class="muted" style="font-size:10.5px">' + esc(hint) + "</span>" : "") + "</label>";
@@ -3412,14 +3434,14 @@ function openRecord(kind, id, preset){
     f += formField("estimated_effort", "Effort ước tính (giờ)", "number", existing.estimated_effort);
     f += formField("actual_effort", "Effort thực tế (giờ)", "number", existing.actual_effort);
     f += formField("progress", "Tiến độ (%)", "number", existing.progress == null ? 0 : existing.progress);
-    f += formField("jira_key", "Jira key liên kết", "text", existing.jira_key, null, false, "Ví dụ: PROJ-123");
+    f += formField("jira_key", "Jira key liên kết", "jirakey", existing.jira_key, null, false, "Gõ hoặc chọn ticket, ví dụ: PROJ-123");
     f += formField("blocked_reason", "Lý do bị chặn", "text", existing.blocked_reason, null, true, "Nên ghi khi trạng thái là Blocked (không bắt buộc)");
     f += formField("description", "Mô tả", "textarea", existing.description, null, true, "Mục tiêu, phạm vi, kết quả mong đợi…");
   } else {
     f += formField("title", "Tên task", "text", existing.title, null, true, "Việc cần làm");
     f += formField("assignee_id", "Người thực hiện", "select", existing.assignee_id || "", directoryOptions(true), false, "", "");
     f += formField("backlog_id", "Thuộc backlog", "select", existing.backlog_id || "", backlogOptions(true));
-    f += formField("jira_key", "Jira key liên kết", "text", existing.jira_key, null, false, "Ví dụ: PROJ-123");
+    f += formField("jira_key", "Jira key liên kết", "jirakey", existing.jira_key, null, false, "Gõ hoặc chọn ticket, ví dụ: PROJ-123");
     f += formField("status", "Trạng thái", "select", existing.status || "todo", statusOptions("task", existing.status));
     f += formField("priority", "Ưu tiên", "select", existing.priority || "medium", [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, { value: "urgent", label: "Urgent" }]);
     f += formField("start_date", "Ngày bắt đầu", "date", existing.start_date);
@@ -3432,6 +3454,7 @@ function openRecord(kind, id, preset){
     f += formField("description", "Mô tả", "textarea", existing.description, null, true, "Chi tiết, tiêu chí hoàn thành…");
   }
   $("#recordFields").innerHTML = f;
+  $$("#recordFields input[data-jk]").forEach(jkHint);
   $("#recordDialog").showModal();
 }
 function cleanText(v){
@@ -3491,6 +3514,88 @@ function buildPayload(kind, data){
   if (status === "done" && !payload.completed_date) payload.completed_date = todayKey();
   return payload;
 }
+/* ---------- Jira key: ô nhập có gợi ý từ Jira tickets (vẫn cho nhập tay) ---------- */
+let JK_CACHE = { src: null, list: [] };
+function jkTickets(){
+  if (JK_CACHE.src !== state.tickets) {
+    const list = state.tickets.map(normTicket).filter(function(t){ return t.code && t.code.indexOf("Ticket ") !== 0; });
+    list.forEach(function(t){ t._s = (t.code + " " + t.title + " " + t.ownerName + " " + t.status).toLowerCase(); t._ts = Date.parse(t.updated) || 0; });
+    list.sort(function(a, b){ return b._ts - a._ts; });
+    JK_CACHE = { src: state.tickets, list: list };
+  }
+  return JK_CACHE.list;
+}
+function jkSearch(q){
+  const all = jkTickets(); q = String(q || "").trim().toLowerCase();
+  if (!q) return all.slice(0, 30);
+  const a = [], b = [], c = [];
+  for (let i = 0; i < all.length; i++) {
+    const t = all[i], at = t.code.toLowerCase().indexOf(q);
+    if (at === 0) a.push(t); else if (at > 0) b.push(t); else if (t._s.indexOf(q) >= 0) c.push(t);
+  }
+  return a.concat(b, c).slice(0, 30);
+}
+function jkHint(input){
+  const el = input.closest(".jk").querySelector(".jk-hint"), v = input.value.trim();
+  if (!v) { el.className = "jk-hint"; el.textContent = "Chọn từ danh sách Jira tickets hoặc tự nhập mã; có thể để trống."; return; }
+  const t = jkTickets().find(function(x){ return x.code.toLowerCase() === v.toLowerCase(); });
+  if (t) { el.className = "jk-hint ok"; el.textContent = "✓ " + t.title; }
+  else { el.className = "jk-hint warn"; el.textContent = "Mã chưa có trong Jira tickets — vẫn lưu bình thường."; }
+}
+function jkRender(input, keepActive){
+  const list = input.closest(".jk").querySelector(".jk-list"), q = input.value.trim();
+  const rows = jkSearch(q), exact = q && rows.some(function(t){ return t.code.toLowerCase() === q.toLowerCase(); });
+  let h = rows.map(function(t){
+    return '<div class="jk-item" role="option" data-key="' + escAttr(t.code) + '"><b>' + esc(t.code) + '</b><span class="jk-sum">' + esc(t.title) + '</span><em>' + esc([t.status, t.ownerName].filter(Boolean).join(" · ")) + '</em></div>';
+  }).join("");
+  if (q && !exact) h += '<div class="jk-item jk-free" role="option" data-key="' + escAttr(q.toUpperCase()) + '">Dùng mã “<b>' + esc(q.toUpperCase()) + '</b>” (nhập tay)</div>';
+  if (!h) h = '<div class="jk-empty">Chưa có Jira tickets để gợi ý — bạn vẫn có thể nhập mã.</div>';
+  else h += '<div class="jk-foot">' + (q ? "Kết quả khớp" : "Ticket cập nhật gần đây") + " · gõ để lọc theo mã, tiêu đề, người xử lý</div>";
+  list.innerHTML = h;
+  list.dataset.active = keepActive ? list.dataset.active || "-1" : "-1";
+  list.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+}
+function jkClose(input){
+  const list = input.closest(".jk").querySelector(".jk-list");
+  list.hidden = true; input.setAttribute("aria-expanded", "false");
+}
+function jkPick(input, key){
+  input.value = key; jkClose(input); jkHint(input);
+}
+function jkMove(input, dir){
+  const list = input.closest(".jk").querySelector(".jk-list"), items = list.querySelectorAll(".jk-item");
+  if (!items.length) return;
+  let i = parseInt(list.dataset.active, 10); if (isNaN(i)) i = -1;
+  i = (i + dir + items.length) % items.length;
+  items.forEach(function(el, n){ el.classList.toggle("on", n === i); });
+  list.dataset.active = String(i);
+  items[i].scrollIntoView({ block: "nearest" });
+}
+document.addEventListener("focusin", function(e){ if (e.target.matches && e.target.matches("input[data-jk]")) jkRender(e.target); });
+document.addEventListener("click", function(e){ if (e.target.matches && e.target.matches("input[data-jk]") && e.target.closest(".jk").querySelector(".jk-list").hidden) jkRender(e.target); });
+document.addEventListener("input", function(e){ if (e.target.matches && e.target.matches("input[data-jk]")) { jkRender(e.target); jkHint(e.target); } });
+document.addEventListener("focusout", function(e){
+  if (!(e.target.matches && e.target.matches("input[data-jk]"))) return;
+  const v = e.target.value.trim(); e.target.value = /^[A-Za-z][A-Za-z0-9_]*-\d+$/.test(v) ? v.toUpperCase() : v;
+  jkClose(e.target); jkHint(e.target);
+});
+document.addEventListener("mousedown", function(e){
+  const it = e.target.closest && e.target.closest(".jk-item");
+  if (!it) return;
+  e.preventDefault();
+  jkPick(it.closest(".jk").querySelector("input[data-jk]"), it.dataset.key);
+});
+document.addEventListener("keydown", function(e){
+  const inp = e.target; if (!(inp.matches && inp.matches("input[data-jk]"))) return;
+  const list = inp.closest(".jk").querySelector(".jk-list");
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (list.hidden) jkRender(inp); jkMove(inp, e.key === "ArrowDown" ? 1 : -1); }
+  else if (e.key === "Enter" && !list.hidden) {
+    const on = list.querySelector(".jk-item.on");
+    if (on) { e.preventDefault(); jkPick(inp, on.dataset.key); }
+  }
+  else if (e.key === "Escape" && !list.hidden) { e.preventDefault(); e.stopPropagation(); jkClose(inp); }
+});
 function validatePayload(kind, payload){
   /* Không có trường bắt buộc: chỉ chuẩn hoá dữ liệu, không chặn lưu. */
   if (!payload.title) payload.title = kind === "backlog" ? "(Backlog chưa đặt tên)" : "(Task chưa đặt tên)";
