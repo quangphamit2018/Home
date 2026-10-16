@@ -2602,7 +2602,7 @@ function sortValue(item, key){
   switch (key) {
     case "due": return item.due ? parseDay(item.due).getTime() : null;
     case "start": return item.start ? parseDay(item.start).getTime() : null;
-    case "span": return (item.start && item.due) ? diffDays(item.start, item.due) : null;
+    case "span": return item.due ? diffDays(todayKey(), item.due) : null;
     case "created": return stampMs(item.created);
     case "updated": return stampMs(item.updated);
     case "updatedRaw": return item.x ? stampMs(item.x.updatedRaw) : null;
@@ -3937,8 +3937,8 @@ const BACKLOG_GROUP_LABEL = {
 function backlogFiltered(){
   return withBlockedSince(applyListFilters(itemsByKind("backlog"), state.filters.backlogs));
 }
-/* Thời gian còn lại = Deadline - Bắt đầu dự kiến (số ngày) */
-function spanDays(item){ return (item.start && item.due) ? diffDays(item.start, item.due) : null; }
+/* Thời gian còn lại = Deadline - thời gian hiện tại (số ngày) */
+function spanDays(item){ return item.due ? diffDays(todayKey(), item.due) : null; }
 function backlogRowCols(){
   return [
     { label: "Backlog", sort: "title", render: function(i){
@@ -3962,8 +3962,9 @@ function backlogRowCols(){
       } },
     { label: "Thời gian còn lại", sort: "span", render: function(i){
         const n = spanDays(i);
-        if (n == null) return '<span class="muted">—</span>';
-        return '<span class="nowrap"' + (n < 0 ? ' style="color:var(--red)"' : "") + ">" + n + " ngày</span>";
+        if (n == null || i.statusGroup === "done") return '<span class="muted">—</span>';
+        if (n < 0) return '<span class="nowrap" style="color:var(--red)">Trễ ' + Math.abs(n) + " ngày</span>";
+        return '<span class="nowrap">' + (n === 0 ? "Hôm nay" : n + " ngày") + "</span>";
       } },
     { label: "", cls: "nowrap", render: function(i){
         return '<div class="row-actions">' +
