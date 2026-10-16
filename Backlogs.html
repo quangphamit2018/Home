@@ -946,6 +946,7 @@ function signInCard(){
     '<h1>Quản lý Jira và công việc nhóm</h1>' +
     '<p class="gate-copy">Theo dõi ticket từ Supabase, lên kế hoạch theo người phụ trách, theo dõi workload và tiến độ trên cùng một workspace.</p>' +
     (authUrlError ? '<div class="notice error">Đăng nhập không thành công: ' + esc(authUrlError) + '</div>' : '') +
+    (inFrame() ? '<div class="notice warn">Ứng dụng đang chạy trong khung nhúng. Google không cho đăng nhập trong khung, nên khi bấm nút bên dưới trang đăng nhập sẽ mở ở cửa sổ chính (hoặc tab mới).</div>' : '') +
     '<button id="googleLogin" class="google-btn"><span class="google-g">G</span>Đăng nhập bằng Google</button>' +
     '<div class="gate-foot">Kết nối: <b>' + esc(hostOf(config().url)) + '</b><br>Tài khoản mới sẽ gửi yêu cầu tham gia và chờ quản trị viên phê duyệt sau lần đăng nhập đầu tiên.</div>' +
     '</div>';
@@ -973,18 +974,35 @@ function renderPending(){
     '<button class="btn" data-action="logout">Đăng xuất</button></div>' +
     '<div class="gate-foot">Chỉ super_admin được chỉ định trong SQL mới nhìn thấy yêu cầu tham gia.</div></div>';
 }
+function inFrame(){
+  try { return window.self !== window.top; } catch (e) { return true; }
+}
 async function signInGoogle(){
   if (!state.client) { toast("Hãy cấu hình Supabase trong code trước", "error"); return; }
   if (location.protocol === "file:" || location.origin === "null") { toast("Hãy mở app qua địa chỉ https (GitHub Pages…), không mở trực tiếp file từ máy", "error"); return; }
   authUrlError = "";
   const redirect = location.origin + location.pathname;
-  /* prompt=select_account: luôn hiện hộp chọn tài khoản Google, tránh tự chọn nhầm tài khoản mặc định (nguyên nhân lỗi 403 ở accountchooser) */
-  const result = await state.client.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: redirect, queryParams: { prompt: "select_account" } }
-  });
-  if (result.error) toast("Google login: " + result.error.message, "error");
+  /* prompt=select_account: luôn hiện hộp chọn tài khoản Google */
+  const opts = { redirectTo: redirect, queryParams: { prompt: "select_account" } };
+  if (!inFrame()) {
+    const result = await state.client.auth.signInWithOAuth({ provider: "google", options: opts });
+    if (result.error) toast("Google login: " + result.error.message, "error");
+    return;
+  }
+  /* Đang chạy trong iframe (vd. Solar Tools Hub): Google từ chối đăng nhập trong khung nhúng (403).
+     Lấy URL OAuth rồi mở ở cửa sổ cấp cao nhất; nếu bị chặn thì mở tab mới. */
+  opts.skipBrowserRedirect = true;
+  const result = await state.client.auth.signInWithOAuth({ provider: "google", options: opts });
+  if (result.error || !result.data || !result.data.url) { toast("Google login: " + ((result.error && result.error.message) || "không lấy được URL đăng nhập"), "error"); return; }
+  try {
+    window.top.location.href = result.data.url;
+  } catch (e) {
+    const w = window.open(result.data.url, "_blank");
+    if (!w) toast("Trình duyệt chặn cửa sổ mới. Hãy cho phép popup hoặc mở trực tiếp " + redirect + " rồi đăng nhập.", "error");
+    else toast("Đã mở trang đăng nhập Google ở tab mới. Đăng nhập xong hãy quay lại và tải lại trang.", "good");
+  }
 }
+
 function showApp(){
   const gate = $("#gate"), shell = $("#shell");
   if (gate) gate.style.display = "none";
