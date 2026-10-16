@@ -1586,6 +1586,35 @@ const state = {
 /* Độ rộng cột người dùng kéo: nhớ giữa các lần render và giữa các phiên */
 try { state.colW = JSON.parse(localStorage.getItem("jtm-colw") || "{}") || {}; } catch (e) { state.colW = {}; }
 function saveColW(){ try { localStorage.setItem("jtm-colw", JSON.stringify(state.colW || {})); } catch (e) {} }
+/* Cột bảng Backlogs đã đổi bố cục: bỏ độ rộng cũ đã lưu một lần để không lệch cột */
+if (state.colW && !state.colW.__v2) { delete state.colW.backlogs; state.colW.__v2 = 1; saveColW(); }
+/* Nhớ tab đang mở: F5 / refresh vẫn ở đúng tab (lưu ở URL hash #tab=... và localStorage) */
+const TAB_STORE_KEY = "jtm-tab";
+function readSavedTab(){
+  try {
+    const h = new URLSearchParams((location.hash || "").replace(/^#/, "")).get("tab");
+    if (h) return h;
+  } catch (e) {}
+  try { return localStorage.getItem(TAB_STORE_KEY) || ""; } catch (e) { return ""; }
+}
+function saveTab(){
+  try { localStorage.setItem(TAB_STORE_KEY, state.tab); } catch (e) {}
+  try {
+    const h = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+    if (h.get("tab") === state.tab) return;
+    h.set("tab", state.tab);
+    history.replaceState(null, "", location.pathname + location.search + "#" + h.toString());
+  } catch (e) {}
+}
+function clearSavedTab(){
+  try { localStorage.removeItem(TAB_STORE_KEY); } catch (e) {}
+  try {
+    const h = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+    h.delete("tab");
+    const hs = h.toString();
+    history.replaceState(null, "", location.pathname + location.search + (hs ? "#" + hs : ""));
+  } catch (e) {}
+}
 /* ============================================================================
    2. KẾT NỐI · ĐĂNG NHẬP GOOGLE · PHÊ DUYỆT THÀNH VIÊN
    ============================================================================ */
@@ -1806,6 +1835,7 @@ async function logout(){
   state.member = null;
   state.tab = "overview";
   state.focusMember = null;
+  clearSavedTab();
   resetData();
   try { closeDrawer(); } catch (e) {}
   showGate();
@@ -1814,6 +1844,7 @@ async function logout(){
 async function bootstrap(){
   try { loginIntent = /[?&]code=/.test(location.search) || /access_token=/.test(location.hash); } catch (e) {}
   readAuthUrlError();
+  { const saved = readSavedTab(); if (saved && TAB_META[saved]) state.tab = saved; }
   if (!connect()) { showGate(); return; }
   const r = await state.client.auth.getSession();
   if (r.error) { gateMessage("Không đọc được phiên đăng nhập", r.error.message, true); return; }
@@ -1877,6 +1908,8 @@ function renderShell(){
   if (!state.session || !state.member || state.member.status !== "approved") return;
   updateUserHeader();
   if ((state.tab === "members" || state.tab === "recycle") && !isAdmin()) state.tab = "overview";
+  if (!TAB_META[state.tab]) state.tab = "overview";
+  saveTab();
   const meta = TAB_META[state.tab] || TAB_META.overview;
   $("#crumbTitle").textContent = meta[0];
   $("#pageEyebrow").textContent = meta[1];
@@ -2322,8 +2355,27 @@ function normTicket(row, index){
     raw: row
   };
 }
+/* Trạng thái thật của Jira ticket theo jira_key (cache theo mảng tickets) */
+let _jsSrc = null, _jsLen = -1, _jsMap = null;
+function jiraStatusOf(key){
+  if (!key) return "";
+  if (!_jsMap || _jsSrc !== state.tickets || _jsLen !== state.tickets.length) {
+    _jsMap = {};
+    state.tickets.forEach(function(t){
+      const k = norm(tf(t, "key"));
+      if (k) _jsMap[k] = tf(t, "status") || "";
+    });
+    _jsSrc = state.tickets; _jsLen = state.tickets.length;
+  }
+  return _jsMap[norm(key)] || "";
+}
 function normBacklog(row){
-  const status = row.status || "planned";
+  const internalStatus = row.status || "planned";
+  const jiraStatus = jiraStatusOf(row.jira_key);
+  /* Backlog gắn Jira key → hiển thị đúng trạng thái trên Jira.
+     Giữ trạng thái nội bộ khi backlog đã Blocked / Archived / Done do người dùng đặt. */
+  const keepInternal = ["blocked", "archived", "done"].indexOf(norm(internalStatus)) >= 0;
+  const status = (jiraStatus && !keepInternal) ? jiraStatus : internalStatus;
   const target = row.target_date || row.due_date || null;
   const progress = hasVal(row.progress) ? clamp(safeNum(row.progress), 0, 100) : null;
   return {
@@ -2333,6 +2385,9 @@ function normBacklog(row){
     title: row.title || "(chưa có tiêu đề)",
     description: row.description || "",
     status: status,
+    jiraStatus: jiraStatus,
+    internalStatus: internalStatus,
+    fromJira: !!(jiraStatus && !keepInternal),
     statusGroup: statusGroup(status),
     priority: row.priority || "medium",
     prio: prioRank(row.priority),
@@ -2547,6 +2602,7 @@ function sortValue(item, key){
   switch (key) {
     case "due": return item.due ? parseDay(item.due).getTime() : null;
     case "start": return item.start ? parseDay(item.start).getTime() : null;
+    case "span": return (item.start && item.due) ? diffDays(item.start, item.due) : null;
     case "created": return stampMs(item.created);
     case "updated": return stampMs(item.updated);
     case "updatedRaw": return item.x ? stampMs(item.x.updatedRaw) : null;
@@ -3881,6 +3937,8 @@ const BACKLOG_GROUP_LABEL = {
 function backlogFiltered(){
   return withBlockedSince(applyListFilters(itemsByKind("backlog"), state.filters.backlogs));
 }
+/* Thời gian còn lại = Deadline - Bắt đầu dự kiến (số ngày) */
+function spanDays(item){ return (item.start && item.due) ? diffDays(item.start, item.due) : null; }
 function backlogRowCols(){
   return [
     { label: "Backlog", sort: "title", render: function(i){
@@ -3890,20 +3948,22 @@ function backlogRowCols(){
           (i.raw.jira_key ? " · " + esc(i.raw.jira_key) : "") + " · " + tasks.length + " task (" + done + " xong)</span>";
       } },
     { label: "Người phụ trách", sort: "owner", render: function(i){ return personHtml(i, i.ownerName); } },
-    { label: "Trạng thái", sort: "status", render: function(i){ return statusBadge(i.status) + (i.blocked && i.blockedReason ? '<span class="cell-sub">' + esc(i.blockedReason) + "</span>" : ""); } },
+    { label: "Trạng thái", sort: "statusName", render: function(i){ return statusBadge(i.status) + (i.fromJira ? '<span class="cell-sub">Theo Jira</span>' : "") + (i.blocked && i.blockedReason ? '<span class="cell-sub">' + esc(i.blockedReason) + "</span>" : ""); } },
     { label: "Ưu tiên", sort: "priority", render: function(i){ return priorityMark(i.priority); } },
-    { label: "Mốc thời gian", sort: "start", render: function(i){
-        if (!i.start && !i.due) return '<span class="badge amber">Thiếu mốc thời gian</span>';
-        const late = i.statusGroup !== "done" && i.due && daysLeft(i) < 0;
-        return '<span class="nowrap">' + esc(fmtDay(i.start)) + " → " + esc(fmtDay(i.due)) + "</span>" +
-          (i.statusGroup === "done" ? '<span class="cell-sub">Hoàn thành ' + esc(fmtDay(i.actualEnd)) + "</span>" :
-            late ? '<span class="cell-sub" style="color:var(--red)">Trễ ' + Math.abs(daysLeft(i)) + " ngày</span>" :
-            i.due ? '<span class="cell-sub">Còn ' + daysLeft(i) + " ngày</span>" : "");
+    { label: "Bắt đầu dự kiến", sort: "start", render: function(i){
+        return i.start ? '<span class="nowrap">' + esc(fmtDay(i.start)) + "</span>" : '<span class="badge amber">Thiếu ngày bắt đầu</span>';
       } },
-    { label: "Tiến độ", sort: "progress", render: function(i){ return progressBar(i.progress, i.progress === 100 ? "green" : i.blocked ? "red" : ""); } },
-    { label: "Effort", sort: "effort", render: function(i){
-        if (i.effort == null && i.actualEffort == null) return '<span class="muted">Chưa có dữ liệu</span>';
-        return '<span class="nowrap">' + esc(fmtHours(i.effort)) + " / " + esc(fmtHours(i.actualEffort)) + '</span><span class="cell-sub">ước tính / thực tế</span>';
+    { label: "Deadline", sort: "due", render: function(i){
+        if (!i.due) return '<span class="badge amber">Thiếu deadline</span>';
+        const late = i.statusGroup !== "done" && daysLeft(i) < 0;
+        return '<span class="nowrap">' + esc(fmtDay(i.due)) + "</span>" +
+          (i.statusGroup === "done" ? '<span class="cell-sub">Hoàn thành ' + esc(fmtDay(i.actualEnd)) + "</span>" :
+            late ? '<span class="cell-sub" style="color:var(--red)">Trễ ' + Math.abs(daysLeft(i)) + " ngày</span>" : "");
+      } },
+    { label: "Thời gian còn lại", sort: "span", render: function(i){
+        const n = spanDays(i);
+        if (n == null) return '<span class="muted">—</span>';
+        return '<span class="nowrap"' + (n < 0 ? ' style="color:var(--red)"' : "") + ">" + n + " ngày</span>";
       } },
     { label: "", cls: "nowrap", render: function(i){
         return '<div class="row-actions">' +
