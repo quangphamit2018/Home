@@ -901,6 +901,7 @@ const state = {
   errors: {},
   loaded: { tickets: false, backlogs: false, tasks: false, directory: false, members: false, activity: false, saved: false },
   ticketComplete: true,
+  ticketFilter: null,
   activityDone: false,
   busy: false,
   filters: {
@@ -1333,7 +1334,8 @@ async function fetchAll(table, options){
   }
   return out;
 }
-async function loadTickets(){
+async function loadTicketsAll(){
+  state.ticketFilter = null;
   const r = await state.client.from(TICKET_TABLE).select("*").range(0, THRESHOLDS.ticketPageSize - 1);
   if (r.error) throw r.error;
   const probe = r.data || [];
@@ -1351,6 +1353,50 @@ async function loadTickets(){
       state.ticketComplete = false;
     }
   }
+  state.loaded.tickets = true;
+}
+/* Chỉ tải ticket của các assignee thuộc nhóm (lọc ngay trên server, tải song song nhiều trang) */
+const TICKET_ASSIGNEES = ["Vxceed Support", "Abhishek.shetty", "Tan Nguyen", "Quang Pham", "Pramodh", "Susanta", "Long Vo", "Phuc Nguyen23", "Rakesha HR", "Truong Nguyen10", "Sharad Kumar"];
+async function loadTickets(){
+  const probe = await state.client.from(TICKET_TABLE).select("*").limit(1);
+  if (probe.error) throw probe.error;
+  const cols = probe.data && probe.data.length ? Object.keys(probe.data[0]) : [];
+  const assigneeCol = TICKET_FIELDS.assignee.find(function(c){ return cols.indexOf(c) >= 0; });
+  if (!assigneeCol) { await loadTicketsAll(); return; }
+  const orderCol = ["id", "issue_key", "ticket_key", "key", "jira_key", "created_at", "created", "updated_at", "updated"].find(function(c){ return cols.indexOf(c) >= 0; });
+  const orExpr = TICKET_ASSIGNEES.map(function(n){ return assigneeCol + ".ilike.%" + n + "%"; }).join(",");
+  const size = THRESHOLDS.ticketPageSize;
+  const cnt = await state.client.from(TICKET_TABLE).select("*", { count: "exact", head: true }).or(orExpr);
+  if (cnt.error) throw cnt.error;
+  const total = cnt.count || 0;
+  if (total === 0) {
+    toast("Không có ticket nào khớp danh sách assignee, đang tải toàn bộ ticket", "error");
+    await loadTicketsAll();
+    return;
+  }
+  let rows = [];
+  if (total <= size || !orderCol) {
+    const r = await state.client.from(TICKET_TABLE).select("*").or(orExpr).range(0, size - 1);
+    if (r.error) throw r.error;
+    rows = r.data || [];
+    state.ticketComplete = total <= size;
+  } else {
+    const pages = Math.min(Math.ceil(total / size), Math.ceil(THRESHOLDS.ticketMaxRows / size));
+    const fetchPage = function(i){
+      return state.client.from(TICKET_TABLE).select("*").or(orExpr).order(orderCol, { ascending: true }).range(i * size, i * size + size - 1)
+        .then(function(r){ if (r.error) throw r.error; return r.data || []; });
+    };
+    const results = new Array(pages);
+    let next = 0;
+    const worker = async function(){
+      while (next < pages) { const i = next++; results[i] = await fetchPage(i); }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    results.forEach(function(chunk){ rows = rows.concat(chunk); });
+    state.ticketComplete = pages * size >= total;
+  }
+  state.tickets = rows;
+  state.ticketFilter = { column: assigneeCol, count: TICKET_ASSIGNEES.length, total: total };
   state.loaded.tickets = true;
 }
 async function loadBacklogs(){
@@ -2157,7 +2203,7 @@ function renderOverview(){
     (state.ticketComplete ? "" : '<div class="notice warn"><b>Dữ liệu ticket có thể chưa đầy đủ.</b> Bảng <span class="mono">' + TICKET_TABLE + '</span> vượt 1.000 dòng nhưng không tìm thấy cột ngày/khóa để phân trang an toàn, nên chỉ đọc được 1.000 dòng đầu. Hãy thêm cột <span class="mono">created_at</span> hoặc <span class="mono">id</span> để tải đủ.</div>') +
     head +
     '<div class="grid stats">' +
-      statCard({ label: "Jira tickets", num: tickets.length, note: "Đọc từ " + TICKET_TABLE + (state.ticketComplete ? " · đã tải đủ" : " · có thể thiếu dòng"), tone: "", icon: "ticket", drill: "tickets|preset=all" }) +
+      statCard({ label: "Jira tickets", num: tickets.length, note: "Đọc từ " + TICKET_TABLE + (state.ticketComplete ? " · đã tải đủ" : " · có thể thiếu dòng") + (state.ticketFilter ? " · lọc theo " + state.ticketFilter.count + " assignee" : ""), tone: "", icon: "ticket", drill: "tickets|preset=all" }) +
       statCard({ label: "Ticket đang mở", num: openList(tickets).length, note: "Chưa ở trạng thái hoàn thành/đóng", tone: "blue", icon: "clock", drill: "tickets|preset=active" }) +
       statCard({ label: "Ticket đã hoàn thành", num: tickets.filter(function(i){ return i.statusGroup === "done"; }).length, note: "Resolved / closed / done", tone: "green", icon: "check", drill: "tickets|preset=done" }) +
       statCard({ label: "Ticket chưa có người", num: unassignedList(tickets).length, note: "Chưa gán assignee trên Jira", tone: "amber", icon: "user", drill: "tickets|preset=unassigned" }) +
@@ -2342,7 +2388,7 @@ function renderTickets(){
       '<span class="muted" style="margin-left:auto;font-size:11.5px">' + fmtNum(filtered.length) + " / " + fmtNum(all.length) + " ticket</span></div>" +
     '<div class="panel"><div class="panel-head"><div><div class="panel-title">Issue register</div>' +
       '<div class="panel-sub">Bảng nguồn Jira chỉ đọc · kế hoạch nội bộ nằm trong backlog và task</div></div>' +
-      '<div class="panel-tools"><span class="muted" style="font-size:11.5px">' + (state.ticketComplete ? "Đã tải đủ dòng" : "Có thể thiếu dòng") + "</span></div></div>" +
+      '<div class="panel-tools"><span class="muted" style="font-size:11.5px">' + (state.ticketComplete ? "Đã tải đủ dòng" : "Có thể thiếu dòng") + (state.ticketFilter ? " · chỉ ticket của " + state.ticketFilter.count + " assignee" : "") + "</span></div></div>" +
       '<div id="listHost">' + ticketListHtml() + "</div></div>";
   $("#pageContent").innerHTML = content;
 }
