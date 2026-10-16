@@ -169,7 +169,7 @@
             return origOpen.apply(this, arguments);
         };
     })();
-    </script><script defer data-preview-inject="true" data-app-id="6ad1a38566068385b607fbf3" data-preview-type="sandbox" data-rum-app-id="db50c921-10c3-4f12-bccb-950fa174b708" data-rum-client-token="pubfe8a4f2972b412b4556fd67e77f82cb4" data-dd-site="datadoghq.com" src="https://app.base44.com/builder-bridge.js?t=1792124325"></script>
+    </script><script defer data-preview-inject="true" data-app-id="6ad1a38566068385b607fbf3" data-preview-type="sandbox" data-rum-app-id="db50c921-10c3-4f12-bccb-950fa174b708" data-rum-client-token="pubfe8a4f2972b412b4556fd67e77f82cb4" data-dd-site="datadoghq.com" src="https://app.base44.com/builder-bridge.js?t=1792124551"></script>
     <script>
     (function() {
         var IGNORE = { SCRIPT: 1, STYLE: 1, LINK: 1, META: 1, NOSCRIPT: 1, TEMPLATE: 1 };
@@ -1299,6 +1299,39 @@ tbody tr:hover .row-actions .icon-act,tbody tr:focus-within .row-actions .icon-a
 @media(prefers-reduced-motion:reduce){
   .stat-card,.panel,.chip,.btn{transition:none}
 }
+
+/* ================================================================================
+   PREMIUM 3D LAYER — sửa lỗi hiển thị và tối ưu điện thoại
+   ================================================================================ */
+/* 1) Biểu tượng SVG trong thẻ KPI / dòng hoạt động chưa được đặt kích thước
+      nên hiển thị thành khối đen lớn — đặt lại kích thước và nét vẽ */
+svg{max-width:100%}
+.stat-icon svg,.stat-foot svg,.feed-icon svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+.stat-icon svg{width:17px;height:17px}
+.stat-foot svg{width:15px;height:15px;stroke-width:2}
+.feed-icon svg{width:16px;height:16px}
+
+/* 2) Sửa gốc lỗi tràn ngang: các khối co giãn phải được phép co nhỏ hơn nội dung */
+.main,.content,#pageContent,.panel,.panel-body,.split>*,.grid>*,.toolbar>*,.panel-foot>*{min-width:0}
+.toolbar .field>input,.toolbar .field>select{min-width:0}
+
+/* Thanh lọc trên điện thoại: co giãn và xuống dòng đúng trong bề ngang màn hình */
+@media(max-width:760px){
+  .toolbar{display:flex;flex-wrap:wrap;gap:9px;align-items:flex-end}
+  .toolbar>*{min-width:0;max-width:100%;flex:0 1 auto}
+  .toolbar .grow,.toolbar .search-box,.toolbar .chips,.toolbar>.seg,.toolbar .btn{flex:1 1 100%}
+  .toolbar .field{flex:1 1 142px;min-width:0}
+  .toolbar .field>input,.toolbar .field>select{width:100%;min-width:0;max-width:100%}
+  .toolbar input,.toolbar select{min-width:0;max-width:100%;font-size:12.5px}
+  .toolbar-sep{display:none}
+  input[type="date"],input[type="datetime-local"]{min-width:0;max-width:100%}
+  .seg{max-width:100%;overflow-x:auto;flex-wrap:nowrap}
+  .page-actions .btn{flex:1 1 46%}
+  .panel-foot{flex-wrap:wrap;gap:9px}
+  .kv dt,.kv dd,.mini-stat,.person-card,.feed-text{min-width:0}
+  .content{overflow-x:clip}
+}
+.stat-foot{margin-top:10px}
 
 </style>
 </head>
