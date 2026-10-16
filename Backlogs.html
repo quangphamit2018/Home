@@ -1,502 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-        <script>if (window.self !== window.top) window.parent.postMessage({ type: 'SANDBOX_DOCUMENT_START' }, '*');</script>
-    <script>
-    (function() {
-        var buffer = window.__base44_preview_native_failures;
-        if (!buffer || buffer.version !== 1 || !Array.isArray(buffer.entries)) {
-            buffer = { version: 1, entries: [], listenersInstalled: false };
-            window.__base44_preview_native_failures = buffer;
-        }
-        if (buffer.listenersInstalled) return;
-        function value(object, key) {
-            return object && typeof object[key] === 'string' ? object[key] : '';
-        }
-        function append(message) {
-            if (!message) return;
-            var normalizedMessage = String(message).slice(0, 5000);
-            for (var index = buffer.entries.length - 1; index >= 0; index--) {
-                var existing = buffer.entries[index];
-                if (existing && existing.level === 'error' && existing.message === normalizedMessage) {
-                    buffer.entries.splice(index, 1);
-                }
-            }
-            buffer.entries.push({
-                level: 'error',
-                message: normalizedMessage,
-                timestamp: Date.now()
-            });
-            if (buffer.entries.length > 100) {
-                buffer.entries.splice(0, buffer.entries.length - 100);
-            }
-        }
-        buffer.append = append;
-        function handleError(event) {
-            var target = event && event.target;
-            var tagName = value(target, 'tagName').toLowerCase() || 'window';
-            var isModule = tagName === 'script' && value(target, 'type').toLowerCase() === 'module';
-            var resourceType = isModule ? 'module' : tagName;
-            var url = value(target, 'src') || value(target, 'href') || value(event, 'filename');
-            var detail = value(event, 'message') || value(event && event.error, 'message');
-            var prefix = tagName === 'window' ? 'Native browser error' : 'Failed to load ' + resourceType;
-            append(prefix + (url ? ' ' + url : '') + (detail ? ': ' + detail : ''));
-        }
-        function rejectionReason(reason) {
-            if (typeof reason === 'string') return reason;
-            var message = value(reason, 'message');
-            if (message) return message;
-            try { return JSON.stringify(reason) || String(reason); }
-            catch (e) { return String(reason); }
-        }
-        function handleRejection(event) {
-            append('Unhandled promise rejection: ' + rejectionReason(event && event.reason));
-        }
-        function handleCspViolation(event) {
-            var blockedUri = value(event, 'blockedURI') || 'resource';
-            var directive = value(event, 'violatedDirective');
-            append('Content Security Policy blocked ' + blockedUri + (directive ? ' (' + directive + ')' : ''));
-        }
-        function overlayText(root, selector) {
-            var element = root && root.querySelector(selector);
-            return value(element, 'textContent').trim();
-        }
-        function captureViteOverlay(overlay) {
-            var root = overlay && overlay.shadowRoot;
-            var message = overlayText(root, '.message-body');
-            if (!message) return;
-            var plugin = overlayText(root, '.plugin');
-            var details = ['Vite build error: ' + (plugin ? plugin + ' ' : '') + message];
-            var file = overlayText(root, '.file');
-            var frame = overlayText(root, '.frame');
-            var stack = overlayText(root, '.stack');
-            if (file) details.push('File: ' + file);
-            if (frame) details.push(frame);
-            if (stack) details.push(stack);
-            append(details.join(String.fromCharCode(10)));
-        }
-        function captureViteOverlays(node) {
-            if (!node || node.nodeType !== 1) return;
-            if (node.matches && node.matches('vite-error-overlay')) captureViteOverlay(node);
-            if (!node.querySelectorAll) return;
-            var overlays = node.querySelectorAll('vite-error-overlay');
-            for (var index = 0; index < overlays.length; index++) captureViteOverlay(overlays[index]);
-        }
-        window.addEventListener('error', handleError, true);
-        window.addEventListener('unhandledrejection', handleRejection);
-        window.addEventListener('securitypolicyviolation', handleCspViolation);
-        if (typeof MutationObserver !== 'undefined' && document.documentElement) {
-            captureViteOverlays(document.documentElement);
-            new MutationObserver(function(records) {
-                for (var recordIndex = 0; recordIndex < records.length; recordIndex++) {
-                    var nodes = records[recordIndex].addedNodes;
-                    for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
-                        captureViteOverlays(nodes[nodeIndex]);
-                    }
-                }
-            }).observe(document.documentElement, { childList: true, subtree: true });
-        }
-        buffer.listenersInstalled = true;
-    })();
-    </script>
-    <script data-preview-data-env-pin="true">
-    (function() {
-        var KEY = 'base44_data_env';
-        var APP_API_PATH = "/api/apps/6ad1a38566068385b607fbf3/";
-        var STORAGE_KEY = KEY + ':' + APP_API_PATH;
-        var API_ORIGINS = ["https://app.base44.com", "https://base44.app"].map(function(u) { return new URL(u).origin; });
-        var REQUEST_INIT_KEYS = [
-            'method', 'headers', 'credentials', 'mode', 'cache', 'redirect',
-            'referrer', 'referrerPolicy', 'integrity', 'keepalive', 'signal', 'priority',
-        ];
-        var env = new URLSearchParams(window.location.search).get(KEY);
-        try {
-            if (env === 'dev' || env === 'prod') sessionStorage.setItem(STORAGE_KEY, env);
-            else env = sessionStorage.getItem(STORAGE_KEY);
-        } catch (e) {}
-        if (env !== 'dev' && env !== 'prod') return;
-        function pin(url) {
-            try {
-                var u = new URL(url, window.location.href);
-                var sameOrigin = u.origin === window.location.origin;
-                if (!sameOrigin && API_ORIGINS.indexOf(u.origin) === -1) return url;
-                // The app's own server routes and TanStack server functions build
-                // their SDK client from this request, so they need the selection too.
-                var appServerPath = sameOrigin && (
-                    u.pathname.startsWith('/api/') || u.pathname.startsWith('/_serverFn/')
-                );
-                if (!appServerPath && !u.pathname.startsWith(APP_API_PATH)) return url;
-                // Privileged function/agent routes trust this app's Preview host,
-                // not a dev parameter sent to the generic SDK API origin.
-                if (u.origin !== window.location.origin && (
-                    u.pathname.startsWith(APP_API_PATH + 'functions/') ||
-                    u.pathname.startsWith(APP_API_PATH + 'agents/')
-                )) {
-                    u = new URL(u.pathname + u.search + u.hash, window.location.origin);
-                }
-                u.searchParams.set(KEY, env);
-                return u.toString();
-            } catch (e) { return url; }
-        }
-        var origFetch = window.fetch;
-        window.fetch = function(input, init) {
-            if (typeof input === 'string' || input instanceof URL) {
-                return origFetch.call(this, pin(String(input)), init);
-            }
-            if (!input || !input.url) return origFetch.call(this, input, init);
-            var pinned = pin(input.url);
-            if (pinned === input.url) return origFetch.call(this, input, init);
-            try {
-                input = new Request(input, init);
-                if (!input.keepalive || !input.body) {
-                    return origFetch.call(this, new Request(pinned, input));
-                }
-                // RequestInit exposes an existing body as a stream, which Fetch
-                // forbids with keepalive. Buffer only that case, after init overrides.
-                var self = this;
-                return input.blob().then(function(body) {
-                    var rebuilt = { body: body };
-                    REQUEST_INIT_KEYS.forEach(function(key) {
-                        if (input[key] !== undefined) rebuilt[key] = input[key];
-                    });
-                    return origFetch.call(self, new Request(pinned, rebuilt));
-                });
-            } catch (error) { return Promise.reject(error); }
-        };
-        var origOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(method, url) {
-            arguments[1] = pin(String(url));
-            return origOpen.apply(this, arguments);
-        };
-    })();
-    </script><script defer data-preview-inject="true" data-app-id="6ad1a38566068385b607fbf3" data-preview-type="sandbox" data-rum-app-id="db50c921-10c3-4f12-bccb-950fa174b708" data-rum-client-token="pubfe8a4f2972b412b4556fd67e77f82cb4" data-dd-site="datadoghq.com" src="https://app.base44.com/builder-bridge.js?t=1792124551"></script>
-    <script>
-    (function() {
-        var IGNORE = { SCRIPT: 1, STYLE: 1, LINK: 1, META: 1, NOSCRIPT: 1, TEMPLATE: 1 };
-        const fire = () => window.parent.postMessage({ type: 'IFRAME_CONTENT_READY' }, '*');
-        function check() {
-            var body = document.body;
-            if (!body) return false;
-            for (var idx = 0; idx < body.children.length; idx++) {
-                if (!IGNORE[body.children[idx].tagName]) return true;
-            }
-            return false;
-        }
-        function start() {
-            if (check()) { fire(); return; }
-            var observer = new MutationObserver(function() {
-                if (check()) { fire(); observer.disconnect(); }
-            });
-            observer.observe(document.documentElement, { childList: true, subtree: true });
-        }
-        if (document.body) { start(); }
-        else { document.addEventListener('DOMContentLoaded', start, { once: true }); }
-    })();
-    </script>
-    <script>
-    (function() {
-        if (window.self === window.top) return;
-        var APP_ID = "6ad1a38566068385b607fbf3";
-        var PREVIEW_TYPE = "sandbox";
-        var on404 = false;
-        var booted = false;
-        function detect() { return !!document.querySelector('[data-source-location^="PageNotFound:"]'); }
-        function payload() { return { app_id: APP_ID, preview_type: PREVIEW_TYPE, url_path: window.location.pathname }; }
-        function tick() {
-            var now = detect();
-            if (now && !on404) {
-                on404 = true;
-                window.parent.postMessage({ type: 'PREVIEW_PAGE_NOT_FOUND', payload: payload() }, '*');
-            } else if (!now && (on404 || !booted)) {
-                // On first tick of a fresh document, emit a cleared signal even when
-                // not currently on a 404 — the parent may have latched is404=true from
-                // a previous document at the same URL (e.g. after an iframe reload).
-                on404 = false;
-                window.parent.postMessage({ type: 'PREVIEW_PAGE_NOT_FOUND_CLEARED', payload: payload() }, '*');
-            }
-            booted = true;
-        }
-        function start() {
-            tick();
-            new MutationObserver(tick).observe(document.body, { childList: true, subtree: true });
-        }
-        if (document.body) { start(); }
-        else { document.addEventListener('DOMContentLoaded', start, { once: true }); }
-    })();
-    </script>
-    <script>
-    (function() {
-        if (window.self === window.top) return;
-        function fire() { window.parent.postMessage({ type: 'REACT_ROOT_HAS_CHILDREN' }, '*'); }
-        function findRoot() {
-            return document.getElementById('root')
-                || document.getElementById('app')
-                || document.querySelector('[data-react-root]');
-        }
-        // One-shot: wait for DOMContentLoaded (static HTML parsed by then, so the
-        // Base44 convention <div id="root"> is either present or not coming),
-        // observe the root's childList until the first element child appears,
-        // then fire and disconnect. No tree-wide subtree observer.
-        function start() {
-            var root = findRoot();
-            if (!root) return;
-            if (root.childElementCount > 0) { fire(); return; }
-            var obs = new MutationObserver(function() {
-                if (root.childElementCount > 0) { fire(); obs.disconnect(); }
-            });
-            obs.observe(root, { childList: true });
-        }
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', start, { once: true });
-        } else { start(); }
-    })();
-    </script>
-    <script>
-    (function() {
-        if (window.self === window.top) return;
-        function postUnsupported(reason) {
-            window.parent.postMessage({
-                type: 'IFRAME_FIRST_CONTENTFUL_PAINT_UNSUPPORTED',
-                payload: { reason: reason, userAgent: navigator.userAgent }
-            }, '*');
-        }
-        if (typeof PerformanceObserver === 'undefined') {
-            postUnsupported('no_performance_observer');
-            return;
-        }
-        try {
-            var obs = new PerformanceObserver(function(list) {
-                var entries = list.getEntries();
-                for (var i = 0; i < entries.length; i++) {
-                    if (entries[i].name === 'first-contentful-paint') {
-                        obs.disconnect();
-                        window.parent.postMessage({ type: 'IFRAME_FIRST_CONTENTFUL_PAINT' }, '*');
-                        return;
-                    }
-                }
-            });
-            obs.observe({ type: 'paint', buffered: true });
-        } catch (e) {
-            postUnsupported('observe_threw:' + (e && e.name ? e.name : 'Error'));
-        }
-    })();
-    </script>
-    <script>
-    (function() {
-        if (window.self === window.top) return;
-        var APP_ID = "6ad1a38566068385b607fbf3";
-        var PREVIEW_TYPE = "sandbox";
-        var DEPS_PATH = '/node_modules/.vite/deps/';
-        var fired = false;
-        function isViteDep(url) {
-            return typeof url === 'string' && url.indexOf(DEPS_PATH) !== -1;
-        }
-        function looksFailed(entry) {
-            // HTTP failure status (Chrome 109+).
-            if (entry.responseStatus && entry.responseStatus >= 400) return true;
-            // Aborted / blocked / network-error: request ran, nothing decoded.
-            // decodedBodySize === 0 distinguishes from cache hits (Safari has no
-            // deliveryType, so we can't rely on it to exclude cached responses).
-            return entry.transferSize === 0
-                && entry.decodedBodySize === 0
-                && entry.duration > 0
-                && entry.responseEnd > 0;
-        }
-        function report(entry) {
-            if (fired) return;
-            fired = true;
-            var nativeBuffer = window.__base44_preview_native_failures;
-            if (nativeBuffer && typeof nativeBuffer.append === 'function') {
-                nativeBuffer.append('Failed to load module ' + entry.name);
-            }
-            window.parent.postMessage({
-                type: 'SANDBOX_VITE_DEPS_404',
-                payload: {
-                    app_id: APP_ID,
-                    preview_type: PREVIEW_TYPE,
-                    url: entry.name,
-                    initiator_type: entry.initiatorType,
-                    response_status: entry.responseStatus
-                }
-            }, '*');
-        }
-        new PerformanceObserver(function(list) {
-            var entries = list.getEntries();
-            for (var i = 0; i < entries.length; i++) {
-                if (isViteDep(entries[i].name) && looksFailed(entries[i])) {
-                    report(entries[i]);
-                    return;
-                }
-            }
-        }).observe({ type: 'resource', buffered: true });
-    })();
-    </script>
-    <script>
-    (function() {
-        if (typeof PerformanceObserver === 'undefined') return;
-        var reported = {};
-        // Only the app's own module trees may put an error over the preview. A page
-        // can load an optional classic script (analytics, a widget) that fails while
-        // the app renders perfectly well; that must not read as broken app code.
-        // Recording is deliberately wider than reporting — the console buffer keeps
-        // every failed module for diagnostics.
-        function isAppModule(path) {
-            return path.indexOf('/src/') === 0 || path.indexOf('/base44/') === 0;
-        }
-        function modulePath(url) {
-            try {
-                var path = new URL(url, window.location.href).pathname;
-                // The bridge probes this standard SDK path opportunistically;
-                // legacy/custom apps are allowed not to provide it.
-                if (path === '/src/api/base44Client.js') return '';
-                if (path.indexOf('/node_modules/.vite/deps/') !== -1) return '';
-                return /[.](?:[cm]?[jt]sx?)$/i.test(path) ? path : '';
-            } catch (e) {
-                return '';
-            }
-        }
-        new PerformanceObserver(function(list) {
-            var entries = list.getEntries();
-            for (var index = 0; index < entries.length; index++) {
-                var entry = entries[index];
-                if (entry.initiatorType !== 'script') continue;
-                var status = entry.responseStatus;
-                if (!status) continue;
-                var path = modulePath(entry.name);
-                if (!path) continue;
-                if (status < 400) {
-                    // Recovered (an HMR fix re-requests it). Forget it, or breaking the
-                    // same path again later this document would be silently suppressed.
-                    delete reported[path];
-                    continue;
-                }
-                var message = status === 404
-                    ? 'Module not found: ' + path
-                    : 'Module failed to load (' + status + '): ' + path;
-                var buffer = window.__base44_preview_native_failures;
-                if (buffer && typeof buffer.append === 'function') buffer.append(message);
-                if (!isAppModule(path) || reported[path] || window.self === window.top) continue;
-                reported[path] = true;
-                window.parent.postMessage({
-                    type: 'SANDBOX_MODULE_LOAD_FAILED',
-                    payload: { path: path, status: status, message: message }
-                }, '*');
-            }
-        }).observe({ type: 'resource', buffered: true });
-    })();
-    </script>
-    <script>
-    (function() {
-        if (window.self === window.top) return;
-        if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') return;
-        var DEPS_PATH = '/node_modules/.vite/deps/';
-        var QUIESCENCE_MS = 1500;
-        var POLL_MS = 500;
-        var fired = false;
-        var intervalId = setInterval(function() {
-            if (fired) return;
-            var entries = performance.getEntriesByType('resource');
-            var lastDepEnd = 0;
-            for (var i = 0; i < entries.length; i++) {
-                if (entries[i].name.indexOf(DEPS_PATH) === -1) continue;
-                if (entries[i].responseEnd > lastDepEnd) lastDepEnd = entries[i].responseEnd;
-            }
-            if (lastDepEnd === 0) return;
-            if (performance.now() - lastDepEnd >= QUIESCENCE_MS) {
-                fired = true;
-                clearInterval(intervalId);
-                window.parent.postMessage({ type: 'IFRAME_VITE_DEPS_SETTLED' }, '*');
-            }
-        }, POLL_MS);
-    })();
-    </script>
-        <script type="module">
-        try {
-            const { base44 } = await import("/src/api/base44Client.js");
-            if (base44) {
-                Object.defineProperty(window, "base44_sdk", {
-                    value: base44,
-                    writable: false,
-                    configurable: true
-                });
-            }
-        } catch (e) {
-            // Some legacy/custom apps may not have the standard client module.
-            // Leave window.base44_sdk undefined; PreviewLens can fall back to UI/network checks.
-            window.parent.postMessage({ type: "PREVIEW_LENS_SDK_ATTACH_FAILED", error: String(e) }, "*");
-        }
-        </script>
-        <script type="module">
-        try {
-            const { createHotContext } = await import("/@vite/client");
-            const hot = createHotContext("/__builder-bridge-hmr");
-            const previewFEVersion = Number(new URLSearchParams(window.location.search).get("previewFE_version")) || 0;
-            hot.on("vite:ws:connect", () => window.parent.postMessage({ type: "SANDBOX_WS_CONNECT" }, "*"));
-            hot.on("vite:ws:disconnect", () => window.parent.postMessage({ type: "SANDBOX_WS_DISCONNECT" }, "*"));
-        
-            hot.on("vite:error", (payload) => {
-                const err = payload && payload.err && typeof payload.err === "object" ? payload.err : {};
-                const message = typeof err.message === "string" ? err.message : "Unknown build error";
-                const plugin = typeof err.plugin === "string" ? `[plugin:${err.plugin}] ` : "";
-                const details = [`Vite build error: ${plugin}${message}`];
-                const loc = err.loc && typeof err.loc === "object" ? err.loc : null;
-                let file = loc && typeof loc.file === "string"
-                    ? loc.file
-                    : (typeof err.id === "string" ? err.id : "");
-                if (file) {
-                    file = file.split("?")[0];
-                    if (loc && Number.isFinite(loc.line) && Number.isFinite(loc.column)) {
-                        file += `:${loc.line}:${loc.column}`;
-                    }
-                    details.push(`File: ${file}`);
-                }
-                if (typeof err.frame === "string" && err.frame.trim()) details.push(err.frame.trim());
-                if (typeof err.stack === "string" && err.stack.trim()) details.push(err.stack.trim());
-
-                const nativeBuffer = window.__base44_preview_native_failures;
-                if (!nativeBuffer || typeof nativeBuffer.append !== "function") return;
-                nativeBuffer.append(details.join(String.fromCharCode(10)));
-            });
-    
-            // The pending promise holds Vite's pageReload (it awaits listeners) so the parent swaps a fresh iframe; an editor that doesn't announce previewFE_version falls back to today's in-place reload.
-            hot.on("vite:beforeFullReload", () => {
-                window.parent.postMessage({ type: "sandbox:beforeFullReload" }, "*");
-                if (previewFEVersion > 0) return new Promise(() => {});
-            });
-        } catch (e) {
-            // Bundled dev mode serves no /@vite/client. The plugin's socket relay, shipped
-            // inside the bundle, reports these events and flags itself once it runs; Vite's
-            // pre-bundle fallback page reloads on its own. Give the bundle time before
-            // declaring the socket unreachable.
-            const reportAttachFailure = (attemptsLeft) => {
-                if (window.__base44_bundled_dev__ || globalThis.__vite_is_fallback_page__) return;
-                if (attemptsLeft <= 0) {
-                    window.parent.postMessage({ type: "SANDBOX_WS_ATTACH_FAILED", error: String(e) }, "*");
-                    return;
-                }
-                setTimeout(() => reportAttachFailure(attemptsLeft - 1), 500);
-            };
-            reportAttachFailure(30);
-        }
-        </script>
-    <script>
-    (function() {
-        if (window.self === window.top) return;
-        var lastUrl = window.location.href;
-        function notify() {
-            var url = window.location.href;
-            if (url === lastUrl) return;
-            lastUrl = url;
-            window.parent.postMessage({ type: 'APP_CHANGED_URL', url: url }, '*');
-        }
-        var origPush = history.pushState.bind(history);
-        history.pushState = function() { origPush.apply(history, arguments); notify(); };
-        var origReplace = history.replaceState.bind(history);
-        history.replaceState = function() { origReplace.apply(history, arguments); notify(); };
-        window.addEventListener('popstate', notify);
-        window.parent.postMessage({ type: 'APP_CHANGED_URL', url: window.location.href }, '*');
-    })();
-    </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#131c27">
@@ -1333,6 +837,110 @@ svg{max-width:100%}
 }
 .stat-foot{margin-top:10px}
 
+/* ================================================================================
+   PREMIUM 3D LAYER — 11) HỆ MÀU THƯƠNG HIỆU GRADIENT (design tokens)
+   ================================================================================ */
+:root{
+  --g1:#5b8cff;--g2:#3f68e8;--g3:#6a5ae0;--g4:#12b0a3;--g5:#f0a13a;--g6:#e0567f;
+  --grad-brand:linear-gradient(135deg,#5b8cff 0%,#3f68e8 48%,#6a5ae0 100%);
+  --grad-brand-2:linear-gradient(135deg,#3f68e8 0%,#6a5ae0 58%,#8b5cf6 100%);
+  --grad-brand-soft:linear-gradient(135deg,#eef3ff 0%,#f3efff 58%,#eaf6f4 100%);
+  --grad-line:linear-gradient(90deg,rgba(91,140,255,0),rgba(91,140,255,.75),rgba(106,90,224,.6),rgba(91,140,255,0));
+  --g-blue:linear-gradient(180deg,#6f97ff,#2b57d8);
+  --g-green:linear-gradient(180deg,#2fb894,#0f7554);
+  --g-amber:linear-gradient(180deg,#e8b861,#bd7c19);
+  --g-red:linear-gradient(180deg,#e87575,#c24545);
+  --g-violet:linear-gradient(180deg,#8b7bf0,#5a49cf);
+  --g-teal:linear-gradient(180deg,#28b3a4,#0c7c72);
+  --g-rose:linear-gradient(180deg,#d9699a,#a83a66);
+  --g-slate:linear-gradient(180deg,#8b98a6,#5a6572);
+}
+.btn.primary{border-color:#3a5fd8;background:var(--grad-brand);box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 10px 22px -10px rgba(63,104,232,.9)}
+.btn.primary:hover{background:var(--grad-brand-2);border-color:#5949d8;box-shadow:inset 0 1px 0 rgba(255,255,255,.34),0 16px 30px -12px rgba(84,84,235,.95)}
+.brand-mark{background:var(--grad-brand);box-shadow:0 14px 28px -12px rgba(63,104,232,.95),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -8px 16px rgba(6,12,24,.3)}
+.sidebar::after{content:"";position:absolute;left:0;right:0;bottom:-60px;height:300px;background:radial-gradient(360px 210px at 82% 100%,rgba(106,90,224,.4),transparent 70%);pointer-events:none}
+.nav-btn.active{background:linear-gradient(90deg,rgba(91,140,255,.4),rgba(106,90,224,.14));box-shadow:0 12px 26px -16px rgba(91,140,255,1),var(--top-hi)}
+.nav-btn.active::before{background:linear-gradient(180deg,#c3d3ff,#6a5ae0);box-shadow:0 0 16px rgba(140,160,255,.95)}
+.topbar::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:var(--grad-line)}
+.chip.active{background:var(--grad-brand);border-color:#3a5fd8;box-shadow:0 10px 22px -12px rgba(63,104,232,.95),var(--top-hi)}
+.seg button.active{background:var(--grad-brand-soft);color:#24408f;box-shadow:var(--e1),inset 0 0 0 1px rgba(91,140,255,.35)}
+thead th{background:linear-gradient(180deg,#f7faff,#e9f0fd);border-bottom-color:#d9e4f7;color:#4c5a6b}
+table.tbl-wide thead th{background:linear-gradient(180deg,#f6faff,#e7effd)}
+.panel{border-color:#e2e9f6}
+.progress i,.hbar-track i{background:var(--g-blue);box-shadow:0 1px 3px rgba(63,104,232,.35)}
+.progress.green i{background:var(--g-green)}
+.progress.red i{background:var(--g-red)}
+.progress.amber i{background:var(--g-amber)}
+.stat-icon{background:var(--grad-brand-soft);color:#2f57c9}
+.stat-icon.blue,button.stat-card[data-tone="blue"] .stat-icon{background:var(--g-blue);color:#fff}
+.stat-icon.green,button.stat-card[data-tone="green"] .stat-icon{background:var(--g-green);color:#fff}
+.stat-icon.amber,button.stat-card[data-tone="amber"] .stat-icon{background:var(--g-amber);color:#fff}
+.stat-icon.red,button.stat-card[data-tone="red"] .stat-icon,.stat-icon.rose{background:var(--g-red);color:#fff}
+.stat-icon.violet,button.stat-card[data-tone="violet"] .stat-icon{background:var(--g-violet);color:#fff}
+.stat-icon svg{stroke:currentColor}
+.feed-icon.blue{background:var(--g-blue);color:#fff}
+.feed-icon.green{background:var(--g-green);color:#fff}
+.feed-icon.amber{background:var(--g-amber);color:#fff}
+.feed-icon.red{background:var(--g-red);color:#fff}
+.ticket-key{background:linear-gradient(180deg,#eff5ff,#e2ecff);border-color:#d5e4ff}
+
+/* ================================================================================
+   PREMIUM 3D LAYER — 12) BẢNG: sắp xếp · kéo cột · dòng vi phạm SLA
+   ================================================================================ */
+table.resizable{table-layout:auto}
+table.resizable.fixed{table-layout:fixed}
+th.col-head{position:relative;overflow:visible}
+th.sortable{cursor:pointer;user-select:none}
+th .th-inner{display:flex;align-items:center;gap:6px;min-width:0}
+th .dir{font-size:9px;letter-spacing:0;line-height:1}
+th .dir.idle{opacity:.24}
+table.resizable.fixed td,table.resizable.fixed th{overflow:hidden}
+table.resizable.fixed tbody td{vertical-align:top;word-break:break-word}
+.col-resize{position:absolute;top:0;right:-6px;width:12px;height:100%;cursor:col-resize;z-index:4;touch-action:none}
+.col-resize::after{content:"";position:absolute;left:5px;top:16%;height:68%;width:2px;border-radius:2px;background:var(--grad-line);opacity:0;transition:opacity .15s}
+th.col-head:hover .col-resize::after{opacity:.7}
+.col-resize:hover::after,.col-resize.on::after{opacity:1}
+body.col-resizing{cursor:col-resize!important;user-select:none}
+body.col-resizing *{cursor:col-resize!important}
+tbody tr[data-breach="1"]>td{background-color:#fdf1f1;background-image:linear-gradient(90deg,rgba(200,73,73,.17),rgba(200,73,73,.06) 56%,rgba(255,255,255,0) 94%)}
+table.tbl-wide tbody tr[data-breach="1"]>td.cell-main{background-color:#fdf1f1;background-image:linear-gradient(90deg,rgba(200,73,73,.22),rgba(200,73,73,.07) 66%,rgba(255,255,255,0))}
+tbody tr[data-breach="1"]>td.cell-main{border-left-color:#c84949!important}
+tbody tr[data-breach="1"] .primary-cell{color:#8f2020}
+tbody tr[data-breach="1"] .cell-sub{color:#9a5c5c}
+tbody tr[data-breach="1"] .ticket-key{background:linear-gradient(180deg,#ffe6e6,#ffd6d6);border-color:#f0c0c0;color:#a01f1f}
+tbody tr[data-breach="1"]:hover>td{background-color:#fbe7e7;background-image:linear-gradient(90deg,rgba(200,73,73,.22),rgba(200,73,73,.08) 60%,rgba(255,255,255,0))}
+tbody tr[data-breach="1"] .st-badge{box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 1px 3px rgba(200,73,73,.28)}
+tbody tr[data-breach="1"] td.cell-main{box-shadow:6px 0 16px -12px rgba(160,31,31,.55),1px 0 0 var(--line),inset 3px 0 0 #c84949}
+
+/* ================================================================================
+   PREMIUM 3D LAYER — 13) BỘ LỌC NHIỀU LỰA CHỌN (multi-select)
+   ================================================================================ */
+.ms{position:relative;min-width:0}
+.ms-btn{display:inline-flex;align-items:center;gap:7px;height:38px;max-width:100%;padding:0 12px;border-radius:12px;border:1px solid #dfe6ef;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:var(--e1),var(--top-hi);color:#41505f;font-size:12.5px;font-weight:640;cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .16s}
+.ms-btn:hover{border-color:#c9d8ef;transform:translateY(-1px);box-shadow:var(--e2),var(--top-hi)}
+.ms-btn.on{border-color:#b9cdf3;background:linear-gradient(180deg,#f5f9ff,#eaf2ff);color:#22407f}
+.ms-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ms-count{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:99px;background:var(--grad-brand);color:#fff;font-size:10.5px;font-weight:750;box-shadow:0 4px 10px -5px rgba(63,104,232,.9)}
+.ms-caret{font-size:9px;opacity:.55;line-height:1}
+.ms-panel{position:absolute;z-index:70;top:calc(100% + 6px);left:0;min-width:216px;max-width:300px;padding:8px;border-radius:14px;border:1px solid #dfe7f3;background:#fff;box-shadow:var(--e3);display:none}
+.ms.open .ms-panel{display:block;animation:msIn .15s cubic-bezier(.22,.7,.2,1)}
+@keyframes msIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.ms-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:3px 6px 9px;margin-bottom:6px;border-bottom:1px solid var(--grid);font-size:10.5px;font-weight:750;letter-spacing:.6px;text-transform:uppercase;color:#5c6773}
+.ms-head .link-btn{font-size:11px;letter-spacing:0;text-transform:none}
+.ms-list{max-height:240px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.ms-opt{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:9px;font-size:12.5px;cursor:pointer}
+.ms-opt:hover{background:#f5f8fd}
+.ms-opt input{height:15px;width:15px;accent-color:#3f68e8;flex:none}
+.ms-opt span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-empty{padding:8px 6px;font-size:12px;color:#8b95a2}
+@media(max-width:760px){
+  .toolbar .ms{flex:1 1 142px;min-width:0}
+  .ms,.ms-btn{width:100%}
+  .ms-panel{left:0;right:0;min-width:0;max-width:none}
+  .col-resize{display:none}
+  table.resizable.fixed{table-layout:auto!important}
+  .table-wrap table.resizable.fixed{min-width:0!important}
+}
 </style>
 </head>
 <body>
@@ -1811,12 +1419,20 @@ const state = {
   sort: {
     tickets: { f: "created", d: "desc" },
     backlogs: { f: "target", d: "asc" },
-    tasks: { f: "due", d: "asc" }
+    tasks: { f: "due", d: "asc" },
+    workload: { f: "score", d: "desc" },
+    member: { f: "due", d: "asc" },
+    risks: { f: "due", d: "asc" },
+    members: { f: "memberStatus", d: "asc" }
   },
   editing: null,
   historyFor: null,
-  listPaint: null
+  listPaint: null,
+  colW: {}
 };
+/* Độ rộng cột người dùng kéo: nhớ giữa các lần render và giữa các phiên */
+try { state.colW = JSON.parse(localStorage.getItem("jtm-colw") || "{}") || {}; } catch (e) { state.colW = {}; }
+function saveColW(){ try { localStorage.setItem("jtm-colw", JSON.stringify(state.colW || {})); } catch (e) {} }
 /* ============================================================================
    2. KẾT NỐI · ĐĂNG NHẬP GOOGLE · PHÊ DUYỆT THÀNH VIÊN
    ============================================================================ */
@@ -2719,23 +2335,35 @@ function haystack(item){
     item.reporter].concat(x ? [x.category, x.group, x.level, x.cause, x.resolutionCf, x.organizations, x.requestType, x.statusCategory] : [])
     .filter(Boolean).join(" ").toLowerCase();
 }
+/* Một giá trị lọc có thể là mảng (multi-select), "all" hoặc chuỗi đơn (tương thích bộ lọc đã lưu) */
+function msArr(raw){
+  if (Array.isArray(raw)) return raw.filter(function(v){ return hasVal(v) && v !== "all"; });
+  return !hasVal(raw) || raw === "all" ? [] : [raw];
+}
+function msOn(value, raw, normFn){
+  const arr = msArr(raw);
+  if (!arr.length) return true;
+  const v = normFn ? normFn(value) : value;
+  return arr.some(function(x){ return normFn ? normFn(x) === v : String(x) === String(value); });
+}
+function msHas(raw, value, normFn){
+  return msArr(raw).some(function(x){ return normFn ? normFn(x) === normFn(value) : String(x) === String(value); });
+}
 function applyListFilters(list, f){
   const term = String(f.q || "").trim().toLowerCase();
   return list.filter(function(item){
-    if (f.status && f.status !== "all" && norm(item.status) !== norm(f.status)) return false;
-    if (f.priority && f.priority !== "all" && norm(item.priority) !== norm(f.priority)) return false;
-    if (f.type && f.type !== "all" && norm(item.type) !== norm(f.type)) return false;
-    if (f.project && f.project !== "all" && item.project !== f.project) return false;
-    if (f.owner && f.owner !== "all"){
-      if (f.owner === "none") { if (!isUnassigned(item)) return false; }
-      else if (item.ownerId !== f.owner) return false;
-    }
+    if (!msOn(item.status, f.status, norm)) return false;
+    if (!msOn(item.priority, f.priority, norm)) return false;
+    if (!msOn(item.type, f.type, norm)) return false;
+    if (!msOn(item.project, f.project)) return false;
+    const owners = msArr(f.owner);
+    if (owners.length && !owners.some(function(v){ return v === "none" ? isUnassigned(item) : item.ownerId === v; })) return false;
     if (f.from || f.to){
       if (!item.due) return false;
       if (f.from && diffDays(f.from, item.due) < 0) return false;
       if (f.to && diffDays(item.due, f.to) < 0) return false;
     }
-    if (item.kind === "backlog" && norm(item.status) === "archived" && f.preset !== "archived" && norm(f.status) !== "archived") return false;
+    if (item.kind === "backlog" && norm(item.status) === "archived" && f.preset !== "archived" && !msHas(f.status, "archived", norm)) return false;
     if (f.preset){
       if (f.preset === "mine" && item.ownerId !== (state.member && state.member.user_id)) return false;
       if (f.preset === "archived" && norm(item.status) !== "archived") return false;
@@ -2781,6 +2409,13 @@ function sortValue(item, key){
     case "code": return item.code;
     case "project": return item.project;
     case "kind": return item.kind;
+    case "name": return String(item.name || item.ownerName || item.title || "").toLowerCase();
+    case "role": return String(item.role || "").toLowerCase();
+    case "memberStatus": return String(item.status || "").toLowerCase();
+    case "riskLevel": return riskGroupOf(item).length;
+    case "openTickets": case "openBacklogs": case "openTasks": case "doneTasks": case "doneWeek": case "doneMonth":
+    case "tickets": case "backlogs": case "blockedDays": case "estimateLeft": case "actualEffort": case "score": case "count":
+      return item[key] == null ? null : item[key];
     default: return null;
   }
 }
@@ -2828,24 +2463,45 @@ function optionList(values, current, allLabel){
 function fSelect(scope, key, inner, title){
   return '<select data-filter="' + scope + ':' + key + '" title="' + escAttr(title) + '" aria-label="' + escAttr(title) + '">' + inner + '</select>';
 }
+/* Bộ lọc nhiều lựa chọn: chọn/bỏ chọn nhanh, xoá riêng từng bộ lọc, giữ nguyên giao diện toolbar */
+function msPretty(v, names){ return names && names[v] ? names[v] : String(v); }
+function fMulti(scope, key, values, current, allLabel, title, names){
+  const sel = msArr(current);
+  const list = [];
+  values.forEach(function(v){ if (hasVal(v) && list.indexOf(v) < 0) list.push(v); });
+  const all = !sel.length || sel.length >= list.length;
+  const opts = list.length ? list.map(function(v){
+    return '<label class="ms-opt"><input type="checkbox" data-ms="' + scope + ":" + key + '" value="' + escAttr(v) + '"' +
+      (!all && sel.indexOf(v) >= 0 ? " checked" : "") + "><span>" + esc(msPretty(v, names)) + "</span></label>";
+  }).join("") : '<div class="ms-empty">Không có lựa chọn phù hợp</div>';
+  return '<div class="ms" data-ms-root="' + scope + ":" + key + '" data-ms-alllabel="' + escAttr(allLabel) + '" data-ms-names="' + escAttr(JSON.stringify(names || {})) + '">' +
+    '<button type="button" class="ms-btn' + (all ? "" : " on") + '" data-ms-toggle title="' + escAttr(title) + '" aria-label="' + escAttr(title) + '">' +
+      '<span class="ms-label">' + esc(all ? allLabel : (sel.length === 1 ? msPretty(sel[0], names) : sel.length + " đã chọn")) + "</span>" +
+      (all ? "" : '<span class="ms-count">' + sel.length + "</span>") +
+      '<span class="ms-caret">▼</span></button>' +
+    '<div class="ms-panel"><div class="ms-head"><span>' + esc(title) + '</span><span>' +
+      '<button type="button" class="link-btn" data-ms-all="' + scope + ":" + key + '">Tất cả</button> ' +
+      '<button type="button" class="link-btn" data-ms-none="' + scope + ":" + key + '">Bỏ chọn</button></span></div>' +
+    '<div class="ms-list">' + opts + "</div></div></div>";
+}
 function statusFilterSelect(scope, list, current){
-  const values = distinctValues(list, function(i){ return i.status; });
-  return fSelect(scope, "status", optionList(values, current, "Mọi trạng thái"), "Trạng thái");
+  return fMulti(scope, "status", distinctValues(list, function(i){ return i.status; }), current, "Mọi trạng thái", "Trạng thái");
 }
 function priorityFilterSelect(scope, list, current){
   const values = distinctValues(list, function(i){ return i.priority; }).filter(function(v){ return norm(v) !== "—"; });
-  return fSelect(scope, "priority", optionList(values, current, "Mọi ưu tiên"), "Ưu tiên");
+  return fMulti(scope, "priority", values, current, "Mọi ưu tiên", "Ưu tiên");
 }
 function ownerFilterSelect(scope, current, allLabel){
-  const inner = '<option value="all">' + esc(allLabel || "Mọi người phụ trách") + '</option>' +
-    '<option value="none"' + (current === "none" ? " selected" : "") + '>Chưa giao</option>' +
-    state.directory.map(function(p){
-      return '<option value="' + escAttr(p.user_id) + '"' + (current === p.user_id ? " selected" : "") + '>' + esc(p.full_name || p.email) + '</option>';
-    }).join("");
-  return fSelect(scope, "owner", inner, "Người phụ trách");
+  const names = {};
+  state.directory.forEach(function(p){ names[p.user_id] = p.full_name || p.email; });
+  return fMulti(scope, "owner", ["none"].concat(state.directory.map(function(p){ return p.user_id; })), current,
+    allLabel || "Mọi người phụ trách", "Người phụ trách", names);
 }
 function projectFilterSelect(scope, list, current){
-  return fSelect(scope, "project", optionList(distinctValues(list, function(i){ return i.project; }), current, "Mọi project"), "Project");
+  return fMulti(scope, "project", distinctValues(list, function(i){ return i.project; }), current, "Mọi project", "Project");
+}
+function typeFilterSelect(scope, list, current, allLabel, title){
+  return fMulti(scope, "type", distinctValues(list, function(i){ return i.type; }), current, allLabel || "Mọi loại", title || "Loại");
 }
 function presetChips(scope, presets, current){
   return '<div class="chips">' + presets.map(function(p){
@@ -2905,13 +2561,32 @@ function loadingBox(rows){
   for (let i = 0; i < (rows || 5); i++) out += '<div class="skeleton-row"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></div>';
   return out;
 }
+/* Vi phạm SLA: cờ từ Jira, hoặc đã quá deadline khi ticket còn mở */
+function isSlaBreached(item){
+  if (!item || !item.x) return false;
+  const x = item.x;
+  if (norm(x.frBreached) === "yes" || norm(x.ttrBreached) === "yes") return true;
+  if (item.statusGroup === "done") return false;
+  const fr = slaInfoOf(x, "fr"), ttr = slaInfoOf(x, "ttr");
+  return !!((fr && fr.overdue) || (ttr && ttr.overdue));
+}
+function colWidthsOf(scope, count){
+  const saved = state.colW && state.colW[scope];
+  return saved && saved.length === count && saved.some(function(w){ return w; }) ? saved : null;
+}
 function dataTable(spec){
-  const cols = spec.cols, rows = spec.rows;
-  const head = cols.map(function(c){
-    if (!c.sort) return "<th>" + esc(c.label) + "</th>";
-    const active = spec.sort && spec.sort.f === c.sort;
-    return '<th class="sortable" data-sort="' + spec.scope + ":" + c.sort + '" title="Sắp xếp theo ' + escAttr(c.label) + '">' +
-      esc(c.label) + (active ? '<span class="dir">' + (spec.sort.d === "asc" ? "▲" : "▼") + "</span>" : "") + "</th>";
+  const cols = spec.cols, rows = spec.rows, scope = spec.scope;
+  const widths = colWidthsOf(scope, cols.length);
+  const head = cols.map(function(c, ci){
+    const active = c.sort && spec.sort && spec.sort.f === c.sort;
+    const cls = ["col-head", (c.sort ? "sortable" : ""), (c.cls || "")].filter(Boolean).join(" ");
+    const label = '<span class="th-inner">' + esc(c.label) + (c.sort
+      ? '<span class="dir' + (active ? "" : " idle") + '">' + (active ? (spec.sort.d === "asc" ? "▲" : "▼") : "⇅") + "</span>"
+      : "") + "</span>";
+    return "<th" + (widths && widths[ci] ? ' style="width:' + widths[ci] + 'px"' : "") + ' class="' + cls + '"' +
+      (c.sort ? ' data-sort="' + scope + ":" + c.sort + '"' : "") +
+      ' title="' + escAttr(c.sort ? ("Sắp xếp theo " + c.label) : (c.label || "Cột")) + '">' +
+      label + '<span class="col-resize" data-col-resize="' + scope + ":" + ci + '" aria-hidden="true"></span></th>';
   }).join("");
   const body = rows.length ? rows.map(function(item, i){
     const tds = cols.map(function(c, ci){
@@ -2919,15 +2594,34 @@ function dataTable(spec){
       return '<td class="' + cls + '" data-label="' + (ci === 0 ? "" : escAttr(c.label)) + '"' + (c.tip ? ' title="' + escAttr(c.tip(item)) + '"' : "") + ">" + c.render(item, i) + "</td>";
     }).join("");
     const alertRow = (item.statusGroup !== "done" && isOverdue(item)) || isBlockedItem(item) ? "1" : "0";
-    return '<tr class="hoverable" data-status="' + escAttr(item.statusGroup || "") + '" data-alert="' + alertRow + '"' + (spec.rowAction
+    return '<tr class="hoverable" data-status="' + escAttr(item.statusGroup || "") + '" data-alert="' + alertRow +
+      '" data-breach="' + (isSlaBreached(item) ? "1" : "0") + '"' + (spec.rowAction
       ? ' data-action="' + spec.rowAction + '" data-kind="' + item.kind + '" data-id="' + escAttr(item.id) + '"'
       : "") + ">" + tds + "</tr>";
   }).join("") : '<tr><td colspan="' + cols.length + '">' + emptyBox(spec.emptyTitle || "Không có dữ liệu", spec.emptyNote || "Thử đổi bộ lọc hoặc từ khoá tìm kiếm") + "</td></tr>";
-  return '<div class="table-wrap' + (spec.wrapClass ? " " + spec.wrapClass : "") + '"><table class="responsive' + (spec.tableClass ? " " + spec.tableClass : "") + '"><thead><tr>' + head + "</tr></thead><tbody>" + body + "</tbody></table></div>" +
+  const colgroup = "<colgroup>" + cols.map(function(c, ci){
+    return "<col" + (widths && widths[ci] ? ' style="width:' + widths[ci] + 'px"' : "") + ">";
+  }).join("") + "</colgroup>";
+  const totalW = widths ? widths.reduce(function(a, b){ return a + (b || 0); }, 0) : 0;
+  return '<div class="table-wrap' + (spec.wrapClass ? " " + spec.wrapClass : "") + '"><table class="responsive resizable' + (widths ? " fixed" : "") +
+    (spec.tableClass ? " " + spec.tableClass : "") + '"' + (widths ? ' style="min-width:' + totalW + 'px"' : "") + ">" + colgroup +
+    "<thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table></div>" +
     (spec.foot ? '<div class="panel-foot">' + spec.foot + "</div>" : "");
 }
 
 /* ---------------- biểu đồ ---------------- */
+/* Mọi mã màu cũ được ánh xạ sang gradient thương hiệu tương ứng */
+const CHART_PAINT = {
+  "var(--blue)": "var(--g-blue)", "var(--green)": "var(--g-green)", "var(--amber)": "var(--g-amber)",
+  "var(--red)": "var(--g-red)", "var(--violet)": "var(--g-violet)", "var(--teal)": "var(--g-teal)",
+  "var(--rose)": "var(--g-rose)", "var(--muted)": "var(--g-slate)", "var(--muted2)": "var(--g-slate)",
+  "#356ee6": "var(--g-blue)", "#168162": "var(--g-green)", "#bd7c19": "var(--g-amber)", "#c84949": "var(--g-red)",
+  "#6b5ce7": "var(--g-violet)", "#0f9b8e": "var(--g-teal)", "#c2477a": "var(--g-rose)", "#999": "var(--g-slate)"
+};
+function chartPaint(color){
+  const key = String(color == null ? "" : color).trim();
+  return CHART_PAINT[key] || key || "var(--g-blue)";
+}
 function chartHBar(items, opts){
   const o = opts || {};
   if (!items.length) return '<div class="chart-empty">Chưa có dữ liệu</div>';
@@ -2936,7 +2630,7 @@ function chartHBar(items, opts){
     const h = Math.round(((it.value || 0) / max) * 100);
     return '<div class="hbar"' + (it.drill ? ' data-drill="' + escAttr(it.drill) + '" style="cursor:pointer"' : "") + ">" +
       '<span class="hbar-name">' + esc(it.label) + '</span><span class="hbar-val">' + fmtNum(it.value) + (it.note ? " · " + esc(it.note) : "") + "</span>" +
-      '<span class="hbar-track"><i style="width:' + (h || 2) + "%;background:" + (it.color || "var(--blue)") + '"></i></span></div>';
+      '<span class="hbar-track"><i style="width:' + (h || 2) + "%;background:" + chartPaint(it.color || "var(--blue)") + '"></i></span></div>';
   }).join("") + "</div>";
 }
 function chartDonut(items, centerValue){
@@ -2956,7 +2650,7 @@ function chartDonut(items, centerValue){
     '<div style="display:flex;flex-direction:column;gap:9px;min-width:160px;flex:1">' + list.map(function(it){
       return '<div style="display:flex;align-items:center;gap:9px;font-size:12px' + (it.drill ? ";cursor:pointer" : "") + '"' +
         (it.drill ? ' data-drill="' + escAttr(it.drill) + '"' : "") + ">" +
-        '<i style="height:9px;width:9px;border-radius:3px;background:' + (it.color || "#356ee6") + '"></i>' +
+        '<i style="height:9px;width:9px;border-radius:3px;background:' + chartPaint(it.color || "#356ee6") + '"></i>' +
         '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(it.label) + "</span>" +
         '<b style="font-variant-numeric:tabular-nums">' + fmtNum(it.value) + "</b>" +
         '<span class="muted" style="width:38px;text-align:right">' + pct(it.value, total) + "%</span></div>";
@@ -2970,7 +2664,7 @@ function chartColumns(labels, series, opts){
     const cols = series.map(function(s){
       const v = s.values[idx] || 0;
       const h = Math.round(v / max * 100);
-      return '<span title="' + escAttr(s.label + ": " + fmtNum(v)) + '" style="width:10px;border-radius:4px 4px 0 0;background:' + s.color + ";height:" + (v ? Math.max(h, 2) : 0) + '%"></span>';
+      return '<span title="' + escAttr(s.label + ": " + fmtNum(v)) + '" style="width:10px;border-radius:4px 4px 0 0;background:' + chartPaint(s.color) + ";height:" + (v ? Math.max(h, 2) : 0) + '%"></span>';
     }).join("");
     return '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:' + (o.width || 52) + 'px;flex:1">' +
       '<div style="display:flex;align-items:flex-end;gap:3px;height:132px;width:100%;justify-content:center">' + cols + "</div>" +
@@ -2978,7 +2672,7 @@ function chartColumns(labels, series, opts){
   }).join("");
   return '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">' + body + '</div>' +
     '<div class="legend" style="margin-top:12px">' + series.map(function(s){
-      return '<span><i style="background:' + s.color + '"></i>' + esc(s.label) + "</span>";
+      return '<span><i style="background:' + chartPaint(s.color) + '"></i>' + esc(s.label) + "</span>";
     }).join("") + "</div>";
 }
 function chartStackRows(labels, series){
@@ -2990,11 +2684,11 @@ function chartStackRows(labels, series){
       '<span class="bar-stack" style="width:' + Math.max(Math.round(totals[i] / max * 100), 2) + '%">' +
       series.map(function(s){
         const v = s.values[i] || 0;
-        return v ? '<i style="width:' + (totals[i] ? v / totals[i] * 100 : 0) + "%;background:" + s.color + '" title="' + escAttr(s.label + ": " + v) + '"></i>' : "";
+        return v ? '<i style="width:' + (totals[i] ? v / totals[i] * 100 : 0) + "%;background:" + chartPaint(s.color) + '" title="' + escAttr(s.label + ": " + v) + '"></i>' : "";
       }).join("") + "</span></div>";
   }).join("") + "</div>" +
     '<div class="legend" style="margin-top:12px">' + series.map(function(s){
-      return '<span><i style="background:' + s.color + '"></i>' + esc(s.label) + "</span>";
+      return '<span><i style="background:' + chartPaint(s.color) + '"></i>' + esc(s.label) + "</span>";
     }).join("") + "</div>";
 }
 
@@ -3302,12 +2996,12 @@ function exportOverviewCsv(){
    ============================================================================ */
 function ticketAssigneeOptions(f){
   const values = distinctValues(state.tickets.map(function(t, i){ return normTicket(t, i); }), function(t){ return t.ownerName; });
-  return fSelect("tickets", "assignee", optionList(values, f.assignee, "Mọi assignee"), "Assignee trên Jira");
+  return fMulti("tickets", "assignee", values, f.assignee, "Mọi assignee", "Assignee trên Jira");
 }
 function ticketFiltered(){
   const f = state.filters.tickets;
   let list = withBlockedSince(itemsByKind("ticket"));
-  if (f.assignee && f.assignee !== "all") list = list.filter(function(i){ return i.ownerName === f.assignee; });
+  if (msArr(f.assignee).length) list = list.filter(function(i){ return msHas(f.assignee, i.ownerName); });
   return applyListFilters(list, f);
 }
 function ticketListHtml(){
@@ -3404,7 +3098,7 @@ function renderTickets(){
       statusFilterSelect("tickets", all, f.status) +
       priorityFilterSelect("tickets", all, f.priority) +
       ticketAssigneeOptions(f) +
-      '<select data-filter="tickets:type" title="Issue type">' + optionList(distinctValues(all, function(i){ return i.type; }), f.type, "Mọi issue type") + "</select>" +
+      typeFilterSelect("tickets", all, f.type, "Mọi issue type", "Issue type") +
       projectFilterSelect("tickets", all, f.project) +
       '<div class="toolbar-sep"></div><label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline từ</span><input type="date" data-filter="tickets:from" value="' + escAttr(f.from) + '" title="Deadline từ ngày"></label>' +
       '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline đến</span><input type="date" data-filter="tickets:to" value="' + escAttr(f.to) + '" title="Deadline đến ngày"></label>' +
@@ -4093,24 +3787,30 @@ function renderWorkload(){
     blocked: function(a, b){ return a.blocked - b.blocked; },
     dueSoon: function(a, b){ return a.dueSoon - b.dueSoon; },
     estimate: function(a, b){ return a.estimateLeft - b.estimateLeft; },
-    doneMonth: function(a, b){ return a.doneMonth - b.doneMonth; }
+    doneMonth: function(a, b){ return a.doneMonth - b.doneMonth; },
+    name: function(a, b){ return String(a.name || "").localeCompare(String(b.name || ""), "vi"); },
+    openTickets: function(a, b){ return a.openTickets - b.openTickets; },
+    openBacklogs: function(a, b){ return a.openBacklogs - b.openBacklogs; },
+    openTasks: function(a, b){ return a.openTasks - b.openTasks; },
+    tickets: function(a, b){ return a.tickets - b.tickets; },
+    backlogs: function(a, b){ return a.backlogs - b.backlogs; }
   }[sortKey.f] || function(a, b){ return a.score - b.score; };
   rows.sort(function(a, b){ return sortKey.d === "asc" ? comparator(a, b) : -comparator(a, b); });
 
   const hasEffort = items.some(function(i){ return i.effort != null || i.actualEffort != null; });
   const cols = [
-    { label: "Thành viên", render: function(r){
+    { label: "Thành viên", sort: "name", render: function(r){
         return '<span class="person"><span class="avatar">' + esc(initials(r.name)) + '</span><span style="min-width:0"><span class="primary-cell">' + esc(r.name) + '</span><span class="cell-sub">' + esc(r.email) + "</span></span></span>";
       } },
-    { label: "Điểm workload", render: function(r){ return '<b>' + fmtNum(r.score) + '</b><span class="cell-sub">chỉ số tổng hợp</span>'; } },
-    { label: "Ticket mở", render: function(r){ return fmtNum(r.openTickets) + " / " + fmtNum(r.tickets); } },
-    { label: "Backlog mở", render: function(r){ return fmtNum(r.openBacklogs) + " / " + fmtNum(r.backlogs); } },
-    { label: "Task mở", render: function(r){ return fmtNum(r.openTasks) + '<span class="cell-sub">' + fmtNum(r.doneTasks) + " đã xong</span>"; } },
-    { label: "Quá hạn", render: function(r){ return r.overdue ? '<span class="badge red">' + fmtNum(r.overdue) + "</span>" : '<span class="muted">0</span>'; } },
-    { label: "Blocked", render: function(r){ return r.blocked ? '<span class="badge red">' + fmtNum(r.blocked) + (r.blockedDays ? " · " + r.blockedDays + "d" : "") + "</span>" : '<span class="muted">0</span>'; } },
-    { label: "Sắp đến hạn", render: function(r){ return r.dueSoon ? '<span class="badge amber">' + fmtNum(r.dueSoon) + "</span>" : '<span class="muted">0</span>'; } },
-    { label: "Estimate còn lại", render: function(r){ return hasEffort ? '<span class="nowrap">' + esc(fmtHours(r.estimateLeft)) + '</span><span class="cell-sub">thực tế ' + esc(fmtHours(r.actualEffort)) + "</span>" : '<span class="muted">Chưa có dữ liệu</span>'; } },
-    { label: "Hoàn thành 7d / 30d", render: function(r){ return '<span class="nowrap">' + fmtNum(r.doneWeek) + " / " + fmtNum(r.doneMonth) + "</span>"; } },
+    { label: "Điểm workload", sort: "score", render: function(r){ return '<b>' + fmtNum(r.score) + '</b><span class="cell-sub">chỉ số tổng hợp</span>'; } },
+    { label: "Ticket mở", sort: "openTickets", render: function(r){ return fmtNum(r.openTickets) + " / " + fmtNum(r.tickets); } },
+    { label: "Backlog mở", sort: "openBacklogs", render: function(r){ return fmtNum(r.openBacklogs) + " / " + fmtNum(r.backlogs); } },
+    { label: "Task mở", sort: "openTasks", render: function(r){ return fmtNum(r.openTasks) + '<span class="cell-sub">' + fmtNum(r.doneTasks) + " đã xong</span>"; } },
+    { label: "Quá hạn", sort: "overdue", render: function(r){ return r.overdue ? '<span class="badge red">' + fmtNum(r.overdue) + "</span>" : '<span class="muted">0</span>'; } },
+    { label: "Blocked", sort: "blocked", render: function(r){ return r.blocked ? '<span class="badge red">' + fmtNum(r.blocked) + (r.blockedDays ? " · " + r.blockedDays + "d" : "") + "</span>" : '<span class="muted">0</span>'; } },
+    { label: "Sắp đến hạn", sort: "dueSoon", render: function(r){ return r.dueSoon ? '<span class="badge amber">' + fmtNum(r.dueSoon) + "</span>" : '<span class="muted">0</span>'; } },
+    { label: "Estimate còn lại", sort: "estimate", render: function(r){ return hasEffort ? '<span class="nowrap">' + esc(fmtHours(r.estimateLeft)) + '</span><span class="cell-sub">thực tế ' + esc(fmtHours(r.actualEffort)) + "</span>" : '<span class="muted">Chưa có dữ liệu</span>'; } },
+    { label: "Hoàn thành 7d / 30d", sort: "doneMonth", render: function(r){ return '<span class="nowrap">' + fmtNum(r.doneWeek) + " / " + fmtNum(r.doneMonth) + "</span>"; } },
     { label: "", cls: "nowrap", render: function(r){ return '<div class="row-actions"><button class="btn text small" data-action="open-member" data-id="' + escAttr(r.id) + '">Chi tiết</button></div>'; } }
   ];
   const unassigned = items.filter(function(i){ return isUnassigned(i) && i.kind !== "ticket"; });
@@ -4133,16 +3833,16 @@ function renderWorkload(){
       "</div>" +
       '<div class="toolbar-sep"></div>' + ownerFilterSelect("overview", state.filters.overview.owner, "Cả nhóm") +
       '<button class="btn small" data-action="refresh">' + icon("refresh") + "Làm mới</button></div>" +
-    (rows.length ? dataTable({ scope: "workload", cols: cols, rows: rows, sort: null }) : panel({ body: emptyBox("Chưa có dữ liệu nhân viên", "Duyệt thành viên và gán owner cho backlog/task để theo dõi workload") })) +
+    (rows.length ? dataTable({ scope: "workload", cols: cols, rows: rows, sort: state.sort.workload }) : panel({ body: emptyBox("Chưa có dữ liệu nhân viên", "Duyệt thành viên và gán owner cho backlog/task để theo dõi workload") })) +
     (unassigned.length ? panel({
       title: "Việc chưa giao người phụ trách · " + unassigned.length,
       sub: "Cần chọn owner rõ ràng để đo được workload",
       tight: true,
       body: dataTable({ scope: "workload", cols: [
-        { label: "Mục", render: function(i){ return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.code + " · " + i.type) + "</span>"; } },
-        { label: "Deadline", render: function(i){ return esc(fmtDay(i.due)); } },
+        { label: "Mục", sort: "title", render: function(i){ return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.code + " · " + i.type) + "</span>"; } },
+        { label: "Deadline", sort: "due", render: function(i){ return esc(fmtDay(i.due)); } },
         { label: "", render: function(i){ return '<div class="row-actions"><button class="btn text small" data-action="open-item" data-kind="' + i.kind + '" data-id="' + escAttr(i.id) + '">Gán người</button></div>'; } }
-      ], rows: unassigned, sort: null, rowAction: "open-item" })
+      ], rows: unassigned, sort: state.sort.workload, rowAction: "open-item" })
     }) : "");
 }
 function exportWorkloadCsv(){
@@ -4183,19 +3883,19 @@ function renderMemberDetail(id){
     "</div>" +
     '<div style="height:15px"></div>' +
     panel({ title: "Công việc đang theo", sub: "Ticket, backlog và task của " + name, tight: true,
-      body: dataTable({ scope: "member", sort: null, rowAction: "open-item", cols: [
-        { label: "Mục", render: function(i){ return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.kind === "ticket" ? "Jira ticket" : i.type) + " · " + esc(i.code) + "</span>"; } },
-        { label: "Trạng thái", render: function(i){ return statusBadge(i.status); } },
-        { label: "Ưu tiên", render: function(i){ return priorityMark(i.priority); } },
-        { label: "Deadline", render: function(i){ return '<span class="nowrap">' + esc(fmtDay(i.due)) + (isOverdue(i) ? ' <span class="badge red">trễ</span>' : "") + "</span>"; } },
-        { label: "Cập nhật", render: function(i){ return '<span class="nowrap">' + esc(fmtDay(i.updated)) + "</span>"; } }
+      body: dataTable({ scope: "member", sort: state.sort.member, rowAction: "open-item", cols: [
+        { label: "Mục", sort: "title", render: function(i){ return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.kind === "ticket" ? "Jira ticket" : i.type) + " · " + esc(i.code) + "</span>"; } },
+        { label: "Trạng thái", sort: "statusName", render: function(i){ return statusBadge(i.status); } },
+        { label: "Ưu tiên", sort: "priority", render: function(i){ return priorityMark(i.priority); } },
+        { label: "Deadline", sort: "due", render: function(i){ return '<span class="nowrap">' + esc(fmtDay(i.due)) + (isOverdue(i) ? ' <span class="badge red">trễ</span>' : "") + "</span>"; } },
+        { label: "Cập nhật", sort: "updated", render: function(i){ return '<span class="nowrap">' + esc(fmtDay(i.updated)) + "</span>"; } }
       ], rows: sortItems(items, { f: "due", d: "asc" }).slice(0, 30),
         emptyTitle: "Chưa có công việc nào được giao", emptyNote: "Gán owner trong backlog hoặc task" }) }) +
     panel({ title: "Cảnh báo & rủi ro", sub: "Theo 6 nhóm quy tắc cảnh báo", tight: true,
-      body: risks.length ? dataTable({ scope: "member", sort: null, rowAction: "open-item", cols: [
-        { label: "Mục", render: function(i){ return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.code) + "</span>"; } },
-        { label: "Cảnh báo", render: function(i){ return riskGroupOf(i).map(riskBadge).join(" "); } },
-        { label: "Deadline", render: function(i){ return esc(fmtDay(i.due)); } }
+      body: risks.length ? dataTable({ scope: "riskmini", sort: state.sort.risks, rowAction: "open-item", cols: [
+        { label: "Mục", sort: "title", render: function(i){ return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.code) + "</span>"; } },
+        { label: "Cảnh báo", sort: "riskLevel", render: function(i){ return riskGroupOf(i).map(riskBadge).join(" "); } },
+        { label: "Deadline", sort: "due", render: function(i){ return esc(fmtDay(i.due)); } }
       ], rows: risks.slice(0, 20) }) : emptyBox("Không có cảnh báo", "Công việc đang trong tầm kiểm soát") }) +
     panel({ title: "Lịch sử hoạt động gần đây", sub: "Thay đổi nội bộ do thành viên này thực hiện", tight: true,
       body: '<div id="memberActivity">' + loadingBox(3) + "</div>" });
@@ -4294,9 +3994,9 @@ function timelineItems(){
   const f = state.filters.timeline;
   const kinds = f.kinds || ["backlog", "task"];
   let list = withBlockedSince(allItems()).filter(function(i){ return kinds.indexOf(i.kind) >= 0; });
-  if (f.owner && f.owner !== "all") list = f.owner === "none" ? list.filter(isUnassigned) : list.filter(function(i){ return i.ownerId === f.owner; });
-  if (f.status && f.status !== "all") list = list.filter(function(i){ return norm(i.status) === norm(f.status); });
-  if (f.priority && f.priority !== "all") list = list.filter(function(i){ return norm(i.priority) === norm(f.priority); });
+  if (msArr(f.owner).length) list = list.filter(function(i){ return msArr(f.owner).some(function(v){ return v === "none" ? isUnassigned(i) : i.ownerId === v; }); });
+  if (msArr(f.status).length) list = list.filter(function(i){ return msHas(f.status, i.status, norm); });
+  if (msArr(f.priority).length) list = list.filter(function(i){ return msHas(f.priority, i.priority, norm); });
   if (f.blocked === "only") list = list.filter(isBlockedItem);
   if (f.preset === "overdue") list = list.filter(isOverdue);
   return list;
@@ -4582,18 +4282,18 @@ function renderRisks(){
         sub: g.rule.rule,
         tight: true,
         tools: g.list.length ? '<button class="btn small" data-action="export-risk-group" data-risk="' + g.rule.key + '">' + icon("download") + "CSV</button>" : "",
-        body: g.list.length ? dataTable({ scope: "risks", sort: null, rowAction: "open-item", cols: [
-          { label: "Mục", render: function(i){
+        body: g.list.length ? dataTable({ scope: "risks", sort: state.sort.risks, rowAction: "open-item", cols: [
+          { label: "Mục", sort: "title", render: function(i){
               return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.code + " · " + i.type + " · " + i.ownerName) + "</span>";
             } },
-          { label: "Trạng thái", render: function(i){ return statusBadge(i.status); } },
-          { label: "Ưu tiên", render: function(i){ return priorityMark(i.priority); } },
-          { label: "Deadline", render: function(i){
+          { label: "Trạng thái", sort: "statusName", render: function(i){ return statusBadge(i.status); } },
+          { label: "Ưu tiên", sort: "priority", render: function(i){ return priorityMark(i.priority); } },
+          { label: "Deadline", sort: "due", render: function(i){
               if (!i.due) return '<span class="badge amber">Thiếu deadline</span>';
               const left = daysLeft(i);
               return '<span class="nowrap">' + esc(fmtDay(i.due)) + (left == null ? "" : left < 0 ? ' <span class="badge red">trễ ' + Math.abs(left) + "d</span>" : ' <span class="muted">còn ' + left + "d</span>") + "</span>";
             } },
-          { label: "Cập nhật", render: function(i){ return '<span class="nowrap">' + esc(relTime(i.updated)) + "</span>"; } }
+          { label: "Cập nhật", sort: "updated", render: function(i){ return '<span class="nowrap">' + esc(relTime(i.updated)) + "</span>"; } }
         ], rows: g.list.slice(0, 60), emptyTitle: "", emptyNote: "" }) : emptyBox("Không có mục nào trong nhóm này", "Điều kiện: " + g.rule.rule)
       });
     }).join("") : panel({ body: emptyBox("Không có cảnh báo", "Không có mục nào khớp điều kiện cảnh báo với bộ lọc hiện tại") }));
@@ -4613,9 +4313,9 @@ function activityFiltered(){
   const f = state.filters.activity;
   const term = String(f.q || "").trim().toLowerCase();
   return state.activity.filter(function(log){
-    if (f.kind !== "all" && log.entity_type !== f.kind) return false;
-    if (f.actor !== "all" && (log.actor_id || "none") !== f.actor) return false;
-    if (f.action !== "all" && log.action !== f.action) return false;
+    if (!msOn(log.entity_type, f.kind)) return false;
+    if (!msOn(log.actor_id || "none", f.actor)) return false;
+    if (!msOn(log.action, f.action)) return false;
     if (f.from && diffDays(f.from, dayKey(log.created_at)) < 0) return false;
     if (f.to && diffDays(dayKey(log.created_at), f.to) < 0) return false;
     if (term && (String(log.entity_label || "") + " " + (log.field || "") + " " + (log.new_value || "") + " " + (log.old_value || "")).toLowerCase().indexOf(term) < 0) return false;
@@ -4646,14 +4346,11 @@ function renderActivity(){
     "</div>" +
     '<div class="toolbar">' +
       '<div class="search-box"><span class="search-ico">' + ICONS.filter + '</span><input type="search" data-filter="activity:q" value="' + escAttr(f.q) + '" placeholder="Tìm theo tên mục, giá trị cũ/mới…"></div>' +
-      '<select data-filter="activity:kind" title="Loại đối tượng"><option value="all">Mọi đối tượng</option>' +
-        [["backlog", "Backlog"], ["task", "Task"]].map(function(o){
-          return '<option value="' + o[0] + '"' + (f.kind === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
-        }).join("") + "</select>" +
-      '<select data-filter="activity:actor" title="Người thực hiện"><option value="all">Mọi người</option><option value="none"' + (f.actor === "none" ? " selected" : "") + ">Hệ thống / không xác định</option>" +
-        state.directory.map(function(p){ return '<option value="' + escAttr(p.user_id) + '"' + (f.actor === p.user_id ? " selected" : "") + ">" + esc(p.full_name || p.email) + "</option>"; }).join("") + "</select>" +
-      '<select data-filter="activity:action" title="Hành động"><option value="all">Mọi hành động</option>' +
-        LOG_ACTIONS.map(function(o){ return '<option value="' + o[0] + '"' + (f.action === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
+      fMulti("activity", "kind", ["backlog", "task"], f.kind, "Mọi đối tượng", "Loại đối tượng", { backlog: "Backlog", task: "Task" }) +
+      fMulti("activity", "actor", ["none"].concat(state.directory.map(function(p){ return p.user_id; })), f.actor, "Mọi người", "Người thực hiện",
+        (function(){ const n = { none: "Hệ thống / không xác định" }; state.directory.forEach(function(p){ n[p.user_id] = p.full_name || p.email; }); return n; })()) +
+      fMulti("activity", "action", LOG_ACTIONS.map(function(o){ return o[0]; }), f.action, "Mọi hành động", "Hành động",
+        (function(){ const n = {}; LOG_ACTIONS.forEach(function(o){ n[o[0]] = o[1]; }); return n; })()) +
       '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Từ</span><input type="date" data-filter="activity:from" value="' + escAttr(f.from) + '"></label>' +
       '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Đến</span><input type="date" data-filter="activity:to" value="' + escAttr(f.to) + '"></label>' +
     "</div>" +
@@ -4941,17 +4638,22 @@ function exportReportCsv(key){
 }
 
 /* ---------------- THÀNH VIÊN ---------------- */
-function memberRow(m, withActions){
-  return '<tr><td class="cell-main" data-label=""><span class="primary-cell">' + esc(m.full_name || "Google member") + '</span><span class="cell-sub">' + esc(m.email) + "</span></td>" +
-    '<td data-label="Trạng thái">' + statusBadge(m.status) + "</td>" +
-    '<td data-label="Ngày gửi" class="nowrap">' + esc(fmtDay(m.created_at)) + "</td>" +
-    '<td data-label="">' + (withActions ? '<div class="row-actions"><button class="btn primary small" data-action="approve-member" data-id="' + escAttr(m.user_id) + '">Duyệt</button>' +
-      '<button class="btn danger small" data-action="reject-member" data-id="' + escAttr(m.user_id) + '">Từ chối</button></div>' : '<span class="muted">—</span>') + "</td></tr>";
-}
 function memberTable(list, withActions){
-  return '<div class="table-wrap"><table class="responsive"><thead><tr><th>Tài khoản</th><th>Trạng thái</th><th>Ngày gửi</th><th></th></tr></thead><tbody>' +
-    (list.length ? list.map(function(m){ return memberRow(m, withActions); }).join("") : '<tr><td colspan="4">' + emptyBox("Không có tài khoản trong nhóm này", "") + "</td></tr>") +
-    "</tbody></table></div>";
+  return dataTable({
+    scope: "members", sort: state.sort.members, rows: list,
+    emptyTitle: "Không có tài khoản trong nhóm này", emptyNote: "",
+    cols: [
+      { label: "Tài khoản", sort: "name", render: function(m){
+          return '<span class="primary-cell">' + esc(m.full_name || "Google member") + '</span><span class="cell-sub">' + esc(m.email) + "</span>";
+        } },
+      { label: "Trạng thái", sort: "memberStatus", render: function(m){ return statusBadge(m.status); } },
+      { label: "Ngày gửi", sort: "created", cls: "nowrap", render: function(m){ return esc(fmtDay(m.created_at)); } },
+      { label: "", render: function(m){
+          return withActions ? '<div class="row-actions"><button class="btn primary small" data-action="approve-member" data-id="' + escAttr(m.user_id) + '">Duyệt</button>' +
+            '<button class="btn danger small" data-action="reject-member" data-id="' + escAttr(m.user_id) + '">Từ chối</button></div>' : '<span class="muted">—</span>';
+        } }
+    ]
+  });
 }
 function renderMembers(){
   setActions('<button class="btn" data-action="refresh">' + icon("refresh") + 'Làm mới</button>');
@@ -5018,6 +4720,114 @@ function onFilterChange(el, isText){
   if (isText) paintList();
   else renderShell();
 }
+/* ---------------- bộ lọc nhiều lựa chọn + kéo giãn cột ---------------- */
+let colDrag = null, colDraggedAt = 0;
+function closeMsPanels(keep){
+  $(".ms.open").forEach(function(n){ if (n !== keep) n.classList.remove("open"); });
+}
+function msSync(root){
+  const parts = String(root.dataset.msRoot).split(":");
+  const scope = parts[0], field = parts.slice(1).join(":");
+  const boxes = Array.prototype.slice.call(root.querySelectorAll("input[data-ms]"));
+  const checked = boxes.filter(function(b){ return b.checked; }).map(function(b){ return b.value; });
+  const all = !checked.length || checked.length >= boxes.length;
+  if (state.filters[scope]) state.filters[scope][field] = all ? [] : checked;
+  state.page[scope] = 1;
+  let names = {};
+  try { names = JSON.parse(root.dataset.msNames || "{}"); } catch (e) { names = {}; }
+  const btn = root.querySelector(".ms-btn");
+  const allLabel = root.dataset.msAlllabel || (field + ": tất cả");
+  btn.classList.toggle("on", !all);
+  btn.querySelector(".ms-label").textContent = all ? allLabel
+    : (checked.length === 1 ? msPretty(checked[0], names) : checked.length + " đã chọn");
+  let cnt = btn.querySelector(".ms-count");
+  if (all) { if (cnt) cnt.parentNode.removeChild(cnt); }
+  else {
+    if (!cnt) { cnt = document.createElement("span"); cnt.className = "ms-count"; btn.insertBefore(cnt, btn.querySelector(".ms-caret")); }
+    cnt.textContent = checked.length;
+  }
+}
+function msRepaint(){
+  if (state.listPaint && $("#listHost")) paintList(); else renderShell();
+}
+function msSetAll(key, on){
+  const root = document.querySelector('.ms[data-ms-root="' + key + '"]');
+  if (!root) return;
+  Array.prototype.slice.call(root.querySelectorAll("input[data-ms]")).forEach(function(b){ b.checked = on; });
+  msSync(root);
+  msRepaint();
+}
+document.addEventListener("change", function(event){
+  const box = event.target.closest("input[data-ms]");
+  if (!box) return;
+  const root = box.closest(".ms");
+  if (!root) return;
+  msSync(root);
+  msRepaint();
+});
+document.addEventListener("click", function(event){
+  const toggleBtn = event.target.closest("[data-ms-toggle]");
+  if (toggleBtn) {
+    const root = toggleBtn.closest(".ms");
+    const willOpen = !root.classList.contains("open");
+    closeMsPanels(root);
+    root.classList.toggle("open", willOpen);
+    return;
+  }
+  const allBtn = event.target.closest("button[data-ms-all]");
+  if (allBtn) { msSetAll(allBtn.dataset.msAll, true); return; }
+  const noneBtn = event.target.closest("button[data-ms-none]");
+  if (noneBtn) { msSetAll(noneBtn.dataset.msNone, false); return; }
+  if (!event.target.closest(".ms")) closeMsPanels(null);
+});
+document.addEventListener("pointerdown", function(event){
+  const handle = event.target.closest("[data-col-resize]");
+  if (!handle) return;
+  const parts = String(handle.dataset.colResize).split(":");
+  const scope = parts[0], index = Number(parts[1]);
+  const table = handle.closest("table"), th = handle.closest("th");
+  if (!table || !th) return;
+  const heads = table.querySelectorAll("thead th");
+  const widths = [];
+  for (let i = 0; i < heads.length; i++) widths.push(Math.round(heads[i].getBoundingClientRect().width));
+  colDrag = { scope: scope, index: index, startX: event.clientX, startW: widths[index], widths: widths, table: table, handle: handle, moved: false };
+  handle.classList.add("on");
+  document.body.classList.add("col-resizing");
+  try { handle.setPointerCapture(event.pointerId); } catch (e) {}
+  event.preventDefault();
+});
+document.addEventListener("pointermove", function(event){
+  if (!colDrag) return;
+  const dx = event.clientX - colDrag.startX;
+  if (!colDrag.moved && Math.abs(dx) < 3) return;
+  colDrag.moved = true;
+  colDrag.widths[colDrag.index] = clamp(Math.round(colDrag.startW + dx), 60, 900);
+  const colEls = colDrag.table.querySelectorAll("colgroup > col");
+  for (let i = 0; i < colEls.length; i++) if (colDrag.widths[i]) colEls[i].style.width = colDrag.widths[i] + "px";
+  let total = 0;
+  for (let i = 0; i < colDrag.widths.length; i++) total += colDrag.widths[i] || 0;
+  colDrag.table.style.minWidth = total + "px";
+  colDrag.table.classList.add("fixed");
+  event.preventDefault();
+});
+document.addEventListener("pointerup", function(){
+  if (!colDrag) return;
+  const drag = colDrag;
+  colDrag = null;
+  drag.handle.classList.remove("on");
+  document.body.classList.remove("col-resizing");
+  if (!drag.moved) return;
+  colDraggedAt = Date.now();
+  state.colW[drag.scope] = drag.widths;
+  saveColW();
+  msRepaint();
+});
+document.addEventListener("dblclick", function(event){
+  const handle = event.target.closest("[data-col-resize]");
+  if (!handle) return;
+  const scope = String(handle.dataset.colResize).split(":")[0];
+  if (state.colW && state.colW[scope]) { delete state.colW[scope]; saveColW(); msRepaint(); }
+});
 document.addEventListener("input", debounce(function(event){
   const el = event.target.closest("[data-filter]");
   if (!el || el.tagName !== "INPUT" || (el.type !== "search" && el.type !== "text")) return;
@@ -5032,6 +4842,7 @@ document.addEventListener("change", function(event){
 });
 document.addEventListener("click", async function(event){
   if (event.target.closest("a[data-stop]")) return;
+  if (event.target.closest("[data-col-resize]") || Date.now() - colDraggedAt < 300) return;
   const zoomEl = event.target.closest("[data-zoom]");
   if (zoomEl) { state.filters.timeline.zoom = zoomEl.dataset.zoom; renderShell(); return; }
   const kindEl = event.target.closest("[data-kinds]");
