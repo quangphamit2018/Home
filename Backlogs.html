@@ -1897,8 +1897,9 @@ function slaCell(x, which){
   const info = slaInfoOf(x, which);
   if (!info) return "";
   const breached = which === "fr" ? x.frBreached : x.ttrBreached;
+  const rowBreached = norm(x.frBreached) === "yes" || norm(x.ttrBreached) === "yes";
   let color;
-  if (breached === "Yes") color = "var(--red)";
+  if (rowBreached) color = "var(--red)";
   else if (breached === "No") color = "var(--blue)";
   else if (info.overdue) color = "var(--red)";
   else if (info.pct >= 85) color = "var(--amber)";
@@ -2561,14 +2562,11 @@ function loadingBox(rows){
   for (let i = 0; i < (rows || 5); i++) out += '<div class="skeleton-row"><span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span></div>';
   return out;
 }
-/* Vi phạm SLA: cờ từ Jira, hoặc đã quá deadline khi ticket còn mở */
+/* Vi phạm SLA: chỉ theo cờ Breached Response / Breached Resolution của Jira */
 function isSlaBreached(item){
   if (!item || !item.x) return false;
   const x = item.x;
-  if (norm(x.frBreached) === "yes" || norm(x.ttrBreached) === "yes") return true;
-  if (item.statusGroup === "done") return false;
-  const fr = slaInfoOf(x, "fr"), ttr = slaInfoOf(x, "ttr");
-  return !!((fr && fr.overdue) || (ttr && ttr.overdue));
+  return norm(x.frBreached) === "yes" || norm(x.ttrBreached) === "yes";
 }
 function colWidthsOf(scope, count){
   const saved = state.colW && state.colW[scope];
