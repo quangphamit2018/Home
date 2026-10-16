@@ -1,10 +1,512 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+        <script>if (window.self !== window.top) window.parent.postMessage({ type: 'SANDBOX_DOCUMENT_START' }, '*');</script>
+    <script>
+    (function() {
+        var buffer = window.__base44_preview_native_failures;
+        if (!buffer || buffer.version !== 1 || !Array.isArray(buffer.entries)) {
+            buffer = { version: 1, entries: [], listenersInstalled: false };
+            window.__base44_preview_native_failures = buffer;
+        }
+        if (buffer.listenersInstalled) return;
+        function value(object, key) {
+            return object && typeof object[key] === 'string' ? object[key] : '';
+        }
+        function append(message) {
+            if (!message) return;
+            var normalizedMessage = String(message).slice(0, 5000);
+            for (var index = buffer.entries.length - 1; index >= 0; index--) {
+                var existing = buffer.entries[index];
+                if (existing && existing.level === 'error' && existing.message === normalizedMessage) {
+                    buffer.entries.splice(index, 1);
+                }
+            }
+            buffer.entries.push({
+                level: 'error',
+                message: normalizedMessage,
+                timestamp: Date.now()
+            });
+            if (buffer.entries.length > 100) {
+                buffer.entries.splice(0, buffer.entries.length - 100);
+            }
+        }
+        buffer.append = append;
+        function handleError(event) {
+            var target = event && event.target;
+            var tagName = value(target, 'tagName').toLowerCase() || 'window';
+            var isModule = tagName === 'script' && value(target, 'type').toLowerCase() === 'module';
+            var resourceType = isModule ? 'module' : tagName;
+            var url = value(target, 'src') || value(target, 'href') || value(event, 'filename');
+            var detail = value(event, 'message') || value(event && event.error, 'message');
+            var prefix = tagName === 'window' ? 'Native browser error' : 'Failed to load ' + resourceType;
+            append(prefix + (url ? ' ' + url : '') + (detail ? ': ' + detail : ''));
+        }
+        function rejectionReason(reason) {
+            if (typeof reason === 'string') return reason;
+            var message = value(reason, 'message');
+            if (message) return message;
+            try { return JSON.stringify(reason) || String(reason); }
+            catch (e) { return String(reason); }
+        }
+        function handleRejection(event) {
+            append('Unhandled promise rejection: ' + rejectionReason(event && event.reason));
+        }
+        function handleCspViolation(event) {
+            var blockedUri = value(event, 'blockedURI') || 'resource';
+            var directive = value(event, 'violatedDirective');
+            append('Content Security Policy blocked ' + blockedUri + (directive ? ' (' + directive + ')' : ''));
+        }
+        function overlayText(root, selector) {
+            var element = root && root.querySelector(selector);
+            return value(element, 'textContent').trim();
+        }
+        function captureViteOverlay(overlay) {
+            var root = overlay && overlay.shadowRoot;
+            var message = overlayText(root, '.message-body');
+            if (!message) return;
+            var plugin = overlayText(root, '.plugin');
+            var details = ['Vite build error: ' + (plugin ? plugin + ' ' : '') + message];
+            var file = overlayText(root, '.file');
+            var frame = overlayText(root, '.frame');
+            var stack = overlayText(root, '.stack');
+            if (file) details.push('File: ' + file);
+            if (frame) details.push(frame);
+            if (stack) details.push(stack);
+            append(details.join(String.fromCharCode(10)));
+        }
+        function captureViteOverlays(node) {
+            if (!node || node.nodeType !== 1) return;
+            if (node.matches && node.matches('vite-error-overlay')) captureViteOverlay(node);
+            if (!node.querySelectorAll) return;
+            var overlays = node.querySelectorAll('vite-error-overlay');
+            for (var index = 0; index < overlays.length; index++) captureViteOverlay(overlays[index]);
+        }
+        window.addEventListener('error', handleError, true);
+        window.addEventListener('unhandledrejection', handleRejection);
+        window.addEventListener('securitypolicyviolation', handleCspViolation);
+        if (typeof MutationObserver !== 'undefined' && document.documentElement) {
+            captureViteOverlays(document.documentElement);
+            new MutationObserver(function(records) {
+                for (var recordIndex = 0; recordIndex < records.length; recordIndex++) {
+                    var nodes = records[recordIndex].addedNodes;
+                    for (var nodeIndex = 0; nodeIndex < nodes.length; nodeIndex++) {
+                        captureViteOverlays(nodes[nodeIndex]);
+                    }
+                }
+            }).observe(document.documentElement, { childList: true, subtree: true });
+        }
+        buffer.listenersInstalled = true;
+    })();
+    </script>
+    <script data-preview-data-env-pin="true">
+    (function() {
+        var KEY = 'base44_data_env';
+        var APP_API_PATH = "/api/apps/6ad1a38566068385b607fbf3/";
+        var STORAGE_KEY = KEY + ':' + APP_API_PATH;
+        var API_ORIGINS = ["https://app.base44.com", "https://base44.app"].map(function(u) { return new URL(u).origin; });
+        var REQUEST_INIT_KEYS = [
+            'method', 'headers', 'credentials', 'mode', 'cache', 'redirect',
+            'referrer', 'referrerPolicy', 'integrity', 'keepalive', 'signal', 'priority',
+        ];
+        var env = new URLSearchParams(window.location.search).get(KEY);
+        try {
+            if (env === 'dev' || env === 'prod') sessionStorage.setItem(STORAGE_KEY, env);
+            else env = sessionStorage.getItem(STORAGE_KEY);
+        } catch (e) {}
+        if (env !== 'dev' && env !== 'prod') return;
+        function pin(url) {
+            try {
+                var u = new URL(url, window.location.href);
+                var sameOrigin = u.origin === window.location.origin;
+                if (!sameOrigin && API_ORIGINS.indexOf(u.origin) === -1) return url;
+                // The app's own server routes and TanStack server functions build
+                // their SDK client from this request, so they need the selection too.
+                var appServerPath = sameOrigin && (
+                    u.pathname.startsWith('/api/') || u.pathname.startsWith('/_serverFn/')
+                );
+                if (!appServerPath && !u.pathname.startsWith(APP_API_PATH)) return url;
+                // Privileged function/agent routes trust this app's Preview host,
+                // not a dev parameter sent to the generic SDK API origin.
+                if (u.origin !== window.location.origin && (
+                    u.pathname.startsWith(APP_API_PATH + 'functions/') ||
+                    u.pathname.startsWith(APP_API_PATH + 'agents/')
+                )) {
+                    u = new URL(u.pathname + u.search + u.hash, window.location.origin);
+                }
+                u.searchParams.set(KEY, env);
+                return u.toString();
+            } catch (e) { return url; }
+        }
+        var origFetch = window.fetch;
+        window.fetch = function(input, init) {
+            if (typeof input === 'string' || input instanceof URL) {
+                return origFetch.call(this, pin(String(input)), init);
+            }
+            if (!input || !input.url) return origFetch.call(this, input, init);
+            var pinned = pin(input.url);
+            if (pinned === input.url) return origFetch.call(this, input, init);
+            try {
+                input = new Request(input, init);
+                if (!input.keepalive || !input.body) {
+                    return origFetch.call(this, new Request(pinned, input));
+                }
+                // RequestInit exposes an existing body as a stream, which Fetch
+                // forbids with keepalive. Buffer only that case, after init overrides.
+                var self = this;
+                return input.blob().then(function(body) {
+                    var rebuilt = { body: body };
+                    REQUEST_INIT_KEYS.forEach(function(key) {
+                        if (input[key] !== undefined) rebuilt[key] = input[key];
+                    });
+                    return origFetch.call(self, new Request(pinned, rebuilt));
+                });
+            } catch (error) { return Promise.reject(error); }
+        };
+        var origOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url) {
+            arguments[1] = pin(String(url));
+            return origOpen.apply(this, arguments);
+        };
+    })();
+    </script><script defer data-preview-inject="true" data-app-id="6ad1a38566068385b607fbf3" data-preview-type="sandbox" data-rum-app-id="db50c921-10c3-4f12-bccb-950fa174b708" data-rum-client-token="pubfe8a4f2972b412b4556fd67e77f82cb4" data-dd-site="datadoghq.com" src="https://app.base44.com/builder-bridge.js?t=1792124325"></script>
+    <script>
+    (function() {
+        var IGNORE = { SCRIPT: 1, STYLE: 1, LINK: 1, META: 1, NOSCRIPT: 1, TEMPLATE: 1 };
+        const fire = () => window.parent.postMessage({ type: 'IFRAME_CONTENT_READY' }, '*');
+        function check() {
+            var body = document.body;
+            if (!body) return false;
+            for (var idx = 0; idx < body.children.length; idx++) {
+                if (!IGNORE[body.children[idx].tagName]) return true;
+            }
+            return false;
+        }
+        function start() {
+            if (check()) { fire(); return; }
+            var observer = new MutationObserver(function() {
+                if (check()) { fire(); observer.disconnect(); }
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+        }
+        if (document.body) { start(); }
+        else { document.addEventListener('DOMContentLoaded', start, { once: true }); }
+    })();
+    </script>
+    <script>
+    (function() {
+        if (window.self === window.top) return;
+        var APP_ID = "6ad1a38566068385b607fbf3";
+        var PREVIEW_TYPE = "sandbox";
+        var on404 = false;
+        var booted = false;
+        function detect() { return !!document.querySelector('[data-source-location^="PageNotFound:"]'); }
+        function payload() { return { app_id: APP_ID, preview_type: PREVIEW_TYPE, url_path: window.location.pathname }; }
+        function tick() {
+            var now = detect();
+            if (now && !on404) {
+                on404 = true;
+                window.parent.postMessage({ type: 'PREVIEW_PAGE_NOT_FOUND', payload: payload() }, '*');
+            } else if (!now && (on404 || !booted)) {
+                // On first tick of a fresh document, emit a cleared signal even when
+                // not currently on a 404 — the parent may have latched is404=true from
+                // a previous document at the same URL (e.g. after an iframe reload).
+                on404 = false;
+                window.parent.postMessage({ type: 'PREVIEW_PAGE_NOT_FOUND_CLEARED', payload: payload() }, '*');
+            }
+            booted = true;
+        }
+        function start() {
+            tick();
+            new MutationObserver(tick).observe(document.body, { childList: true, subtree: true });
+        }
+        if (document.body) { start(); }
+        else { document.addEventListener('DOMContentLoaded', start, { once: true }); }
+    })();
+    </script>
+    <script>
+    (function() {
+        if (window.self === window.top) return;
+        function fire() { window.parent.postMessage({ type: 'REACT_ROOT_HAS_CHILDREN' }, '*'); }
+        function findRoot() {
+            return document.getElementById('root')
+                || document.getElementById('app')
+                || document.querySelector('[data-react-root]');
+        }
+        // One-shot: wait for DOMContentLoaded (static HTML parsed by then, so the
+        // Base44 convention <div id="root"> is either present or not coming),
+        // observe the root's childList until the first element child appears,
+        // then fire and disconnect. No tree-wide subtree observer.
+        function start() {
+            var root = findRoot();
+            if (!root) return;
+            if (root.childElementCount > 0) { fire(); return; }
+            var obs = new MutationObserver(function() {
+                if (root.childElementCount > 0) { fire(); obs.disconnect(); }
+            });
+            obs.observe(root, { childList: true });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', start, { once: true });
+        } else { start(); }
+    })();
+    </script>
+    <script>
+    (function() {
+        if (window.self === window.top) return;
+        function postUnsupported(reason) {
+            window.parent.postMessage({
+                type: 'IFRAME_FIRST_CONTENTFUL_PAINT_UNSUPPORTED',
+                payload: { reason: reason, userAgent: navigator.userAgent }
+            }, '*');
+        }
+        if (typeof PerformanceObserver === 'undefined') {
+            postUnsupported('no_performance_observer');
+            return;
+        }
+        try {
+            var obs = new PerformanceObserver(function(list) {
+                var entries = list.getEntries();
+                for (var i = 0; i < entries.length; i++) {
+                    if (entries[i].name === 'first-contentful-paint') {
+                        obs.disconnect();
+                        window.parent.postMessage({ type: 'IFRAME_FIRST_CONTENTFUL_PAINT' }, '*');
+                        return;
+                    }
+                }
+            });
+            obs.observe({ type: 'paint', buffered: true });
+        } catch (e) {
+            postUnsupported('observe_threw:' + (e && e.name ? e.name : 'Error'));
+        }
+    })();
+    </script>
+    <script>
+    (function() {
+        if (window.self === window.top) return;
+        var APP_ID = "6ad1a38566068385b607fbf3";
+        var PREVIEW_TYPE = "sandbox";
+        var DEPS_PATH = '/node_modules/.vite/deps/';
+        var fired = false;
+        function isViteDep(url) {
+            return typeof url === 'string' && url.indexOf(DEPS_PATH) !== -1;
+        }
+        function looksFailed(entry) {
+            // HTTP failure status (Chrome 109+).
+            if (entry.responseStatus && entry.responseStatus >= 400) return true;
+            // Aborted / blocked / network-error: request ran, nothing decoded.
+            // decodedBodySize === 0 distinguishes from cache hits (Safari has no
+            // deliveryType, so we can't rely on it to exclude cached responses).
+            return entry.transferSize === 0
+                && entry.decodedBodySize === 0
+                && entry.duration > 0
+                && entry.responseEnd > 0;
+        }
+        function report(entry) {
+            if (fired) return;
+            fired = true;
+            var nativeBuffer = window.__base44_preview_native_failures;
+            if (nativeBuffer && typeof nativeBuffer.append === 'function') {
+                nativeBuffer.append('Failed to load module ' + entry.name);
+            }
+            window.parent.postMessage({
+                type: 'SANDBOX_VITE_DEPS_404',
+                payload: {
+                    app_id: APP_ID,
+                    preview_type: PREVIEW_TYPE,
+                    url: entry.name,
+                    initiator_type: entry.initiatorType,
+                    response_status: entry.responseStatus
+                }
+            }, '*');
+        }
+        new PerformanceObserver(function(list) {
+            var entries = list.getEntries();
+            for (var i = 0; i < entries.length; i++) {
+                if (isViteDep(entries[i].name) && looksFailed(entries[i])) {
+                    report(entries[i]);
+                    return;
+                }
+            }
+        }).observe({ type: 'resource', buffered: true });
+    })();
+    </script>
+    <script>
+    (function() {
+        if (typeof PerformanceObserver === 'undefined') return;
+        var reported = {};
+        // Only the app's own module trees may put an error over the preview. A page
+        // can load an optional classic script (analytics, a widget) that fails while
+        // the app renders perfectly well; that must not read as broken app code.
+        // Recording is deliberately wider than reporting — the console buffer keeps
+        // every failed module for diagnostics.
+        function isAppModule(path) {
+            return path.indexOf('/src/') === 0 || path.indexOf('/base44/') === 0;
+        }
+        function modulePath(url) {
+            try {
+                var path = new URL(url, window.location.href).pathname;
+                // The bridge probes this standard SDK path opportunistically;
+                // legacy/custom apps are allowed not to provide it.
+                if (path === '/src/api/base44Client.js') return '';
+                if (path.indexOf('/node_modules/.vite/deps/') !== -1) return '';
+                return /[.](?:[cm]?[jt]sx?)$/i.test(path) ? path : '';
+            } catch (e) {
+                return '';
+            }
+        }
+        new PerformanceObserver(function(list) {
+            var entries = list.getEntries();
+            for (var index = 0; index < entries.length; index++) {
+                var entry = entries[index];
+                if (entry.initiatorType !== 'script') continue;
+                var status = entry.responseStatus;
+                if (!status) continue;
+                var path = modulePath(entry.name);
+                if (!path) continue;
+                if (status < 400) {
+                    // Recovered (an HMR fix re-requests it). Forget it, or breaking the
+                    // same path again later this document would be silently suppressed.
+                    delete reported[path];
+                    continue;
+                }
+                var message = status === 404
+                    ? 'Module not found: ' + path
+                    : 'Module failed to load (' + status + '): ' + path;
+                var buffer = window.__base44_preview_native_failures;
+                if (buffer && typeof buffer.append === 'function') buffer.append(message);
+                if (!isAppModule(path) || reported[path] || window.self === window.top) continue;
+                reported[path] = true;
+                window.parent.postMessage({
+                    type: 'SANDBOX_MODULE_LOAD_FAILED',
+                    payload: { path: path, status: status, message: message }
+                }, '*');
+            }
+        }).observe({ type: 'resource', buffered: true });
+    })();
+    </script>
+    <script>
+    (function() {
+        if (window.self === window.top) return;
+        if (typeof performance === 'undefined' || typeof performance.getEntriesByType !== 'function') return;
+        var DEPS_PATH = '/node_modules/.vite/deps/';
+        var QUIESCENCE_MS = 1500;
+        var POLL_MS = 500;
+        var fired = false;
+        var intervalId = setInterval(function() {
+            if (fired) return;
+            var entries = performance.getEntriesByType('resource');
+            var lastDepEnd = 0;
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i].name.indexOf(DEPS_PATH) === -1) continue;
+                if (entries[i].responseEnd > lastDepEnd) lastDepEnd = entries[i].responseEnd;
+            }
+            if (lastDepEnd === 0) return;
+            if (performance.now() - lastDepEnd >= QUIESCENCE_MS) {
+                fired = true;
+                clearInterval(intervalId);
+                window.parent.postMessage({ type: 'IFRAME_VITE_DEPS_SETTLED' }, '*');
+            }
+        }, POLL_MS);
+    })();
+    </script>
+        <script type="module">
+        try {
+            const { base44 } = await import("/src/api/base44Client.js");
+            if (base44) {
+                Object.defineProperty(window, "base44_sdk", {
+                    value: base44,
+                    writable: false,
+                    configurable: true
+                });
+            }
+        } catch (e) {
+            // Some legacy/custom apps may not have the standard client module.
+            // Leave window.base44_sdk undefined; PreviewLens can fall back to UI/network checks.
+            window.parent.postMessage({ type: "PREVIEW_LENS_SDK_ATTACH_FAILED", error: String(e) }, "*");
+        }
+        </script>
+        <script type="module">
+        try {
+            const { createHotContext } = await import("/@vite/client");
+            const hot = createHotContext("/__builder-bridge-hmr");
+            const previewFEVersion = Number(new URLSearchParams(window.location.search).get("previewFE_version")) || 0;
+            hot.on("vite:ws:connect", () => window.parent.postMessage({ type: "SANDBOX_WS_CONNECT" }, "*"));
+            hot.on("vite:ws:disconnect", () => window.parent.postMessage({ type: "SANDBOX_WS_DISCONNECT" }, "*"));
+        
+            hot.on("vite:error", (payload) => {
+                const err = payload && payload.err && typeof payload.err === "object" ? payload.err : {};
+                const message = typeof err.message === "string" ? err.message : "Unknown build error";
+                const plugin = typeof err.plugin === "string" ? `[plugin:${err.plugin}] ` : "";
+                const details = [`Vite build error: ${plugin}${message}`];
+                const loc = err.loc && typeof err.loc === "object" ? err.loc : null;
+                let file = loc && typeof loc.file === "string"
+                    ? loc.file
+                    : (typeof err.id === "string" ? err.id : "");
+                if (file) {
+                    file = file.split("?")[0];
+                    if (loc && Number.isFinite(loc.line) && Number.isFinite(loc.column)) {
+                        file += `:${loc.line}:${loc.column}`;
+                    }
+                    details.push(`File: ${file}`);
+                }
+                if (typeof err.frame === "string" && err.frame.trim()) details.push(err.frame.trim());
+                if (typeof err.stack === "string" && err.stack.trim()) details.push(err.stack.trim());
+
+                const nativeBuffer = window.__base44_preview_native_failures;
+                if (!nativeBuffer || typeof nativeBuffer.append !== "function") return;
+                nativeBuffer.append(details.join(String.fromCharCode(10)));
+            });
+    
+            // The pending promise holds Vite's pageReload (it awaits listeners) so the parent swaps a fresh iframe; an editor that doesn't announce previewFE_version falls back to today's in-place reload.
+            hot.on("vite:beforeFullReload", () => {
+                window.parent.postMessage({ type: "sandbox:beforeFullReload" }, "*");
+                if (previewFEVersion > 0) return new Promise(() => {});
+            });
+        } catch (e) {
+            // Bundled dev mode serves no /@vite/client. The plugin's socket relay, shipped
+            // inside the bundle, reports these events and flags itself once it runs; Vite's
+            // pre-bundle fallback page reloads on its own. Give the bundle time before
+            // declaring the socket unreachable.
+            const reportAttachFailure = (attemptsLeft) => {
+                if (window.__base44_bundled_dev__ || globalThis.__vite_is_fallback_page__) return;
+                if (attemptsLeft <= 0) {
+                    window.parent.postMessage({ type: "SANDBOX_WS_ATTACH_FAILED", error: String(e) }, "*");
+                    return;
+                }
+                setTimeout(() => reportAttachFailure(attemptsLeft - 1), 500);
+            };
+            reportAttachFailure(30);
+        }
+        </script>
+    <script>
+    (function() {
+        if (window.self === window.top) return;
+        var lastUrl = window.location.href;
+        function notify() {
+            var url = window.location.href;
+            if (url === lastUrl) return;
+            lastUrl = url;
+            window.parent.postMessage({ type: 'APP_CHANGED_URL', url: url }, '*');
+        }
+        var origPush = history.pushState.bind(history);
+        history.pushState = function() { origPush.apply(history, arguments); notify(); };
+        var origReplace = history.replaceState.bind(history);
+        history.replaceState = function() { origReplace.apply(history, arguments); notify(); };
+        window.addEventListener('popstate', notify);
+        window.parent.postMessage({ type: 'APP_CHANGED_URL', url: window.location.href }, '*');
+    })();
+    </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#131c27">
 <title>Jira Desk — Team Operations</title>
+<meta name="description" content="Jira Desk — bảng điều hành vận hành nhóm: ticket Jira, backlog, task, workload, timeline, rủi ro và báo cáo theo dữ liệu thật.">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='17' fill='%230c1826'/%3E%3Cpath d='M19 45V19h7.4v18.6H36V45z' fill='%234c86ff'/%3E%3Cpath d='M40 19h6.6v26H40z' fill='%23ffffff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
 <style>
 :root{--ink:#17212b;--muted:#74808c;--muted2:#9aa5b1;--line:#e5e9ed;--grid:#eef1f4;--paper:#fff;--canvas:#f4f6f7;--nav:#131c27;--nav2:#1e2a37;--blue:#356ee6;--blue-dark:#2358ca;--blue-soft:#eef3fe;--mint:#dff4ed;--green:#168162;--amber:#bd7c19;--amber-soft:#fdf3e3;--red:#c84949;--red-soft:#fdeeee;--violet:#6b5ce7;--teal:#0f9b8e;--rose:#c2477a;--radius:14px;--shadow:0 18px 48px rgba(25,39,52,.13);--shadow-sm:0 1px 2px rgba(23,33,43,.06),0 6px 16px rgba(23,33,43,.05);--focus:0 0 0 3px rgba(53,110,230,.22)}
 *{box-sizing:border-box}
@@ -475,6 +977,329 @@ a.ticket-key.tk-link:hover{background:var(--blue-dark);color:#fff;border-color:v
   .cell-clip,.cell-clip.w-md,.cell-clip.w-lg{max-width:none;white-space:normal}
   .sla-wrap{min-width:140px}
 }
+/* ================================================================================
+   PREMIUM 3D LAYER — lớp nâng cấp giao diện (thêm vào cuối, không đổi logic)
+   1) Nền & chiều sâu không gian  2) Sidebar / topbar  3) Điều khiển
+   ================================================================================ */
+:root{
+  --ink:#101a24;--muted:#5c6773;--muted2:#8b95a2;
+  --line:#e3e9f0;--grid:#edf1f6;--paper:#ffffff;--canvas:#eef1f6;
+  --nav:#0c1826;--nav2:#17293d;
+  --radius:18px;
+  --e1:0 1px 2px rgba(16,26,40,.06),0 1px 3px rgba(16,26,40,.05);
+  --e2:0 1px 2px rgba(16,26,40,.05),0 8px 20px -10px rgba(16,26,40,.22);
+  --e3:0 2px 4px rgba(16,26,40,.05),0 16px 32px -14px rgba(16,26,40,.26),0 36px 64px -36px rgba(16,26,40,.32);
+  --e4:0 2px 6px rgba(9,17,28,.10),0 26px 50px -20px rgba(9,17,28,.36),0 54px 96px -44px rgba(9,17,28,.46);
+  --top-hi:inset 0 1px 0 rgba(255,255,255,.9);
+  --shadow-sm:var(--e2);
+  --shadow:var(--e4);
+  --sans:"Be Vietnam Pro",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+html{background:radial-gradient(1100px 520px at 6% -12%,rgba(53,110,230,.14),transparent 62%),
+  radial-gradient(900px 470px at 98% 0%,rgba(15,155,142,.12),transparent 64%),
+  radial-gradient(1000px 640px at 62% 114%,rgba(107,92,231,.11),transparent 66%),
+  linear-gradient(180deg,#f8fafd 0%,#eaeff6 100%);background-attachment:fixed}
+body{font-family:var(--sans);font-size:13.8px;background:transparent;color:var(--ink);letter-spacing:-.05px}
+h1,h2,h3,h4{letter-spacing:-.5px}
+.mono,.ticket-key,.delta,.sla-pct,.stat-num,.report-table td.num,.gantt-col b{font-family:var(--mono);font-variant-numeric:tabular-nums}
+::selection{background:rgba(53,110,230,.18)}
+*{scrollbar-width:thin;scrollbar-color:#c3ceda transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:#c6d1de;border:3px solid transparent;border-radius:99px;background-clip:padding-box}
+*::-webkit-scrollbar-thumb:hover{background:#a8b6c6;background-clip:padding-box}
+
+/* ---------- sidebar: khối tối có chiều sâu ---------- */
+.sidebar{background:linear-gradient(180deg,#0e1c2c 0%,#0b1521 54%,#0a121d 100%);border-right:1px solid rgba(255,255,255,.06);box-shadow:34px 0 76px -58px rgba(9,17,28,.9)}
+.sidebar::before{content:"";position:absolute;left:0;right:0;top:0;height:270px;background:radial-gradient(430px 230px at 24% -32%,rgba(53,110,230,.5),transparent 72%);pointer-events:none}
+.brand{position:relative;padding:2px 8px 18px}
+.brand-mark{height:40px;width:40px;border-radius:13px;background:linear-gradient(150deg,#5f8dff,#2f5fd8 56%,#1b3f9e);color:#fff;font-size:15.5px;font-weight:800;letter-spacing:-.5px;box-shadow:0 12px 24px -12px rgba(53,110,230,.95),inset 0 1px 0 rgba(255,255,255,.5),inset 0 -7px 14px rgba(4,10,20,.28)}
+.brand-name{font-size:15.5px;font-weight:750;letter-spacing:-.4px;color:#fff}
+.brand-sub{color:#7e8da0;letter-spacing:1.35px}
+.nav-label{color:#71829a;letter-spacing:1.35px}
+.nav-btn{position:relative;border-radius:12px;padding:10px 12px;color:#a7b5c5;transition:transform .18s cubic-bezier(.22,.7,.2,1),background-color .18s,color .18s,box-shadow .18s,opacity .18s}
+.nav-btn:hover{background:rgba(255,255,255,.055);color:#fff;transform:translateX(2px)}
+.nav-btn.active{background:linear-gradient(90deg,rgba(53,110,230,.34),rgba(53,110,230,.06));color:#fff;box-shadow:0 10px 24px -16px rgba(53,110,230,1),var(--top-hi)}
+.nav-btn.active::before{content:"";position:absolute;left:0;top:50%;margin-top:-11px;width:3px;height:22px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#adc7ff,#4d86ff);box-shadow:0 0 14px rgba(120,164,255,.9)}
+.nav-icon{transition:transform .18s cubic-bezier(.22,.7,.2,1)}
+.nav-btn:hover .nav-icon,.nav-btn.active .nav-icon{transform:scale(1.07)}
+.nav-count{background:linear-gradient(180deg,#35485f,#2a3b50);color:#d8e4f3;box-shadow:inset 0 1px 0 rgba(255,255,255,.13)}
+.nav-count.alert{background:linear-gradient(180deg,#f2c565,#d9a13c);color:#231b09;box-shadow:0 8px 16px -9px rgba(217,161,60,.9),inset 0 1px 0 rgba(255,255,255,.55)}
+.connection-mini{color:#8fa0b2}
+.dot{box-shadow:0 0 0 3px rgba(66,185,131,.16),0 0 12px rgba(66,185,131,.75)}
+.side-user-name{color:#e8eef6}
+.side-user-email{color:#8494a6}
+.avatar{background:linear-gradient(180deg,#eff3f8,#e2e9f1);box-shadow:inset 0 1px 0 #fff,0 1px 3px rgba(16,26,40,.14)}
+.mobile-logout{display:none}
+
+/* ---------- topbar kính mờ ---------- */
+.topbar{height:62px;background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(255,255,255,.72));backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);border-bottom:1px solid rgba(226,233,240,.92);box-shadow:0 18px 34px -32px rgba(16,26,40,.8)}
+.crumb{letter-spacing:-.1px}
+.crumb strong{font-weight:700}
+.user-chip{background:linear-gradient(180deg,#fff,#f8fafd);border-color:#e4eaf2;box-shadow:var(--e1),var(--top-hi)}
+.content{padding:28px 30px 74px;max-width:1700px}
+.page-head{margin-bottom:22px}
+.page-title{font-size:25px;letter-spacing:-.9px}
+.eyebrow{letter-spacing:1.5px}
+.page-desc{font-size:13.2px;line-height:1.55}
+
+/* ---------- điều khiển ---------- */
+.btn{border-radius:12px;border-color:#e2e8f0;background:linear-gradient(180deg,#fff,#f7fafd);box-shadow:var(--e1),var(--top-hi);transition:transform .18s cubic-bezier(.22,.7,.2,1),box-shadow .18s,border-color .18s,background-color .18s,color .18s}
+.btn:hover{border-color:#cbd7e6;box-shadow:var(--e2),var(--top-hi);transform:translateY(-1.5px)}
+.btn:active{transform:translateY(0) scale(.985);box-shadow:var(--e1)}
+.btn.primary{border-color:#2560e0;background:linear-gradient(180deg,#427cf6,#2458d8);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 10px 22px -10px rgba(37,88,216,.85)}
+.btn.primary:hover{background:linear-gradient(180deg,#396ff0,#1e4ecb);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 14px 28px -10px rgba(37,88,216,.95)}
+.btn.danger{border-color:#f0d6d6;background:linear-gradient(180deg,#fff,#fdf5f5);color:var(--red)}
+.btn.danger:hover{background:linear-gradient(180deg,#fdf1f1,#fbe8e8);border-color:#eec9c9}
+.btn.ghost{background:none}
+.btn.text,.btn.text:hover{background:none;box-shadow:none;transform:none}
+.btn.text{color:var(--blue-dark)}
+.btn.text:hover{color:var(--blue)}
+.btn.small{padding:7px 11px;font-size:11.5px;border-radius:10px}
+.icon-btn{border-radius:10px;transition:transform .18s cubic-bezier(.22,.7,.2,1),background-color .18s,color .18s,box-shadow .18s}
+.icon-btn:hover{background:rgba(16,26,40,.055);box-shadow:var(--e1)}
+.icon-btn:active{transform:scale(.94)}
+.icon-btn.dark:hover{background:rgba(255,255,255,.1);color:#fff}
+input,select,textarea{border-radius:12px;border-color:#dfe6ef;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:inset 0 1px 2px rgba(16,26,40,.05);transition:border-color .16s,box-shadow .16s,background-color .16s}
+input:hover,select:hover,textarea:hover{border-color:#cbd7e6}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);background:#fff;box-shadow:var(--focus),inset 0 1px 2px rgba(16,26,40,.03)}
+.toolbar{border-color:#e5ebf3;background:linear-gradient(180deg,#fff,#fcfdff);box-shadow:var(--e2),var(--top-hi);padding:12px 13px;margin-bottom:16px}
+.toolbar-sep{background:#e4eaf2}
+.search-box input{padding-left:34px}
+.search-ico{color:#93a1b1}
+.chips{gap:8px}
+.chip{border-color:#e2e8f0;background:linear-gradient(180deg,#fff,#f8fafd);box-shadow:var(--e1),var(--top-hi);transition:transform .18s cubic-bezier(.22,.7,.2,1),box-shadow .18s,border-color .18s,background-color .18s,color .18s}
+.chip:hover{color:var(--ink);border-color:#cbd7e6;transform:translateY(-1.5px);box-shadow:var(--e2)}
+.chip.active{background:linear-gradient(180deg,#25344a,#121c29);border-color:#121c29;color:#fff;box-shadow:0 10px 22px -12px rgba(16,26,40,.95),var(--top-hi)}
+.seg{background:#e7ecf3;border-radius:12px;box-shadow:inset 0 1px 3px rgba(16,26,40,.09)}
+.seg button{border-radius:9px;transition:background-color .18s,color .18s,box-shadow .18s}
+.seg button.active{background:linear-gradient(180deg,#fff,#f5f9fd);box-shadow:var(--e1),var(--top-hi)}
+.field>span,.fld-label{color:#5d6875;letter-spacing:.35px}
+
+/* ================================================================================
+   PREMIUM 3D LAYER — Thẻ KPI nổi khối, panel và bảng dữ liệu chuyên nghiệp
+   ================================================================================ */
+.grid{gap:16px}
+.stats{gap:14px;margin-bottom:20px}
+.stat-card{border-radius:var(--radius);border-color:#e5ebf3;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:var(--e2),var(--top-hi);padding:16px 17px 15px;overflow:hidden;isolation:isolate;transition:transform .22s cubic-bezier(.22,.7,.2,1),box-shadow .22s,border-color .22s}
+.stat-card[data-tone]{--tc:#6b7b8c;--tcs:rgba(107,123,140,.18)}
+.stat-card[data-tone="blue"]{--tc:#356ee6;--tcs:rgba(53,110,230,.22)}
+.stat-card[data-tone="green"]{--tc:#168162;--tcs:rgba(22,129,98,.22)}
+.stat-card[data-tone="amber"]{--tc:#bd7c19;--tcs:rgba(189,124,25,.22)}
+.stat-card[data-tone="red"]{--tc:#c84949;--tcs:rgba(200,73,73,.22)}
+.stat-card[data-tone="rose"]{--tc:#c2477a;--tcs:rgba(194,71,122,.22)}
+.stat-card[data-tone="violet"]{--tc:#6b5ce7;--tcs:rgba(107,92,231,.22)}
+.stat-card::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--tc),transparent 82%);opacity:.9;z-index:1}
+.stat-card::after{content:"";position:absolute;right:-52px;bottom:-64px;width:168px;height:168px;border-radius:50%;background:radial-gradient(circle,var(--tcs),transparent 68%);pointer-events:none;z-index:0}
+.stat-card>*{position:relative;z-index:1}
+button.stat-card:hover{border-color:#d5e0ee;transform:translateY(-3px);box-shadow:var(--e3),var(--top-hi)}
+button.stat-card:hover .stat-icon{transform:scale(1.09) rotate(-4deg)}
+.stat-top{color:#5c6773;font-size:11.5px;font-weight:660}
+.stat-icon{height:30px;width:30px;border-radius:10px;transition:transform .22s cubic-bezier(.22,.7,.2,1);box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.stat-num{font-size:27px;font-weight:790;letter-spacing:-1.3px;margin:10px 0 3px;color:#0d1620}
+.stat-note{color:#697484;font-size:11.5px;line-height:1.5}
+.stat-foot{color:var(--tc);font-weight:760;margin-top:9px}
+.stat-foot svg{transition:transform .2s cubic-bezier(.22,.7,.2,1)}
+button.stat-card:hover .stat-foot svg{transform:translateY(3px)}
+
+/* ---------- panel ---------- */
+.panel{border-radius:var(--radius);border-color:#e5ebf3;background:linear-gradient(180deg,#fff,#fdfeff);box-shadow:var(--e2),var(--top-hi);margin-bottom:18px}
+.panel-head{padding:16px 18px;border-bottom:1px solid var(--grid);background:linear-gradient(180deg,#fff,#fbfdff)}
+.panel-title{font-size:14.5px;font-weight:730;letter-spacing:-.3px}
+.panel-sub{font-size:11.5px;line-height:1.5}
+.panel-body{padding:16px 18px}
+.panel-foot{background:linear-gradient(180deg,#fbfdff,#f6f9fc);padding:12px 18px;font-size:12px}
+.section-label{color:#5c6773;letter-spacing:1.2px}
+.empty{padding:40px 18px}
+.empty strong{font-size:14px}
+.notice{border-radius:13px;box-shadow:var(--e1),var(--top-hi)}
+
+/* ---------- bảng dữ liệu ---------- */
+table{font-size:13px}
+thead th{background:linear-gradient(180deg,#f8fbfe,#eff4fa);color:#5a6572;font-weight:790;letter-spacing:.85px;padding:12px 14px;border-bottom:1px solid #dfe7f0}
+thead th.sortable{transition:color .16s,background .16s}
+thead th.sortable:hover{color:var(--blue-dark);background:linear-gradient(180deg,#f1f6ff,#e8f0fe)}
+thead th .dir{font-size:9px;letter-spacing:0}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--grid);transition:background-color .16s}
+tbody tr.hoverable:hover{background:linear-gradient(90deg,rgba(53,110,230,.055),rgba(53,110,230,.012) 46%,transparent)}
+.primary-cell{font-weight:650;color:#0f1922;letter-spacing:-.15px}
+.cell-sub{font-size:11px;line-height:1.45;color:#78838f}
+.ticket-key{background:linear-gradient(180deg,#eff5ff,#e0ebff);border:1px solid #d5e4ff;color:#1b49c0;border-radius:8px;padding:3px 8px;font-size:11px;box-shadow:inset 0 1px 0 #fff}
+a.ticket-key.tk-link:hover{background:linear-gradient(180deg,#3f7bf0,#2458d8);color:#fff;border-color:#2458d8;box-shadow:0 8px 18px -10px rgba(53,110,230,.9)}
+tr[data-status] td.cell-main{border-left:3px solid transparent;transition:border-color .2s}
+tr[data-status="todo"] td.cell-main{border-left-color:#a7b3c2}
+tr[data-status="progress"] td.cell-main{border-left-color:#356ee6}
+tr[data-status="blocked"] td.cell-main{border-left-color:#c84949}
+tr[data-status="done"] td.cell-main{border-left-color:#168162}
+tr[data-status="done"] .primary-cell{color:#6c7783;font-weight:600}
+tr[data-status="done"] .cell-sub{color:#8a94a0}
+tr[data-alert="1"] td{background-image:linear-gradient(90deg,rgba(200,73,73,.07),transparent 58%)}
+tr[data-alert="1"] td.cell-main{border-left-color:#c84949}
+.table-wrap.tall{max-height:70vh;scrollbar-color:#c3ceda transparent}
+table.tbl-wide thead th{background:linear-gradient(180deg,#f8fbfe,#eef4fa)}
+table.tbl-wide td.cell-main,table.tbl-wide thead th:first-child{box-shadow:6px 0 16px -12px rgba(16,26,40,.5),1px 0 0 var(--line)}
+table.tbl-wide td.cell-main{background:linear-gradient(180deg,#fff,#fdfeff)}
+table.tbl-wide tbody tr.hoverable:hover td.cell-main{background:linear-gradient(180deg,#f7faff,#f1f7ff)}
+.row-actions{gap:4px}
+.icon-act{border:1px solid transparent;background:transparent;border-radius:10px;padding:7px;display:grid;place-items:center;color:#78838f;cursor:pointer;transition:transform .18s cubic-bezier(.22,.7,.2,1),background-color .18s,color .18s,border-color .18s,box-shadow .18s,opacity .18s}
+.icon-act svg,.icon-act .icon svg{width:16px;height:16px}
+.icon-act:hover{color:var(--blue-dark);background:linear-gradient(180deg,#f1f6ff,#e8f0fe);border-color:#dbe6fb;transform:translateY(-1.5px);box-shadow:0 8px 16px -10px rgba(53,110,230,.8)}
+.icon-act:active{transform:translateY(0) scale(.94)}
+.icon-act.danger:hover{color:var(--red);background:linear-gradient(180deg,#fdf2f2,#fbe9e9);border-color:#f2dada;box-shadow:0 8px 16px -10px rgba(200,73,73,.7)}
+tbody tr .row-actions .icon-act{opacity:.62}
+tbody tr:hover .row-actions .icon-act,tbody tr:focus-within .row-actions .icon-act{opacity:1}
+@media(hover:none){tbody tr .row-actions .icon-act{opacity:1}}
+
+/* ---------- nhãn, thanh tiến độ, số liệu ---------- */
+.badge{border-radius:999px;padding:3px 10px;font-weight:720;box-shadow:inset 0 1px 0 rgba(255,255,255,.6)}
+.badge.gray{background:linear-gradient(180deg,#f4f7fa,#e9eef4);color:#5a6572}
+.st-badge{padding:4px 11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 1px 2px rgba(16,26,40,.06)}
+.progress{height:7px;background:#e9eef5;box-shadow:inset 0 1px 2px rgba(16,26,40,.13)}
+.progress i{background:linear-gradient(90deg,#4c86ff,#2a5fe0);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.progress.green i{background:linear-gradient(90deg,#22a67e,#0f7554)}
+.progress.red i{background:linear-gradient(90deg,#e06b6b,#c24545)}
+.progress.amber i{background:linear-gradient(90deg,#e2ac4f,#bd7c19)}
+.sla-track{background:#e6ecf4;box-shadow:inset 0 1.5px 3px rgba(16,26,40,.16)}
+.sla-fill{box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.hbar-track{height:9px;background:#e9eef5;box-shadow:inset 0 1.5px 3px rgba(16,26,40,.12)}
+.hbar-track i{background:linear-gradient(90deg,#4c86ff,#2a5fe0);box-shadow:0 1px 3px rgba(53,110,230,.35)}
+.bar-stack{box-shadow:inset 0 1px 2px rgba(16,26,40,.1)}
+.mini-stat{border-radius:14px;border-color:#e5ebf3;background:linear-gradient(180deg,#fff,#fafcfe);box-shadow:var(--e1),var(--top-hi);padding:12px 14px}
+.mini-stat b{font-size:19px;letter-spacing:-.6px}
+.delta{border-radius:6px;background:#f2f5f9}
+.person-card{border-radius:14px;border-color:#e5ebf3;box-shadow:var(--e1),var(--top-hi);transition:transform .2s cubic-bezier(.22,.7,.2,1),box-shadow .2s}
+.person-card:hover{transform:translateY(-2px);box-shadow:var(--e2),var(--top-hi)}
+.feed-item{padding:14px 18px;transition:background-color .16s}
+.feed-item:hover{background:#fbfcfe}
+.feed-icon{height:32px;width:32px;border-radius:11px;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.risk-group{border-radius:14px;border-color:#e5ebf3;box-shadow:var(--e1),var(--top-hi);overflow:hidden}
+.risk-head{transition:background-color .16s}
+.risk-head:hover{background:#fafcfe}
+.tabs button{transition:color .18s,border-color .18s}
+.gate-card{border-radius:24px;box-shadow:var(--e4)}
+.gate-card h1{letter-spacing:-.7px}
+.google-btn{border-radius:13px;box-shadow:var(--e2),var(--top-hi)}
+.config-row input{border-radius:12px}
+.sk-card,.sk-pill{border-radius:14px}
+.skeleton{border-radius:8px}
+
+/* ================================================================================
+   PREMIUM 3D LAYER — 7) Gantt/biểu đồ 8) Drawer, dialog, toast
+   9) Responsive (desktop / tablet / điện thoại) 10) Chuyển động
+   ================================================================================ */
+.gantt{border-radius:16px;border-color:#e5ebf3;box-shadow:var(--e2),var(--top-hi)}
+.gantt-head{background:linear-gradient(180deg,#f9fbfe,#f1f5fa)}
+.gantt-corner{background:transparent;color:#5c6773}
+.gantt-col.weekend{background:rgba(107,92,231,.045)}
+.gantt-groupbar{background:linear-gradient(180deg,#f7fafd,#eef3f9)}
+.gantt-row:hover{background:linear-gradient(90deg,rgba(53,110,230,.05),transparent)}
+.gantt-bar{border-radius:9px;box-shadow:0 3px 8px rgba(53,110,230,.26),inset 0 1px 0 rgba(255,255,255,.3);transition:filter .16s,box-shadow .16s}
+.gantt-bar:hover{filter:brightness(1.06);box-shadow:0 6px 16px rgba(53,110,230,.34),inset 0 1px 0 rgba(255,255,255,.34)}
+.gantt-bar.blocked{box-shadow:0 3px 8px rgba(200,73,73,.28),inset 0 1px 0 rgba(255,255,255,.28)}
+.gantt-bar.done{box-shadow:0 3px 8px rgba(22,129,98,.26),inset 0 1px 0 rgba(255,255,255,.28)}
+.gantt-bar.planned{box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+.gantt-today{box-shadow:0 0 14px rgba(189,124,25,.7)}
+.chart .seg:hover{opacity:.88}
+.chart-wrap{position:relative}
+
+/* ---------- drawer, dialog, toast ---------- */
+.drawer{box-shadow:-34px 0 80px -34px rgba(9,17,28,.55)}
+.drawer-head{background:linear-gradient(180deg,#fff,#fbfdff)}
+.drawer-body{scrollbar-color:#c3ceda transparent}
+.drawer-raw{background:linear-gradient(180deg,#fbfdff,#f6f9fc)}
+.dialog{border-radius:22px;box-shadow:var(--e4);border:1px solid rgba(255,255,255,.6)}
+.dialog::backdrop{background:radial-gradient(1000px 620px at 50% -6%,rgba(23,33,43,.42),rgba(9,17,28,.64))}
+.dialog-inner{padding:24px 26px 22px}
+.dialog-foot{margin-top:22px}
+.toast{border-radius:14px;background:linear-gradient(180deg,#1d2836,#121b27);box-shadow:var(--e4);padding:12px 16px;font-size:12.5px}
+.toast.good{border-left-color:#42b983}
+.gate{background:radial-gradient(1200px 640px at 18% -14%,#2a3f5c,transparent),radial-gradient(900px 500px at 96% 108%,#1b3a52,transparent),var(--nav)}
+@keyframes floatIn{from{opacity:0;transform:translateY(14px) scale(.985)}}
+
+/* ---------- RESPONSIVE ---------- */
+@media(max-width:1180px){
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats.five{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:1050px){
+  .content{padding:26px 22px 68px}
+  .sidebar{width:220px}
+  .main{margin-left:220px}
+}
+@media(max-width:900px){
+  .stats.three{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stats.three>.stat-card:last-child{grid-column:1/-1}
+}
+@media(max-width:760px){
+  .sidebar{box-shadow:0 16px 34px -26px rgba(9,17,28,.9)}
+  .sidebar::before{height:120px;background:radial-gradient(320px 120px at 20% -60%,rgba(53,110,230,.4),transparent 72%)}
+  .brand{padding:0 2px 9px}
+  .brand-mark{height:30px;width:30px;border-radius:10px;font-size:12.5px}
+  .brand-name{font-size:14px}
+  .mobile-logout{display:grid;margin-left:auto}
+  .side-scroll{scroll-snap-type:x proximity;padding:2px 2px 4px;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 14px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 14px),transparent 100%)}
+  .nav-btn{padding:9px 12px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);scroll-snap-align:start}
+  .nav-btn:hover{transform:none}
+  .nav-btn.active{background:linear-gradient(180deg,rgba(53,110,230,.42),rgba(53,110,230,.2));border-color:rgba(122,162,255,.45)}
+  .nav-btn.active::before{left:50%;top:auto;bottom:0;margin-top:0;transform:translateX(-50%);width:24px;height:3px;border-radius:3px 3px 0 0}
+  .topbar{position:static}
+  .page-actions{width:100%;gap:8px}
+  .page-actions .btn{flex:1 1 auto;justify-content:center;padding:10px 14px}
+  .icon-btn{padding:9px}
+  .stats,.stats.five{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+  .stats.five>.stat-card:last-child{grid-column:1/-1}
+  .stats.three>.stat-card:last-child{grid-column:1/-1}
+  .stat-num{font-size:23px}
+  .stat-card{padding:14px 14px 13px}
+  .stat-icon{height:28px;width:28px}
+  .panel-head{padding:14px 15px}
+  .panel-body{padding:14px 15px}
+  .panel-body.tight{padding:10px 10px 2px}
+  .panel-foot{padding:11px 15px}
+  .content{padding:18px 14px 68px}
+  .page-title{font-size:21px}
+  .tabs{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 16px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 10px,#000 calc(100% - 16px),transparent 100%)}
+  .table-wrap{overflow-x:auto}
+  table{font-size:12.8px}
+  .report-table th,.report-table td{padding:9px 10px}
+  .report-table{font-size:12.2px}
+  .kv{font-size:12.5px}
+  .dialog{border-radius:20px}
+  .dialog-inner{padding:20px 17px}
+  .gantt{border-radius:14px}
+  .gantt-row,.gantt-label{padding-top:9px;padding-bottom:9px}
+  .mini-stat{padding:11px 12px}
+  /* bảng -> thẻ dữ liệu trên điện thoại */
+  .table-wrap{background:transparent}
+  table.responsive tbody tr{display:block;border:1px solid #e5ebf3;border-radius:16px;background:linear-gradient(180deg,#fff,#fcfdff);box-shadow:var(--e2),var(--top-hi);margin:0 0 10px;padding:0;overflow:hidden;border-bottom:1px solid #e5ebf3}
+  table.responsive tbody tr:last-child{margin-bottom:0}
+  table.responsive tbody td{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 14px;border:0;text-align:right}
+  table.responsive tbody td:before{content:attr(data-label);color:#6b7683;font-size:10.5px;letter-spacing:.7px;font-weight:750;text-transform:uppercase;text-align:left;flex:0 0 auto;line-height:1.7}
+  table.responsive tbody td.cell-main{display:block;text-align:left;padding:13px 14px 10px;border-bottom:1px dashed var(--grid)}
+  table.responsive tbody td.cell-main:before{display:none}
+  table.responsive tbody td:last-child{border-top:1px solid var(--grid);padding:8px 12px;margin-top:2px;justify-content:flex-end}
+  table.responsive tbody td:last-child:before{display:none}
+  table.responsive tbody tr[data-status] td.cell-main{border-left:0}
+  table.responsive tbody tr[data-status="progress"]{border-left:3px solid #356ee6}
+  table.responsive tbody tr[data-status="blocked"],table.responsive tbody tr[data-alert="1"]{border-left:3px solid #c84949}
+  table.responsive tbody tr[data-status="done"]{border-left:3px solid #168162}
+  table.responsive tbody tr[data-status="todo"]{border-left:3px solid #a7b3c2}
+  table.responsive tbody tr[data-alert="1"]{background:linear-gradient(180deg,#fffafa,#fff)}
+  table.responsive tbody tr[data-alert="1"] td{background-image:none}
+  table.responsive tbody td .row-actions .icon-act{padding:9px;background:linear-gradient(180deg,#f8fafd,#f1f5fa);border-color:#e6ecf4}
+  .empty{padding:30px 16px}
+}
+@media(max-width:460px){
+  .stats,.stats.five,.stats.three{grid-template-columns:1fr}
+  .stats>.stat-card:last-child,.stats.five>.stat-card:last-child,.stats.three>.stat-card:last-child{grid-column:auto}
+  .user-chip{display:none}
+  .page-title{font-size:20px}
+}
+@media(prefers-reduced-motion:reduce){
+  .stat-card,.panel,.chip,.btn{transition:none}
+}
+
 </style>
 </head>
 <body>
@@ -486,6 +1311,7 @@ a.ticket-key.tk-link:hover{background:var(--blue-dark);color:#fff;border-color:v
     <div class="brand">
       <div class="brand-mark">JD</div>
       <div><div class="brand-name">Jira Desk</div><span class="brand-sub">Team operations</span></div>
+      <button class="icon-btn dark mobile-logout" data-action="logout" title="Đăng xuất" aria-label="Đăng xuất"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l5-5-5-5M20 12H9M12 19H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg></button>
     </div>
     <div class="side-scroll">
       <div class="nav-group">
@@ -677,7 +1503,8 @@ const ICONS = {
   trend:'<svg viewBox="0 0 24 24"><path d="M4 17l5-5 3.5 3L20 7"/><path d="M15 7h5v5"/></svg>',
   lock:'<svg viewBox="0 0 24 24"><path d="M6 11h12v9H6zM9 11V8.5a3 3 0 0 1 6 0V11"/></svg>',
   arrowUp:'<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
-  arrowDown:'<svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>'
+  arrowDown:'<svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
+  eye:'<svg viewBox="0 0 24 24"><path d="M2.6 12S6.2 5.6 12 5.6 21.4 12 21.4 12 17.8 18.4 12 18.4 2.6 12 2.6 12z"/><circle cx="12" cy="12" r="3"/></svg>'
 };
 function icon(name){ return '<span class="icon">'+(ICONS[name]||"")+'</span>'; }
 
@@ -2014,9 +2841,10 @@ function statCard(o){
     '<div class="stat-num">' + (o.raw ? o.num : fmtNum(o.num)) + '</div>' +
     '<div class="stat-note">' + esc(o.note || "") + '</div>' +
     (o.drill ? '<div class="stat-foot">Xem danh sách ' + (ICONS.arrowDown) + '</div>' : "");
+  const tone = ' data-tone="' + escAttr(o.tone || "neutral") + '"';
   return o.drill
-    ? '<button class="stat-card" data-drill="' + escAttr(o.drill) + '">' + inner + '</button>'
-    : '<div class="stat-card">' + inner + '</div>';
+    ? '<button class="stat-card"' + tone + ' data-drill="' + escAttr(o.drill) + '">' + inner + '</button>'
+    : '<div class="stat-card"' + tone + '>' + inner + '</div>';
 }
 function panel(o){
   return '<section class="panel">' +
@@ -2057,7 +2885,8 @@ function dataTable(spec){
       const cls = [(ci === 0 ? "cell-main" : ""), (c.cls || "")].filter(Boolean).join(" ");
       return '<td class="' + cls + '" data-label="' + (ci === 0 ? "" : escAttr(c.label)) + '"' + (c.tip ? ' title="' + escAttr(c.tip(item)) + '"' : "") + ">" + c.render(item, i) + "</td>";
     }).join("");
-    return '<tr class="hoverable"' + (spec.rowAction
+    const alertRow = (item.statusGroup !== "done" && isOverdue(item)) || isBlockedItem(item) ? "1" : "0";
+    return '<tr class="hoverable" data-status="' + escAttr(item.statusGroup || "") + '" data-alert="' + alertRow + '"' + (spec.rowAction
       ? ' data-action="' + spec.rowAction + '" data-kind="' + item.kind + '" data-id="' + escAttr(item.id) + '"'
       : "") + ">" + tds + "</tr>";
   }).join("") : '<tr><td colspan="' + cols.length + '">' + emptyBox(spec.emptyTitle || "Không có dữ liệu", spec.emptyNote || "Thử đổi bộ lọc hoặc từ khoá tìm kiếm") + "</td></tr>";
@@ -2496,8 +3325,8 @@ function ticketListHtml(){
         return esc(fmtDt(i.x.updatedRaw)) + (i.x.updatedRaw ? '<span class="cell-sub">' + esc(relTime(i.x.updatedRaw)) + "</span>" : "");
       } },
     { label: "", cls: "nowrap", render: function(i){
-        return '<div class="row-actions"><button class="btn text small" data-action="open-item" data-kind="ticket" data-id="' + escAttr(i.id) + '">Chi tiết</button>' +
-          (i.url ? '<a class="btn text small" data-stop href="' + escAttr(i.url) + '" target="_blank" rel="noopener noreferrer" title="Mở trên Jira">' + icon("external") + "</a>" : "") + "</div>";
+        return '<div class="row-actions"><button class="icon-act" data-action="open-item" data-kind="ticket" data-id="' + escAttr(i.id) + '" title="Xem chi tiết" aria-label="Xem chi tiết">' + icon("eye") + '</button>' +
+          (i.url ? '<a class="icon-act" data-stop href="' + escAttr(i.url) + '" target="_blank" rel="noopener noreferrer" title="Mở trên Jira" aria-label="Mở trên Jira">' + icon("external") + "</a>" : "") + "</div>";
       } }
   ];
   return dataTable({
@@ -2984,10 +3813,10 @@ function backlogRowCols(){
       } },
     { label: "", cls: "nowrap", render: function(i){
         return '<div class="row-actions">' +
-          '<button class="btn text small" data-action="open-item" data-kind="backlog" data-id="' + escAttr(i.id) + '">Chi tiết</button>' +
-          '<button class="btn text small" data-action="edit-backlog" data-id="' + escAttr(i.id) + '" title="Sửa">' + icon("edit") + "</button>" +
-          (i.statusGroup === "done" ? "" : '<button class="btn text small" data-action="archive-backlog" data-id="' + escAttr(i.id) + '" title="Lưu trữ">' + icon("lock") + "</button>") +
-          '<button class="btn text small" data-action="delete-backlog" data-id="' + escAttr(i.id) + '" title="Xoá">' + icon("trash") + "</button></div>";
+          '<button class="icon-act" data-action="open-item" data-kind="backlog" data-id="' + escAttr(i.id) + '" title="Xem chi tiết" aria-label="Xem chi tiết">' + icon("eye") + "</button>" +
+          '<button class="icon-act" data-action="edit-backlog" data-id="' + escAttr(i.id) + '" title="Sửa" aria-label="Sửa">' + icon("edit") + "</button>" +
+          (i.statusGroup === "done" ? "" : '<button class="icon-act" data-action="archive-backlog" data-id="' + escAttr(i.id) + '" title="Lưu trữ" aria-label="Lưu trữ">' + icon("lock") + "</button>") +
+          '<button class="icon-act danger" data-action="delete-backlog" data-id="' + escAttr(i.id) + '" title="Xoá" aria-label="Xoá">' + icon("trash") + "</button></div>";
       } }
   ];
 }
@@ -3116,10 +3945,10 @@ function taskCols(){
       } },
     { label: "", cls: "nowrap", render: function(i){
         return '<div class="row-actions">' +
-          '<button class="btn text small" data-action="open-item" data-kind="task" data-id="' + escAttr(i.id) + '">Chi tiết</button>' +
-          '<button class="btn text small" data-action="edit-task" data-id="' + escAttr(i.id) + '" title="Sửa">' + icon("edit") + "</button>" +
-          (i.statusGroup === "done" ? "" : '<button class="btn text small" data-action="complete-task" data-id="' + escAttr(i.id) + '" title="Hoàn thành">' + icon("check") + "</button>") +
-          '<button class="btn text small" data-action="delete-task" data-id="' + escAttr(i.id) + '" title="Xoá">' + icon("trash") + "</button></div>";
+          '<button class="icon-act" data-action="open-item" data-kind="task" data-id="' + escAttr(i.id) + '" title="Xem chi tiết" aria-label="Xem chi tiết">' + icon("eye") + "</button>" +
+          '<button class="icon-act" data-action="edit-task" data-id="' + escAttr(i.id) + '" title="Sửa" aria-label="Sửa">' + icon("edit") + "</button>" +
+          (i.statusGroup === "done" ? "" : '<button class="icon-act" data-action="complete-task" data-id="' + escAttr(i.id) + '" title="Hoàn thành" aria-label="Hoàn thành">' + icon("check") + "</button>") +
+          '<button class="icon-act danger" data-action="delete-task" data-id="' + escAttr(i.id) + '" title="Xoá" aria-label="Xoá">' + icon("trash") + "</button></div>";
       } }
   ];
 }
