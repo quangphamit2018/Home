@@ -941,6 +941,19 @@ tbody tr[data-breach="1"] td.cell-main{box-shadow:6px 0 16px -12px rgba(160,31,3
   table.resizable.fixed{table-layout:auto!important}
   .table-wrap table.resizable.fixed{min-width:0!important}
 }
+
+/* ---- Sửa: kéo giãn cột phải hiển thị đủ nội dung ---- */
+table.resizable.fixed .primary-cell,table.resizable.fixed .cell-sub,table.resizable.fixed .cell-clip,
+table.resizable.fixed .cell-clip.w-md,table.resizable.fixed .cell-clip.w-lg{max-width:none!important}
+table.resizable.fixed th.col-head{overflow:visible}
+table.resizable.fixed th .th-inner{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:flex}
+table.resizable.fixed td{overflow:hidden}
+.ms.right .ms-panel{left:auto;right:0}
+.ms-head{flex-wrap:wrap}
+@media(max-width:760px){
+  table.resizable.fixed{width:100%!important;min-width:0!important}
+  .ms.right .ms-panel{left:0;right:0}
+}
 </style>
 </head>
 <body>
@@ -1105,6 +1118,7 @@ const THRESHOLDS = {
   dueSoonWide: 30,
   staleTicketDays: 14,
   staleWorkDays: 10,
+  riskWindowDays: 7,
   ticketPageSize: 1000,
   ticketMaxRows: 60000,
   listPage: 40,
@@ -2359,10 +2373,12 @@ function applyListFilters(list, f){
     if (!msOn(item.project, f.project)) return false;
     const owners = msArr(f.owner);
     if (owners.length && !owners.some(function(v){ return v === "none" ? isUnassigned(item) : item.ownerId === v; })) return false;
+    if (f.kind && f.kind !== "all" && item.kind !== f.kind) return false;
     if (f.from || f.to){
-      if (!item.due) return false;
-      if (f.from && diffDays(f.from, item.due) < 0) return false;
-      if (f.to && diffDays(item.due, f.to) < 0) return false;
+      const ref = item.kind === "ticket" ? (item.due || dayKey(item.created)) : item.due;
+      if (!ref) return false;
+      if (f.from && diffDays(f.from, ref) < 0) return false;
+      if (f.to && diffDays(ref, f.to) < 0) return false;
     }
     if (item.kind === "backlog" && norm(item.status) === "archived" && f.preset !== "archived" && !msHas(f.status, "archived", norm)) return false;
     if (f.preset){
@@ -2473,7 +2489,7 @@ function fMulti(scope, key, values, current, allLabel, title, names){
   const all = !sel.length || sel.length >= list.length;
   const opts = list.length ? list.map(function(v){
     return '<label class="ms-opt"><input type="checkbox" data-ms="' + scope + ":" + key + '" value="' + escAttr(v) + '"' +
-      (!all && sel.indexOf(v) >= 0 ? " checked" : "") + "><span>" + esc(msPretty(v, names)) + "</span></label>";
+      (all || sel.indexOf(v) >= 0 ? " checked" : "") + "><span>" + esc(msPretty(v, names)) + "</span></label>";
   }).join("") : '<div class="ms-empty">Không có lựa chọn phù hợp</div>';
   return '<div class="ms" data-ms-root="' + scope + ":" + key + '" data-ms-alllabel="' + escAttr(allLabel) + '" data-ms-names="' + escAttr(JSON.stringify(names || {})) + '">' +
     '<button type="button" class="ms-btn' + (all ? "" : " on") + '" data-ms-toggle title="' + escAttr(title) + '" aria-label="' + escAttr(title) + '">' +
@@ -2481,8 +2497,7 @@ function fMulti(scope, key, values, current, allLabel, title, names){
       (all ? "" : '<span class="ms-count">' + sel.length + "</span>") +
       '<span class="ms-caret">▼</span></button>' +
     '<div class="ms-panel"><div class="ms-head"><span>' + esc(title) + '</span><span>' +
-      '<button type="button" class="link-btn" data-ms-all="' + scope + ":" + key + '">Tất cả</button> ' +
-      '<button type="button" class="link-btn" data-ms-none="' + scope + ":" + key + '">Bỏ chọn</button></span></div>' +
+      '<button type="button" class="link-btn" data-ms-all="' + scope + ":" + key + '">Chọn tất cả (bỏ lọc)</button></span></div>' +
     '<div class="ms-list">' + opts + "</div></div></div>";
 }
 function statusFilterSelect(scope, list, current){
@@ -2602,7 +2617,7 @@ function dataTable(spec){
   }).join("") + "</colgroup>";
   const totalW = widths ? widths.reduce(function(a, b){ return a + (b || 0); }, 0) : 0;
   return '<div class="table-wrap' + (spec.wrapClass ? " " + spec.wrapClass : "") + '"><table class="responsive resizable' + (widths ? " fixed" : "") +
-    (spec.tableClass ? " " + spec.tableClass : "") + '"' + (widths ? ' style="min-width:' + totalW + 'px"' : "") + ">" + colgroup +
+    (spec.tableClass ? " " + spec.tableClass : "") + '"' + (widths ? ' style="width:' + totalW + 'px;min-width:' + totalW + 'px"' : "") + ">" + colgroup +
     "<thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table></div>" +
     (spec.foot ? '<div class="panel-foot">' + spec.foot + "</div>" : "");
 }
@@ -2841,7 +2856,8 @@ function workloadScore(row){
   return row.openTickets + row.openBacklogs * 2 + row.openTasks + row.blocked * 2 + row.overdue * 2 + Math.round(row.estimateLeft / 8);
 }
 function overviewItems(){
-  return withBlockedSince(applyListFilters(allItems(), state.filters.overview));
+  const f = Object.assign({}, state.filters.overview, { from: "", to: "", preset: "" });
+  return withBlockedSince(applyListFilters(allItems(), f));
 }
 function renderOverview(){
   const f = state.filters.overview;
@@ -2863,7 +2879,7 @@ function renderOverview(){
   const soon7 = dueSoonList(items, THRESHOLDS.dueSoon);
   const soon14 = dueSoonList(items, THRESHOLDS.dueSoonMid);
   const soon30 = dueSoonList(items, THRESHOLDS.dueSoonWide);
-  const risks = riskItems().filter(function(i){ return items.indexOf(i) >= 0; });
+  const risks = items.filter(function(i){ return riskGroupOf(i).length > 0; });
   const owners = ownerRows(items);
   const topWorkload = owners.rows.slice().sort(function(a, b){ return workloadScore(b) - workloadScore(a); }).slice(0, 8);
 
@@ -3098,8 +3114,8 @@ function renderTickets(){
       ticketAssigneeOptions(f) +
       typeFilterSelect("tickets", all, f.type, "Mọi issue type", "Issue type") +
       projectFilterSelect("tickets", all, f.project) +
-      '<div class="toolbar-sep"></div><label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline từ</span><input type="date" data-filter="tickets:from" value="' + escAttr(f.from) + '" title="Deadline từ ngày"></label>' +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline đến</span><input type="date" data-filter="tickets:to" value="' + escAttr(f.to) + '" title="Deadline đến ngày"></label>' +
+      '<div class="toolbar-sep"></div><label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline từ</span><input type="date" data-filter="tickets:from" value="' + escAttr(f.from) + '" title="Từ ngày (deadline, hoặc ngày tạo nếu ticket không có deadline)"></label>' +
+      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline đến</span><input type="date" data-filter="tickets:to" value="' + escAttr(f.to) + '" title="Đến ngày (deadline, hoặc ngày tạo nếu ticket không có deadline)"></label>' +
       '<div class="toolbar-sep"></div>' + savedFilterBar("tickets", all) + savedFilterButtons("tickets") +
       '<button class="btn small" data-action="clear-filters" data-scope="tickets">Xoá lọc</button>' +
     '</div>' +
@@ -4260,8 +4276,8 @@ function renderRisks(){
       statCard({ label: "Thiếu mốc thời gian", num: missingCount, note: "Không đo được tiến độ", tone: "amber", icon: "calendar" }) +
     "</div>" +
     '<div class="toolbar">' +
-      '<div class="chips"><button class="chip' + (!f.risk || f.risk === "all" ? " active" : "") + '" data-preset="risks:all">Tất cả nhóm</button>' +
-      RISK_RULES.map(function(r){ return '<button class="chip' + (f.risk === r.key ? " active" : "") + '" data-preset="risks:' + r.key + '">' + esc(r.label) + "</button>"; }).join("") + "</div>" +
+      '<div class="chips"><button class="chip' + (!f.risk || f.risk === "all" ? " active" : "") + '" data-risk-chip="all">Tất cả nhóm</button>' +
+      RISK_RULES.map(function(r){ return '<button class="chip' + (f.risk === r.key ? " active" : "") + '" data-risk-chip="' + r.key + '">' + esc(r.label) + "</button>"; }).join("") + "</div>" +
       '<div class="toolbar-sep"></div>' +
       ownerFilterSelect("risks", f.owner) +
       projectFilterSelect("risks", all, f.project) +
@@ -4398,10 +4414,7 @@ function exportActivityCsv(){
 /* ---------------- BÁO CÁO ---------------- */
 function reportItems(){
   const f = state.filters.reports;
-  let list = withBlockedSince(allItems());
-  if (f.owner && f.owner !== "all") list = f.owner === "none" ? list.filter(isUnassigned) : list.filter(function(i){ return i.ownerId === f.owner; });
-  if (f.project && f.project !== "all") list = list.filter(function(i){ return i.project === f.project; });
-  return list;
+  return withBlockedSince(applyListFilters(allItems(), { q: "", status: "all", priority: "all", type: "all", owner: f.owner, project: f.project, from: "", to: "", preset: "" }));
 }
 function leadTime(list){
   const arr = list.map(function(i){
@@ -4414,9 +4427,15 @@ function leadTime(list){
 function reportData(){
   const f = state.filters.reports;
   const to = f.to || todayKey();
-  const from = f.from || dayKey(startOfMonth(new Date()));
-  const unit = f.period === "month" ? "month" : "week";
   const items = reportItems();
+  let from = f.from;
+  if (!from) {
+    if (f.preset === "all") {
+      const ds = items.map(function(i){ return dayKey(i.created); }).filter(Boolean).sort();
+      from = ds[0] || dayKey(startOfMonth(new Date()));
+    } else from = dayKey(startOfMonth(new Date()));
+  }
+  const unit = (f.period === "month" || diffDays(from, to) > 400) ? "month" : "week";
   const tickets = items.filter(function(i){ return i.kind === "ticket"; });
   const backlogs = items.filter(function(i){ return i.kind === "backlog"; });
   const tasks = items.filter(function(i){ return i.kind === "task"; });
@@ -4494,7 +4513,7 @@ function reportTable(headers, rows, footer){
 }
 function renderReports(){
   const f = state.filters.reports;
-  if (!f.from) { f.from = dayKey(startOfMonth(new Date())); f.to = todayKey(); }
+  if (!f.from && f.preset !== "all") { f.from = dayKey(startOfMonth(new Date())); f.to = todayKey(); }
   const d = reportData();
   setActions('<button class="btn" data-action="refresh">' + icon("refresh") + 'Làm mới</button>' +
     '<button class="btn" data-action="export-report" data-report="all">' + icon("download") + 'Xuất toàn bộ báo cáo</button>');
@@ -4691,7 +4710,10 @@ function paintList(){
 function drillTo(tab, patch){
   if (!TAB_META[tab]) tab = "tickets";
   state.tab = tab;
-  if (patch && Object.keys(patch).length) state.filters[tab] = Object.assign(blankFilters(tab), patch);
+  if (patch && Object.keys(patch).length) {
+    if (patch.preset === "all") patch.preset = "";
+    state.filters[tab] = Object.assign(blankFilters(tab), patch);
+  }
   state.focusMember = tab === "workload" && patch && patch.member ? patch.member : null;
   state.page[tab] = 1;
   closeDrawer();
@@ -4715,13 +4737,17 @@ function onFilterChange(el, isText){
   state.filters[scope][key] = el.value;
   if (!isText && (key === "from" || key === "to") && state.filters[scope].preset) state.filters[scope].preset = "custom";
   state.page[scope] = 1;
-  if (isText) paintList();
-  else renderShell();
+  if (isText) {
+    const sel = el.dataset.filter, pos = el.selectionStart;
+    renderShell();
+    const again = document.querySelector('[data-filter="' + sel + '"]');
+    if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) {} }
+  } else renderShell();
 }
 /* ---------------- bộ lọc nhiều lựa chọn + kéo giãn cột ---------------- */
 let colDrag = null, colDraggedAt = 0;
 function closeMsPanels(keep){
-  $(".ms.open").forEach(function(n){ if (n !== keep) n.classList.remove("open"); });
+  $$(".ms.open").forEach(function(n){ if (n !== keep) n.classList.remove("open"); });
 }
 function msSync(root){
   const parts = String(root.dataset.msRoot).split(":");
@@ -4745,8 +4771,21 @@ function msSync(root){
     cnt.textContent = checked.length;
   }
 }
+function placeMs(root){
+  const panelEl = root.querySelector(".ms-panel");
+  root.classList.remove("right");
+  if (!panelEl) return;
+  const r = panelEl.getBoundingClientRect();
+  if (r.right > window.innerWidth - 8) root.classList.add("right");
+}
 function msRepaint(){
-  if (state.listPaint && $("#listHost")) paintList(); else renderShell();
+  const open = document.querySelector(".ms.open");
+  const key = open ? open.dataset.msRoot : null;
+  renderShell();
+  if (key) {
+    const again = document.querySelector('.ms[data-ms-root="' + key + '"]');
+    if (again) { again.classList.add("open"); placeMs(again); }
+  }
 }
 function msSetAll(key, on){
   const root = document.querySelector('.ms[data-ms-root="' + key + '"]');
@@ -4770,6 +4809,7 @@ document.addEventListener("click", function(event){
     const willOpen = !root.classList.contains("open");
     closeMsPanels(root);
     root.classList.toggle("open", willOpen);
+    if (willOpen) placeMs(root);
     return;
   }
   const allBtn = event.target.closest("button[data-ms-all]");
@@ -4799,12 +4839,13 @@ document.addEventListener("pointermove", function(event){
   const dx = event.clientX - colDrag.startX;
   if (!colDrag.moved && Math.abs(dx) < 3) return;
   colDrag.moved = true;
-  colDrag.widths[colDrag.index] = clamp(Math.round(colDrag.startW + dx), 60, 900);
+  colDrag.widths[colDrag.index] = clamp(Math.round(colDrag.startW + dx), 60, 2000);
   const colEls = colDrag.table.querySelectorAll("colgroup > col");
   for (let i = 0; i < colEls.length; i++) if (colDrag.widths[i]) colEls[i].style.width = colDrag.widths[i] + "px";
   let total = 0;
   for (let i = 0; i < colDrag.widths.length; i++) total += colDrag.widths[i] || 0;
   colDrag.table.style.minWidth = total + "px";
+  colDrag.table.style.width = total + "px";
   colDrag.table.classList.add("fixed");
   event.preventDefault();
 });
@@ -4849,6 +4890,15 @@ document.addEventListener("click", async function(event){
   if (wsEl) { state.sort.workload = { f: wsEl.dataset.workloadSort, d: "desc" }; renderShell(); return; }
   const drillEl = event.target.closest("[data-drill]");
   if (drillEl) { const parts = drillEl.dataset.drill.split("|"); drillTo(parts[0], parsePatch(parts[1])); return; }
+  const riskChip = event.target.closest("[data-risk-chip]");
+  if (riskChip) {
+    const rf = state.filters.risks;
+    rf.risk = riskChip.dataset.riskChip;
+    rf.preset = "";
+    state.page.risks = 1;
+    renderShell();
+    return;
+  }
   const periodEl = event.target.closest("[data-period]");
   if (periodEl) { const parts = periodEl.dataset.period.split(":"); applyPreset(parts[0], parts.slice(1).join(":")); renderShell(); return; }
   const presetEl = event.target.closest("[data-preset]");
