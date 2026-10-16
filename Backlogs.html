@@ -1057,6 +1057,80 @@ table.resizable.fixed td{overflow:hidden}
 .live-badge[hidden]{display:none}
 .live-badge i{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:livePulse 1.8s ease-out infinite}
 @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}100%{box-shadow:0 0 0 7px rgba(34,197,94,0)}}
+
+/* =====================================================================
+   v2 · Chi tiết Backlog/Task/Ticket hiển thị dạng popup giữa màn hình
+   ===================================================================== */
+.drawer-scrim{background:rgba(12,20,32,.58);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.drawer{top:50%;left:50%;right:auto;bottom:auto;width:min(1040px,94vw);max-height:90vh;border-radius:22px;border:1px solid rgba(255,255,255,.7);
+  box-shadow:0 44px 110px -34px rgba(9,17,28,.7),0 0 0 1px rgba(16,26,40,.06);overflow:hidden;
+  transform:translate(-50%,-46%) scale(.965);opacity:0;visibility:hidden;pointer-events:none;
+  transition:transform .26s cubic-bezier(.22,.8,.3,1),opacity .2s ease,visibility 0s linear .26s}
+.drawer.open{transform:translate(-50%,-50%) scale(1);opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
+.drawer-head{padding:22px 30px 18px;align-items:center;background:linear-gradient(180deg,#fff,#f6f9fd);border-bottom:1px solid #e3eaf3}
+.drawer-title{font-size:20px;line-height:1.35;letter-spacing:-.3px}
+.drawer-body{padding:26px 30px 34px}
+.drawer .kv{grid-template-columns:150px minmax(0,1fr) 150px minmax(0,1fr);gap:0 28px;font-size:13.5px}
+.drawer .kv dt,.drawer .kv dd{padding:11px 0;border-bottom:1px solid var(--grid)}
+.drawer .kv dt{font-size:12px;letter-spacing:.2px}
+.drawer .kv dt.kv-wide{grid-column:1}
+.drawer .kv dd.kv-wide{grid-column:2/-1}
+.desc-box{white-space:pre-wrap;word-break:break-word;background:#fbfcfe;border:1px solid #e3eaf3;border-radius:14px;padding:16px 18px;
+  font-size:13.5px;line-height:1.75;max-height:340px;overflow:auto;box-shadow:inset 0 1px 3px rgba(16,26,40,.05)}
+.drawer .section-label{margin:28px 0 12px}
+.drawer .section-label:first-child{margin-top:0}
+.dialog{max-width:min(960px,95vw)}
+.dialog-inner{padding:28px 32px 24px}
+.form-grid{gap:16px}
+.form-grid textarea{min-height:150px;line-height:1.6}
+.form-grid textarea[name="description"]{min-height:220px}
+@media(max-width:760px){
+  .drawer{width:100vw;height:100vh;max-height:100vh;border-radius:0}
+  .drawer-head,.drawer-body{padding-left:16px;padding-right:16px}
+  .drawer .kv{grid-template-columns:1fr;gap:0}
+  .drawer .kv dt{border-bottom:0;padding-bottom:0}
+  .drawer .kv dt.kv-wide,.drawer .kv dd.kv-wide{grid-column:auto}
+}
+
+/* =====================================================================
+   v2 · Bảng Backlogs — nổi bật dữ liệu, dễ quét mắt
+   ===================================================================== */
+.bl-wrap{border:1px solid #dde6f1;border-radius:18px;background:#fff;overflow-x:auto;
+  box-shadow:0 22px 44px -30px rgba(16,26,40,.4),0 2px 6px rgba(16,26,40,.05)}
+.bl-wrap.flat{border:0;border-radius:0;box-shadow:none}
+table.bl-table{border-collapse:separate;border-spacing:0;font-size:13px}
+.bl-table thead th{padding:15px 16px;font-size:10.5px;letter-spacing:.95px;color:#43546a;
+  background:linear-gradient(180deg,#f7faff,#e9f0f9);border-bottom:2px solid #cfdcec}
+.bl-table thead th:first-child{border-top-left-radius:17px}
+.bl-table thead th:last-child{border-top-right-radius:17px}
+.bl-table tbody td{padding:17px 16px;border-bottom:1px solid #edf1f6;vertical-align:middle;background-color:#fff;transition:background-color .15s}
+.bl-table tbody tr:nth-child(even) td{background-color:#fafcff}
+.bl-table tbody tr:last-child td{border-bottom:0}
+.bl-table tbody tr.hoverable:hover td{background-color:#eef4ff}
+.bl-table td.cell-main{border-left-width:4px;min-width:300px}
+.bl-table .primary-cell{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;max-width:58ch;
+  font-size:14.5px;font-weight:720;line-height:1.4;color:#0c1722}
+.bl-meta{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:8px}
+.bl-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;font-weight:600;color:#6b7683;
+  background:#f1f4f8;border-radius:6px;padding:2px 7px}
+.bl-tasks{font-size:11px;font-weight:650;color:#5a6572;background:#f1f4f8;border-radius:999px;padding:2px 9px}
+.bl-tasks.all{background:var(--mint);color:var(--green)}
+.bl-table .person .avatar{height:32px;width:32px;font-size:11px}
+.bl-table .person .primary-cell{font-size:13px;font-weight:680}
+.bl-table .badge{padding:4px 11px;font-size:11.5px}
+.bl-table .priority{padding:4px 12px 4px 10px;border-radius:999px;background:#f1f4f7;border:1px solid #e3e9f0;color:#44505c}
+.bl-table .priority.medium{background:#eef3fe;border-color:#d3e0fb;color:#1f4cb8}
+.bl-table .priority.high{background:#fff4de;border-color:#f5dca6;color:#8a5608}
+.bl-table .priority.urgent,.bl-table .priority.highest,.bl-table .priority.critical{background:#fdecec;border-color:#f3c9c9;color:#a62f2f}
+.bl-table .progress{min-width:90px;height:8px}
+.bl-table .progress-line b{color:#2a3744;font-size:12px}
+.bl-date{font-weight:650;color:#26333f;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bl-due{display:inline-flex;align-items:center;padding:5px 12px;border-radius:10px;font-weight:720;white-space:nowrap;
+  font-variant-numeric:tabular-nums;background:#f1f4f7;border:1px solid #e1e8ef;color:#2a3744}
+.bl-due.amber{background:#fff4de;border-color:#f5dca6;color:#8a5608}
+.bl-due.red{background:#fdecec;border-color:#f3c9c9;color:#a62f2f}
+.bl-due.green{background:var(--mint);border-color:#bfe6d8;color:var(--green)}
+.bl-table td.nowrap .row-actions .icon-act{opacity:.75}
 </style>
 </head>
 <body>
@@ -2536,7 +2610,6 @@ function riskGroupOf(item){
   else if (isDueSoon(item, THRESHOLDS.dueSoon)) groups.push("duesoon");
   if (isBlockedItem(item)) groups.push("blocked");
   if (isUnassigned(item)) groups.push("unassigned");
-  if (item.kind === "ticket" && isStale(item)) groups.push("stale");
   if (missingDates(item)) groups.push("missing");
   return groups;
 }
@@ -3138,9 +3211,9 @@ function renderOverview(){
     '</div>' +
     '<div class="grid stats">' +
       statCard({ label: "Quá hạn", num: overdue.length, note: "Đã qua deadline và chưa xong", tone: "red", icon: "alert", drill: "risks|risk=overdue" }) +
-      statCard({ label: "Ticket lâu không cập nhật", num: stale.length, note: "Không đổi trạng thái trong " + THRESHOLDS.staleTicketDays + " ngày", tone: "amber", icon: "clock", drill: "risks|risk=stale" }) +
+      statCard({ label: "Ticket lâu không cập nhật", num: stale.length, note: "Không đổi trạng thái trong " + THRESHOLDS.staleTicketDays + " ngày", tone: "amber", icon: "clock", drill: "tickets|preset=stale" }) +
       statCard({ label: "Sắp đến hạn 7 ngày", num: soon7.length, note: "Tính theo deadline hiện tại", tone: "amber", icon: "calendar", drill: "risks|risk=duesoon" }) +
-      statCard({ label: "Rủi ro cần xử lý", num: risks.length, note: "Tổng hợp 6 nhóm cảnh báo", tone: "red", icon: "flag", drill: "risks|risk=all" }) +
+      statCard({ label: "Rủi ro cần xử lý", num: risks.length, note: "Tổng hợp 5 nhóm cảnh báo", tone: "red", icon: "flag", drill: "risks|risk=all" }) +
     '</div>' +
 
     '<div class="split">' +
@@ -3363,8 +3436,8 @@ function closeDrawer(){
   $("#drawerScrim").classList.remove("open");
   $("#drawer").setAttribute("aria-hidden", "true");
 }
-function kv(label, value){
-  return "<dt>" + esc(label) + "</dt><dd>" + (value === "" || value == null ? '<span class="muted">—</span>' : value) + "</dd>";
+function kv(label, value, wide){
+  return "<dt" + (wide ? ' class="kv-wide"' : "") + ">" + esc(label) + "</dt><dd" + (wide ? ' class="kv-wide"' : "") + ">" + (value === "" || value == null ? '<span class="muted">—</span>' : value) + "</dd>";
 }
 function linksBlock(items){
   if (!items.length) return '<div class="notice">Chưa liên kết với backlog hoặc task nội bộ nào. Dùng nút “Tạo task nội bộ” hoặc gắn Jira key trong backlog để tạo liên kết.</div>';
@@ -3435,7 +3508,7 @@ function openItemDrawer(kind, id){
         kv("Time Breached Resolution", esc(fmtDt(item.x.ttrDeadline))) +
         kv("%SLA Resolution", slaCell(item.x, "ttr")) +
         kv("Breached Resolution", breachedPill(item.x.ttrBreached)) +
-        kv("Description", item.description ? '<span style="white-space:pre-wrap">' + esc(item.description) + "</span>" : "") +
+        kv("Description", item.description ? '<div class="desc-box">' + esc(item.description) + "</div>" : "", true) +
         kv("Resolution", esc(item.resolution)) +
         kv("Ngày resolve", esc(fmtDay(item.actualEnd))) +
         kv("Sprint", esc(item.raw && item.raw.sprint ? item.raw.sprint : "")) +
@@ -3472,14 +3545,15 @@ function openItemDrawer(kind, id){
         (kind === "backlog" ? kv("Tiến độ", progressBar(item.progress, item.progress === 100 ? "green" : "")) : "") +
         kv("Effort ước tính", item.effort == null ? "" : esc(fmtHours(item.effort))) +
         kv("Effort thực tế", item.actualEffort == null ? "" : esc(fmtHours(item.actualEffort))) +
-        kv("Lý do bị chặn", esc(item.blockedReason)) +
+        kv("Lý do bị chặn", esc(item.blockedReason), true) +
         (item.blocked && item.blockedSince ? kv("Blocked từ", esc(fmtDay(item.blockedSince)) + " · " + esc(String(diffDays(item.blockedSince, new Date()) || 0)) + " ngày") : "") +
         kv("Jira key", item.jiraKey || (raw.jira_key ? esc(raw.jira_key) : "")) +
-        kv("Mô tả", item.description ? '<span style="white-space:pre-wrap">' + esc(item.description) + "</span>" : "") +
         kv("Ngày tạo", esc(fmtStamp(item.created))) +
         kv("Cập nhật", esc(fmtStamp(item.updated))) +
         kv("Người tạo", esc(actorName(raw.created_by))) +
       "</dl>" +
+      '<div class="section-label">Mô tả</div>' +
+      (item.description ? '<div class="desc-box">' + esc(item.description) + "</div>" : '<div class="notice">Chưa có mô tả.</div>') +
       (ticketRelated.length ? '<div class="section-label">Jira ticket liên quan</div>' + linksBlock(ticketRelated) : "") +
       '<div class="section-label">' + (kind === "task" ? "Backlog chứa task" : "Task thuộc backlog") + "</div>" +
       (kind === "task"
@@ -3948,27 +4022,34 @@ function backlogRowCols(){
     { label: "Backlog", sort: "title", render: function(i){
         const tasks = state.tasks.filter(function(t){ return t.backlog_id === i.id; });
         const done = tasks.filter(function(t){ return norm(t.status) === "done"; }).length;
-        return '<span class="primary-cell">' + esc(i.title) + "</span><span class=\"cell-sub\">" + esc(i.code) +
-          (i.raw.jira_key ? " · " + esc(i.raw.jira_key) : "") + " · " + tasks.length + " task (" + done + " xong)</span>";
+        const jk = i.raw.jira_key;
+        return '<span class="primary-cell" title="' + escAttr(i.title) + '">' + esc(i.title) + "</span>" +
+          '<span class="bl-meta"><span class="bl-code">' + esc(i.code) + "</span>" +
+          (jk ? '<span class="ticket-key">' + esc(jk) + "</span>" : "") +
+          '<span class="bl-tasks' + (tasks.length && done === tasks.length ? " all" : "") + '">' + tasks.length + " task · " + done + " xong</span></span>";
       } },
     { label: "Người phụ trách", sort: "owner", render: function(i){ return personHtml(i, i.ownerName); } },
     { label: "Trạng thái", sort: "statusName", render: function(i){ return statusBadge(i.status) + (i.fromJira ? '<span class="cell-sub">Theo Jira</span>' : "") + (i.blocked && i.blockedReason ? '<span class="cell-sub">' + esc(i.blockedReason) + "</span>" : ""); } },
     { label: "Ưu tiên", sort: "priority", render: function(i){ return priorityMark(i.priority); } },
+    { label: "Tiến độ", sort: "progress", render: function(i){
+        return progressBar(i.progress, i.statusGroup === "done" || i.progress === 100 ? "green" : (isBlockedItem(i) ? "red" : ""));
+      } },
     { label: "Bắt đầu dự kiến", sort: "start", render: function(i){
-        return i.start ? '<span class="nowrap">' + esc(fmtDay(i.start)) + "</span>" : '<span class="badge amber">Thiếu ngày bắt đầu</span>';
+        return i.start ? '<span class="bl-date">' + esc(fmtDay(i.start)) + "</span>" : '<span class="badge amber">Thiếu ngày bắt đầu</span>';
       } },
     { label: "Deadline", sort: "due", render: function(i){
         if (!i.due) return '<span class="badge amber">Thiếu deadline</span>';
-        const late = i.statusGroup !== "done" && daysLeft(i) < 0;
-        return '<span class="nowrap">' + esc(fmtDay(i.due)) + "</span>" +
-          (i.statusGroup === "done" ? '<span class="cell-sub">Hoàn thành ' + esc(fmtDay(i.actualEnd)) + "</span>" :
-            late ? '<span class="cell-sub" style="color:var(--red)">Trễ ' + Math.abs(daysLeft(i)) + " ngày</span>" : "");
+        if (i.statusGroup === "done") return '<span class="bl-due green">' + esc(fmtDay(i.due)) + '</span><span class="cell-sub">Hoàn thành ' + esc(fmtDay(i.actualEnd)) + "</span>";
+        const left = daysLeft(i);
+        const tone = left < 0 ? "red" : left <= THRESHOLDS.dueSoon ? "amber" : "";
+        return '<span class="bl-due ' + tone + '">' + esc(fmtDay(i.due)) + "</span>";
       } },
     { label: "Thời gian còn lại", sort: "span", render: function(i){
         const n = spanDays(i);
         if (n == null || i.statusGroup === "done") return '<span class="muted">—</span>';
-        if (n < 0) return '<span class="nowrap" style="color:var(--red)">Trễ ' + Math.abs(n) + " ngày</span>";
-        return '<span class="nowrap">' + (n === 0 ? "Hôm nay" : n + " ngày") + "</span>";
+        if (n < 0) return '<span class="badge red">Trễ ' + Math.abs(n) + " ngày</span>";
+        if (n === 0) return '<span class="badge amber">Hôm nay</span>';
+        return '<span class="badge ' + (n <= THRESHOLDS.dueSoon ? "amber" : "blue") + '">Còn ' + n + " ngày</span>";
       } },
     { label: "", cls: "nowrap", render: function(i){
         return '<div class="row-actions">' +
@@ -3982,7 +4063,7 @@ function backlogRowCols(){
 function backlogGroupedHtml(list, mode){
   if (!list.length) return emptyBox("Không có backlog phù hợp", "Thử đổi bộ lọc hoặc tạo backlog mới");
   if (mode === "none") {
-    return dataTable({ scope: "backlogs", cols: backlogRowCols(), rows: list, sort: state.sort.backlogs, rowAction: "open-item" });
+    return dataTable({ scope: "backlogs", cols: backlogRowCols(), rows: list, sort: state.sort.backlogs, rowAction: "open-item", wrapClass: "bl-wrap", tableClass: "bl-table" });
   }
   const keys = [];
   list.forEach(function(i){
@@ -3999,7 +4080,7 @@ function backlogGroupedHtml(list, mode){
       title: label + " · " + group.length,
       sub: est ? "Effort ước tính " + fmtHours(est) : "",
       tight: true,
-      body: dataTable({ scope: "backlogs", cols: backlogRowCols(), rows: group, sort: state.sort.backlogs, rowAction: "open-item" })
+      body: dataTable({ scope: "backlogs", cols: backlogRowCols(), rows: group, sort: state.sort.backlogs, rowAction: "open-item", wrapClass: "bl-wrap flat", tableClass: "bl-table" })
     });
   }).join("");
 }
@@ -4011,7 +4092,7 @@ function backlogListHtml(){
   state.page.backlogs = page.page;
   if (mode !== "none") return backlogGroupedHtml(list, mode);
   return dataTable({
-    scope: "backlogs", cols: backlogRowCols(), rows: page.items, sort: state.sort.backlogs, rowAction: "open-item",
+    scope: "backlogs", cols: backlogRowCols(), rows: page.items, sort: state.sort.backlogs, rowAction: "open-item", wrapClass: "bl-wrap", tableClass: "bl-table",
     emptyTitle: "Không có backlog phù hợp", emptyNote: "Tạo backlog đầu tiên để bắt đầu lên kế hoạch",
     foot: pagerHtml("backlogs", page)
   });
@@ -4649,14 +4730,10 @@ const RISK_RULES = [
     rule: "Deadline đã qua và mục chưa được đánh dấu hoàn thành.", test: isOverdue },
   { key: "duesoon", label: "Sắp đến hạn", tone: "amber", icon: "calendar",
     rule: "Còn tối đa " + THRESHOLDS.dueSoon + " ngày tới deadline và chưa hoàn thành.", test: function(i){ return isDueSoon(i, THRESHOLDS.dueSoon); } },
-  { key: "stale", label: "Không cập nhật trong thời gian dài", tone: "violet", icon: "clock",
-    rule: "Ticket Jira không đổi trong hơn " + THRESHOLDS.staleTicketDays + " ngày; backlog/task nội bộ hơn " + THRESHOLDS.staleWorkDays + " ngày (theo ngày cập nhật thật của bản ghi).", test: isStale },
   { key: "blocked", label: "Đang bị chặn", tone: "red", icon: "block",
     rule: "Trạng thái là Blocked và chưa hoàn thành — cần người gỡ vướng.", test: isBlockedItem },
   { key: "unassigned", label: "Chưa giao người phụ trách", tone: "amber", icon: "user",
     rule: "Không có owner (backlog/task) hoặc assignee (ticket) và chưa hoàn thành.", test: isUnassigned },
-  { key: "schedule", label: "Nguy cơ trễ mốc", tone: "red", icon: "trend",
-    rule: "Chưa hoàn thành, còn tối đa " + THRESHOLDS.riskWindowDays + " ngày tới deadline, và tiến độ dưới 50% hoặc chưa bắt đầu thực tế.", test: behindSchedule },
   { key: "missing", label: "Thiếu mốc thời gian", tone: "gray", icon: "calendar",
     rule: "Backlog/task thiếu ngày bắt đầu hoặc deadline (mục đã hoàn thành thiếu ngày hoàn thành), hoặc ticket thiếu ngày tạo.", test: function(i){
       if (i.kind === "ticket") return !i.created;
@@ -4674,6 +4751,7 @@ function riskFiltered(){
 }
 function renderRisks(){
   const f = state.filters.risks;
+  if (f.risk && f.risk !== "all" && !RISK_RULES.some(function(r){ return r.key === f.risk; })) f.risk = "all";
   const all = withBlockedSince(allItems());
   const scoped = applyListFilters(all, f);
   const groups = RISK_RULES.map(function(rule){
@@ -4716,8 +4794,9 @@ function renderRisks(){
         tools: g.list.length ? '<button class="btn small" data-action="export-risk-group" data-risk="' + g.rule.key + '">' + icon("download") + "CSV</button>" : "",
         body: g.list.length ? dataTable({ scope: "risks", sort: state.sort.risks, rowAction: "open-item", cols: [
           { label: "Mục", sort: "title", render: function(i){
-              return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.code + " · " + i.type + " · " + i.ownerName) + "</span>";
+              return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' + esc(i.code + " · " + i.type) + "</span>";
             } },
+          { label: "Người phụ trách", sort: "owner", render: function(i){ return personHtml(i, i.ownerName); } },
           { label: "Trạng thái", sort: "statusName", render: function(i){ return statusBadge(i.status); } },
           { label: "Ưu tiên", sort: "priority", render: function(i){ return priorityMark(i.priority); } },
           { label: "Deadline", sort: "due", render: function(i){
