@@ -3515,13 +3515,26 @@ async function saveRecord(event){
   btn.disabled = true;
   btn.textContent = "Đang lưu…";
   try {
-    const r = state.editing.id
-      ? await state.client.from(table).update(payload).eq("id", state.editing.id)
-      : await state.client.from(table).insert(payload);
+    /* Nếu database thiếu cột (vd. jira_key), bỏ cột đó khỏi payload rồi lưu lại thay vì báo lỗi. */
+    const skipped = [];
+    let r;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      r = state.editing.id
+        ? await state.client.from(table).update(payload).eq("id", state.editing.id)
+        : await state.client.from(table).insert(payload);
+      const m = r.error && /Could not find the '([^']+)' column/i.exec(r.error.message || "");
+      if (m && Object.prototype.hasOwnProperty.call(payload, m[1])) {
+        if (payload[m[1]] !== null && payload[m[1]] !== undefined) skipped.push(m[1]);
+        delete payload[m[1]];
+        continue;
+      }
+      break;
+    }
     if (r.error) throw r.error;
     $("#recordDialog").close();
     state.editing = null;
-    toast(kind === "backlog" ? "Đã lưu backlog" : "Đã lưu task", "good");
+    if (skipped.length) toast("Đã lưu, nhưng cột " + skipped.join(", ") + " chưa có trong database nên chưa được lưu. Hãy chạy file SQL bổ sung cột.", "error");
+    else toast(kind === "backlog" ? "Đã lưu backlog" : "Đã lưu task", "good");
     await loadAll({ only: ["backlogs", "tasks"] });
   } catch (e) {
     toast("Không thể lưu: " + e.message, "error");
