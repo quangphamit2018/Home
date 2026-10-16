@@ -1207,6 +1207,7 @@ table.bl-table{width:100%;min-width:1180px;table-layout:auto}
         <nav class="nav-list" aria-label="Quản trị">
           <button class="nav-btn" data-tab="members"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span><span>Thành viên</span><span class="nav-count alert" id="pendingCount"></span></button>
           <button class="nav-btn" data-tab="recycle"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M6.5 7l.8 13h9.4l.8-13"/></svg></span><span>Thùng rác</span><span class="nav-count" id="navRecycle"></span></button>
+          <button class="nav-btn" data-tab="settings"><span class="nav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 0 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 0 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 0 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 0 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 0 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9z"/></svg></span><span>Cấu hình</span></button>
         </nav>
       </div>
     </div>
@@ -1308,7 +1309,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    ============================================================================ */
 const CONFIG = {
   supabaseUrl: "https://rnsjiqbbeywgbnqsojce.supabase.co",
-  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuc2ppcWJiZXl3Z2JucXNvamNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0OTExNjAsImV4cCI6MjA5MzA2NzE2MH0.1BrlS__GNAMFbBmudl6gUJwJ9j_zoDdAj9rtfhBkhdk",
+  supabaseAnonKey: "",
   jiraBaseUrl: "https://ccdoitac.atlassian.net",
   timeZone: "Asia/Bangkok"
 };
@@ -1683,6 +1684,7 @@ const state = {
   editing: null,
   historyFor: null,
   listPaint: null,
+  alertSettings: null, alertSettingsLoaded: false, alertSettingsLoading: false, alertSettingsError: "", alertRuns: [], alertBusy: false,
   colW: {}
 };
 /* Độ rộng cột người dùng kéo: nhớ giữa các lần render và giữa các phiên */
@@ -2004,12 +2006,13 @@ const TAB_META = {
   reports: ["Báo cáo", "REPORTING", "Số liệu theo kỳ được tính từ dữ liệu thật, kèm xuất CSV."],
   activity: ["Lịch sử hoạt động", "AUDIT TRAIL", "Thay đổi nội bộ trên backlog và task, được ghi tại database."],
   recycle: ["Thùng rác", "RECYCLE BIN", "Backlog và task đã xoá. Chỉ super_admin xem, khôi phục hoặc xoá vĩnh viễn."],
-  members: ["Thành viên", "ACCESS CONTROL", "Phê duyệt yêu cầu và kiểm tra quyền truy cập workspace."]
+  members: ["Thành viên", "ACCESS CONTROL", "Phê duyệt yêu cầu và kiểm tra quyền truy cập workspace."],
+  settings: ["Cấu hình", "NOTIFICATION SETTINGS", "Cấu hình cảnh báo email và gửi thông báo tự động vào Microsoft Teams cho workspace."]
 };
 function renderShell(){
   if (!state.session || !state.member || state.member.status !== "approved") return;
   updateUserHeader();
-  if ((state.tab === "members" || state.tab === "recycle") && !isAdmin()) state.tab = "overview";
+  if ((state.tab === "members" || state.tab === "recycle" || state.tab === "settings") && !isAdmin()) state.tab = "overview";
   if (!TAB_META[state.tab]) state.tab = "overview";
   saveTab();
   const meta = TAB_META[state.tab] || TAB_META.overview;
@@ -2070,7 +2073,9 @@ function renderActivePage(){
   else if (state.tab === "reports") renderReports();
   else if (state.tab === "activity") renderActivity();
   else if (state.tab === "recycle") renderRecycle();
-  else renderMembers();
+  else if (state.tab === "settings") renderNotificationSettings();
+  else if (state.tab === "members") renderMembers();
+  else renderOverview();
   if (animate) animatePage();
 }
 function paintCount(el, value, alert){
@@ -5227,6 +5232,170 @@ async function reviewMember(id, approve){
   await loadAll({ only: ["directory", "members"] });
 }
 
+/* ---------------- CẤU HÌNH CẢNH BÁO (super_admin) ---------------- */
+function defaultNotificationSettings(){
+  return { id: "workspace", enabled: false, email_enabled: false, email_recipients: [], email_sender: "", teams_enabled: false, teams_channel_name: "", alert_overdue: true, alert_due_soon: true, alert_blocked: true, alert_unassigned: false, due_soon_days: 7, send_time: "09:00:00", time_zone: "Asia/Bangkok" };
+}
+async function loadNotificationSettings(){
+  if (!isAdmin()) return;
+  state.alertSettingsLoading = true;
+  state.alertSettingsError = "";
+  try {
+    const results = await Promise.all([
+      state.client.from("jtm_notification_settings").select("*").eq("id", "workspace").maybeSingle(),
+      state.client.from("jtm_notification_runs").select("run_key,status,attempted_at,sent_at,items_count,channel_status,error").order("attempted_at", { ascending: false }).limit(10)
+    ]);
+    if (results[0].error) throw results[0].error;
+    if (results[1].error) throw results[1].error;
+    state.alertSettings = Object.assign(defaultNotificationSettings(), results[0].data || {});
+    if (!Array.isArray(state.alertSettings.email_recipients)) state.alertSettings.email_recipients = [];
+    state.alertRuns = results[1].data || [];
+    state.alertSettingsLoaded = true;
+  } catch (e) {
+    state.alertSettingsError = String((e && e.message) || e || "Lỗi không xác định");
+    state.alertSettingsLoaded = false;
+  } finally {
+    state.alertSettingsLoading = false;
+  }
+}
+function settingCheck(id, title, note, checked){
+  return '<label style="display:flex;align-items:flex-start;gap:11px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fbfcfd;cursor:pointer">' +
+    '<input type="checkbox" id="' + escAttr(id) + '"' + (checked ? " checked" : "") + ' style="margin:2px 0 0;accent-color:var(--blue);width:16px;height:16px;flex:none">' +
+    '<span><b style="display:block;font-size:12.5px">' + esc(title) + '</b><span class="muted" style="font-size:11.5px">' + esc(note) + '</span></span></label>';
+}
+function notificationRunStatus(row){
+  const labels = { sent: "Đã gửi", partial: "Gửi một phần", failed: "Thất bại", processing: "Đang xử lý", no_items: "Không có cảnh báo", test: "Kiểm tra" };
+  const tones = { sent: "green", partial: "amber", failed: "red", processing: "blue", no_items: "gray", test: "violet" };
+  const detail = row.channel_status && typeof row.channel_status === "object" ? JSON.stringify(row.channel_status) : "";
+  return '<span class="badge ' + (tones[row.status] || "gray") + '">' + esc(labels[row.status] || row.status || "—") + '</span>' +
+    (detail ? '<div class="cell-sub">' + esc(detail) + '</div>' : "") +
+    (row.error ? '<div class="cell-sub" style="color:var(--red)">' + esc(row.error) + '</div>' : "");
+}
+function renderNotificationSettings(){
+  setActions('<button class="btn" data-action="refresh-notification-settings">' + icon("refresh") + 'Làm mới</button>');
+  if (!isAdmin()) { state.tab = "overview"; renderShell(); return; }
+  if (!state.alertSettingsLoaded) {
+    if (state.alertSettingsError) {
+      $("#pageContent").innerHTML = '<div class="notice error"><b>Chưa tải được cấu hình cảnh báo.</b><br>' + esc(state.alertSettingsError) + '<br>Hãy chạy file SQL migration đi kèm, rồi tải lại trang.</div><button class="btn" data-action="refresh-notification-settings">Thử lại</button>';
+    } else {
+      $("#pageContent").innerHTML = '<div class="panel"><div class="panel-body">Đang tải cấu hình cảnh báo…</div></div>';
+      if (!state.alertSettingsLoading) loadNotificationSettings().then(function(){ if (state.tab === "settings") renderShell(); });
+    }
+    return;
+  }
+  const s = Object.assign(defaultNotificationSettings(), state.alertSettings || {});
+  const sendTime = String(s.send_time || "09:00").slice(0, 5);
+  let options = "";
+  for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += 5) {
+    const v = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+    options += '<option value="' + v + '"' + (v === sendTime ? " selected" : "") + '>' + v + '</option>';
+  }
+  const runs = state.alertRuns.length ? '<div class="table-wrap"><table><thead><tr><th>Thời điểm</th><th>Trạng thái</th><th>Số cảnh báo</th></tr></thead><tbody>' + state.alertRuns.map(function(r){
+    return '<tr><td class="nowrap">' + esc(fmtDt(r.attempted_at)) + '</td><td>' + notificationRunStatus(r) + '</td><td>' + esc(String(r.items_count == null ? 0 : r.items_count)) + '</td></tr>';
+  }).join("") + '</tbody></table></div>' : emptyBox("Chưa có lần gửi nào", "Lịch sử gửi sẽ xuất hiện sau lần chạy đầu tiên hoặc lần gửi thử.");
+  $("#pageContent").innerHTML =
+    '<div class="notice warn"><b>Lịch gửi:</b> hệ thống kiểm tra dữ liệu mỗi 5 phút và gửi tối đa một bản tổng hợp mỗi ngày vào giờ Bangkok đã chọn. Microsoft Graph và lịch chạy cần được cài theo hướng dẫn đi kèm; thông tin đăng nhập chỉ lưu ở Supabase Function Secrets, không lưu trong bảng cấu hình.</div>' +
+    '<form id="notificationSettingsForm" autocomplete="off">' +
+      '<div class="grid cols-2">' +
+        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Trạng thái & lịch gửi</div><div class="panel-sub">Thiết lập chung cho toàn workspace</div></div></div><div class="panel-body">' +
+          settingCheck("notify_enabled", "Bật cảnh báo tự động", "Tắt công tắc này để dừng toàn bộ email và Teams.", !!s.enabled) +
+          '<div class="form-grid" style="margin-top:14px"><label class="field"><span>Giờ gửi mỗi ngày (Asia/Bangkok)</span><select id="notify_send_time">' + options + '</select></label>' +
+          '<label class="field"><span>Số ngày sắp đến hạn</span><input id="notify_due_days" type="number" min="1" max="30" value="' + escAttr(String(s.due_soon_days || 7)) + '"></label></div>' +
+        '</div></section>' +
+        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Loại cảnh báo</div><div class="panel-sub">Tổng hợp ticket, backlog và task chưa hoàn thành</div></div></div><div class="panel-body"><div class="grid">' +
+          settingCheck("notify_overdue", "Đã quá hạn", "Có deadline trước hôm nay và chưa hoàn thành.", !!s.alert_overdue) +
+          settingCheck("notify_due_soon", "Sắp đến hạn", "Trong số ngày đã chọn ở trên.", !!s.alert_due_soon) +
+          settingCheck("notify_blocked", "Đang bị blocked", "Trạng thái blocked hoặc cờ blocked bật.", !!s.alert_blocked) +
+          settingCheck("notify_unassigned", "Chưa được giao", "Chưa có người phụ trách.", !!s.alert_unassigned) +
+        '</div></div></section>' +
+        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Email</div><div class="panel-sub">Gửi qua Microsoft Graph, không gửi trực tiếp từ trình duyệt.</div></div></div><div class="panel-body">' +
+          settingCheck("notify_email_enabled", "Gửi email cảnh báo", "Cần cấu hình ứng dụng Microsoft 365 theo hướng dẫn.", !!s.email_enabled) +
+          '<div class="form-grid" style="margin-top:14px"><label class="field full"><span>Hộp thư gửi (Microsoft 365)</span><input id="notify_email_sender" type="email" value="' + escAttr(s.email_sender || "") + '" placeholder="alerts@company.com"></label>' +
+          '<label class="field full"><span>Người nhận — mỗi dòng một email</span><textarea id="notify_email_recipients" placeholder="team@company.com&#10;owner@company.com">' + esc((s.email_recipients || []).join("\n")) + '</textarea></label></div>' +
+        '</div></section>' +
+        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Microsoft Teams</div><div class="panel-sub">Đăng thông báo vào một channel trong Team.</div></div></div><div class="panel-body">' +
+          settingCheck("notify_teams_enabled", "Gửi thông báo vào Teams", "Đăng vào group chat hoặc channel đã chọn trong Teams Workflows; webhook được lưu bảo mật ở Supabase Function Secrets.", !!s.teams_enabled) +
+          '<div class="form-grid" style="margin-top:14px"><label class="field full"><span>Tên group / chat / channel nhận thông báo</span><input id="notify_teams_channel_name" value="' + escAttr(s.teams_channel_name || "") + '" placeholder="Ví dụ: Operations / Alerts"></label></div>' +
+        '</div></section>' +
+      '</div>' +
+      '<div class="page-actions" style="justify-content:flex-end;margin:4px 0 18px"><button class="btn" type="button" data-action="test-notification-settings"' + (state.alertBusy ? " disabled" : "") + '>Gửi thử</button><button class="btn primary" type="button" data-action="save-notification-settings"' + (state.alertBusy ? " disabled" : "") + '>' + icon("save") + 'Lưu cấu hình</button></div>' +
+    '</form>' +
+    panel({ title: "Lịch sử gửi gần đây", sub: "Tối đa 10 lần gửi hoặc gửi thử mới nhất", body: runs });
+}
+function readNotificationForm(){
+  const emailRecipients = $("#notify_email_recipients").value.split(/[\n,;]+/).map(function(x){ return x.trim().toLowerCase(); }).filter(Boolean);
+  const uniqueRecipients = Array.from(new Set(emailRecipients));
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailEnabled = $("#notify_email_enabled").checked;
+  const teamsEnabled = $("#notify_teams_enabled").checked;
+  if (emailEnabled && (!$("#notify_email_sender").value.trim() || !validEmail.test($("#notify_email_sender").value.trim()))) throw new Error("Nhập địa chỉ hộp thư gửi hợp lệ cho email.");
+  if (emailEnabled && !uniqueRecipients.length) throw new Error("Nhập ít nhất một địa chỉ người nhận email.");
+  if (uniqueRecipients.some(function(x){ return !validEmail.test(x); })) throw new Error("Danh sách người nhận có email không hợp lệ.");
+  if (teamsEnabled && !$("#notify_teams_channel_name").value.trim()) throw new Error("Nhập tên nhóm chat hoặc channel nhận thông báo.");
+  const dueDays = Number($("#notify_due_days").value);
+  if (!Number.isInteger(dueDays) || dueDays < 1 || dueDays > 30) throw new Error("Số ngày sắp đến hạn phải từ 1 đến 30.");
+  return {
+    id: "workspace",
+    enabled: $("#notify_enabled").checked,
+    email_enabled: emailEnabled,
+    email_recipients: uniqueRecipients,
+    email_sender: $("#notify_email_sender").value.trim(),
+    teams_enabled: teamsEnabled,
+    teams_channel_name: $("#notify_teams_channel_name").value.trim(),
+    alert_overdue: $("#notify_overdue").checked,
+    alert_due_soon: $("#notify_due_soon").checked,
+    alert_blocked: $("#notify_blocked").checked,
+    alert_unassigned: $("#notify_unassigned").checked,
+    due_soon_days: dueDays,
+    send_time: $("#notify_send_time").value + ":00",
+    time_zone: "Asia/Bangkok",
+    updated_by: state.session && state.session.user ? state.session.user.id : null,
+    updated_at: new Date().toISOString()
+  };
+}
+async function saveNotificationSettings(silent){
+  if (!isAdmin() || state.alertBusy) return false;
+  let payload;
+  try { payload = readNotificationForm(); }
+  catch (e) { toast(e.message || String(e), "error"); return false; }
+  state.alertBusy = true;
+  try {
+    const r = await state.client.from("jtm_notification_settings").upsert(payload, { onConflict: "id" }).select("*").single();
+    if (r.error) throw r.error;
+    state.alertSettings = Object.assign(defaultNotificationSettings(), r.data || payload);
+    state.alertSettingsLoaded = true;
+    if (!silent) toast("Đã lưu cấu hình cảnh báo", "good");
+    return true;
+  } catch (e) {
+    toast("Không lưu được cấu hình: " + String((e && e.message) || e), "error");
+    return false;
+  } finally {
+    state.alertBusy = false;
+    if (state.tab === "settings") renderShell();
+  }
+}
+async function testNotificationSettings(){
+  if (!isAdmin() || state.alertBusy) return;
+  if (!(await saveNotificationSettings(true))) return;
+  const s = state.alertSettings || {};
+  if (!s.email_enabled && !s.teams_enabled) { toast("Bật ít nhất một kênh gửi trước khi gửi thử.", "error"); return; }
+  state.alertBusy = true;
+  try {
+    const r = await state.client.functions.invoke("jtm-send-alerts", { body: { test: true } });
+    if (r.error) throw r.error;
+    const data = r.data || {};
+    if (data.status === "test") toast("Đã gửi thử thành công. Kiểm tra email hoặc Teams.", "good");
+    else if (data.status === "partial") toast("Gửi thử được một phần: " + String(data.message || "kiểm tra trạng thái từng kênh."), "error");
+    else toast("Gửi thử chưa thành công: " + String(data.message || data.status || "không rõ lỗi"), "error");
+    await loadNotificationSettings();
+  } catch (e) {
+    toast("Không gửi được thử: " + String((e && e.message) || e), "error");
+  } finally {
+    state.alertBusy = false;
+    if (state.tab === "settings") renderShell();
+  }
+}
+
 /* ---------------- điều khiển sự kiện ---------------- */
 function paintList(){
   if (state.listPaint && $("#listHost")) $("#listHost").innerHTML = state.listPaint();
@@ -5482,6 +5651,9 @@ document.addEventListener("click", async function(event){
     return;
   }
   if (action === "refresh") { await refreshData(false); return; }
+  if (action === "save-notification-settings") { await saveNotificationSettings(false); return; }
+  if (action === "test-notification-settings") { await testNotificationSettings(); return; }
+  if (action === "refresh-notification-settings") { state.alertSettingsLoaded = false; state.alertSettingsError = ""; await loadNotificationSettings(); renderShell(); return; }
   if (action === "sync-jira") { await runJiraSync(); return; }
   if (action === "refresh-activity") { await loadActivity(true); renderShell(); toast("Đã tải lại lịch sử", "good"); return; }
   if (action === "load-more-activity") { await loadActivity(false); renderShell(); return; }
