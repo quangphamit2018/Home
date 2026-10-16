@@ -367,8 +367,18 @@ function processData(forms) {
   for (const f of forms) {
     const scan = (f.Answers || []).find(a => a.Key === 'scanEquipmentQuestion');
     let eqs = [];
-    if (scan && scan.Value) {
-      try { eqs = JSON.parse(scan.Value); } catch { badScan++; }
+    if (scan) {
+      // Value có thể là mảng object sẵn, hoặc chuỗi JSON; dự phòng thêm AdditionalData.Answers
+      const parseEqs = v => {
+        if (Array.isArray(v)) return v;
+        if (typeof v === 'string' && v.trim()) { const p = JSON.parse(v); return Array.isArray(p) ? p : [p]; }
+        if (v && typeof v === 'object') return [v];
+        return null;
+      };
+      try {
+        eqs = parseEqs(scan.Value);
+        if (!eqs || !eqs.length) eqs = parseEqs(scan.AdditionalData && scan.AdditionalData.Answers) || [];
+      } catch { badScan++; eqs = []; }
     }
     for (const e of eqs) {
       rows.push({
