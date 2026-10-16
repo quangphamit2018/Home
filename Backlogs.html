@@ -442,6 +442,39 @@ html{scroll-behavior:auto}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+/* ---------- Issue register mở rộng (đủ cột như Dashboard) ---------- */
+.table-wrap.tall{max-height:68vh;overflow:auto;scrollbar-width:thin;scrollbar-color:#aab6c2 transparent}
+table.tbl-wide{width:max-content;min-width:100%}
+table.tbl-wide th,table.tbl-wide td{white-space:nowrap}
+table.tbl-wide thead th{position:sticky;top:0;z-index:3;background:#f7f9fb}
+table.tbl-wide td.cell-main,table.tbl-wide thead th:first-child{position:sticky;left:0;background:var(--paper);box-shadow:1px 0 0 var(--line)}
+table.tbl-wide td.cell-main{z-index:2}
+table.tbl-wide thead th:first-child{z-index:4;background:#f7f9fb}
+table.tbl-wide tbody tr.hoverable:hover td.cell-main{background:#fafbfc}
+table.tbl-wide .primary-cell{max-width:340px}
+.cell-clip{display:block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell-clip.w-md{max-width:260px}
+.cell-clip.w-lg{max-width:360px}
+a.ticket-key.tk-link{text-decoration:none;border:1px solid #cfe0fb;transition:background .12s,color .12s}
+a.ticket-key.tk-link:hover{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark)}
+.st-badge{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;font-size:11.5px;font-weight:700;line-height:1.2;white-space:nowrap;background:#eef1f4;color:var(--ink)}
+.st-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--st,#999);flex:0 0 auto}
+@supports (background:color-mix(in srgb,red 10%,white)){
+  .st-badge{background:color-mix(in srgb,var(--st,#999) 13%,#fff);color:color-mix(in srgb,var(--st,#999) 74%,#000);border:1px solid color-mix(in srgb,var(--st,#999) 34%,#fff)}
+}
+.sla-wrap{display:flex;align-items:center;gap:8px;min-width:130px}
+.sla-track{flex:1;height:10px;border-radius:99px;background:#e1e9f1;overflow:hidden;box-shadow:inset 0 1px 2px rgba(25,39,52,.18)}
+.sla-fill{height:100%;border-radius:99px}
+.sla-pct{font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;min-width:36px;text-align:right}
+@media(max-width:760px){
+  .table-wrap.tall{max-height:none;overflow:visible}
+  table.tbl-wide{width:100%}
+  table.tbl-wide th,table.tbl-wide td{white-space:normal}
+  table.tbl-wide td.cell-main{position:static;box-shadow:none}
+  .cell-clip,.cell-clip.w-md,.cell-clip.w-lg{max-width:none;white-space:normal}
+  .sla-wrap{min-width:140px}
+}
 </style>
 </head>
 <body>
@@ -916,7 +949,7 @@ const state = {
   },
   page: { tickets: 1, backlogs: 1, tasks: 1 },
   sort: {
-    tickets: { f: "updated", d: "desc" },
+    tickets: { f: "created", d: "desc" },
     backlogs: { f: "target", d: "asc" },
     tasks: { f: "due", d: "asc" }
   },
@@ -1307,15 +1340,106 @@ const TICKET_FIELDS = {
   sprint: ["sprint", "sprint_name"],
   points: ["story_points", "storyPoints", "story_point_estimate", "estimate", "points"],
   labels: ["labels", "label"],
-  description: ["description", "body", "details"]
+  description: ["description", "body", "details"],
+  /* Các cột mở rộng — trùng tên cột của Dashboard trên bảng jira_tickets */
+  category: ["ticket_category_type", "category_type", "category"],
+  group: ["ticket_group", "group"],
+  level: ["ticket_level", "level"],
+  cause: ["cause"],
+  frDeadline: ["fr_deadline"],
+  frBreached: ["fr_breached"],
+  ttrDeadline: ["ttr_deadline"],
+  ttrBreached: ["ttr_breached"],
+  resolutionCf: ["resolution_cf"],
+  organizations: ["organizations", "organization"],
+  requestType: ["request_type"],
+  statusCategory: ["status_category"],
+  ticketUrl: ["ticket_url"]
 };
 function tf(row, name){ return valueOf(row, TICKET_FIELDS[name] || []); }
 function ticketUrlOf(row){
+  const direct = tf(row, "ticketUrl");
+  if (/^https?:\/\//i.test(direct)) return direct;
   const key = tf(row, "key");
   const base = config().jira;
   if (!base || !/^[A-Za-z][A-Za-z0-9]*-\d+$/.test(key)) return "";
   return base + "/browse/" + key;
 }
+
+/* ---------------- cột mở rộng của Issue register (đồng bộ logic với Dashboard) ---------------- */
+const TICKET_STATUS_COLORS = {
+  "Resolved": "#28A745", "Closed": "#6c757d", "Canceled": "#adb5bd", "Cancelled": "#adb5bd",
+  "In Progress L1": "#123a5e", "In Progress L2": "#1b4a73", "Pending": "#D9B300",
+  "Waiting for customer": "#118DFF", "Waiting for support": "#FF0000"
+};
+function ynOf(v){
+  const s = String(v == null ? "" : v).trim().toLowerCase();
+  if (s === "true" || s === "yes" || s === "1") return "Yes";
+  if (s === "false" || s === "no" || s === "0") return "No";
+  return "";
+}
+function stampMs(v){
+  if (!v) return null;
+  const raw = String(v);
+  const t = new Date(raw.indexOf(" ") > 0 ? raw.replace(" ", "T") : raw).getTime();
+  return Number.isNaN(t) ? null : t;
+}
+function fmtDt(v){
+  if (!v) return "";
+  const t = stampMs(v);
+  if (t === null) return String(v);
+  const d = new Date(t);
+  const p = function(n){ return String(n).padStart(2, "0"); };
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+}
+function slaProgress(createdValue, deadlineValue){
+  const start = stampMs(createdValue), end = stampMs(deadlineValue);
+  if (start === null || end === null) return null;
+  const now = Date.now();
+  const total = end - start;
+  const overdue = now > end;
+  let p = total > 0 ? ((now - start) / total) * 100 : (overdue ? 100 : 0);
+  p = Math.max(0, Math.min(100, p));
+  if (overdue) p = 100;
+  return { pct: p, overdue: overdue, remainingMs: end - now };
+}
+function slaInfoOf(x, which){
+  return x ? slaProgress(x.createdRaw, which === "fr" ? x.frDeadline : x.ttrDeadline) : null;
+}
+function durVi(ms){
+  let totalMin = Math.round(Math.abs(ms) / 60000);
+  const days = Math.floor(totalMin / 1440); totalMin -= days * 1440;
+  const hrs = Math.floor(totalMin / 60); totalMin -= hrs * 60;
+  const parts = [];
+  if (days > 0) parts.push(days + "ng");
+  if (hrs > 0) parts.push(hrs + "g");
+  if (parts.length < 2 && totalMin > 0) parts.push(totalMin + "p");
+  if (!parts.length) parts.push("<1p");
+  return parts.join(" ");
+}
+function slaCell(x, which){
+  const info = slaInfoOf(x, which);
+  if (!info) return "";
+  const breached = which === "fr" ? x.frBreached : x.ttrBreached;
+  let color;
+  if (breached === "Yes") color = "var(--red)";
+  else if (breached === "No") color = "var(--blue)";
+  else if (info.overdue) color = "var(--red)";
+  else if (info.pct >= 85) color = "var(--amber)";
+  else color = "var(--green)";
+  const label = (info.overdue ? "Quá hạn " : "Còn lại ") + durVi(info.remainingMs) + " (" + Math.round(info.pct) + "%)";
+  return '<div class="sla-wrap' + (info.overdue ? " over" : "") + '" title="' + escAttr(label) + '"><div class="sla-track"><div class="sla-fill" style="width:' + info.pct.toFixed(1) + "%;background:" + color + '"></div></div><div class="sla-pct" style="color:' + color + '">' + Math.round(info.pct) + "%</div></div>";
+}
+function slaText(x, which){
+  const info = slaInfoOf(x, which);
+  return info ? Math.round(info.pct) + "%" + (info.overdue ? " (Quá hạn)" : "") : "";
+}
+function stBadge(label, color){
+  return label ? '<span class="st-badge" style="--st:' + escAttr(color) + '">' + esc(label) + "</span>" : "";
+}
+function ticketStatusPill(status){ return stBadge(status, TICKET_STATUS_COLORS[status] || "#999"); }
+function breachedPill(v){ return v === "Yes" ? stBadge("Yes", "#c84949") : (v === "No" ? stBadge("No", "#168162") : ""); }
+
 async function fetchAll(table, options){
   const opts = options || {};
   const pageSize = opts.pageSize || 1000;
@@ -1533,8 +1657,8 @@ function normTicket(row, index){
     prio: prioRank(tf(row, "priority")),
     ownerId: ownerMatchId(assignee, tf(row, "assigneeEmail")),
     ownerName: assignee || "Unassigned",
-    project: tf(row, "project") || "—",
-    type: tf(row, "type") || "—",
+    project: tf(row, "project") || tf(row, "group") || "—",
+    type: tf(row, "type") || tf(row, "category") || "—",
     reporter: tf(row, "reporter"),
     resolution: tf(row, "resolution"),
     start: tf(row, "created") || null,
@@ -1550,6 +1674,15 @@ function normTicket(row, index){
     effort: hasVal(tf(row, "points")) ? safeNum(tf(row, "points")) : null,
     actualEffort: null,
     url: ticketUrlOf(row),
+    x: {
+      category: tf(row, "category"), group: tf(row, "group"), level: tf(row, "level"),
+      cause: tf(row, "cause"), resolutionCf: tf(row, "resolutionCf"),
+      organizations: tf(row, "organizations"), requestType: tf(row, "requestType"),
+      statusCategory: tf(row, "statusCategory"),
+      frDeadline: tf(row, "frDeadline"), frBreached: ynOf(tf(row, "frBreached")),
+      ttrDeadline: tf(row, "ttrDeadline"), ttrBreached: ynOf(tf(row, "ttrBreached")),
+      createdRaw: tf(row, "created"), resolvedRaw: tf(row, "resolved"), updatedRaw: tf(row, "updated")
+    },
     raw: row
   };
 }
@@ -1720,8 +1853,10 @@ function riskItems(){
    4. BỘ LỌC · SẮP XẾP · BẢNG · BIỂU ĐỒ (dùng chung cho mọi màn hình)
    ============================================================================ */
 function haystack(item){
+  const x = item.x;
   return [item.code, item.title, item.ownerName, item.project, item.type, item.status, item.priority,
-    item.description, item.blockedReason, item.raw && item.raw.jira_key, item.raw && item.raw.sprint]
+    item.description, item.blockedReason, item.raw && item.raw.jira_key, item.raw && item.raw.sprint,
+    item.reporter].concat(x ? [x.category, x.group, x.level, x.cause, x.resolutionCf, x.organizations, x.requestType, x.statusCategory] : [])
     .filter(Boolean).join(" ").toLowerCase();
 }
 function applyListFilters(list, f){
@@ -1762,8 +1897,20 @@ function sortValue(item, key){
   switch (key) {
     case "due": return item.due ? parseDay(item.due).getTime() : null;
     case "start": return item.start ? parseDay(item.start).getTime() : null;
-    case "created": return item.created ? new Date(item.created).getTime() : null;
-    case "updated": return item.updated ? new Date(item.updated).getTime() : null;
+    case "created": return stampMs(item.created);
+    case "updated": return stampMs(item.updated);
+    case "updatedRaw": return item.x ? stampMs(item.x.updatedRaw) : null;
+    case "resolvedAt": return item.x ? stampMs(item.x.resolvedRaw) : null;
+    case "frDeadline": return item.x ? stampMs(item.x.frDeadline) : null;
+    case "ttrDeadline": return item.x ? stampMs(item.x.ttrDeadline) : null;
+    case "frPct": { const i = slaInfoOf(item.x, "fr"); return i ? i.pct : null; }
+    case "ttrPct": { const i = slaInfoOf(item.x, "ttr"); return i ? i.pct : null; }
+    case "statusName": return String(item.status || "").toLowerCase();
+    case "reporter": return String(item.reporter || "").toLowerCase();
+    case "description": return String(item.description || "").toLowerCase();
+    case "category": case "group": case "level": case "cause": case "resolutionCf":
+    case "organizations": case "requestType": case "statusCategory": case "frBreached": case "ttrBreached":
+      return item.x ? String(item.x[key] || "").toLowerCase() : "";
     case "completed": return item.actualEnd ? new Date(item.actualEnd).getTime() : null;
     case "priority": return item.prio;
     case "status": return item.statusGroup;
@@ -1908,13 +2055,13 @@ function dataTable(spec){
   const body = rows.length ? rows.map(function(item, i){
     const tds = cols.map(function(c, ci){
       const cls = [(ci === 0 ? "cell-main" : ""), (c.cls || "")].filter(Boolean).join(" ");
-      return '<td class="' + cls + '" data-label="' + (ci === 0 ? "" : escAttr(c.label)) + '">' + c.render(item, i) + "</td>";
+      return '<td class="' + cls + '" data-label="' + (ci === 0 ? "" : escAttr(c.label)) + '"' + (c.tip ? ' title="' + escAttr(c.tip(item)) + '"' : "") + ">" + c.render(item, i) + "</td>";
     }).join("");
     return '<tr class="hoverable"' + (spec.rowAction
       ? ' data-action="' + spec.rowAction + '" data-kind="' + item.kind + '" data-id="' + escAttr(item.id) + '"'
       : "") + ">" + tds + "</tr>";
   }).join("") : '<tr><td colspan="' + cols.length + '">' + emptyBox(spec.emptyTitle || "Không có dữ liệu", spec.emptyNote || "Thử đổi bộ lọc hoặc từ khoá tìm kiếm") + "</td></tr>";
-  return '<div class="table-wrap"><table class="responsive"><thead><tr>' + head + "</tr></thead><tbody>" + body + "</tbody></table></div>" +
+  return '<div class="table-wrap' + (spec.wrapClass ? " " + spec.wrapClass : "") + '"><table class="responsive' + (spec.tableClass ? " " + spec.tableClass : "") + '"><thead><tr>' + head + "</tr></thead><tbody>" + body + "</tbody></table></div>" +
     (spec.foot ? '<div class="panel-foot">' + spec.foot + "</div>" : "");
 }
 
@@ -2306,37 +2453,55 @@ function ticketListHtml(){
   const list = sortItems(ticketFiltered(), state.sort.tickets);
   const page = paginate(list, state.page.tickets, THRESHOLDS.listPage);
   state.page.tickets = page.page;
+  function txt(label, sort, get, size){
+    return { label: label, sort: sort, tip: function(i){ return get(i) || ""; },
+      render: function(i){ const v = get(i); return v ? '<span class="cell-clip' + (size ? " " + size : "") + '">' + esc(v) + "</span>" : ""; } };
+  }
+  const X = function(k){ return function(i){ return i.x ? i.x[k] : ""; }; };
   const cols = [
-    { label: "Ticket", sort: "code", render: function(i){
-        return '<span class="ticket-key">' + esc(i.code) + '</span><span class="cell-sub">' + esc(i.project) + " · " + esc(i.type) + "</span>";
+    { label: "Ticket Key", sort: "code", cls: "nowrap", render: function(i){
+        return i.url
+          ? '<a class="ticket-key tk-link" data-stop href="' + escAttr(i.url) + '" target="_blank" rel="noopener noreferrer" title="Mở ' + escAttr(i.code) + ' trên Jira">' + esc(i.code) + "</a>"
+          : '<span class="ticket-key">' + esc(i.code) + "</span>";
       } },
-    { label: "Summary", sort: "title", render: function(i){
+    { label: "Summary", sort: "title", tip: function(i){ return i.title; }, render: function(i){
         const linked = internalLinksFor(i.code);
-        return '<span class="primary-cell">' + esc(i.title) + '</span><span class="cell-sub">' +
-          (i.raw && i.raw.sprint ? esc(String(i.raw.sprint)) + " · " : "") +
-          (linked.length ? linked.length + " liên kết nội bộ" : "Chưa liên kết backlog/task") + "</span>";
+        return '<span class="primary-cell">' + esc(i.title) + "</span>" +
+          (linked.length ? '<span class="cell-sub">' + linked.length + " liên kết nội bộ</span>" : "");
       } },
-    { label: "Trạng thái", sort: "status", render: function(i){ return statusBadge(i.status); } },
-    { label: "Ưu tiên", sort: "priority", render: function(i){ return priorityMark(i.priority); } },
+    txt("Ticket Category/Type", "category", X("category")),
+    txt("Ticket Group", "group", X("group")),
+    txt("Ticket Level", "level", X("level")),
+    { label: "Priority", sort: "priority", render: function(i){ return i.priority && i.priority !== "—" ? priorityMark(i.priority) : ""; } },
+    txt("Description", "description", function(i){ return i.description; }, "w-lg"),
+    txt("Reporter", "reporter", function(i){ return i.reporter; }),
+    { label: "Status", sort: "statusName", render: function(i){ return ticketStatusPill(i.status); } },
     { label: "Assignee", sort: "owner", render: function(i){
         return personHtml(i, i.ownerName, i.ownerId ? "Thành viên nhóm" : (i.ownerName === "Unassigned" ? "Chưa giao trên Jira" : "Ngoài nhóm"));
       } },
-    { label: "Deadline", sort: "due", render: function(i){
-        if (!i.due) return '<span class="muted">—</span>';
-        const left = daysLeft(i);
-        const tone = i.statusGroup === "done" ? "" : (left < 0 ? "red" : left <= THRESHOLDS.dueSoon ? "amber" : "gray");
-        return '<span class="badge ' + tone + '">' + esc(fmtDay(i.due)) + (i.statusGroup === "done" ? "" : left < 0 ? " · trễ " + Math.abs(left) + "d" : left === 0 ? " · hôm nay" : " · " + left + "d") + "</span>";
-      } },
-    { label: "Cập nhật", sort: "updated", render: function(i){
-        return '<span class="nowrap">' + esc(fmtDay(i.updated)) + '</span><span class="cell-sub">' + esc(relTime(i.updated)) + "</span>";
+    { label: "Created", sort: "created", cls: "nowrap", render: function(i){ return esc(fmtDt(i.x.createdRaw)); } },
+    { label: "Time Breached Response", sort: "frDeadline", cls: "nowrap", render: function(i){ return esc(fmtDt(i.x.frDeadline)); } },
+    { label: "%SLA Response", sort: "frPct", render: function(i){ return slaCell(i.x, "fr"); } },
+    { label: "Breached Response", sort: "frBreached", render: function(i){ return breachedPill(i.x.frBreached); } },
+    { label: "Time Breached Resolution", sort: "ttrDeadline", cls: "nowrap", render: function(i){ return esc(fmtDt(i.x.ttrDeadline)); } },
+    { label: "%SLA Resolution", sort: "ttrPct", render: function(i){ return slaCell(i.x, "ttr"); } },
+    { label: "Breached Resolution", sort: "ttrBreached", render: function(i){ return breachedPill(i.x.ttrBreached); } },
+    txt("Cause", "cause", X("cause"), "w-md"),
+    txt("Resolution_Cf", "resolutionCf", X("resolutionCf"), "w-md"),
+    txt("Organizations", "organizations", X("organizations")),
+    txt("Request Type", "requestType", X("requestType")),
+    { label: "Resolved", sort: "resolvedAt", cls: "nowrap", render: function(i){ return esc(fmtDt(i.x.resolvedRaw)); } },
+    txt("Status Category", "statusCategory", X("statusCategory")),
+    { label: "Updated", sort: "updatedRaw", cls: "nowrap", render: function(i){
+        return esc(fmtDt(i.x.updatedRaw)) + (i.x.updatedRaw ? '<span class="cell-sub">' + esc(relTime(i.x.updatedRaw)) + "</span>" : "");
       } },
     { label: "", cls: "nowrap", render: function(i){
         return '<div class="row-actions"><button class="btn text small" data-action="open-item" data-kind="ticket" data-id="' + escAttr(i.id) + '">Chi tiết</button>' +
-          (i.url ? '<a class="btn text small" href="' + escAttr(i.url) + '" target="_blank" rel="noopener" title="Mở trên Jira">' + icon("external") + "</a>" : "") + "</div>";
+          (i.url ? '<a class="btn text small" data-stop href="' + escAttr(i.url) + '" target="_blank" rel="noopener noreferrer" title="Mở trên Jira">' + icon("external") + "</a>" : "") + "</div>";
       } }
   ];
   return dataTable({
-    scope: "tickets", cols: cols, rows: page.items, sort: state.sort.tickets, rowAction: "open-item",
+    scope: "tickets", cols: cols, rows: page.items, sort: state.sort.tickets, rowAction: "open-item", wrapClass: "tall", tableClass: "tbl-wide",
     emptyTitle: "Không có ticket phù hợp", emptyNote: state.tickets.length ? "Thử bỏ bớt điều kiện lọc" : "Bảng nguồn đang trống hoặc chưa được cấp quyền đọc",
     foot: pagerHtml("tickets", page)
   });
@@ -2387,7 +2552,7 @@ function renderTickets(){
     '<div class="toolbar" style="padding:9px 12px">' + presetChips("tickets", presets, f.preset) +
       '<span class="muted" style="margin-left:auto;font-size:11.5px">' + fmtNum(filtered.length) + " / " + fmtNum(all.length) + " ticket</span></div>" +
     '<div class="panel"><div class="panel-head"><div><div class="panel-title">Issue register</div>' +
-      '<div class="panel-sub">Bảng nguồn Jira chỉ đọc · kế hoạch nội bộ nằm trong backlog và task</div></div>' +
+      '<div class="panel-sub">Bảng nguồn Jira chỉ đọc · đủ 24 cột như Dashboard, cuộn ngang để xem hết · kế hoạch nội bộ nằm trong backlog và task</div></div>' +
       '<div class="panel-tools"><span class="muted" style="font-size:11.5px">' + (state.ticketComplete ? "Đã tải đủ dòng" : "Có thể thiếu dòng") + (state.ticketFilter ? " · chỉ ticket của " + state.ticketFilter.count + " assignee" : "") + "</span></div></div>" +
       '<div id="listHost">' + ticketListHtml() + "</div></div>";
   $("#pageContent").innerHTML = content;
@@ -2395,11 +2560,17 @@ function renderTickets(){
 function exportTicketsCsv(){
   const list = sortItems(ticketFiltered(), state.sort.tickets);
   const rows = list.map(function(i){
-    return [i.code, i.title, labelStatus(i.status), i.priority, i.ownerName, i.project, i.type, i.reporter, fmtDay(i.created), fmtDay(i.due), i.resolution, fmtDay(i.actualEnd), fmtDay(i.updated),
-      i.raw && i.raw.sprint ? i.raw.sprint : "", i.effort == null ? "" : i.effort, internalLinksFor(i.code).map(function(x){ return x.code + " " + x.title; }).join(" | ")];
+    const x = i.x;
+    return [i.code, i.title, x.category, x.group, x.level, i.priority === "—" ? "" : i.priority, i.description, i.reporter, i.status,
+      i.ownerName === "Unassigned" ? "" : i.ownerName, fmtDt(x.createdRaw),
+      fmtDt(x.frDeadline), slaText(x, "fr"), x.frBreached, fmtDt(x.ttrDeadline), slaText(x, "ttr"), x.ttrBreached,
+      x.cause, x.resolutionCf, x.organizations, x.requestType, fmtDt(x.resolvedRaw), x.statusCategory, fmtDt(x.updatedRaw), i.url,
+      internalLinksFor(i.code).map(function(l){ return l.code + " " + l.title; }).join(" | ")];
   });
   downloadFile("jira-tickets-" + stampName() + ".csv",
-    csvOf(["Key", "Summary", "Status", "Priority", "Assignee", "Project", "Issue type", "Reporter", "Created", "Due", "Resolution", "Resolved", "Updated", "Sprint", "Story points", "Liên kết nội bộ"], rows));
+    csvOf(["Ticket Key", "Summary", "Ticket Category/Type", "Ticket Group", "Ticket Level", "Priority", "Description", "Reporter", "Status", "Assignee", "Created",
+      "Time Breached Response", "%SLA Response", "Breached Response", "Time Breached Resolution", "%SLA Resolution", "Breached Resolution",
+      "Cause", "Resolution_Cf", "Organizations", "Request Type", "Resolved", "Status Category", "Updated", "Ticket URL", "Liên kết nội bộ"], rows));
   toast("Đã xuất " + fmtNum(rows.length) + " ticket ra CSV", "good");
 }
 
@@ -2475,6 +2646,21 @@ function openItemDrawer(kind, id){
         kv("Ngày tạo", esc(fmtDay(item.created))) +
         kv("Cập nhật", esc(fmtDay(item.updated)) + ' <span class="muted">(' + esc(relTime(item.updated)) + ")</span>") +
         kv("Deadline", item.due ? esc(fmtDay(item.due)) + (item.statusGroup === "done" ? "" : " · " + esc(daysLeft(item) < 0 ? "trễ " + Math.abs(daysLeft(item)) + " ngày" : "còn " + daysLeft(item) + " ngày")) : "") +
+        kv("Ticket Category/Type", esc(item.x.category)) +
+        kv("Ticket Group", esc(item.x.group)) +
+        kv("Ticket Level", esc(item.x.level)) +
+        kv("Request Type", esc(item.x.requestType)) +
+        kv("Status Category", esc(item.x.statusCategory)) +
+        kv("Organizations", esc(item.x.organizations)) +
+        kv("Cause", esc(item.x.cause)) +
+        kv("Resolution_Cf", esc(item.x.resolutionCf)) +
+        kv("Time Breached Response", esc(fmtDt(item.x.frDeadline))) +
+        kv("%SLA Response", slaCell(item.x, "fr")) +
+        kv("Breached Response", breachedPill(item.x.frBreached)) +
+        kv("Time Breached Resolution", esc(fmtDt(item.x.ttrDeadline))) +
+        kv("%SLA Resolution", slaCell(item.x, "ttr")) +
+        kv("Breached Resolution", breachedPill(item.x.ttrBreached)) +
+        kv("Description", item.description ? '<span style="white-space:pre-wrap">' + esc(item.description) + "</span>" : "") +
         kv("Resolution", esc(item.resolution)) +
         kv("Ngày resolve", esc(fmtDay(item.actualEnd))) +
         kv("Sprint", esc(item.raw && item.raw.sprint ? item.raw.sprint : "")) +
@@ -3983,6 +4169,7 @@ document.addEventListener("change", function(event){
   onFilterChange(el, false);
 });
 document.addEventListener("click", async function(event){
+  if (event.target.closest("a[data-stop]")) return;
   const zoomEl = event.target.closest("[data-zoom]");
   if (zoomEl) { state.filters.timeline.zoom = zoomEl.dataset.zoom; renderShell(); return; }
   const kindEl = event.target.closest("[data-kinds]");
