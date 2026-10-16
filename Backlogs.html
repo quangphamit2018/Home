@@ -946,9 +946,7 @@ function signInCard(){
     '<h1>Quản lý Jira và công việc nhóm</h1>' +
     '<p class="gate-copy">Theo dõi ticket từ Supabase, lên kế hoạch theo người phụ trách, theo dõi workload và tiến độ trên cùng một workspace.</p>' +
     (authUrlError ? '<div class="notice error">Đăng nhập không thành công: ' + esc(authUrlError) + '</div>' : '') +
-    (inFrame() ? '<div class="notice warn">Ứng dụng đang chạy trong khung nhúng. Google không cho đăng nhập trong khung, nên khi bấm nút bên dưới trang đăng nhập sẽ mở ở cửa sổ chính (hoặc tab mới).</div>' : '') +
     '<button id="googleLogin" class="google-btn"><span class="google-g">G</span>Đăng nhập bằng Google</button>' +
-    '<div class="gate-foot">Kết nối: <b>' + esc(hostOf(config().url)) + '</b><br>Tài khoản mới sẽ gửi yêu cầu tham gia và chờ quản trị viên phê duyệt sau lần đăng nhập đầu tiên.</div>' +
     '</div>';
   const btn = $("#googleLogin");
   if (btn) btn.addEventListener("click", signInGoogle);
@@ -977,30 +975,69 @@ function renderPending(){
 function inFrame(){
   try { return window.self !== window.top; } catch (e) { return true; }
 }
+const LOGIN_MARK = "jd_popup_login";
+let loginPoll = null;
+let authChannel = null;
+try { authChannel = new BroadcastChannel("jd-auth"); } catch (e) {}
+function stopLoginPoll(){ if (loginPoll) { clearInterval(loginPoll); loginPoll = null; } }
+async function adoptSessionFromStorage(){
+  if (!state.client) return false;
+  const r = await state.client.auth.getSession();
+  if (r.data && r.data.session) {
+    stopLoginPoll();
+    await loadSession(r.data.session, true);
+    return true;
+  }
+  return false;
+}
+function startLoginPoll(){
+  stopLoginPoll();
+  const until = Date.now() + 5 * 60 * 1000;
+  loginPoll = setInterval(function(){
+    if (Date.now() > until) { stopLoginPoll(); return; }
+    adoptSessionFromStorage().catch(function(){});
+  }, 1000);
+}
+if (authChannel) authChannel.onmessage = function(){ if (!state.session) adoptSessionFromStorage().catch(function(){}); };
 async function signInGoogle(){
   if (!state.client) { toast("Hãy cấu hình Supabase trong code trước", "error"); return; }
   if (location.protocol === "file:" || location.origin === "null") { toast("Hãy mở app qua địa chỉ https (GitHub Pages…), không mở trực tiếp file từ máy", "error"); return; }
   authUrlError = "";
   const redirect = location.origin + location.pathname;
-  /* prompt=select_account: luôn hiện hộp chọn tài khoản Google */
-  const opts = { redirectTo: redirect, queryParams: { prompt: "select_account" } };
-  if (!inFrame()) {
-    const result = await state.client.auth.signInWithOAuth({ provider: "google", options: opts });
-    if (result.error) toast("Google login: " + result.error.message, "error");
+  /* Cửa sổ popup chọn tài khoản Google (prompt=select_account). Google không cho đăng nhập trong iframe,
+     nên popup luôn là cửa sổ cấp cao nhất; phiên đăng nhập được chia sẻ qua localStorage cùng origin. */
+  const result = await state.client.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: redirect, skipBrowserRedirect: true, queryParams: { prompt: "select_account" } }
+  });
+  if (result.error || !result.data || !result.data.url) { toast("Google login: " + ((result.error && result.error.message) || "không lấy được URL đăng nhập"), "error"); return; }
+  try { localStorage.setItem(LOGIN_MARK, String(Date.now())); } catch (e) {}
+  const w = 500, h = 650;
+  const left = Math.max(0, Math.round((window.screenX || 0) + ((window.outerWidth || 1000) - w) / 2));
+  const top = Math.max(0, Math.round((window.screenY || 0) + ((window.outerHeight || 800) - h) / 2));
+  const popup = window.open(result.data.url, "jd-google-login", "popup=yes,width=" + w + ",height=" + h + ",left=" + left + ",top=" + top);
+  if (!popup) {
+    /* Popup bị chặn: chuyển hướng cả trang (hoặc cửa sổ chính nếu đang trong iframe) */
+    try { localStorage.removeItem(LOGIN_MARK); } catch (e) {}
+    try { (inFrame() ? window.top : window).location.href = result.data.url; }
+    catch (e) { toast("Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép popup cho trang này rồi thử lại.", "error"); }
     return;
   }
-  /* Đang chạy trong iframe (vd. Solar Tools Hub): Google từ chối đăng nhập trong khung nhúng (403).
-     Lấy URL OAuth rồi mở ở cửa sổ cấp cao nhất; nếu bị chặn thì mở tab mới. */
-  opts.skipBrowserRedirect = true;
-  const result = await state.client.auth.signInWithOAuth({ provider: "google", options: opts });
-  if (result.error || !result.data || !result.data.url) { toast("Google login: " + ((result.error && result.error.message) || "không lấy được URL đăng nhập"), "error"); return; }
+  try { popup.focus(); } catch (e) {}
+  startLoginPoll();
+}
+/* Chạy trong cửa sổ popup sau khi Google chuyển hướng về: báo cho cửa sổ gốc rồi tự đóng */
+function finishPopupLogin(){
+  let fresh = false;
   try {
-    window.top.location.href = result.data.url;
-  } catch (e) {
-    const w = window.open(result.data.url, "_blank");
-    if (!w) toast("Trình duyệt chặn cửa sổ mới. Hãy cho phép popup hoặc mở trực tiếp " + redirect + " rồi đăng nhập.", "error");
-    else toast("Đã mở trang đăng nhập Google ở tab mới. Đăng nhập xong hãy quay lại và tải lại trang.", "good");
-  }
+    const t = Number(localStorage.getItem(LOGIN_MARK) || 0);
+    fresh = t > 0 && Date.now() - t < 3 * 60 * 1000;
+  } catch (e) {}
+  if (!fresh || inFrame()) return false;
+  try { localStorage.removeItem(LOGIN_MARK); } catch (e) {}
+  if (authChannel) { try { authChannel.postMessage("signed-in"); } catch (e) {} }
+  try { window.close(); } catch (e) {}
+  return true;
 }
 
 function showApp(){
@@ -1060,6 +1097,10 @@ async function bootstrap(){
   if (!connect()) { showGate(); return; }
   const r = await state.client.auth.getSession();
   if (r.error) { gateMessage("Không đọc được phiên đăng nhập", r.error.message, true); return; }
+  if (r.data.session) {
+    finishPopupLogin();
+    /* Nếu cửa sổ không tự đóng được, tiếp tục hiển thị app bình thường */
+  }
   await loadSession(r.data.session);
   state.client.auth.onAuthStateChange(function(event, session){
     setTimeout(function(){
