@@ -954,6 +954,25 @@ table.resizable.fixed td{overflow:hidden}
   table.resizable.fixed{width:100%!important;min-width:0!important}
   .ms.right .ms-panel{left:0;right:0}
 }
+
+/* ---- Nút Đồng bộ dữ liệu (lấy từ Dashboard) ---- */
+.public-sync-btn{display:inline-flex;align-items:center;gap:10px;height:42px;padding:0 22px 0 6px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:linear-gradient(180deg,#123a5e 0%,#102944 55%,#08182a 100%);color:#fff;font:inherit;font-size:13px;font-weight:700;letter-spacing:.2px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 0 rgba(255,255,255,.2) inset,0 8px 18px rgba(16,41,68,.32);transition:background .18s ease,box-shadow .18s ease,transform .12s ease}
+.public-sync-btn .sync-ico{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.34)}
+.public-sync-btn .sync-ico svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;transition:transform .45s ease}
+.public-sync-btn:hover:not(:disabled){background:linear-gradient(180deg,#245d8f 0%,#143659 55%,#0a2036 100%);transform:translateY(-1px);box-shadow:0 1px 0 rgba(255,255,255,.22) inset,0 12px 24px rgba(16,41,68,.38),0 0 0 4px rgba(17,141,255,.22)}
+.public-sync-btn:hover:not(:disabled) .sync-ico svg{transform:rotate(180deg)}
+.public-sync-btn:active:not(:disabled){transform:translateY(1px)}
+.public-sync-btn:focus-visible{outline:3px solid rgba(53,110,230,.45);outline-offset:3px}
+.public-sync-btn:disabled{cursor:progress;background:linear-gradient(180deg,#5b7f9c,#3d6180);border-color:rgba(255,255,255,.2);box-shadow:none;transform:none;opacity:1}
+.public-sync-btn:disabled .sync-ico svg{animation:sync-spin 1s linear infinite}
+@keyframes sync-spin{to{transform:rotate(360deg)}}
+.sync-fresh{display:inline-flex;align-items:center;gap:7px;padding:5px 13px 5px 11px;border-radius:999px;font-size:11.5px;font-weight:600;background:#e8f6ec;border:1px solid #b9e2c4;color:#1e7e34;white-space:nowrap}
+.sync-fresh .dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px rgba(30,126,52,.2)}
+.sync-fresh.warn{background:#fff4d6;border-color:#f0dc9b;color:#8a6100}
+.sync-fresh.stale{background:#fdecea;border-color:#f3b8b3;color:#b02a24}
+@media(max-width:1180px){.sync-fresh{display:none!important}}
+@media(max-width:760px){.public-sync-btn{height:38px;padding:0 6px}.public-sync-btn .sync-label{display:none}}
+@media(prefers-reduced-motion:reduce){.public-sync-btn:disabled .sync-ico svg{animation:none}}
 </style>
 </head>
 <body>
@@ -1018,6 +1037,8 @@ table.resizable.fixed td{overflow:hidden}
     <header class="topbar">
       <div class="crumb"><span class="crumb-lead">Workspace <span class="crumb-sep">/</span> </span><strong id="crumbTitle">Tổng quan</strong></div>
       <div class="top-right">
+        <span class="sync-fresh" id="syncFresh" style="display:none"><span class="dot"></span><span id="syncFreshLabel"></span></span>
+        <button class="public-sync-btn" id="syncJiraBtn" type="button" data-action="sync-jira" title="Lấy dữ liệu Jira mới nhất về Jira Desk"><span class="sync-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.5 5.8L21 8"/><path d="M21 3v5h-5"/></svg></span><span class="sync-label" id="syncJiraLabel">Đồng bộ dữ liệu</span></button>
         <span class="user-chip" id="topUser"></span>
         <button class="icon-btn" data-action="logout" title="Đăng xuất" aria-label="Đăng xuất"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17l5-5-5-5M20 12H9M12 19H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg></button>
       </div>
@@ -1615,6 +1636,7 @@ function showApp(){
   if (shell) shell.style.display = "block";
   updateUserHeader();
   renderShell();
+  updateSyncFreshness();
   if (shell && shell.animate && !REDUCED_MOTION) shell.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 280, easing: "ease-out" });
 }
 let sessionChain = Promise.resolve();
@@ -4957,6 +4979,7 @@ document.addEventListener("click", async function(event){
     return;
   }
   if (action === "refresh") { await refreshData(false); return; }
+  if (action === "sync-jira") { await runJiraSync(); return; }
   if (action === "refresh-activity") { await loadActivity(true); renderShell(); toast("Đã tải lại lịch sử", "good"); return; }
   if (action === "load-more-activity") { await loadActivity(false); renderShell(); return; }
   if (action === "close-drawer") { closeDrawer(); return; }
@@ -5058,6 +5081,81 @@ $("#historyDialog").addEventListener("click", function(e){ if (e.target === $("#
 document.addEventListener("keydown", function(e){
   if (e.key === "Escape" && $("#drawer").classList.contains("open")) closeDrawer();
 });
+/* ============================================================================
+   ĐỒNG BỘ DỮ LIỆU JIRA — gọi Edge Function jira-sync (cùng cách với Dashboard),
+   sau đó tải lại bảng jira_tickets để toàn bộ màn hình hiển thị dữ liệu mới.
+   ============================================================================ */
+let syncRunning = false;
+async function runJiraSync(){
+  if (syncRunning || !approvedNow()) return;
+  const cfg = config();
+  const btn = $("#syncJiraBtn"), label = $("#syncJiraLabel");
+  const setLabel = function(t){ if (label) label.textContent = t; };
+  syncRunning = true;
+  if (btn) btn.disabled = true;
+  setLabel("Đang đồng bộ…");
+  let pageToken = null, done = false, round = 0, total = 0, mode = null;
+  const startedAt = new Date().toISOString();
+  try {
+    while (!done && round < 200) {
+      const qs = new URLSearchParams({ maxPages: "3", syncStartedAt: startedAt });
+      if (pageToken) qs.set("pageToken", pageToken);
+      const resp = await fetch(cfg.url + "/functions/v1/jira-sync?" + qs.toString(), {
+        headers: { apikey: cfg.key, Authorization: "Bearer " + cfg.key }
+      });
+      const raw = await resp.text();
+      let json = null;
+      try { json = JSON.parse(raw); } catch (e) {}
+      if (!(resp.ok && json && typeof json.upserted === "number")) {
+        const detail = json ? String(json.error || json.message || JSON.stringify(json)).slice(0, 200) : raw.slice(0, 200);
+        throw new Error("HTTP " + resp.status + " ở lượt " + (round + 1) + " (đã ghi " + fmtNum(total) + " ticket)" + (detail ? " · " + detail : ""));
+      }
+      total += json.upserted;
+      mode = json.mode;
+      pageToken = json.nextPageToken || null;
+      done = !!json.done || !pageToken;
+      round++;
+      setLabel("Đang đồng bộ… " + fmtNum(total));
+    }
+    setLabel("Đang tải lại…");
+    await loadAll({ only: ["tickets"] });
+    const modeLabel = mode === "full" ? "Đồng bộ toàn bộ" : "Đồng bộ tăng dần";
+    if (state.errors.tickets) toast("Đã đồng bộ lên Supabase nhưng chưa tải lại được ticket: " + state.errors.tickets, "error");
+    else toast(modeLabel + " thành công: " + fmtNum(total) + " ticket được ghi/cập nhật · hiện có " + fmtNum(state.tickets.length) + " ticket", "good");
+  } catch (e) {
+    toast("Đồng bộ dữ liệu Jira thất bại: " + e.message, "error");
+  } finally {
+    syncRunning = false;
+    if (btn) btn.disabled = false;
+    setLabel("Đồng bộ dữ liệu");
+    updateSyncFreshness();
+  }
+}
+/* Thời điểm server đồng bộ Jira gần nhất (RPC public_get_sync_status, giống Dashboard) */
+async function updateSyncFreshness(){
+  const el = $("#syncFresh"), lab = $("#syncFreshLabel");
+  if (!el || !lab || !approvedNow()) return;
+  const cfg = config();
+  try {
+    const resp = await fetch(cfg.url + "/rest/v1/rpc/public_get_sync_status", {
+      method: "POST",
+      headers: { apikey: cfg.key, Authorization: "Bearer " + cfg.key, "Content-Type": "application/json" },
+      body: "{}"
+    });
+    if (!resp.ok) { el.style.display = "none"; return; }
+    const data = await resp.json();
+    const row = Array.isArray(data) ? data[0] : data;
+    const raw = row && row.last_sync_at;
+    el.style.display = "inline-flex";
+    if (!raw) { el.className = "sync-fresh warn"; el.title = ""; lab.textContent = "Chưa có lượt đồng bộ nào"; return; }
+    const last = new Date(raw);
+    const mins = Math.max(0, Math.round((Date.now() - last.getTime()) / 60000));
+    el.className = "sync-fresh" + (mins > 45 ? " stale" : mins > 20 ? " warn" : "");
+    el.title = "Đồng bộ Jira gần nhất: " + last.toLocaleString("vi-VN");
+    lab.textContent = "Cập nhật " + (mins === 0 ? "vừa xong" : mins < 60 ? mins + " phút trước" : Math.round(mins / 60) + " giờ trước");
+  } catch (e) { el.style.display = "none"; }
+}
+setInterval(updateSyncFreshness, 60000);
 initTimelineDrag();
 bootstrap().catch(function(e){
   gateMessage("Không khởi tạo được ứng dụng", String(e && e.message ? e.message : e), true);
