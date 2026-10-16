@@ -2357,21 +2357,25 @@ function normTicket(row, index){
 }
 /* Trạng thái thật của Jira ticket theo jira_key (cache theo mảng tickets) */
 let _jsSrc = null, _jsLen = -1, _jsMap = null;
-function jiraStatusOf(key){
-  if (!key) return "";
+function jiraInfoOf(key){
+  if (!key) return null;
   if (!_jsMap || _jsSrc !== state.tickets || _jsLen !== state.tickets.length) {
     _jsMap = {};
     state.tickets.forEach(function(t){
       const k = norm(tf(t, "key"));
-      if (k) _jsMap[k] = tf(t, "status") || "";
+      if (k) _jsMap[k] = { status: tf(t, "status") || "", priority: tf(t, "priority") || "" };
     });
     _jsSrc = state.tickets; _jsLen = state.tickets.length;
   }
-  return _jsMap[norm(key)] || "";
+  return _jsMap[norm(key)] || null;
 }
+function jiraStatusOf(key){ const i = jiraInfoOf(key); return i ? i.status : ""; }
+function jiraPriorityOf(key){ const i = jiraInfoOf(key); return i ? i.priority : ""; }
 function normBacklog(row){
   const internalStatus = row.status || "planned";
   const jiraStatus = jiraStatusOf(row.jira_key);
+  /* Ưu tiên: lấy đúng Priority của Jira ticket nếu có gắn Jira key */
+  const priority = jiraPriorityOf(row.jira_key) || row.priority || "medium";
   /* Backlog gắn Jira key → hiển thị đúng trạng thái trên Jira.
      Giữ trạng thái nội bộ khi backlog đã Blocked / Archived / Done do người dùng đặt. */
   const keepInternal = ["blocked", "archived", "done"].indexOf(norm(internalStatus)) >= 0;
@@ -2389,8 +2393,8 @@ function normBacklog(row){
     internalStatus: internalStatus,
     fromJira: !!(jiraStatus && !keepInternal),
     statusGroup: statusGroup(status),
-    priority: row.priority || "medium",
-    prio: prioRank(row.priority),
+    priority: priority,
+    prio: prioRank(priority),
     ownerId: row.owner_id || null,
     ownerName: row.owner_id ? memberName(row.owner_id) : "Chưa giao",
     project: row.jira_key ? String(row.jira_key).replace(/-[^-]*$/, "") : "Internal",
