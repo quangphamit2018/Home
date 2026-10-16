@@ -550,8 +550,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
    Chỉ dùng anon / publishable key. TUYỆT ĐỐI không dùng service_role key.
    ============================================================================ */
 const CONFIG = {
-  supabaseUrl: "https://rnsjiqbbeywgbnqsojce.supabase.co",
-  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuc2ppcWJiZXl3Z2JucXNvamNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0OTExNjAsImV4cCI6MjA5MzA2NzE2MH0.1BrlS__GNAMFbBmudl6gUJwJ9j_zoDdAj9rtfhBkhdk",
+  supabaseUrl: "",
+  supabaseAnonKey: "",
   jiraBaseUrl: "",
   timeZone: "Asia/Bangkok"
 };
@@ -900,7 +900,7 @@ function connect(){
   const cfg = config();
   if (!cfg.url || !cfg.key) { state.client = null; return false; }
   try {
-    state.client = createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+    state.client = createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" } });
     return true;
   } catch (e) {
     state.client = null;
@@ -927,10 +927,25 @@ function configCard(){
     '<div class="gate-foot">Tình trạng hiện tại: URL ' + (cfg.url ? '<b>đã có</b> (' + esc(hostOf(cfg.url)) + ')' : '<b>chưa có</b>') + ' · anon key ' + (cfg.key ? '<b>đã có</b>' : '<b>chưa có</b>') + '.<br>Bảng ticket nguồn: <span class="mono">public.' + TICKET_TABLE + '</span> (chỉ đọc). Bảng nội bộ: <span class="mono">jtm_*</span>.</div>' +
     '</div>';
 }
+let authUrlError = "";
+function readAuthUrlError(){
+  try {
+    const q = new URLSearchParams(location.search);
+    const h = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+    const msg = q.get("error_description") || h.get("error_description") || q.get("error") || h.get("error") || "";
+    if (msg) {
+      authUrlError = msg.replace(/\+/g, " ");
+      ["error","error_code","error_description","error_uri"].forEach(function(k){ q.delete(k); h.delete(k); });
+      const qs = q.toString(), hs = h.toString();
+      history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + (hs ? "#" + hs : ""));
+    }
+  } catch (e) {}
+}
 function signInCard(){
   $("#gate").innerHTML = '<div class="gate-card">' + brandBlock() +
     '<h1>Quản lý Jira và công việc nhóm</h1>' +
     '<p class="gate-copy">Theo dõi ticket từ Supabase, lên kế hoạch theo người phụ trách, theo dõi workload và tiến độ trên cùng một workspace.</p>' +
+    (authUrlError ? '<div class="notice error">Đăng nhập không thành công: ' + esc(authUrlError) + '</div>' : '') +
     '<button id="googleLogin" class="google-btn"><span class="google-g">G</span>Đăng nhập bằng Google</button>' +
     '<div class="gate-foot">Kết nối: <b>' + esc(hostOf(config().url)) + '</b><br>Tài khoản mới sẽ gửi yêu cầu tham gia và chờ quản trị viên phê duyệt sau lần đăng nhập đầu tiên.</div>' +
     '</div>';
@@ -960,8 +975,14 @@ function renderPending(){
 }
 async function signInGoogle(){
   if (!state.client) { toast("Hãy cấu hình Supabase trong code trước", "error"); return; }
+  if (location.protocol === "file:" || location.origin === "null") { toast("Hãy mở app qua địa chỉ https (GitHub Pages…), không mở trực tiếp file từ máy", "error"); return; }
+  authUrlError = "";
   const redirect = location.origin + location.pathname;
-  const result = await state.client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirect } });
+  /* prompt=select_account: luôn hiện hộp chọn tài khoản Google, tránh tự chọn nhầm tài khoản mặc định (nguyên nhân lỗi 403 ở accountchooser) */
+  const result = await state.client.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo: redirect, queryParams: { prompt: "select_account" } }
+  });
   if (result.error) toast("Google login: " + result.error.message, "error");
 }
 function showApp(){
@@ -971,19 +992,36 @@ function showApp(){
   updateUserHeader();
   renderShell();
 }
-async function loadSession(session){
+let sessionChain = Promise.resolve();
+function loadSession(session, force){
+  sessionChain = sessionChain.then(function(){ return loadSessionNow(session, force); }).catch(function(e){
+    gateMessage("Không thể kiểm tra quyền truy cập", (e && e.message) || String(e), true);
+  });
+  return sessionChain;
+}
+async function loadSessionNow(session, force){
   const uid = session && session.user ? session.user.id : null;
   state.session = session || null;
   if (!session) { showGate(); return; }
-  if (state.member && state.member.user_id === uid && state.member.status === "approved" && state.loaded.backlogs) {
-    updateUserHeader();
-    return;
+  /* Tránh nhấp nháy / tải lặp khi Supabase phát lại sự kiện SIGNED_IN lúc đổi tab */
+  if (!force && state.member && state.member.user_id === uid) {
+    if (state.member.status === "approved" && state.loaded.backlogs) { updateUserHeader(); return; }
+    if (state.member.status !== "approved") return;
   }
   showGate();
-  const r = await state.client.from(MEMBER_TABLE).select("user_id,email,full_name,avatar_url,role,status,created_at,reviewed_at").eq("user_id", uid).maybeSingle();
+  const cols = "user_id,email,full_name,avatar_url,role,status,created_at,reviewed_at";
+  let r = await state.client.from(MEMBER_TABLE).select(cols).eq("user_id", uid).maybeSingle();
   if (r.error) { gateMessage("Không thể kiểm tra bảng thành viên", r.error.message, true); return; }
   if (!r.data) {
-    gateMessage("Chưa tìm thấy hồ sơ thành viên", "Trigger jtm_sync_auth_user có thể chưa được chạy trong Supabase. Hãy chạy file SQL migration rồi bấm Thử lại.", true);
+    /* Tự chữa: nhờ database tạo hồ sơ nếu trigger đăng ký bị lỡ */
+    const ens = await state.client.rpc("jtm_ensure_member");
+    if (!ens.error) {
+      r = await state.client.from(MEMBER_TABLE).select(cols).eq("user_id", uid).maybeSingle();
+      if (r.error) { gateMessage("Không thể kiểm tra bảng thành viên", r.error.message, true); return; }
+    }
+  }
+  if (!r.data) {
+    gateMessage("Chưa tìm thấy hồ sơ thành viên", "Không tạo được hồ sơ cho tài khoản (uid " + (uid || "trống") + "). Hãy chạy file Jira-Desk-Complete.sql trong Supabase SQL Editor, sau đó tải lại trang bằng Ctrl/Cmd+Shift+R." , true);
     return;
   }
   state.member = r.data;
@@ -1000,12 +1038,14 @@ async function logout(){
   showGate();
 }
 async function bootstrap(){
+  readAuthUrlError();
   if (!connect()) { showGate(); return; }
   const r = await state.client.auth.getSession();
   if (r.error) { gateMessage("Không đọc được phiên đăng nhập", r.error.message, true); return; }
   await loadSession(r.data.session);
   state.client.auth.onAuthStateChange(function(event, session){
     setTimeout(function(){
+      if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") { if (session) state.session = session; return; }
       if (event === "SIGNED_OUT" || !session) {
         state.session = null;
         state.member = null;
@@ -3776,11 +3816,11 @@ document.addEventListener("click", async function(event){
   const action = actionEl.dataset.action;
   const id = actionEl.dataset.id;
   if (action === "logout") { await logout(); return; }
-  if (action === "retry") { await loadSession(state.session); return; }
+  if (action === "retry") { await loadSession(state.session, true); return; }
   if (action === "reapply") {
     const r = await state.client.rpc("jtm_reapply_access");
     if (r.error) toast("Gửi lại không thành công: " + r.error.message, "error");
-    else { toast("Đã gửi lại yêu cầu", "good"); await loadSession(state.session); }
+    else { toast("Đã gửi lại yêu cầu", "good"); await loadSession(state.session, true); }
     return;
   }
   if (action === "refresh") { await refreshData(false); return; }
