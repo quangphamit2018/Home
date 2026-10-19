@@ -2007,7 +2007,7 @@ const TAB_META = {
   activity: ["Lịch sử hoạt động", "AUDIT TRAIL", "Thay đổi nội bộ trên backlog và task, được ghi tại database."],
   recycle: ["Thùng rác", "RECYCLE BIN", "Backlog và task đã xoá. Chỉ super_admin xem, khôi phục hoặc xoá vĩnh viễn."],
   members: ["Thành viên", "ACCESS CONTROL", "Phê duyệt yêu cầu và kiểm tra quyền truy cập workspace."],
-  settings: ["Cấu hình", "NOTIFICATION SETTINGS", "Cấu hình cảnh báo email và gửi thông báo tự động vào Microsoft Teams cho workspace."]
+  settings: ["Cấu hình", "NOTIFICATION SETTINGS", "Cấu hình gửi thông báo tự động vào Microsoft Teams cho workspace."]
 };
 function renderShell(){
   if (!state.session || !state.member || state.member.status !== "approved") return;
@@ -5234,7 +5234,7 @@ async function reviewMember(id, approve){
 
 /* ---------------- CẤU HÌNH CẢNH BÁO (super_admin) ---------------- */
 function defaultNotificationSettings(){
-  return { id: "workspace", enabled: false, email_enabled: false, email_recipients: [], email_sender: "", teams_enabled: false, teams_channel_name: "", alert_overdue: true, alert_due_soon: true, alert_blocked: true, alert_unassigned: false, due_soon_days: 7, send_time: "09:00:00", time_zone: "Asia/Bangkok" };
+  return { id: "workspace", enabled: false, email_enabled: false, teams_enabled: false, teams_channel_name: "", alert_overdue: true, alert_due_soon: true, alert_blocked: true, alert_unassigned: false, due_soon_days: 7, send_time: "09:00:00", time_zone: "Asia/Bangkok" };
 }
 async function loadNotificationSettings(){
   if (!isAdmin()) return;
@@ -5248,7 +5248,6 @@ async function loadNotificationSettings(){
     if (results[0].error) throw results[0].error;
     if (results[1].error) throw results[1].error;
     state.alertSettings = Object.assign(defaultNotificationSettings(), results[0].data || {});
-    if (!Array.isArray(state.alertSettings.email_recipients)) state.alertSettings.email_recipients = [];
     state.alertRuns = results[1].data || [];
     state.alertSettingsLoaded = true;
   } catch (e) {
@@ -5294,11 +5293,11 @@ function renderNotificationSettings(){
     return '<tr><td class="nowrap">' + esc(fmtDt(r.attempted_at)) + '</td><td>' + notificationRunStatus(r) + '</td><td>' + esc(String(r.items_count == null ? 0 : r.items_count)) + '</td></tr>';
   }).join("") + '</tbody></table></div>' : emptyBox("Chưa có lần gửi nào", "Lịch sử gửi sẽ xuất hiện sau lần chạy đầu tiên hoặc lần gửi thử.");
   $("#pageContent").innerHTML =
-    '<div class="notice warn"><b>Lịch gửi:</b> hệ thống kiểm tra dữ liệu mỗi 5 phút và gửi tối đa một bản tổng hợp mỗi ngày vào giờ Bangkok đã chọn. Microsoft Graph và lịch chạy cần được cài theo hướng dẫn đi kèm; thông tin đăng nhập chỉ lưu ở Supabase Function Secrets, không lưu trong bảng cấu hình.</div>' +
+    '<div class="notice warn"><b>Lịch gửi:</b> hệ thống kiểm tra dữ liệu mỗi 5 phút và gửi tối đa một bản tổng hợp mỗi ngày vào giờ Bangkok đã chọn. Webhook Teams chỉ lưu ở Supabase Function Secrets, không lưu trong bảng cấu hình.</div>' +
     '<form id="notificationSettingsForm" autocomplete="off">' +
       '<div class="grid cols-2">' +
         '<section class="panel"><div class="panel-head"><div><div class="panel-title">Trạng thái & lịch gửi</div><div class="panel-sub">Thiết lập chung cho toàn workspace</div></div></div><div class="panel-body">' +
-          settingCheck("notify_enabled", "Bật cảnh báo tự động", "Tắt công tắc này để dừng toàn bộ email và Teams.", !!s.enabled) +
+          settingCheck("notify_enabled", "Bật cảnh báo tự động", "Tắt công tắc này để dừng toàn bộ thông báo Teams.", !!s.enabled) +
           '<div class="form-grid" style="margin-top:14px"><label class="field"><span>Giờ gửi mỗi ngày (Asia/Bangkok)</span><select id="notify_send_time">' + options + '</select></label>' +
           '<label class="field"><span>Số ngày sắp đến hạn</span><input id="notify_due_days" type="number" min="1" max="30" value="' + escAttr(String(s.due_soon_days || 7)) + '"></label></div>' +
         '</div></section>' +
@@ -5308,12 +5307,7 @@ function renderNotificationSettings(){
           settingCheck("notify_blocked", "Đang bị blocked", "Trạng thái blocked hoặc cờ blocked bật.", !!s.alert_blocked) +
           settingCheck("notify_unassigned", "Chưa được giao", "Chưa có người phụ trách.", !!s.alert_unassigned) +
         '</div></div></section>' +
-        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Email</div><div class="panel-sub">Gửi qua Microsoft Graph, không gửi trực tiếp từ trình duyệt.</div></div></div><div class="panel-body">' +
-          settingCheck("notify_email_enabled", "Gửi email cảnh báo", "Cần cấu hình ứng dụng Microsoft 365 theo hướng dẫn.", !!s.email_enabled) +
-          '<div class="form-grid" style="margin-top:14px"><label class="field full"><span>Hộp thư gửi (Microsoft 365)</span><input id="notify_email_sender" type="email" value="' + escAttr(s.email_sender || "") + '" placeholder="alerts@company.com"></label>' +
-          '<label class="field full"><span>Người nhận — mỗi dòng một email</span><textarea id="notify_email_recipients" placeholder="team@company.com&#10;owner@company.com">' + esc((s.email_recipients || []).join("\n")) + '</textarea></label></div>' +
-        '</div></section>' +
-        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Microsoft Teams</div><div class="panel-sub">Đăng thông báo vào một channel trong Team.</div></div></div><div class="panel-body">' +
+        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Microsoft Teams</div><div class="panel-sub">Đăng thông báo vào group chat hoặc channel qua Teams Workflows.</div></div></div><div class="panel-body">' +
           settingCheck("notify_teams_enabled", "Gửi thông báo vào Teams", "Đăng vào group chat hoặc channel đã chọn trong Teams Workflows; webhook được lưu bảo mật ở Supabase Function Secrets.", !!s.teams_enabled) +
           '<div class="form-grid" style="margin-top:14px"><label class="field full"><span>Tên group / chat / channel nhận thông báo</span><input id="notify_teams_channel_name" value="' + escAttr(s.teams_channel_name || "") + '" placeholder="Ví dụ: Operations / Alerts"></label></div>' +
         '</div></section>' +
@@ -5323,23 +5317,14 @@ function renderNotificationSettings(){
     panel({ title: "Lịch sử gửi gần đây", sub: "Tối đa 10 lần gửi hoặc gửi thử mới nhất", body: runs });
 }
 function readNotificationForm(){
-  const emailRecipients = $("#notify_email_recipients").value.split(/[\n,;]+/).map(function(x){ return x.trim().toLowerCase(); }).filter(Boolean);
-  const uniqueRecipients = Array.from(new Set(emailRecipients));
-  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const emailEnabled = $("#notify_email_enabled").checked;
   const teamsEnabled = $("#notify_teams_enabled").checked;
-  if (emailEnabled && (!$("#notify_email_sender").value.trim() || !validEmail.test($("#notify_email_sender").value.trim()))) throw new Error("Nhập địa chỉ hộp thư gửi hợp lệ cho email.");
-  if (emailEnabled && !uniqueRecipients.length) throw new Error("Nhập ít nhất một địa chỉ người nhận email.");
-  if (uniqueRecipients.some(function(x){ return !validEmail.test(x); })) throw new Error("Danh sách người nhận có email không hợp lệ.");
   if (teamsEnabled && !$("#notify_teams_channel_name").value.trim()) throw new Error("Nhập tên nhóm chat hoặc channel nhận thông báo.");
   const dueDays = Number($("#notify_due_days").value);
   if (!Number.isInteger(dueDays) || dueDays < 1 || dueDays > 30) throw new Error("Số ngày sắp đến hạn phải từ 1 đến 30.");
   return {
     id: "workspace",
     enabled: $("#notify_enabled").checked,
-    email_enabled: emailEnabled,
-    email_recipients: uniqueRecipients,
-    email_sender: $("#notify_email_sender").value.trim(),
+    email_enabled: false,
     teams_enabled: teamsEnabled,
     teams_channel_name: $("#notify_teams_channel_name").value.trim(),
     alert_overdue: $("#notify_overdue").checked,
@@ -5378,13 +5363,13 @@ async function testNotificationSettings(){
   if (!isAdmin() || state.alertBusy) return;
   if (!(await saveNotificationSettings(true))) return;
   const s = state.alertSettings || {};
-  if (!s.email_enabled && !s.teams_enabled) { toast("Bật ít nhất một kênh gửi trước khi gửi thử.", "error"); return; }
+  if (!s.teams_enabled) { toast("Bật gửi Teams trước khi gửi thử.", "error"); return; }
   state.alertBusy = true;
   try {
     const r = await state.client.functions.invoke("jtm-send-alerts", { body: { test: true } });
     if (r.error) throw r.error;
     const data = r.data || {};
-    if (data.status === "test") toast("Đã gửi thử thành công. Kiểm tra email hoặc Teams.", "good");
+    if (data.status === "test") toast("Đã gửi thử thành công. Kiểm tra tin nhắn trong Teams.", "good");
     else if (data.status === "partial") toast("Gửi thử được một phần: " + String(data.message || "kiểm tra trạng thái từng kênh."), "error");
     else toast("Gửi thử chưa thành công: " + String(data.message || data.status || "không rõ lỗi"), "error");
     await loadNotificationSettings();
