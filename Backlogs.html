@@ -1719,6 +1719,63 @@ function clearSavedTab(){
     history.replaceState(null, "", location.pathname + location.search + (hs ? "#" + hs : ""));
   } catch (e) {}
 }
+/* Nhớ bộ lọc đã lưu (apply-saved) của từng màn hình: F5 / refresh vẫn giữ nguyên lựa chọn.
+   Lưu theo từng user trong localStorage: { [scope]: { id: <id bộ lọc đã lưu>, f: <bộ lọc đang hiển thị> } } */
+const SAVED_SCOPES = ["tickets", "backlogs", "tasks"];
+function savedChoiceKey(){
+  const u = state.session && state.session.user;
+  return "jtm-saved-filter:" + (u && u.id ? u.id : "anon");
+}
+function readSavedChoices(){
+  try {
+    const o = JSON.parse(localStorage.getItem(savedChoiceKey()) || "{}");
+    return o && typeof o === "object" ? o : {};
+  } catch (e) { return {}; }
+}
+function writeSavedChoices(o){
+  try {
+    if (Object.keys(o).length) localStorage.setItem(savedChoiceKey(), JSON.stringify(o));
+    else localStorage.removeItem(savedChoiceKey());
+  } catch (e) {}
+}
+/* Gọi mỗi lần vẽ lại: ghi lại lựa chọn hiện tại, hoặc xoá nếu người dùng đã bỏ / xoá lọc */
+function syncSavedChoices(){
+  if (!state.savedRestored) return;
+  const cur = readSavedChoices();
+  let changed = false;
+  SAVED_SCOPES.forEach(function(scope){
+    const f = state.filters[scope];
+    const id = f && f.__savedId ? f.__savedId : "";
+    if (!id) {
+      if (cur[scope]) { delete cur[scope]; changed = true; }
+      return;
+    }
+    const snap = Object.assign({}, f);
+    delete snap.__savedId;
+    const next = { id: id, f: snap };
+    if (JSON.stringify(cur[scope]) !== JSON.stringify(next)) { cur[scope] = next; changed = true; }
+  });
+  if (changed) writeSavedChoices(cur);
+}
+/* Gọi một lần sau khi tải xong danh sách bộ lọc đã lưu; trả về true nếu đã khôi phục ít nhất một màn hình */
+function restoreSavedChoices(){
+  if (state.savedRestored) return false;
+  state.savedRestored = true;
+  const cur = readSavedChoices();
+  let restored = false, dirty = false;
+  SAVED_SCOPES.forEach(function(scope){
+    const c = cur[scope];
+    if (!c || !c.id) return;
+    const row = state.saved.find(function(x){ return x.id === c.id && x.scope === scope; });
+    if (!row) { delete cur[scope]; dirty = true; return; }   /* bộ lọc đã bị xoá → bỏ nhớ */
+    const base = c.f && typeof c.f === "object" ? c.f : (row.payload && row.payload.filters ? row.payload.filters : {});
+    state.filters[scope] = Object.assign(blankFilters(scope), base, { __savedId: row.id });
+    state.page[scope] = 1;
+    restored = true;
+  });
+  if (dirty) writeSavedChoices(cur);
+  return restored;
+}
 /* ============================================================================
    2. KẾT NỐI · ĐĂNG NHẬP GOOGLE · PHÊ DUYỆT THÀNH VIÊN
    ============================================================================ */
@@ -2015,6 +2072,7 @@ function renderShell(){
   if ((state.tab === "members" || state.tab === "recycle" || state.tab === "settings") && !isAdmin()) state.tab = "overview";
   if (!TAB_META[state.tab]) state.tab = "overview";
   saveTab();
+  syncSavedChoices();
   const meta = TAB_META[state.tab] || TAB_META.overview;
   $("#crumbTitle").textContent = meta[0];
   $("#pageEyebrow").textContent = meta[1];
@@ -2030,6 +2088,7 @@ function tabDataReady(){
   const t = state.tab, d = state.settled;
   if (t === "activity" || t === "recycle") return true;
   if (t === "members") return !!d.members;
+  if ((t === "tickets" || t === "backlogs" || t === "tasks") && !d.saved) return false;
   if (t === "backlogs" || t === "tasks") return !!(d.backlogs && d.tasks && d.directory);
   return !!(d.tickets && d.backlogs && d.tasks && d.directory);
 }
@@ -2333,6 +2392,7 @@ async function loadSavedFilters(){
   if (r.error) { state.saved = []; state.loaded.saved = true; return; }
   state.saved = r.data || [];
   state.loaded.saved = true;
+  restoreSavedChoices();
 }
 async function loadEntityHistory(type, id){
   const r = await state.client.from(ACTIVITY_TABLE).select("*").eq("entity_type", type).eq("entity_id", id).order("created_at", { ascending: false }).limit(THRESHOLDS.historyLimit);
@@ -2345,6 +2405,7 @@ function resetData(){
   state.loaded = { tickets: false, backlogs: false, tasks: false, directory: false, members: false, activity: false, saved: false };
   state.settled = {}; state.errors = {};
   state.dataStarted = false; state.syncing = false; state.skeletonShown = false; state.lastPaintedTab = null;
+  state.savedRestored = false;
 }
 function approvedNow(){ return !!(state.session && state.member && state.member.status === "approved"); }
 /* opts.initial: lần tải đầu sau khi vào app (hiện skeleton, vẽ ngay khi đủ dữ liệu cho tab đang mở).
@@ -2835,6 +2896,25 @@ function presetChips(scope, presets, current){
     return '<button class="chip' + (current === p.value ? " active" : "") + '" data-preset="' + scope + ':' + p.value + '">' + esc(p.label) +
       (p.count != null ? '<span class="c-count">' + fmtNum(p.count) + '</span>' : "") + '</button>';
   }).join("") + '</div>';
+}
+/* Bộ lọc có đang áp dụng điều kiện nào không (không tính preset / nhóm) */
+function filterIsActive(scope){
+  const f = state.filters[scope];
+  if (!f) return false;
+  return ["q", "status", "priority", "type", "project", "owner", "assignee", "backlog", "from", "to"].some(function(k){
+    const v = f[k];
+    if (Array.isArray(v)) return v.length > 0;
+    return !!v && v !== "all";
+  });
+}
+/* Danh sách sau khi áp mọi bộ lọc, nhưng thay preset (chip) bằng giá trị chỉ định — dùng để tính số cho stat-card và chip */
+function filteredWithPreset(scope, preset){
+  const f = state.filters[scope];
+  const keep = f.preset;
+  f.preset = preset;
+  try {
+    return scope === "tickets" ? ticketFiltered() : scope === "backlogs" ? backlogFiltered() : taskFiltered();
+  } finally { f.preset = keep; }
 }
 function savedFilterBar(scope, list){
   const mine = state.saved.filter(function(s){ return s.scope === scope; });
@@ -3397,13 +3477,15 @@ function renderTickets(){
   const f = state.filters.tickets;
   const all = withBlockedSince(itemsByKind("ticket"));
   const filtered = ticketFiltered();
+  const scoped = filteredWithPreset("tickets", "");   /* theo mọi bộ lọc, trừ chip preset → dùng cho stat-card và chip */
+  const filtering = filterIsActive("tickets");
   const presets = [
-    { value: "", label: "Tất cả", count: all.length },
-    { value: "active", label: "Đang mở", count: openList(all).length },
-    { value: "unassigned", label: "Chưa giao", count: unassignedList(all).length },
-    { value: "duesoon", label: "Sắp đến hạn", count: dueSoonList(all, THRESHOLDS.dueSoon).length },
-    { value: "overdue", label: "Quá hạn", count: overdueList(all).length },
-    { value: "stale", label: "Lâu không cập nhật", count: staleList(all).length }
+    { value: "", label: "Tất cả", count: scoped.length },
+    { value: "active", label: "Đang mở", count: openList(scoped).length },
+    { value: "unassigned", label: "Chưa giao", count: unassignedList(scoped).length },
+    { value: "duesoon", label: "Sắp đến hạn", count: dueSoonList(scoped, THRESHOLDS.dueSoon).length },
+    { value: "overdue", label: "Quá hạn", count: overdueList(scoped).length },
+    { value: "stale", label: "Lâu không cập nhật", count: staleList(scoped).length }
   ];
   setActions('<button class="btn" data-action="refresh">' + icon("refresh") + 'Làm mới</button>' +
     '<button class="btn" data-action="export-tickets">' + icon("download") + 'Xuất CSV</button>' +
@@ -3413,10 +3495,10 @@ function renderTickets(){
   const content = errorNotice("tickets") +
     (state.ticketComplete ? "" : '<div class="notice warn"><b>Chưa tải đủ ticket.</b> Bảng nguồn vượt 1.000 dòng nhưng thiếu cột ngày/khóa để phân trang; danh sách và báo cáo có thể thiếu dữ liệu.</div>') +
     '<div class="grid stats">' +
-      statCard({ label: "Tổng ticket đã tải", num: all.length, note: "Đọc từ " + TICKET_TABLE, tone: "", icon: "ticket" }) +
-      statCard({ label: "Đang mở", num: openList(all).length, note: "Chưa done / resolved / closed", tone: "blue", icon: "clock" }) +
-      statCard({ label: "Quá hạn", num: overdueList(all).length, note: "Có deadline và đã trễ", tone: "red", icon: "alert", drill: "tickets|preset=overdue" }) +
-      statCard({ label: "Chưa giao", num: unassignedList(all).length, note: "Không có assignee", tone: "amber", icon: "user", drill: "tickets|preset=unassigned" }) +
+      statCard({ label: filtering ? "Ticket khớp bộ lọc" : "Tổng ticket đã tải", num: scoped.length, note: filtering ? "Trên tổng " + fmtNum(all.length) + " ticket đã tải" : "Đọc từ " + TICKET_TABLE, tone: "", icon: "ticket" }) +
+      statCard({ label: "Đang mở", num: openList(scoped).length, note: "Chưa done / resolved / closed", tone: "blue", icon: "clock" }) +
+      statCard({ label: "Quá hạn", num: overdueList(scoped).length, note: "Có deadline và đã trễ", tone: "red", icon: "alert", drill: "tickets|preset=overdue" }) +
+      statCard({ label: "Chưa giao", num: unassignedList(scoped).length, note: "Không có assignee", tone: "amber", icon: "user", drill: "tickets|preset=unassigned" }) +
     '</div>' +
     '<div class="toolbar">' +
       '<div class="search-box"><span class="search-ico">' + ICONS.filter + '</span><input type="search" data-filter="tickets:q" value="' + escAttr(f.q) + '" placeholder="Tìm theo key, summary, assignee, project…"></div>' +
@@ -4141,20 +4223,21 @@ function backlogStats(list){
 function renderBacklogs(){
   const f = state.filters.backlogs;
   const all = withBlockedSince(itemsByKind("backlog"));
+  const scoped = filteredWithPreset("backlogs", "");   /* theo mọi bộ lọc, trừ chip preset */
   const presets = [
-    { value: "", label: "Tất cả", count: all.length },
-    { value: "mine", label: "Của tôi", count: all.filter(function(i){ return i.ownerId === state.member.user_id; }).length },
-    { value: "active", label: "Đang hoạt động", count: openList(all).length },
-    { value: "overdue", label: "Quá hạn", count: overdueList(all).length },
-    { value: "duesoon", label: "Sắp đến hạn", count: dueSoonList(all, THRESHOLDS.dueSoon).length },
-    { value: "blocked", label: "Blocked", count: blockedList(all).length },
-    { value: "archived", label: "Lưu trữ", count: all.filter(function(i){ return norm(i.status) === "archived"; }).length }
+    { value: "", label: "Tất cả", count: scoped.length },
+    { value: "mine", label: "Của tôi", count: scoped.filter(function(i){ return i.ownerId === state.member.user_id; }).length },
+    { value: "active", label: "Đang hoạt động", count: openList(scoped).length },
+    { value: "overdue", label: "Quá hạn", count: overdueList(scoped).length },
+    { value: "duesoon", label: "Sắp đến hạn", count: dueSoonList(scoped, THRESHOLDS.dueSoon).length },
+    { value: "blocked", label: "Blocked", count: blockedList(scoped).length },
+    { value: "archived", label: "Lưu trữ", count: filteredWithPreset("backlogs", "archived").length }
   ];
   setActions('<button class="btn" data-action="refresh">' + icon("refresh") + 'Làm mới</button>' +
     '<button class="btn" data-action="export-backlogs">' + icon("download") + 'Xuất CSV</button>' +
     '<button class="btn primary" data-action="new-backlog">' + icon("plus") + 'Thêm backlog</button>');
   state.listPaint = backlogListHtml;
-  $("#pageContent").innerHTML = errorNotice("backlogs") + backlogStats(all) +
+  $("#pageContent").innerHTML = errorNotice("backlogs") + backlogStats(scoped) +
     '<div class="toolbar">' +
       '<div class="search-box"><span class="search-ico">' + ICONS.filter + '</span><input type="search" data-filter="backlogs:q" value="' + escAttr(f.q) + '" placeholder="Tìm backlog theo tên, mô tả, Jira key…"></div>' +
       ownerFilterSelect("backlogs", f.owner) +
@@ -4254,15 +4337,16 @@ function taskListHtml(){
 function renderTasks(){
   const f = state.filters.tasks;
   const all = withBlockedSince(itemsByKind("task"));
+  const scoped = filteredWithPreset("tasks", "");   /* theo mọi bộ lọc, trừ chip preset */
   const week = dayKey(addDays(new Date(), -6));
   const presets = [
-    { value: "", label: "Tất cả", count: all.length },
-    { value: "mine", label: "Của tôi", count: all.filter(function(i){ return i.ownerId === state.member.user_id; }).length },
-    { value: "active", label: "Đang mở", count: openList(all).length },
-    { value: "overdue", label: "Quá hạn", count: overdueList(all).length },
-    { value: "duesoon", label: "Sắp đến hạn", count: dueSoonList(all, THRESHOLDS.dueSoon).length },
-    { value: "blocked", label: "Blocked", count: blockedList(all).length },
-    { value: "unassigned", label: "Chưa giao", count: unassignedList(all).length }
+    { value: "", label: "Tất cả", count: scoped.length },
+    { value: "mine", label: "Của tôi", count: scoped.filter(function(i){ return i.ownerId === state.member.user_id; }).length },
+    { value: "active", label: "Đang mở", count: openList(scoped).length },
+    { value: "overdue", label: "Quá hạn", count: overdueList(scoped).length },
+    { value: "duesoon", label: "Sắp đến hạn", count: dueSoonList(scoped, THRESHOLDS.dueSoon).length },
+    { value: "blocked", label: "Blocked", count: blockedList(scoped).length },
+    { value: "unassigned", label: "Chưa giao", count: unassignedList(scoped).length }
   ];
   setActions('<button class="btn" data-action="refresh">' + icon("refresh") + 'Làm mới</button>' +
     '<button class="btn" data-action="export-tasks">' + icon("download") + 'Xuất CSV</button>' +
@@ -4270,10 +4354,10 @@ function renderTasks(){
   state.listPaint = taskListHtml;
   $("#pageContent").innerHTML = errorNotice("tasks") +
     '<div class="grid stats">' +
-      statCard({ label: "Task đang mở", num: openList(all).length, note: "Todo, in progress hoặc blocked", tone: "blue", icon: "task" }) +
-      statCard({ label: "Hoàn thành 7 ngày", num: completedIn(all, week, todayKey()).length, note: "Ngày hoàn thành từ " + fmtDay(week), tone: "green", icon: "check" }) +
-      statCard({ label: "Quá hạn", num: overdueList(all).length, note: "Qua deadline và chưa xong", tone: "red", icon: "alert", drill: "tasks|preset=overdue" }) +
-      statCard({ label: "Chưa giao", num: unassignedList(all).length, note: "Cần chọn người thực hiện", tone: "amber", icon: "user", drill: "tasks|preset=unassigned" }) +
+      statCard({ label: "Task đang mở", num: openList(scoped).length, note: "Todo, in progress hoặc blocked", tone: "blue", icon: "task" }) +
+      statCard({ label: "Hoàn thành 7 ngày", num: completedIn(scoped, week, todayKey()).length, note: "Ngày hoàn thành từ " + fmtDay(week), tone: "green", icon: "check" }) +
+      statCard({ label: "Quá hạn", num: overdueList(scoped).length, note: "Qua deadline và chưa xong", tone: "red", icon: "alert", drill: "tasks|preset=overdue" }) +
+      statCard({ label: "Chưa giao", num: unassignedList(scoped).length, note: "Cần chọn người thực hiện", tone: "amber", icon: "user", drill: "tasks|preset=unassigned" }) +
     "</div>" +
     '<div class="toolbar">' +
       '<div class="search-box"><span class="search-ico">' + ICONS.filter + '</span><input type="search" data-filter="tasks:q" value="' + escAttr(f.q) + '" placeholder="Tìm task theo tên, mô tả, Jira key…"></div>' +
@@ -5427,10 +5511,13 @@ function paintList(){
 }
 function drillTo(tab, patch){
   if (!TAB_META[tab]) tab = "tickets";
+  const sameTab = state.tab === tab && SAVED_SCOPES.indexOf(tab) >= 0;
   state.tab = tab;
   if (patch && Object.keys(patch).length) {
     if (patch.preset === "all") patch.preset = "";
-    state.filters[tab] = Object.assign(blankFilters(tab), patch);
+    state.filters[tab] = sameTab
+      ? Object.assign({}, state.filters[tab], patch)
+      : Object.assign(blankFilters(tab), patch);
   }
   state.focusMember = tab === "workload" && patch && patch.member ? patch.member : null;
   state.page[tab] = 1;
