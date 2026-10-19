@@ -5234,7 +5234,7 @@ async function reviewMember(id, approve){
 
 /* ---------------- CẤU HÌNH CẢNH BÁO (super_admin) ---------------- */
 function defaultNotificationSettings(){
-  return { id: "workspace", enabled: false, email_enabled: false, teams_enabled: false, teams_channel_name: "", alert_overdue: true, alert_due_soon: true, alert_blocked: true, alert_unassigned: false, due_soon_days: 7, send_time: "09:00:00", time_zone: "Asia/Bangkok" };
+  return { id: "workspace", enabled: false, email_enabled: false, teams_enabled: false, teams_channel_name: "", alert_overdue: true, alert_due_soon: true, alert_blocked: true, alert_unassigned: false, due_soon_days: 7, send_time: "09:00:00", time_zone: "Asia/Bangkok", ticket_date_field: "created", ticket_date_from: "", ticket_date_to: "", assignee_filter: [] };
 }
 async function loadNotificationSettings(){
   if (!isAdmin()) return;
@@ -5248,6 +5248,9 @@ async function loadNotificationSettings(){
     if (results[0].error) throw results[0].error;
     if (results[1].error) throw results[1].error;
     state.alertSettings = Object.assign(defaultNotificationSettings(), results[0].data || {});
+    if (!Array.isArray(state.alertSettings.assignee_filter)) state.alertSettings.assignee_filter = [];
+    state.alertSettings.ticket_date_from = state.alertSettings.ticket_date_from || "";
+    state.alertSettings.ticket_date_to = state.alertSettings.ticket_date_to || "";
     state.alertRuns = results[1].data || [];
     state.alertSettingsLoaded = true;
   } catch (e) {
@@ -5269,6 +5272,19 @@ function notificationRunStatus(row){
   return '<span class="badge ' + (tones[row.status] || "gray") + '">' + esc(labels[row.status] || row.status || "—") + '</span>' +
     (detail ? '<div class="cell-sub">' + esc(detail) + '</div>' : "") +
     (row.error ? '<div class="cell-sub" style="color:var(--red)">' + esc(row.error) + '</div>' : "");
+}
+function notifyAssigneeOptions(){
+  const counts = {};
+  (state.tickets || []).forEach(function(t){
+    const n = String(tf(t, "assignee") || "").trim();
+    if (n) counts[n] = (counts[n] || 0) + 1;
+  });
+  (state.directory || []).forEach(function(p){
+    const n = String(p.full_name || p.email || "").trim();
+    if (n && counts[n] === undefined) counts[n] = 0;
+  });
+  return Object.keys(counts).sort(function(a, b){ return counts[b] - counts[a] || a.localeCompare(b); })
+    .map(function(n){ return '<option value="' + escAttr(n) + '">' + esc(n) + (counts[n] ? " (" + counts[n] + " ticket)" : "") + '</option>'; }).join("");
 }
 function renderNotificationSettings(){
   setActions('<button class="btn" data-action="refresh-notification-settings">' + icon("refresh") + 'Làm mới</button>');
@@ -5301,11 +5317,16 @@ function renderNotificationSettings(){
           '<div class="form-grid" style="margin-top:14px"><label class="field"><span>Giờ gửi mỗi ngày (Asia/Bangkok)</span><select id="notify_send_time">' + options + '</select></label>' +
           '</div>' +
         '</div></section>' +
-        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Nội dung bản tin</div><div class="panel-sub">Cố định, không cần chọn</div></div></div><div class="panel-body"><div class="grid">' +
-          '<div><b>1. Backlog chưa xử lý xong</b><div class="cell-sub">Trạng thái không phải Done và không phải Resolved.</div></div>' +
-          '<div><b>2. Ticket theo từng Assignee</b><div class="cell-sub">Trạng thái không phải Resolved, Canceled hoặc Cancelled.</div></div>' +
-          '<div class="cell-sub">Danh sách người được tag trong Teams cấu hình trong Edge Function jtm-send-alerts.</div>' +
-        '</div></div></section>' +
+        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Phạm vi dữ liệu bản tin</div><div class="panel-sub">Chỉ lấy ticket trong khoảng ngày và của các Assignee dưới đây</div></div></div><div class="panel-body">' +
+          '<div class="form-grid"><label class="field full"><span>Lọc ticket theo</span><select id="notify_date_field">' +
+            [["created", "Ngày tạo"], ["updated", "Ngày cập nhật"], ["due", "Hạn (due date)"]].map(function(o){ return '<option value="' + o[0] + '"' + ((s.ticket_date_field || "created") === o[0] ? " selected" : "") + '>' + o[1] + '</option>'; }).join("") +
+          '</select></label>' +
+          '<label class="field"><span>Từ ngày</span><input id="notify_date_from" type="date" value="' + escAttr(String(s.ticket_date_from || "").slice(0, 10)) + '"></label>' +
+          '<label class="field"><span>Đến ngày</span><input id="notify_date_to" type="date" value="' + escAttr(String(s.ticket_date_to || "").slice(0, 10)) + '"></label>' +
+          '<label class="field full"><span>Thêm Assignee từ danh sách</span><select id="notify_assignee_pick"><option value="">Chọn để thêm…</option>' + notifyAssigneeOptions() + '</select></label>' +
+          '<label class="field full"><span>Assignee được gửi — mỗi dòng một tên hoặc email (chỉ những người này)</span><textarea id="notify_assignees" rows="5" placeholder="Ví dụ: Tên Assignee trên Jira">' + esc((s.assignee_filter || []).join("\n")) + '</textarea></label></div>' +
+          '<div class="cell-sub" style="margin-top:12px"><b>Bản tin gồm:</b> (1) Backlog chưa Done / Resolved; (2) Ticket Jira theo từng Assignee, không Resolved / Canceled / Cancelled. Danh sách người được tag cấu hình trong Edge Function jtm-send-alerts.</div>' +
+        '</div></section>' +
         '<section class="panel"><div class="panel-head"><div><div class="panel-title">Microsoft Teams</div><div class="panel-sub">Đăng thông báo vào group chat hoặc channel qua Teams Workflows.</div></div></div><div class="panel-body">' +
           settingCheck("notify_teams_enabled", "Gửi thông báo vào Teams", "Đăng vào group chat hoặc channel đã chọn trong Teams Workflows; webhook được lưu bảo mật ở Supabase Function Secrets.", !!s.teams_enabled) +
           '<div class="form-grid" style="margin-top:14px"><label class="field full"><span>Tên group / chat / channel nhận thông báo</span><input id="notify_teams_channel_name" value="' + escAttr(s.teams_channel_name || "") + '" placeholder="Ví dụ: Operations / Alerts"></label></div>' +
@@ -5319,6 +5340,11 @@ function readNotificationForm(){
   const teamsEnabled = $("#notify_teams_enabled").checked;
   if (teamsEnabled && !$("#notify_teams_channel_name").value.trim()) throw new Error("Nhập tên nhóm chat hoặc channel nhận thông báo.");
   const prev = Object.assign(defaultNotificationSettings(), state.alertSettings || {});
+  const dateFrom = $("#notify_date_from").value, dateTo = $("#notify_date_to").value;
+  const assignees = Array.from(new Set($("#notify_assignees").value.split(/\n+/).map(function(x){ return x.trim(); }).filter(Boolean)));
+  if (teamsEnabled && (!dateFrom || !dateTo)) throw new Error("Chọn khoảng thời gian (từ ngày – đến ngày) cho ticket.");
+  if (dateFrom && dateTo && dateFrom > dateTo) throw new Error("Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.");
+  if (teamsEnabled && !assignees.length) throw new Error("Chọn ít nhất một Assignee sẽ được gửi.");
   return {
     id: "workspace",
     enabled: $("#notify_enabled").checked,
@@ -5330,6 +5356,10 @@ function readNotificationForm(){
     alert_blocked: prev.alert_blocked,
     alert_unassigned: prev.alert_unassigned,
     due_soon_days: prev.due_soon_days,
+    ticket_date_field: $("#notify_date_field").value,
+    ticket_date_from: dateFrom || null,
+    ticket_date_to: dateTo || null,
+    assignee_filter: assignees,
     send_time: $("#notify_send_time").value + ":00",
     time_zone: "Asia/Bangkok",
     updated_by: state.session && state.session.user ? state.session.user.id : null,
@@ -5378,6 +5408,17 @@ async function testNotificationSettings(){
     if (state.tab === "settings") renderShell();
   }
 }
+
+document.addEventListener("change", function(ev){
+  const el = ev.target;
+  if (!el || el.id !== "notify_assignee_pick" || !el.value) return;
+  const box = $("#notify_assignees");
+  if (!box) return;
+  const cur = box.value.split(/\n+/).map(function(x){ return x.trim(); }).filter(Boolean);
+  if (!cur.some(function(x){ return norm(x) === norm(el.value); })) cur.push(el.value);
+  box.value = cur.join("\n");
+  el.value = "";
+});
 
 /* ---------------- điều khiển sự kiện ---------------- */
 function paintList(){
