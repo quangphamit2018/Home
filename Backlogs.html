@@ -5299,13 +5299,12 @@ function renderNotificationSettings(){
         '<section class="panel"><div class="panel-head"><div><div class="panel-title">Trạng thái & lịch gửi</div><div class="panel-sub">Thiết lập chung cho toàn workspace</div></div></div><div class="panel-body">' +
           settingCheck("notify_enabled", "Bật cảnh báo tự động", "Tắt công tắc này để dừng toàn bộ thông báo Teams.", !!s.enabled) +
           '<div class="form-grid" style="margin-top:14px"><label class="field"><span>Giờ gửi mỗi ngày (Asia/Bangkok)</span><select id="notify_send_time">' + options + '</select></label>' +
-          '<label class="field"><span>Số ngày sắp đến hạn</span><input id="notify_due_days" type="number" min="1" max="30" value="' + escAttr(String(s.due_soon_days || 7)) + '"></label></div>' +
+          '</div>' +
         '</div></section>' +
-        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Loại cảnh báo</div><div class="panel-sub">Tổng hợp ticket, backlog và task chưa hoàn thành</div></div></div><div class="panel-body"><div class="grid">' +
-          settingCheck("notify_overdue", "Đã quá hạn", "Có deadline trước hôm nay và chưa hoàn thành.", !!s.alert_overdue) +
-          settingCheck("notify_due_soon", "Sắp đến hạn", "Trong số ngày đã chọn ở trên.", !!s.alert_due_soon) +
-          settingCheck("notify_blocked", "Đang bị blocked", "Trạng thái blocked hoặc cờ blocked bật.", !!s.alert_blocked) +
-          settingCheck("notify_unassigned", "Chưa được giao", "Chưa có người phụ trách.", !!s.alert_unassigned) +
+        '<section class="panel"><div class="panel-head"><div><div class="panel-title">Nội dung bản tin</div><div class="panel-sub">Cố định, không cần chọn</div></div></div><div class="panel-body"><div class="grid">' +
+          '<div><b>1. Backlog chưa xử lý xong</b><div class="cell-sub">Trạng thái không phải Done và không phải Resolved.</div></div>' +
+          '<div><b>2. Ticket theo từng Assignee</b><div class="cell-sub">Trạng thái không phải Resolved, Canceled hoặc Cancelled.</div></div>' +
+          '<div class="cell-sub">Danh sách người được tag trong Teams cấu hình trong Edge Function jtm-send-alerts.</div>' +
         '</div></div></section>' +
         '<section class="panel"><div class="panel-head"><div><div class="panel-title">Microsoft Teams</div><div class="panel-sub">Đăng thông báo vào group chat hoặc channel qua Teams Workflows.</div></div></div><div class="panel-body">' +
           settingCheck("notify_teams_enabled", "Gửi thông báo vào Teams", "Đăng vào group chat hoặc channel đã chọn trong Teams Workflows; webhook được lưu bảo mật ở Supabase Function Secrets.", !!s.teams_enabled) +
@@ -5319,19 +5318,18 @@ function renderNotificationSettings(){
 function readNotificationForm(){
   const teamsEnabled = $("#notify_teams_enabled").checked;
   if (teamsEnabled && !$("#notify_teams_channel_name").value.trim()) throw new Error("Nhập tên nhóm chat hoặc channel nhận thông báo.");
-  const dueDays = Number($("#notify_due_days").value);
-  if (!Number.isInteger(dueDays) || dueDays < 1 || dueDays > 30) throw new Error("Số ngày sắp đến hạn phải từ 1 đến 30.");
+  const prev = Object.assign(defaultNotificationSettings(), state.alertSettings || {});
   return {
     id: "workspace",
     enabled: $("#notify_enabled").checked,
     email_enabled: false,
     teams_enabled: teamsEnabled,
     teams_channel_name: $("#notify_teams_channel_name").value.trim(),
-    alert_overdue: $("#notify_overdue").checked,
-    alert_due_soon: $("#notify_due_soon").checked,
-    alert_blocked: $("#notify_blocked").checked,
-    alert_unassigned: $("#notify_unassigned").checked,
-    due_soon_days: dueDays,
+    alert_overdue: prev.alert_overdue,
+    alert_due_soon: prev.alert_due_soon,
+    alert_blocked: prev.alert_blocked,
+    alert_unassigned: prev.alert_unassigned,
+    due_soon_days: prev.due_soon_days,
     send_time: $("#notify_send_time").value + ":00",
     time_zone: "Asia/Bangkok",
     updated_by: state.session && state.session.user ? state.session.user.id : null,
