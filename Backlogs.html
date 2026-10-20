@@ -950,27 +950,37 @@ table.resizable.fixed th .th-inner{overflow:hidden;white-space:nowrap;text-overf
 table.resizable.fixed td{overflow:hidden}
 .ms.right .ms-panel{left:auto;right:0}
 .ms-head{flex-wrap:wrap}
-/* ===== Bộ lọc SLA + khối ngày: cùng ngôn ngữ thiết kế với .ms-btn ===== */
-.sla-btn .sla-ico{display:inline-grid;place-items:center;height:20px;width:20px;border-radius:7px;background:#fdeaea;color:#c84949}
-.sla-btn .sla-ico svg{height:12px;width:12px}
-.sla-btn.on{border-color:#f0c4c4;background:linear-gradient(180deg,#fff7f7,#fdeaea);color:#8f2020}
-.sla-btn.on .sla-ico{background:#c84949;color:#fff}
-.sla-panel{min-width:292px;max-width:340px}
-.sla-opt{display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border:0;border-radius:11px;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit;transition:background .12s}
-.sla-opt:hover{background:#f5f8fd}
-.sla-opt.active{background:#eef3ff;box-shadow:inset 0 0 0 1px #cfdcf7}
-.sla-dot{flex:none;height:10px;width:10px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.05)}
-.sla-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.sla-txt b{font-size:12.5px;font-weight:700;color:#2b3846}
-.sla-txt em{font-style:normal;font-size:11px;color:#8b95a2}
-.sla-num{flex:none;min-width:30px;text-align:center;padding:2px 8px;border-radius:99px;background:#f1f4f9;font-size:11.5px;font-weight:700;color:#41505f;font-variant-numeric:tabular-nums}
-.sla-opt.active .sla-num{background:var(--grad-brand);color:#fff}
+/* ===== BỘ THẺ FILTER THỐNG NHẤT: mọi control trên thanh lọc cùng cao 38px, bo 12px, cùng viền / đổ bóng ===== */
+.toolbar{gap:10px}
+.toolbar .search-box input{height:38px;border-radius:12px;border:1px solid #dfe6ef;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:var(--e1),var(--top-hi);font-size:12.5px}
+.toolbar .btn.small{height:38px;padding:0 14px;border-radius:12px;font-size:12.5px;font-weight:650;display:inline-flex;align-items:center;gap:7px}
+.toolbar .btn.small svg{height:14px;width:14px}
+.tb-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.toolbar select{height:38px;border-radius:12px}
+.pk-btn .pk-ico{display:inline-grid;place-items:center;height:20px;width:20px;border-radius:7px;background:#eef3fe;color:#3f68e8;flex:none}
+.pk-btn .pk-ico svg{height:12px;width:12px}
+.pk-btn.on .pk-ico{background:#3f68e8;color:#fff}
+.pk-btn.tone-red .pk-ico{background:#fdeaea;color:#c84949}
+.pk-btn.tone-red.on{border-color:#f0c4c4;background:linear-gradient(180deg,#fff7f7,#fdeaea);color:#8f2020}
+.pk-btn.tone-red.on .pk-ico{background:#c84949;color:#fff}
+.pk-panel{min-width:260px;max-width:340px}
+.pk-opt{display:flex;align-items:center;gap:11px;width:100%;padding:9px 10px;border:0;border-radius:11px;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit;transition:background .12s}
+.pk-opt:hover{background:#f5f8fd}
+.pk-opt.active{background:#eef3ff;box-shadow:inset 0 0 0 1px #cfdcf7}
+.pk-dot{flex:none;height:10px;width:10px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.05)}
+.pk-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.pk-txt b{font-size:12.5px;font-weight:700;color:#2b3846;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-txt em{font-style:normal;font-size:11px;color:#8b95a2}
+.pk-num{flex:none;min-width:30px;text-align:center;padding:2px 8px;border-radius:99px;background:#f1f4f9;font-size:11.5px;font-weight:700;color:#41505f;font-variant-numeric:tabular-nums}
+.pk-opt.active .pk-num{background:var(--grad-brand);color:#fff}
+.pk-tick{flex:none;width:18px;text-align:center;font-size:12px;font-weight:800;color:#3f68e8;opacity:0}
+.pk-opt.active .pk-tick{opacity:1}
 .date-range{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 6px 0 12px;border-radius:12px;border:1px solid #dfe6ef;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:var(--e1),var(--top-hi)}
-.date-range .dr-label{font-size:10.5px;font-weight:750;letter-spacing:.6px;text-transform:uppercase;color:#6b7785}
+.date-range .dr-label{font-size:10.5px;font-weight:750;letter-spacing:.6px;text-transform:uppercase;color:#6b7785;white-space:nowrap}
 .date-range .dr-arrow{color:#a3adba;font-size:12px}
 .date-range input[type=date]{height:28px;padding:0 8px;border:0;background:#f5f8fc;border-radius:8px;font-size:12.5px;box-shadow:none;min-width:0;width:132px}
 .date-range:focus-within{border-color:#b9cdf3;box-shadow:0 0 0 3px rgba(63,104,232,.12)}
-@media (max-width:720px){.date-range{width:100%;justify-content:space-between}.date-range input[type=date]{flex:1;width:auto}.sla-panel{min-width:0;max-width:none}}
+@media (max-width:720px){.date-range{width:100%;justify-content:space-between}.date-range input[type=date]{flex:1;width:auto}.pk-panel{min-width:0;max-width:none}.tb-actions{margin-left:0;width:100%}}
 @media(max-width:760px){
   table.resizable.fixed{width:100%!important;min-width:0!important}
   .ms.right .ms-panel{left:0;right:0}
@@ -2938,13 +2948,17 @@ function filteredWithPreset(scope, preset){
   } finally { f.preset = keep; }
 }
 function savedFilterBar(scope, list){
-  const mine = state.saved.filter(function(s){ return s.scope === scope; });
-  if (!mine.length && !(state.filters[scope] && state.filters[scope].__savedId)) return "";
+  const mine = state.saved.filter(function(x){ return x.scope === scope; });
   const current = state.filters[scope] && state.filters[scope].__savedId;
-  return '<select data-action="apply-saved" data-scope="' + scope + '" title="Bộ lọc đã lưu" aria-label="Bộ lọc đã lưu">' +
-    '<option value="">Bộ lọc đã lưu…</option>' + mine.map(function(s){
-      return '<option value="' + escAttr(s.id) + '"' + (current === s.id ? " selected" : "") + '>' + esc(s.name) + (s.shared ? " · nhóm" : "") + '</option>';
-    }).join("") + '</select>';
+  if (!mine.length && !current) return "";
+  const cur = mine.find(function(x){ return x.id === current; });
+  return pickDropdown({
+    title: "Bộ lọc đã lưu", icon: ICONS.save, active: !!cur, label: cur ? cur.name : "Bộ lọc đã lưu",
+    rootAttr: 'data-saved-root="' + scope + '"',
+    rows: mine.map(function(x){
+      return { label: x.name, sub: x.shared ? "Chia sẻ cho nhóm" : "Chỉ mình tôi", active: x.id === current, attr: 'data-saved-pick="' + escAttr(x.id) + '"' };
+    })
+  });
 }
 function savedFilterButtons(scope){
   const has = state.filters[scope] && state.filters[scope].__savedId;
@@ -2996,11 +3010,63 @@ function isSlaBreached(item){
   return norm(x.frBreached) === "yes" || norm(x.ttrBreached) === "yes";
 }
 /* Bộ lọc SLA (chỉ tab Tickets): any = Response hoặc Resolution; fr = Response=Yes; ttr = Resolution=Yes; both = cả hai = Yes */
+/* ============================================================================
+   BỘ THẺ FILTER DÙNG CHUNG — mọi tab đều dựng thanh lọc từ các hàm này
+   fMulti (nhiều lựa chọn) · fPick (một lựa chọn) · dateRange (khoảng ngày) · filterActions (lưu / xoá lọc)
+   ============================================================================ */
+function pickDropdown(c){
+  return '<div class="ms pk"' + (c.rootAttr ? " " + c.rootAttr : "") + '>' +
+    '<button type="button" class="ms-btn pk-btn' + (c.active ? " on" : "") + (c.tone ? " tone-" + c.tone : "") + '" data-ms-toggle title="' + escAttr(c.title) + '" aria-label="' + escAttr(c.title) + '">' +
+      (c.icon ? '<span class="pk-ico">' + c.icon + "</span>" : "") +
+      '<span class="ms-label">' + esc(c.label) + "</span>" +
+      '<span class="ms-caret">▼</span></button>' +
+    '<div class="ms-panel pk-panel"><div class="ms-head"><span>' + esc(c.title) + "</span></div><div class=\"ms-list\">" +
+      c.rows.map(function(r){
+        return '<button type="button" class="pk-opt' + (r.active ? " active" : "") + '" ' + r.attr + ">" +
+          (r.color ? '<i class="pk-dot" style="background:' + r.color + '"></i>' : "") +
+          '<span class="pk-txt"><b>' + esc(r.label) + "</b>" + (r.sub ? "<em>" + esc(r.sub) + "</em>" : "") + "</span>" +
+          (r.count != null ? '<span class="pk-num">' + fmtNum(r.count) + "</span>" : '<span class="pk-tick">✓</span>') + "</button>";
+      }).join("") + "</div></div></div>";
+}
+/* Bộ lọc một lựa chọn. o: { options:[{value,label,sub,color,count,btn}], current, def, allLabel, title, icon, tone, neutral } */
+function fPick(scope, key, o){
+  const def = o.def == null ? "all" : o.def;
+  const cur = hasVal(o.current) ? String(o.current) : def;
+  const curOpt = o.options.find(function(x){ return String(x.value) === cur; });
+  const isDef = cur === String(def);
+  return pickDropdown({
+    title: o.title, icon: o.icon, tone: o.tone,
+    active: !o.neutral && !isDef,
+    label: (isDef && o.allLabel) ? o.allLabel : (curOpt ? (curOpt.btn || curOpt.label) : (o.allLabel || cur)),
+    rootAttr: 'data-pick-root="' + scope + ":" + key + '"',
+    rows: o.options.map(function(x){
+      return { label: x.label, sub: x.sub, color: x.color, count: x.count, active: String(x.value) === cur,
+               attr: 'data-pick="' + scope + ":" + key + ":" + escAttr(x.value) + '"' };
+    })
+  });
+}
+/* Khoảng ngày: một khối thống nhất, thay cho hai ô date rời */
+function dateRange(scope, f, o){
+  o = o || {};
+  const from = o.from != null ? o.from : f.from, to = o.to != null ? o.to : f.to;
+  const lab = o.label || "Từ – đến";
+  return '<div class="date-range" title="' + escAttr(o.title || lab) + '"><span class="dr-label">' + esc(lab) + "</span>" +
+    '<input type="date" data-filter="' + scope + ':from" value="' + escAttr(from) + '" aria-label="' + escAttr(lab) + ' từ ngày">' +
+    '<span class="dr-arrow">→</span>' +
+    '<input type="date" data-filter="' + scope + ':to" value="' + escAttr(to) + '" aria-label="' + escAttr(lab) + ' đến ngày"></div>';
+}
+/* Cụm hành động bên phải thanh lọc: bộ lọc đã lưu · Lưu bộ lọc · Xoá lọc */
+function filterActions(scope, list){
+  return '<div class="tb-actions">' + savedFilterBar(scope, list) + savedFilterButtons(scope) +
+    '<button class="btn small" data-action="clear-filters" data-scope="' + scope + '">Xoá lọc</button></div>';
+}
+
+/* ---- bộ lọc SLA (tab Tickets) ---- */
 const SLA_FILTER_OPTIONS = [
-  { value: "any",  short: "Breached SLA",  label: "Breached SLA",               sub: "Response hoặc Resolution", color: "#c84949" },
-  { value: "fr",   short: "Response",      label: "Breached Response = Yes",    sub: "Gồm cả ticket vi phạm cả hai", color: "#e0892b" },
-  { value: "ttr",  short: "Resolution",    label: "Breached Resolution = Yes",  sub: "Gồm cả ticket vi phạm cả hai", color: "#8a5bd6" },
-  { value: "both", short: "Cả hai",        label: "Vi phạm cả hai",             sub: "Response và Resolution = Yes", color: "#a01f1f" }
+  { value: "any",  btn: "SLA: Breached",        label: "Breached SLA",              sub: "Response hoặc Resolution", color: "#c84949" },
+  { value: "fr",   btn: "SLA: Response",        label: "Breached Response = Yes",   sub: "Gồm cả ticket vi phạm cả hai", color: "#e0892b" },
+  { value: "ttr",  btn: "SLA: Resolution",      label: "Breached Resolution = Yes", sub: "Gồm cả ticket vi phạm cả hai", color: "#8a5bd6" },
+  { value: "both", btn: "SLA: Cả hai",          label: "Vi phạm cả hai",            sub: "Response và Resolution = Yes", color: "#a01f1f" }
 ];
 function slaFilterMatch(item, mode){
   if (!mode || mode === "all") return true;
@@ -3014,25 +3080,12 @@ function slaFilterMatch(item, mode){
   return true;
 }
 function slaFilterSelect(scope, current, list){
-  const cur = current && current !== "all" ? current : "";
-  const curOpt = SLA_FILTER_OPTIONS.find(function(o){ return o.value === cur; });
-  const rows = [{ value: "all", label: "Tất cả ticket", sub: "Không lọc theo SLA", color: "#9aa7b6", count: (list || []).length }]
+  list = list || [];
+  const opts = [{ value: "all", label: "Tất cả ticket", sub: "Không lọc theo SLA", color: "#9aa7b6", count: list.length }]
     .concat(SLA_FILTER_OPTIONS.map(function(o){
-      return Object.assign({}, o, { count: (list || []).filter(function(i){ return slaFilterMatch(i, o.value); }).length });
+      return Object.assign({}, o, { count: list.filter(function(i){ return slaFilterMatch(i, o.value); }).length });
     }));
-  return '<div class="ms sla-ms" data-sla-root="' + scope + '">' +
-    '<button type="button" class="ms-btn sla-btn' + (curOpt ? " on" : "") + '" data-ms-toggle title="Lọc theo Breached SLA" aria-label="Lọc theo Breached SLA">' +
-      '<span class="sla-ico">' + (ICONS.alert || "") + '</span>' +
-      '<span class="ms-label">' + esc(curOpt ? "SLA: " + curOpt.short : "Mọi SLA") + '</span>' +
-      '<span class="ms-caret">▼</span></button>' +
-    '<div class="ms-panel sla-panel"><div class="ms-head"><span>Trạng thái SLA</span></div><div class="ms-list">' +
-      rows.map(function(o){
-        const on = (o.value === "all" && !cur) || o.value === cur;
-        return '<button type="button" class="sla-opt' + (on ? " active" : "") + '" data-sla-pick="' + scope + ':' + o.value + '">' +
-          '<i class="sla-dot" style="background:' + o.color + '"></i>' +
-          '<span class="sla-txt"><b>' + esc(o.label) + '</b><em>' + esc(o.sub) + '</em></span>' +
-          '<span class="sla-num">' + fmtNum(o.count) + '</span></button>';
-      }).join("") + '</div></div></div>';
+  return fPick(scope, "sla", { options: opts, current: current, def: "all", allLabel: "Mọi SLA", title: "Trạng thái SLA", icon: ICONS.alert, tone: "red" });
 }
 function colWidthsOf(scope, count){
   const saved = state.colW && state.colW[scope];
@@ -3238,8 +3291,7 @@ function periodToolbar(scope, f, extra){
     return '<button class="chip' + (f.preset === p.value ? " active" : "") + '" data-period="' + scope + ":" + p.value + '">' + esc(p.label) + "</button>";
   }).join("");
   return '<div class="toolbar"><div class="chips">' + chips + '</div>' +
-    '<label class="field" style="flex-direction:row;align-items:center;gap:7px"><span class="sr">Từ ngày</span><input type="date" data-filter="' + scope + ':from" value="' + escAttr(f.from) + '" title="Từ ngày"></label>' +
-    '<label class="field" style="flex-direction:row;align-items:center;gap:7px"><span class="sr">Đến ngày</span><input type="date" data-filter="' + scope + ':to" value="' + escAttr(f.to) + '" title="Đến ngày"></label>' +
+    dateRange(scope, f, { label: "Khoảng" }) +
     '<div class="toolbar-sep"></div>' +
     ownerFilterSelect(scope, f.owner, "Cả nhóm") +
     projectFilterSelect(scope, allItems(), f.project) +
@@ -3569,12 +3621,8 @@ function renderTickets(){
       typeFilterSelect("tickets", all, f.type, "Mọi issue type", "Issue type") +
       projectFilterSelect("tickets", all, f.project) +
       slaFilterSelect("tickets", f.sla, all) +
-      '<div class="date-range" title="Lọc theo deadline (hoặc ngày tạo nếu ticket không có deadline)"><span class="dr-label">Deadline</span>' +
-        '<input type="date" data-filter="tickets:from" value="' + escAttr(f.from) + '" aria-label="Deadline từ ngày">' +
-        '<span class="dr-arrow">→</span>' +
-        '<input type="date" data-filter="tickets:to" value="' + escAttr(f.to) + '" aria-label="Deadline đến ngày"></div>' +
-      '<div class="toolbar-sep"></div>' + savedFilterBar("tickets", all) + savedFilterButtons("tickets") +
-      '<button class="btn small" data-action="clear-filters" data-scope="tickets">Xoá lọc</button>' +
+      dateRange("tickets", f, { label: "Deadline", title: "Lọc theo deadline (hoặc ngày tạo nếu ticket không có deadline)" }) +
+      filterActions("tickets", all) +
     '</div>' +
     '<div class="toolbar" style="padding:9px 12px">' + presetChips("tickets", presets, f.preset) +
       '<span class="muted" style="margin-left:auto;font-size:11.5px">' + fmtNum(filtered.length) + " / " + fmtNum(all.length) + " ticket</span></div>" +
@@ -4307,13 +4355,16 @@ function renderBacklogs(){
       ownerFilterSelect("backlogs", f.owner) +
       statusFilterSelect("backlogs", all, f.status) +
       priorityFilterSelect("backlogs", all, f.priority) +
-      '<select data-filter="backlogs:group" title="Nhóm theo">' +
-        [["none", "Không nhóm"], ["owner", "Nhóm theo người phụ trách"], ["status", "Nhóm theo trạng thái"], ["priority", "Nhóm theo ưu tiên"], ["deadline", "Nhóm theo deadline"]]
-          .map(function(o){ return '<option value="' + o[0] + '"' + ((f.group || "none") === o[0] ? " selected" : "") + ">" + o[1] + "</option>"; }).join("") + "</select>" +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline từ</span><input type="date" data-filter="backlogs:from" value="' + escAttr(f.from) + '" title="Deadline từ ngày"></label>' +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline đến</span><input type="date" data-filter="backlogs:to" value="' + escAttr(f.to) + '" title="Deadline đến ngày"></label>' +
-      savedFilterBar("backlogs", all) + savedFilterButtons("backlogs") +
-      '<button class="btn small" data-action="clear-filters" data-scope="backlogs">Xoá lọc</button>' +
+      fPick("backlogs", "group", { def: "none", current: f.group, allLabel: "Không nhóm", title: "Nhóm theo", icon: ICONS.overview,
+        options: [
+          { value: "none", label: "Không nhóm" },
+          { value: "owner", label: "Nhóm theo người phụ trách", btn: "Nhóm: Người phụ trách" },
+          { value: "status", label: "Nhóm theo trạng thái", btn: "Nhóm: Trạng thái" },
+          { value: "priority", label: "Nhóm theo ưu tiên", btn: "Nhóm: Ưu tiên" },
+          { value: "deadline", label: "Nhóm theo deadline", btn: "Nhóm: Deadline" }
+        ] }) +
+      dateRange("backlogs", f, { label: "Deadline" }) +
+      filterActions("backlogs", all) +
     "</div>" +
     '<div class="toolbar" style="padding:9px 12px">' + presetChips("backlogs", presets, f.preset) + "</div>" +
     '<div id="listHost">' + backlogListHtml() + "</div>";
@@ -4428,17 +4479,16 @@ function renderTasks(){
       ownerFilterSelect("tasks", f.owner) +
       statusFilterSelect("tasks", all, f.status) +
       priorityFilterSelect("tasks", all, f.priority) +
-      '<select data-filter="tasks:backlog" title="Backlog">' +
-        '<option value="all">Mọi backlog</option><option value="none"' + (f.backlog === "none" ? " selected" : "") + ">Không thuộc backlog</option>" +
-        state.backlogs.map(function(b){ return '<option value="' + escAttr(b.id) + '"' + (f.backlog === b.id ? " selected" : "") + ">" + esc(b.title) + "</option>"; }).join("") + "</select>" +
-      '<select data-filter="tasks:group" title="Nhóm theo">' +
-        [["none", "Không nhóm"], ["owner", "Nhóm theo người thực hiện"]].map(function(o){
-          return '<option value="' + o[0] + '"' + ((f.group || "none") === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
-        }).join("") + "</select>" +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline từ</span><input type="date" data-filter="tasks:from" value="' + escAttr(f.from) + '" title="Deadline từ ngày"></label>' +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline đến</span><input type="date" data-filter="tasks:to" value="' + escAttr(f.to) + '" title="Deadline đến ngày"></label>' +
-      savedFilterBar("tasks", all) + savedFilterButtons("tasks") +
-      '<button class="btn small" data-action="clear-filters" data-scope="tasks">Xoá lọc</button>' +
+      fPick("tasks", "backlog", { def: "all", current: f.backlog, allLabel: "Mọi backlog", title: "Backlog", icon: ICONS.backlog,
+        options: [{ value: "all", label: "Mọi backlog" }, { value: "none", label: "Không thuộc backlog" }]
+          .concat(state.backlogs.map(function(b){ return { value: b.id, label: b.title }; })) }) +
+      fPick("tasks", "group", { def: "none", current: f.group, allLabel: "Không nhóm", title: "Nhóm theo", icon: ICONS.overview,
+        options: [
+          { value: "none", label: "Không nhóm" },
+          { value: "owner", label: "Nhóm theo người thực hiện", btn: "Nhóm: Người thực hiện" }
+        ] }) +
+      dateRange("tasks", f, { label: "Deadline" }) +
+      filterActions("tasks", all) +
     "</div>" +
     '<div class="toolbar" style="padding:9px 12px">' + presetChips("tasks", presets, f.preset) +
       '<span class="muted" style="margin-left:auto;font-size:11.5px">' + fmtNum(taskFiltered().length) + " / " + fmtNum(all.length) + " task</span></div>" +
@@ -4793,16 +4843,18 @@ function renderTimeline(){
     '<div class="toolbar">' +
       '<div class="gantt-zoom"><span class="muted" style="font-size:11.5px">Mức xem</span><div class="seg">' + zoomButtons + "</div></div>" +
       '<div class="toolbar-sep"></div>' +
-      '<select data-filter="timeline:group" title="Nhóm theo">' +
-        [["owner", "Nhóm theo nhân viên"], ["backlog", "Nhóm theo backlog"], ["project", "Nhóm theo project"]].map(function(o){
-          return '<option value="' + o[0] + '"' + (f.group === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
-        }).join("") + "</select>" +
+      fPick("timeline", "group", { def: "owner", current: f.group, neutral: true, title: "Nhóm theo", icon: ICONS.overview,
+        options: [
+          { value: "owner", label: "Nhóm theo nhân viên", btn: "Nhóm: Nhân viên" },
+          { value: "backlog", label: "Nhóm theo backlog", btn: "Nhóm: Backlog" },
+          { value: "project", label: "Nhóm theo project", btn: "Nhóm: Project" }
+        ] }) +
       ownerFilterSelect("timeline", f.owner, "Cả nhóm") +
       statusFilterSelect("timeline", itemsByKind("backlog").concat(itemsByKind("task")), f.status) +
       priorityFilterSelect("timeline", itemsByKind("backlog").concat(itemsByKind("task")), f.priority) +
-      '<select data-filter="timeline:blocked" title="Blocked"><option value="all">Cả blocked</option><option value="only"' + (f.blocked === "only" ? " selected" : "") + ">Chỉ blocked</option></select>" +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Từ</span><input type="date" data-filter="timeline:from" value="' + escAttr(dayKey(f.from)) + '"></label>' +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Đến</span><input type="date" data-filter="timeline:to" value="' + escAttr(dayKey(f.to)) + '"></label>' +
+      fPick("timeline", "blocked", { def: "all", current: f.blocked, allLabel: "Cả blocked", title: "Blocked", icon: ICONS.block,
+        options: [{ value: "all", label: "Cả blocked" }, { value: "only", label: "Chỉ blocked", color: "#c84949" }] }) +
+      dateRange("timeline", f, { label: "Khoảng", from: dayKey(f.from), to: dayKey(f.to) }) +
       '<div class="toolbar-sep"></div>' +
       '<div class="chips">' +
         [["backlog,task", "Backlog + Task"], ["backlog", "Chỉ backlog"], ["task", "Chỉ task"], ["backlog,task,ticket", "Thêm ticket Jira"]].map(function(o){
@@ -4959,12 +5011,9 @@ function renderRisks(){
       ownerFilterSelect("risks", f.owner) +
       projectFilterSelect("risks", all, f.project) +
       priorityFilterSelect("risks", all, f.priority) +
-      '<select data-filter="risks:kind" title="Loại mục"><option value="all">Mọi loại</option>' +
-        [["ticket", "Jira ticket"], ["backlog", "Backlog"], ["task", "Task"]].map(function(o){
-          return '<option value="' + o[0] + '"' + (f.kind === o[0] ? " selected" : "") + ">" + o[1] + "</option>";
-        }).join("") + "</select>" +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Từ</span><input type="date" data-filter="risks:from" value="' + escAttr(f.from) + '"></label>' +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Đến</span><input type="date" data-filter="risks:to" value="' + escAttr(f.to) + '"></label>' +
+      fPick("risks", "kind", { def: "all", current: f.kind, allLabel: "Mọi loại", title: "Loại mục", icon: ICONS.filter,
+        options: [{ value: "all", label: "Mọi loại" }, { value: "ticket", label: "Jira ticket" }, { value: "backlog", label: "Backlog" }, { value: "task", label: "Task" }] }) +
+      dateRange("risks", f, { label: "Khoảng" }) +
     "</div>" +
     '<div class="notice">Mọi cảnh báo đều dựa trên điều kiện xác định rõ bên dưới, tính trực tiếp từ dữ liệu thật trong workspace. Ticket Jira chỉ được đọc — không có cảnh báo nào dựa trên suy đoán lịch sử Jira.</div>' +
     (activeGroups.length ? activeGroups.map(function(g){
@@ -5043,8 +5092,7 @@ function renderActivity(){
         (function(){ const n = { none: "Hệ thống / không xác định" }; state.directory.forEach(function(p){ n[p.user_id] = p.full_name || p.email; }); return n; })()) +
       fMulti("activity", "action", LOG_ACTIONS.map(function(o){ return o[0]; }), f.action, "Mọi hành động", "Hành động",
         (function(){ const n = {}; LOG_ACTIONS.forEach(function(o){ n[o[0]] = o[1]; }); return n; })()) +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Từ</span><input type="date" data-filter="activity:from" value="' + escAttr(f.from) + '"></label>' +
-      '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span>Đến</span><input type="date" data-filter="activity:to" value="' + escAttr(f.to) + '"></label>' +
+      dateRange("activity", f, { label: "Khoảng" }) +
     "</div>" +
     '<div class="notice">Đây là <b>lịch sử nội bộ</b> của backlog/task trong workspace, được ghi tự động bằng trigger tại database nên không thể bị bỏ qua khi thao tác từ giao diện. Đây không phải changelog của Jira: Jira Desk không suy diễn lịch sử Jira từ trạng thái hiện tại.</div>' +
     '<div class="panel"><div class="panel-head"><div><div class="panel-title">Dòng thời gian thay đổi</div>' +
@@ -5212,8 +5260,8 @@ function renderReports(){
       statCard({ label: "Ngày blocked hiện tại", num: d.blockedDays, note: d.blockedNow.length + " mục đang blocked", tone: "red", icon: "block" }) +
     "</div>" +
     periodToolbar("reports", f,
-      '<select data-filter="reports:period" title="Độ chi tiết"><option value="week"' + (f.period === "week" ? " selected" : "") + ">Theo tuần</option>" +
-      '<option value="month"' + (f.period === "month" ? " selected" : "") + ">Theo tháng</option></select>") +
+      fPick("reports", "period", { def: "week", current: f.period, neutral: true, title: "Độ chi tiết", icon: ICONS.trend,
+        options: [{ value: "week", label: "Theo tuần", btn: "Chi tiết: Theo tuần" }, { value: "month", label: "Theo tháng", btn: "Chi tiết: Theo tháng" }] })) +
 
     reportBlock("tickets", REPORT_META.tickets, "Đếm theo ngày tạo và ngày resolve của nguồn Jira trong khoảng đã chọn",
       chartColumns(d.labels, [
@@ -5672,15 +5720,16 @@ document.addEventListener("change", function(event){
   msRepaint();
 });
 document.addEventListener("click", function(event){
-  const slaBtn = event.target.closest("[data-sla-pick]");
-  if (slaBtn) {
-    const bits = String(slaBtn.dataset.slaPick).split(":");
-    const scope = bits[0], val = bits[1];
-    if (state.filters[scope]) { state.filters[scope].sla = val; state.page[scope] = 1; }
+  const pickBtn = event.target.closest("[data-pick]");
+  if (pickBtn) {
+    const raw = String(pickBtn.dataset.pick), i1 = raw.indexOf(":"), i2 = raw.indexOf(":", i1 + 1);
+    const scope = raw.slice(0, i1), key = raw.slice(i1 + 1, i2), val = raw.slice(i2 + 1);
     closeMsPanels(null);
-    renderShell();
+    onFilterChange({ dataset: { filter: scope + ":" + key }, value: val }, false);
     return;
   }
+  const savedBtn = event.target.closest("[data-saved-pick]");
+  if (savedBtn) { closeMsPanels(null); applySavedFilter(savedBtn.dataset.savedPick); return; }
   const toggleBtn = event.target.closest("[data-ms-toggle]");
   if (toggleBtn) {
     const root = toggleBtn.closest(".ms");
