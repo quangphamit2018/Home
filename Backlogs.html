@@ -2575,9 +2575,10 @@ function normBacklog(row){
   const jiraStatus = jiraStatusOf(row.jira_key);
   /* Ưu tiên: lấy đúng Priority của Jira ticket nếu có gắn Jira key */
   const priority = jiraPriorityOf(row.jira_key) || row.priority || "medium";
-  /* Backlog gắn Jira key → hiển thị đúng trạng thái trên Jira.
-     Giữ trạng thái nội bộ khi backlog đã Blocked / Archived / Done do người dùng đặt. */
-  const keepInternal = ["blocked", "archived", "done"].indexOf(norm(internalStatus)) >= 0;
+  /* Backlog gắn Jira key → hiển thị đúng trạng thái trên Jira (Resolved, Closed, In Progress...).
+     Chỉ giữ trạng thái nội bộ khi backlog được đặt Blocked / Archived.
+     "Done" nội bộ KHÔNG còn đè lên Jira; nếu không tìm thấy ticket Jira thì vẫn dùng trạng thái nội bộ. */
+  const keepInternal = ["blocked", "archived"].indexOf(norm(internalStatus)) >= 0;
   const status = (jiraStatus && !keepInternal) ? jiraStatus : internalStatus;
   const target = row.target_date || row.due_date || null;
   const progress = hasVal(row.progress) ? clamp(safeNum(row.progress), 0, 100) : null;
@@ -3789,7 +3790,7 @@ function openItemDrawer(kind, id){
       '<div class="section-label">Hành động</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
         '<button class="btn primary" data-action="edit-' + kind + '" data-id="' + escAttr(item.id) + '">' + icon("edit") + "Sửa</button>" +
-        (item.statusGroup === "done" ? "" : '<button class="btn" data-action="quick-done" data-kind="' + kind + '" data-id="' + escAttr(item.id) + '">' + icon("check") + "Đánh dấu hoàn thành</button>") +
+        ((item.statusGroup === "done" || (kind === "backlog" && item.fromJira)) ? "" : '<button class="btn" data-action="quick-done" data-kind="' + kind + '" data-id="' + escAttr(item.id) + '">' + icon("check") + "Đánh dấu hoàn thành</button>") +
         '<button class="btn danger" data-action="delete-' + kind + '" data-id="' + escAttr(item.id) + '">' + icon("trash") + "Xoá</button>" +
       "</div>" +
       '<div class="section-label">Lịch sử thay đổi</div><div id="drawerHistory">' + loadingBox(3) + "</div>";
@@ -3857,7 +3858,7 @@ function openRecord(kind, id, preset){
   if (kind === "backlog") {
     f += formField("title", "Tên backlog", "text", existing.title, null, true, "Ví dụ: cải thiện quy trình onboarding");
     f += formField("owner_id", "Người phụ trách", "select", existing.owner_id || "", directoryOptions(true, "Chưa giao"), false, "", "Nên gán owner rõ ràng cho mọi backlog");
-    f += formField("status", "Trạng thái", "select", existing.status || "planned", statusOptions("backlog", existing.status));
+    f += formField("status", "Trạng thái", "select", existing.status || "planned", statusOptions("backlog", existing.status), false, "", "Backlog gắn Jira key sẽ hiển thị theo trạng thái ticket Jira (trừ Blocked / Archived)");
     f += formField("priority", "Ưu tiên", "select", existing.priority || "medium", [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, { value: "urgent", label: "Urgent" }]);
     f += formField("start_date", "Ngày bắt đầu", "date", existing.start_date);
     f += formField("target_date", "Deadline (target)", "date", existing.target_date || existing.due_date);
