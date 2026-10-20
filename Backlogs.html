@@ -2901,7 +2901,7 @@ function presetChips(scope, presets, current){
 function filterIsActive(scope){
   const f = state.filters[scope];
   if (!f) return false;
-  return ["q", "status", "priority", "type", "project", "owner", "assignee", "backlog", "from", "to"].some(function(k){
+  return ["q", "status", "priority", "type", "project", "owner", "assignee", "backlog", "sla", "from", "to"].some(function(k){
     const v = f[k];
     if (Array.isArray(v)) return v.length > 0;
     return !!v && v !== "all";
@@ -2973,6 +2973,30 @@ function isSlaBreached(item){
   if (!item || !item.x) return false;
   const x = item.x;
   return norm(x.frBreached) === "yes" || norm(x.ttrBreached) === "yes";
+}
+/* Bộ lọc SLA (chỉ tab Tickets): any = Response hoặc Resolution; fr = Response=Yes; ttr = Resolution=Yes; both = cả hai = Yes */
+const SLA_FILTER_OPTIONS = [
+  { value: "any", label: "Breached SLA (Response hoặc Resolution)" },
+  { value: "fr", label: "Breached Response = Yes" },
+  { value: "ttr", label: "Breached Resolution = Yes" },
+  { value: "both", label: "Cả Response và Resolution = Yes" }
+];
+function slaFilterMatch(item, mode){
+  if (!mode || mode === "all") return true;
+  const x = item && item.x;
+  if (!x) return false;
+  const fr = norm(x.frBreached) === "yes", ttr = norm(x.ttrBreached) === "yes";
+  if (mode === "any") return fr || ttr;
+  if (mode === "fr") return fr;
+  if (mode === "ttr") return ttr;
+  if (mode === "both") return fr && ttr;
+  return true;
+}
+function slaFilterSelect(scope, current){
+  return fSelect(scope, "sla",
+    '<option value="all">Mọi trạng thái SLA</option>' + SLA_FILTER_OPTIONS.map(function(o){
+      return '<option value="' + o.value + '"' + (String(current) === o.value ? " selected" : "") + ">" + esc(o.label) + "</option>";
+    }).join(""), "Lọc theo Breached SLA");
 }
 function colWidthsOf(scope, count){
   const saved = state.colW && state.colW[scope];
@@ -3407,6 +3431,7 @@ function ticketFiltered(){
   const f = state.filters.tickets;
   let list = withBlockedSince(itemsByKind("ticket"));
   if (msArr(f.assignee).length) list = list.filter(function(i){ return msHas(f.assignee, i.ownerName); });
+  if (f.sla && f.sla !== "all") list = list.filter(function(i){ return slaFilterMatch(i, f.sla); });
   return applyListFilters(list, f);
 }
 function ticketListHtml(){
@@ -3507,6 +3532,7 @@ function renderTickets(){
       ticketAssigneeOptions(f) +
       typeFilterSelect("tickets", all, f.type, "Mọi issue type", "Issue type") +
       projectFilterSelect("tickets", all, f.project) +
+      slaFilterSelect("tickets", f.sla) +
       '<div class="toolbar-sep"></div><label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline từ</span><input type="date" data-filter="tickets:from" value="' + escAttr(f.from) + '" title="Từ ngày (deadline, hoặc ngày tạo nếu ticket không có deadline)"></label>' +
       '<label class="field" style="flex-direction:row;gap:7px;align-items:center"><span class="sr">Deadline đến</span><input type="date" data-filter="tickets:to" value="' + escAttr(f.to) + '" title="Đến ngày (deadline, hoặc ngày tạo nếu ticket không có deadline)"></label>' +
       '<div class="toolbar-sep"></div>' + savedFilterBar("tickets", all) + savedFilterButtons("tickets") +
