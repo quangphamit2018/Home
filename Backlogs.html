@@ -1377,7 +1377,7 @@ table.bl-table{width:100%;min-width:1180px;table-layout:auto}
 <div class="toast-stack" id="toastStack" popover="manual" aria-live="polite"></div>
 
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.117.2";
 /* ============================================================================
    1. CẤU HÌNH — điền trực tiếp tại đây, không có màn hình Settings, không localStorage.
    Chỉ dùng anon / publishable key. TUYỆT ĐỐI không dùng service_role key.
@@ -1749,7 +1749,7 @@ const state = {
   page: { tickets: 1, backlogs: 1, tasks: 1 },
   sort: {
     tickets: { f: "created", d: "desc" },
-    backlogs: { f: "target", d: "asc" },
+    backlogs: { f: "due", d: "asc" },
     tasks: { f: "due", d: "asc" },
     workload: { f: "score", d: "desc" },
     member: { f: "due", d: "asc" },
@@ -2606,7 +2606,7 @@ function jiraInfoOf(key){
     _jsMap = {};
     state.tickets.forEach(function(t){
       const k = norm(tf(t, "key"));
-      if (k) _jsMap[k] = { status: tf(t, "status") || "", priority: tf(t, "priority") || "" };
+      if (k) _jsMap[k] = { status: tf(t, "status") || "", priority: tf(t, "priority") || "", resolved: tf(t, "resolved") || "" };
     });
     _jsSrc = state.tickets; _jsLen = state.tickets.length;
   }
@@ -2614,6 +2614,7 @@ function jiraInfoOf(key){
 }
 function jiraStatusOf(key){ const i = jiraInfoOf(key); return i ? i.status : ""; }
 function jiraPriorityOf(key){ const i = jiraInfoOf(key); return i ? i.priority : ""; }
+function jiraResolvedOf(key){ const i = jiraInfoOf(key); return i ? i.resolved : ""; }
 function normBacklog(row){
   const internalStatus = row.status || "planned";
   const jiraStatus = jiraStatusOf(row.jira_key);
@@ -2648,10 +2649,10 @@ function normBacklog(row){
     start: row.start_date || null,
     due: target,
     actualStart: row.actual_start_date || null,
-    actualEnd: row.completed_date || (statusGroup(status) === "done" ? row.updated_at : null),
+    actualEnd: row.completed_date || (statusGroup(status) === "done" ? (jiraResolvedOf(row.jira_key) || row.updated_at) : null),
     created: row.created_at,
     updated: row.updated_at || row.created_at,
-    progress: progress,
+    progress: statusGroup(status) === "done" ? 100 : progress,
     blocked: norm(status) === "blocked",
     blockedReason: row.blocked_reason || "",
     blockedSince: null,
@@ -2858,7 +2859,7 @@ function sortValue(item, key){
     case "ttrDeadline": return item.x ? stampMs(item.x.ttrDeadline) : null;
     case "frPct": { const i = slaInfoOf(item.x, "fr"); return i ? i.pct : null; }
     case "ttrPct": { const i = slaInfoOf(item.x, "ttr"); return i ? i.pct : null; }
-    case "statusName": return String(item.status || "").toLowerCase();
+    case "statusName": return ({ blocked: 0, progress: 1, todo: 2, other: 3, done: 4 })[item.statusGroup];
     case "reporter": return String(item.reporter || "").toLowerCase();
     case "description": return String(item.description || "").toLowerCase();
     case "category": case "group": case "level": case "cause": case "resolutionCf":
@@ -4095,6 +4096,7 @@ function validatePayload(kind, payload){
     payload.jira_key = hit.code;
   }
   if (!payload.title) payload.title = kind === "backlog" ? "(Backlog chưa đặt tên)" : "(Task chưa đặt tên)";
+  if (kind === "backlog" && payload.start_date && payload.target_date && payload.target_date < payload.start_date) toast("Deadline đang sớm hơn ngày bắt đầu.", "info");
   if (kind === "backlog" && payload.progress != null) payload.progress = Math.min(100, Math.max(0, payload.progress));
   return "";
 }
@@ -4273,8 +4275,8 @@ function backlogGroupKey(item, mode){
     const left = daysLeft(item);
     if (item.statusGroup === "done") return "done";
     if (left < 0) return "overdue";
-    if (left <= 7) return "week";
-    if (left <= 30) return "month";
+    if (left <= THRESHOLDS.dueSoon) return "week";
+    if (left <= THRESHOLDS.dueSoonWide) return "month";
     return "later";
   }
   return "all";
@@ -4311,7 +4313,11 @@ function backlogRowCols(){
       } },
     { label: "Deadline", sort: "due", render: function(i){
         if (!i.due) return '<span class="badge amber">Thiếu deadline</span>';
-        if (i.statusGroup === "done") return '<span class="bl-due green">' + esc(fmtDay(i.due)) + '</span><span class="cell-sub">Hoàn thành ' + esc(fmtDay(i.actualEnd)) + "</span>";
+        if (i.statusGroup === "done") {
+          const late = i.actualEnd ? diffDays(i.due, i.actualEnd) : null;
+          return '<span class="bl-due green">' + esc(fmtDay(i.due)) + '</span><span class="cell-sub">Hoàn thành ' + esc(fmtDay(i.actualEnd)) + "</span>" +
+            (late > 0 ? '<span class="badge red">Trễ ' + late + ' ngày</span>' : "");
+        }
         const left = daysLeft(i);
         const tone = left < 0 ? "red" : left <= THRESHOLDS.dueSoon ? "amber" : "";
         return '<span class="bl-due ' + tone + '">' + esc(fmtDay(i.due)) + "</span>";
