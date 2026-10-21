@@ -1249,6 +1249,7 @@ table.bl-table{width:100%;min-width:1180px;table-layout:auto}
 tr:where([data-status]:not([data-status="done"])) td{transition:background-color .18s ease}
 tr:where([data-status]:not([data-status="done"])):hover td{background-color:rgba(53,110,230,.05)}
 tr[data-status="done"] td{transition:opacity .18s ease}
+.toolbar:focus-within,.toolbar:has(.ms-panel:not([hidden])){position:relative;z-index:40}
 .chip{transition:background-color .2s,border-color .2s,color .2s,box-shadow .2s,transform .15s}
 .chip:active{transform:scale(.96)}
 .chip.active{box-shadow:0 8px 16px -8px rgba(16,26,40,.55)}
@@ -1257,19 +1258,19 @@ tr[data-status="done"] td{transition:opacity .18s ease}
   @keyframes jdRow{from{opacity:0;transform:translateY(6px)}}
   @keyframes jdFill{from{transform:scaleX(0)}}
   @keyframes jdPulse{0%,100%{box-shadow:0 0 0 0 rgba(200,73,73,.32)}60%{box-shadow:0 0 0 6px rgba(200,73,73,0)}}
-  #pageContent>*{animation:jdUp .42s cubic-bezier(.2,.7,.2,1) both}
+  #pageContent>*{animation:jdUp .42s cubic-bezier(.2,.7,.2,1) backwards}
   #pageContent>*:nth-child(2){animation-delay:.05s}
   #pageContent>*:nth-child(3){animation-delay:.1s}
   #pageContent>*:nth-child(4){animation-delay:.15s}
   #pageContent>*:nth-child(n+5){animation-delay:.2s}
-  table.bl-table tbody tr{animation:jdRow .34s cubic-bezier(.2,.7,.2,1) both}
+  table.bl-table tbody tr{animation:jdRow .34s cubic-bezier(.2,.7,.2,1) backwards}
   table.bl-table tbody tr:nth-child(2){animation-delay:.03s}
   table.bl-table tbody tr:nth-child(3){animation-delay:.06s}
   table.bl-table tbody tr:nth-child(4){animation-delay:.09s}
   table.bl-table tbody tr:nth-child(5){animation-delay:.12s}
   table.bl-table tbody tr:nth-child(6){animation-delay:.15s}
   table.bl-table tbody tr:nth-child(n+7){animation-delay:.18s}
-  .progress i{animation:jdFill .8s cubic-bezier(.2,.8,.2,1) both}
+  .progress i{animation:jdFill .8s cubic-bezier(.2,.8,.2,1) backwards}
   tr[data-alert="1"] .badge.red{animation:jdPulse 2.4s ease-out infinite}
 }
 </style>
