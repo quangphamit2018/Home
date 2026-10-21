@@ -638,6 +638,13 @@ tr[data-status="blocked"] td.cell-main{border-left-color:#c84949}
 tr[data-status="done"] td.cell-main{border-left-color:#168162}
 tr[data-status="done"] .primary-cell{color:#6c7783;font-weight:600}
 tr[data-status="done"] .cell-sub{color:#8a94a0}
+/* Làm nổi bật backlog chưa Done / Resolved */
+tr:where([data-status]:not([data-status="done"])) td{background-image:linear-gradient(90deg,rgba(53,110,230,.08),transparent 60%)}
+tr:where([data-status]:not([data-status="done"])) .primary-cell{color:#0f1b2d;font-weight:700}
+tr:where([data-status]:not([data-status="done"])) td.cell-main{border-left-width:4px}
+tr[data-status="done"] td{opacity:.65;transition:opacity .15s}
+tr[data-status="done"]:hover td{opacity:1}
+@media(max-width:760px){table.responsive tbody tr:where([data-status]:not([data-status="done"])){background:linear-gradient(180deg,#f5f8ff,#fff)}}
 tr[data-alert="1"] td{background-image:linear-gradient(90deg,rgba(200,73,73,.07),transparent 58%)}
 tr[data-alert="1"] td.cell-main{border-left-color:#c84949}
 .table-wrap.tall{max-height:70vh;scrollbar-color:#c3ceda transparent}
