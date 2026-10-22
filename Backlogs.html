@@ -1249,7 +1249,8 @@ table.bl-table{width:100%;min-width:1180px;table-layout:auto}
 tr:where([data-status]:not([data-status="done"])) td{transition:background-color .18s ease}
 tr:where([data-status]:not([data-status="done"])):hover td{background-color:rgba(53,110,230,.05)}
 tr[data-status="done"] td{transition:opacity .18s ease}
-.toolbar:focus-within,.toolbar:has(.ms-panel:not([hidden])){position:relative;z-index:40}
+.toolbar:focus-within,.toolbar:has(.ms.open){position:relative;z-index:7}
+body:has(.drawer.open) .toolbar{z-index:auto}
 .chip{transition:background-color .2s,border-color .2s,color .2s,box-shadow .2s,transform .15s}
 .chip:active{transform:scale(.96)}
 .chip.active{box-shadow:0 8px 16px -8px rgba(16,26,40,.55)}
@@ -3739,6 +3740,8 @@ function openDrawer(kicker, title, body){
   $("#drawerKicker").textContent = kicker || "";
   $("#drawerTitle").textContent = title || "";
   $("#drawerBody").innerHTML = body || "";
+  if (document.activeElement && document.activeElement !== document.body && !$("#drawer").contains(document.activeElement)) document.activeElement.blur();
+  document.querySelectorAll(".ms.open").forEach(function(m){ m.classList.remove("open"); });
   $("#drawer").classList.add("open");
   $("#drawerScrim").classList.add("open");
   $("#drawer").setAttribute("aria-hidden", "false");
