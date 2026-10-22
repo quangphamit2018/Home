@@ -4095,8 +4095,8 @@ function jkApply(input){
   });
   /* Trạng thái (task + backlog) và Ưu tiên (backlog): khi đã chọn Jira key thì lấy nguyên từ ticket Jira và khoá,
      hiển thị đúng chữ của Jira (vd. "Closed", "Settled", "Highest"). Bỏ Jira key → khôi phục lựa chọn ban đầu. */
-  const fields = [["status", t && t.status ? (map[t.statusGroup] || norm(t.status)) : "", t ? t.status : ""]];
-  if (kind === "backlog") fields.push(["priority", t && t.priority && t.priority !== "—" ? (prioMap[t.prio] || norm(t.priority)) : "", t ? t.priority : ""]);
+  const fields = [["status", t && t.status ? (map[t.statusGroup] || "in_progress") : "", t ? t.status : ""]];
+  if (kind === "backlog") fields.push(["priority", t && t.priority && t.priority !== "—" ? (prioMap[t.prio] || "medium") : "", t ? t.priority : ""]);
   fields.forEach(function(p){
     const el = form.querySelector('[name="' + p[0] + '"]'); if (!el) return;
     const on = !!p[1];
