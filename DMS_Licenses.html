@@ -2957,7 +2957,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       $("#prd-status").innerHTML = m ? `<span class="prd-live"></span>Real-time · cập nhật ${escapeHtml(prdTime(m.synced_at))}` : "";
       if (PRD.err) { $("#prd-chips").innerHTML = ""; el.innerHTML = `<div class="empty"><strong>Không đọc được dữ liệu Product</strong>${escapeHtml(PRD.err)}<br>Kiểm tra đã chạy file SQL tạo bảng <b>product_sync</b> trên Supabase chưa.</div>`; return; }
       if (PRD.loading && !PRD.loaded) { el.innerHTML = `<div class="empty"><strong>Đang tải dữ liệu Product…</strong></div>`; return; }
-      if (!PRD.metas.length) { $("#prd-chips").innerHTML = ""; el.innerHTML = `<div class="empty"><strong>Chưa có dữ liệu</strong>Flow Power Automate chưa đồng bộ lần nào. Chạy flow một lần, dữ liệu sẽ tự hiện ở đây.</div>`; return; }
+      if (!PRD.metas.length) { $("#prd-chips").innerHTML = ""; el.innerHTML = `<div class="empty"><strong>Chưa có dữ liệu</strong>Chưa có ai tải dữ liệu lên. Bấm "Tải Excel lên" và chọn file MDM_Product data promotion.xlsx.</div>`; return; }
       const ix = prdView(), pages = Math.max(1, Math.ceil(ix.length / PRD.size)); PRD.page = Math.min(PRD.page, pages);
       const from = (PRD.page - 1) * PRD.size, sl = ix.slice(from, from + PRD.size);
       $("#prd-chips").innerHTML = `<span class="adj-chip ok">${nf(ix.length)}${ix.length !== PRD.rows.length ? " / " + nf(PRD.rows.length) : ""} dòng</span><span class="adj-chip">${PRD.cols.length} cột</span>`;
@@ -2973,6 +2973,26 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data, { header: PRD.cols }), PRD.sheet.slice(0, 31) || "Product");
       const fn = `product_${PRD.sheet}_${new Date().toISOString().slice(0, 10)}.xlsx`; XLSX.writeFile(wb, fn); toast(`Đã xuất "${fn}" (${nf(data.length)} dòng).`, "success");
     }
+    async function prdUpload(file) {
+      if (!file) return;
+      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
+      const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T00:00:00`;
+      let sheets = [];
+      try {
+        const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+        wb.SheetNames.forEach(n => {
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], { defval: null }).map(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v instanceof Date ? iso(v) : typeof v === "string" ? v.trim() : v]))).filter(r => Object.values(r).some(v => v !== null && v !== ""));
+          if (rows.length) sheets.push({ name: wb.SheetNames.length === 1 ? "Product" : n, cols: Object.keys(rows[0]), rows });
+        });
+      } catch (err) { return toast("Không đọc được file Excel: " + err.message, "error"); }
+      if (!sheets.length) return toast("File không có dữ liệu (dòng 1 phải là tiêu đề cột).", "error");
+      if (!(await confirmDialog({ title: "Cập nhật dữ liệu Product?", message: sheets.map(s => `Sheet "${s.name}": thay toàn bộ bằng ${nf(s.rows.length)} dòng, ${s.cols.length} cột`).join("\n"), confirmText: "Cập nhật" }))) return;
+      for (const s of sheets) {
+        const r = await state.supabase.rpc("replace_product_sheet_user", { p_sheet: s.name, p_columns: s.cols, p_rows: s.rows });
+        if (r.error) return toast("Cập nhật thất bại: " + r.error.message, "error");
+      }
+      PRD.sheet = sheets[0].name; PRD.loaded = false; toast(`Đã cập nhật ${sheets.map(s => nf(s.rows.length)).join(" + ")} dòng.`, "success"); prdLoad();
+    }
     function prdEnsure() {
       if (!PRD.bound) {
         PRD.bound = true;
@@ -2984,9 +3004,10 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           else if (pg) { PRD.page += Number(pg.dataset.prdPg); prdDraw(); }
           else if (e.target.closest("[data-prd-reload]")) prdLoad();
           else if (e.target.closest("[data-prd-export]")) prdExport();
+          else if (e.target.closest("[data-prd-upload]")) $("#prd-file").click();
         });
         document.addEventListener("input", e => { if (e.target.id !== "prd-q") return; clearTimeout(PRD.qt); PRD.qt = setTimeout(() => { PRD.q = e.target.value; PRD.page = 1; prdDraw(); }, 150); });
-        document.addEventListener("change", e => { if (e.target.id === "prd-size") { PRD.size = Number(e.target.value); PRD.page = 1; prdDraw(); } });
+        document.addEventListener("change", e => { if (e.target.id === "prd-file") { const f = e.target.files[0]; e.target.value = ""; prdUpload(f); } if (e.target.id === "prd-size") { PRD.size = Number(e.target.value); PRD.page = 1; prdDraw(); } });
       }
       if (state.supabase && !PRD.ch) PRD.ch = state.supabase.channel(`${APP_CHANNEL_PREFIX}:product`).on("postgres_changes", { event: "*", schema: "public", table: "product_sync_meta" }, () => prdLoad(true).then(() => { if (state.tab === "product") toast("Dữ liệu Product vừa được cập nhật.", "success"); })).subscribe();
       if (!PRD.loaded && !PRD.loading) prdLoad(); else setTimeout(prdDraw, 0);
@@ -2995,8 +3016,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     function renderProduct() {
       prdEnsure();
       return `<section class="panel tl-panel"><style>.prd-status{display:flex;align-items:center;gap:8px;font-size:12px;color:#6b5555}.prd-live{width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.15);animation:prdp 2s infinite}@keyframes prdp{50%{box-shadow:0 0 0 7px rgba(22,163,74,0)}}.prd-sheets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.prd-sheets:empty{display:none}.prd-sh{border:1px solid #dcc9c9;background:#fff;border-radius:999px;padding:6px 14px;font:600 12.5px/1 inherit;cursor:pointer;color:#555}.prd-sh em{font-style:normal;opacity:.6;margin-left:4px}.prd-sh.on{background:#b91c1c;border-color:#b91c1c;color:#fff}.prd-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.prd-bar input{flex:1;min-width:220px;height:38px;border:1px solid #dcc9c9;border-radius:10px;padding:0 12px;font-size:13px}#prd-chips{display:flex;gap:6px}.prd-wrap{overflow:auto;max-height:62vh;border:1px solid #ecdcdc;border-radius:12px}.prd-t{border-collapse:collapse;width:100%;font-size:12.5px}.prd-t th{position:sticky;top:0;background:#fbeeee;color:#8a1c1c;text-align:left;padding:9px 12px;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:1px solid #ecdcdc;font-weight:700}.prd-t th i{font-style:normal;font-size:9px;margin-left:5px}.prd-t th.on{background:#f7d9d9}.prd-t td{padding:7px 12px;border-bottom:1px solid #f4eaea;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}.prd-t tbody tr:hover{background:#fdf6f6}.prd-t .n{color:#aa9;text-align:center;width:46px;cursor:default}.prd-none{text-align:center;color:#999;padding:28px!important}.prd-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:#6b5555}.prd-foot>div{display:flex;gap:8px;align-items:center}.prd-foot select{height:32px;border:1px solid #dcc9c9;border-radius:8px;padding:0 8px}</style>
-        <div class="panel-head"><div><h2>Product</h2><p>Dữ liệu từ file Excel MDM_Product data promotion, tự đồng bộ từ SharePoint qua Power Automate.</p></div><div class="prd-status" id="prd-status"></div></div>
-        <div class="panel-body"><div class="prd-sheets" id="prd-sheets"></div><div class="prd-bar"><input id="prd-q" placeholder="Tìm theo bất kỳ cột nào (nhiều từ khóa = khớp tất cả)…" value="${escapeHtml(PRD.q)}" autocomplete="off"><div id="prd-chips"></div><button type="button" class="btn btn-plain" data-prd-reload>↻ Tải lại</button><button type="button" class="btn btn-plain" data-prd-export>⬇ Xuất Excel</button></div><div id="prd-body"></div></div></section>`;
+        <div class="panel-head"><div><h2>Product</h2><p>Dữ liệu từ file Excel MDM_Product data promotion. Senior-member / Super-admin tải file mới lên để cập nhật cho mọi người.</p></div><div class="prd-status" id="prd-status"></div></div>
+        <div class="panel-body"><div class="prd-sheets" id="prd-sheets"></div><div class="prd-bar"><input id="prd-q" placeholder="Tìm theo bất kỳ cột nào (nhiều từ khóa = khớp tất cả)…" value="${escapeHtml(PRD.q)}" autocomplete="off"><div id="prd-chips"></div><button type="button" class="btn btn-plain" data-prd-reload>↻ Tải lại</button>${canEdit() ? `<button type="button" class="btn btn-primary" data-prd-upload>⬆ Tải Excel lên</button><input type="file" id="prd-file" accept=".xlsx,.xlsm" hidden>` : ""}<button type="button" class="btn btn-plain" data-prd-export>⬇ Xuất Excel</button></div><div id="prd-body"></div></div></section>`;
     }
 
     function renderPage() {
