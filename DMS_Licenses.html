@@ -4365,34 +4365,63 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
 
     /* ---- Cài đặt giá cho SKU: lưới ItemCode + giá, xuất XLSX đúng mẫu 4_pricingcontrol.xlsx (sheet "in") ---- */
     const PRC_COLS = ["PricingCode", "PricingDescription", "ProductHierarchyCode", "ItemCode", "EffectiveDate", "DebitPrice", "CreditPrice", "DepositPrice", "DamagePrice", "MRP", "SalesTaxPercentage", "ActiveIndicator", "TerritoryHierarchy", "ItemTypeCode"];
+    const PRC_PRESET = [["VN10VN11", ["HCGT", "HCHT"]], ["VN10VN12", ["HNGT", "HNHT"]], ["VN10VN13", ["CPGT", "CPHT", "CPHT1"]], ["VN10VN15", ["MKGT", "MKHT", "MKHT1"]], ["VN10VN16", ["NEGT", "NEHT", "NEHT1"]], ["VN10VN17", ["SPGT", "SPHT", "SPHT1"]], ["VN10VN19", ["NWGT", "NWHT", "NWHT1"]]];
     const prcBlank = () => ({ item: "", qty: "" });
-    const mdmPrc = { code: "Solar", desc: "Solar", date: adjToday(), terr: "VN10VN11", active: "1", type: "1", rows: [prcBlank()] };
+    const mdmPrc = { date: adjToday(), active: "1", type: "1", ovr: false, newCode: "", newTerr: "", groups: PRC_PRESET.map(([terr, cs]) => ({ terr, codes: cs.map(c => ({ c, on: false })) })), rows: [prcBlank()] };
+    const prcShort = t => t.replace(/^VN10/, "");
+    const prcTargets = () => { const o = []; mdmPrc.groups.forEach(g => g.codes.forEach(x => { if (x.on) o.push({ code: x.c, terr: g.terr }); })); return o; };
+    const prcOvCols = () => { if (!mdmPrc.ovr) return []; const s = []; prcTargets().forEach(t => { if (!s.includes(t.terr)) s.push(t.terr); }); return s; };
     function prcDateSerial(s) { // dd/mm/yyyy -> số serial Excel; null nếu ngày không tồn tại
       const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s.trim()); if (!m) return null;
       const d = Date.UTC(+m[3], +m[2] - 1, +m[1]), c = new Date(d);
       if (c.getUTCDate() !== +m[1] || c.getUTCMonth() !== +m[2] - 1) return null;
       return d / 86400000 + 25569;
     }
+    function prcNum(s) { // null = trống, NaN = sai/mơ hồ (vd 15.000 hoặc 3083,33 -> bắt người dùng sửa, không tự đoán)
+      s = String(s == null ? "" : s).trim().replace(/[\s₫]|đ|vnd/gi, "");
+      if (!s) return null;
+      if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, "");
+      if (!/^\d+(\.\d+)?$/.test(s) || /^\d{1,3}(\.\d{3})+$/.test(s)) return NaN;
+      const n = Number(s); return n > 0 ? n : NaN;
+    }
     function prcParse() {
-      const out = [], bad = {}, cfgBad = {}, seen = {}, dup = {};
+      const tg = prcTargets(), ov = prcOvCols(), terrs = [...new Set(tg.map(t => t.terr))], cfgBad = {}, bad = {}, dup = {}, items = [], seen = {};
       const serial = prcDateSerial(mdmPrc.date);
       if (serial == null) cfgBad.date = 1;
-      ["code", "desc", "terr", "active", "type"].forEach(k => { if (!mdmPrc[k].trim()) cfgBad[k] = 1; });
-      let total = 0;
+      ["active", "type"].forEach(k => { if (!mdmPrc[k].trim()) cfgBad[k] = 1; });
+      if (!tg.length) cfgBad.tg = 1;
+      let merged = 0, low = 0;
       mdmPrc.rows.forEach((r, i) => {
-        const item = r.item.trim(), qty = r.qty.trim().replace(/,/g, "");
-        if (!item && !qty) return;
-        const okItem = !!item, okQty = /^\d+(\.\d+)?$/.test(qty) && Number(qty) > 0;
-        if (!okItem || !okQty) { bad[i] = { item: !okItem, qty: !okQty }; return; }
-        total += Number(qty);
-        if (seen[item] != null) dup[i] = dup[seen[item]] = 1; else seen[item] = i;
-        const p = Number(qty), ic = /^\d+$/.test(item) ? Number(item) : item;
-        out.push([mdmPrc.code.trim(), mdmPrc.desc.trim(), null, ic, serial, p, null, p, p, null, null, /^\d+$/.test(mdmPrc.active.trim()) ? Number(mdmPrc.active.trim()) : mdmPrc.active.trim(), mdmPrc.terr.trim(), /^\d+$/.test(mdmPrc.type.trim()) ? Number(mdmPrc.type.trim()) : mdmPrc.type.trim()]);
+        const item = r.item.trim(), base = prcNum(r.qty);
+        if (!item && !String(r.qty).trim() && !ov.some(t => String(r["o_" + t] || "").trim())) return;
+        const b = {}, prices = {};
+        if (!/^\d+$/.test(item)) b.item = 1;
+        if (Number.isNaN(base)) b.qty = 1;
+        terrs.forEach(t => {
+          const o = ov.includes(t) ? prcNum(r["o_" + t]) : null;
+          if (Number.isNaN(o)) b["o_" + t] = 1;
+          const p = o != null && !Number.isNaN(o) ? o : base;
+          if (p == null) b[ov.includes(t) ? "o_" + t : "qty"] = 1; else if (!Number.isNaN(p)) prices[t] = p;
+        });
+        if (Object.keys(b).length) { bad[i] = b; return; }
+        const sig = JSON.stringify(terrs.map(t => prices[t]));
+        if (seen[item]) {
+          if (seen[item].sig === sig) { merged++; dup[i] = 1; return; }
+          bad[i] = { item: 1 }; bad[seen[item].i] = { item: 1 }; return; // cùng ItemCode nhưng khác giá -> lỗi
+        }
+        seen[item] = { i, sig };
+        if (Object.values(prices).some(p => p < 100)) low++;
+        items.push({ item, prices });
       });
-      return { out, bad, cfgBad, dup, total, nbad: Object.keys(bad).length, ndup: Object.keys(dup).length, ncfg: Object.keys(cfgBad).length };
+      const act = /^\d+$/.test(mdmPrc.active.trim()) ? Number(mdmPrc.active.trim()) : mdmPrc.active.trim(), ty = /^\d+$/.test(mdmPrc.type.trim()) ? Number(mdmPrc.type.trim()) : mdmPrc.type.trim();
+      const out = [];
+      tg.forEach(t => items.forEach(x => { const p = x.prices[t.terr]; out.push([t.code, t.code, null, /^[1-9]\d*$/.test(x.item) ? Number(x.item) : x.item, serial, p, null, p, p, null, null, act, t.terr, ty]); }));
+      return { out, bad, cfgBad, dup, nsku: items.length, ntg: tg.length, merged, low, nbad: Object.keys(bad).length, ncfg: Object.keys(cfgBad).length };
     }
+    function prcGrid() { return `grid-template-columns:44px minmax(0,1fr) minmax(0,1fr)${" minmax(0,1fr)".repeat(prcOvCols().length)} 36px`; }
     function prcRowHtml(r, i) {
-      return `<div class="adj-row" data-r="${i}"><span class="adj-n">${i + 1}</span><input data-c="item" value="${escapeHtml(r.item)}" placeholder="vd: 1122" autocomplete="off" inputmode="numeric"><input data-c="qty" class="num" value="${escapeHtml(r.qty)}" placeholder="vd: 15000" autocomplete="off" inputmode="numeric"><button type="button" class="adj-del" data-prc-del title="Xóa dòng">×</button></div>`;
+      const ov = prcOvCols().map(t => `<input data-c="o_${t}" class="num" value="${escapeHtml(r["o_" + t] || "")}" placeholder="= giá chung" autocomplete="off" inputmode="decimal">`).join("");
+      return `<div class="adj-row" data-r="${i}" style="${prcGrid()}"><span class="adj-n">${i + 1}</span><input data-c="item" value="${escapeHtml(r.item)}" placeholder="vd: 1122" autocomplete="off" inputmode="numeric"><input data-c="qty" class="num" value="${escapeHtml(r.qty)}" placeholder="vd: 15000" autocomplete="off" inputmode="decimal">${ov}<button type="button" class="adj-del" data-prc-del title="Xóa dòng">×</button></div>`;
     }
     function prcEnsureTail() { const l = mdmPrc.rows[mdmPrc.rows.length - 1]; if (!l || l.item.trim() || l.qty.trim()) mdmPrc.rows.push(prcBlank()); }
     function prcDrawRows(focus) {
@@ -4405,17 +4434,20 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const v = prcParse();
       document.querySelectorAll("#prc-rows .adj-row").forEach(row => {
         const i = Number(row.dataset.r), bd = v.bad[i];
-        row.querySelector('[data-c="item"]').classList.toggle("bad", !!(bd && bd.item));
-        row.querySelector('[data-c="qty"]').classList.toggle("bad", !!(bd && bd.qty));
+        row.querySelectorAll("input[data-c]").forEach(el => el.classList.toggle("bad", !!(bd && bd[el.dataset.c])));
         row.querySelector('[data-c="item"]').classList.toggle("dup", !!v.dup[i]);
       });
       document.querySelectorAll("#prc-cfg .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
-      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng hợp lệ</span>`];
+      const tgEl = $("#prc-tg"); if (tgEl) tgEl.classList.toggle("bad", !!v.cfgBad.tg);
+      const sum = $("#prc-tg-sum"); if (sum) sum.textContent = `Đã chọn ${v.ntg} / ${mdmPrc.groups.reduce((a, g) => a + g.codes.length, 0)} bảng giá`;
+      const chips = [`<span class="adj-chip ${v.nsku ? "ok" : ""}">${nf(v.nsku)} SKU hợp lệ</span>`];
       if (v.nbad) chips.push(`<span class="adj-chip err">${v.nbad} dòng lỗi</span>`);
-      if (v.ndup) chips.push(`<span class="adj-chip warn">${v.ndup} dòng trùng ItemCode</span>`);
+      if (v.merged) chips.push(`<span class="adj-chip warn">${v.merged} dòng trùng (cùng giá) đã gộp</span>`);
+      if (v.low) chips.push(`<span class="adj-chip warn">${v.low} SKU giá &lt; 100đ — kiểm tra lại</span>`);
       $("#prc-chips").innerHTML = chips.join("");
-      $("#prc-export").disabled = !v.out.length || !!v.nbad || !!v.ncfg;
-      $("#prc-meta").innerHTML = `Giá nhập được điền vào <b>DebitPrice</b>, <b>DepositPrice</b>, <b>DamagePrice</b> · <b>CreditPrice</b>, MRP, thuế, ProductHierarchyCode để trống · sheet <b>in</b>`;
+      const ex = $("#prc-export"); ex.disabled = !v.out.length || !!v.nbad || !!v.ncfg;
+      ex.textContent = v.out.length ? `⬇ Xuất Excel (${nf(v.out.length)} dòng)` : "⬇ Xuất Excel (.xlsx)";
+      $("#prc-meta").innerHTML = v.cfgBad.tg ? `⚠ Chọn ít nhất <b>1 bảng giá</b> để xuất` : `${nf(v.nsku)} SKU × ${v.ntg} bảng giá = <b>${nf(v.out.length)}</b> dòng · giá điền vào <b>DebitPrice</b>, <b>DepositPrice</b>, <b>DamagePrice</b> · PricingDescription = PricingCode · CreditPrice, MRP, thuế, ProductHierarchyCode để trống · sheet <b>in</b>`;
     }
     async function prcExport() {
       const v = prcParse(); if (!v.out.length || v.nbad || v.ncfg) return;
@@ -4423,38 +4455,57 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const ws = XLSX.utils.aoa_to_sheet([PRC_COLS, ...v.out]);
       v.out.forEach((_, i) => {
         const r = i + 2;
-        [["E", "mm-dd-yy"], ["F", "#,##0"], ["H", "#,##0"], ["I", "#,##0"]].forEach(([c, z]) => { const cell = ws[c + r]; if (cell) cell.z = z; });
+        [["E", "mm-dd-yy"], ["F", "#,##0.#####"], ["H", "#,##0.#####"], ["I", "#,##0.#####"]].forEach(([c, z]) => { const cell = ws[c + r]; if (cell) cell.z = z; });
       });
       ws["!cols"] = PRC_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "in");
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `pricingcontrol_${stamp}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
+      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng, ${v.nsku} SKU × ${v.ntg} bảng giá).`, "success");
     }
     function prcPaste(e) {
       const inp = e.target.closest("#prc-rows input"); if (!inp) return;
       const txt = (e.clipboardData || window.clipboardData).getData("text").replace(/\r/g, "").replace(/\n+$/, "");
-      const col = inp.dataset.c;
+      const col = inp.dataset.c, cols = ["item", "qty", ...prcOvCols().map(t => "o_" + t)], c0 = cols.indexOf(col);
       if (!/[\t\n]/.test(txt) && !(col === "item" && /\s/.test(txt.trim()))) return;
       e.preventDefault();
-      let r = Number(inp.closest(".adj-row").dataset.r);
-      const lines = txt.split("\n");
+      let lines = txt.split("\n");
+      const first = (lines[0].split("\t")[0] || "").trim();
+      if (c0 === 0 && lines.length > 1 && first && !/^\d/.test(first)) lines = lines.slice(1); // bỏ dòng tiêu đề (ItemCode...)
+      const r = Number(inp.closest(".adj-row").dataset.r);
       lines.forEach((ln, k) => {
         const row = mdmPrc.rows[r + k] || (mdmPrc.rows[r + k] = prcBlank());
-        const cells = ln.includes("\t") ? ln.split("\t") : (col === "item" ? ln.trim().split(/[\s;]+/) : [ln]);
-        if (col === "item") { row.item = (cells[0] || "").trim(); if (cells[1] !== undefined) row.qty = cells[1].trim(); }
-        else row.qty = (cells[0] || "").trim();
+        const cells = ln.includes("\t") ? ln.split("\t") : (c0 === 0 ? ln.trim().split(/[\s;]+/) : [ln]);
+        cells.forEach((val, j) => { const key = cols[c0 + j]; if (key) row[key] = val.trim().replace(/^"|"$/g, ""); });
       });
       prcDrawRows([r + lines.length, col]);
       toast(`Đã dán ${nf(lines.length)} dòng.`, "success");
     }
+    function prcRedraw() { $("#mdm-root").innerHTML = renderPrc(); prcDrawRows(); }
+    function prcClick(e) {
+      const g = e.target.closest("[data-prc-grp]"), c = e.target.closest("[data-prc-code]"), t = e.target.closest("[data-prc-tgt]"), o = e.target.closest("[data-prc-ovr]");
+      if (!(g || c || t || o)) return false;
+      if (g) { const gr = mdmPrc.groups[+g.dataset.prcGrp], on = !gr.codes.every(x => x.on); gr.codes.forEach(x => { x.on = on; }); }
+      else if (c) { const [a, b] = c.dataset.prcCode.split(":").map(Number), x = mdmPrc.groups[a].codes[b]; x.on = !x.on; }
+      else if (o) mdmPrc.ovr = !mdmPrc.ovr;
+      else if (t.dataset.prcTgt === "add") {
+        const code = mdmPrc.newCode.trim(), terr = mdmPrc.newTerr.trim();
+        if (!code || !terr) { toast("Nhập đủ PricingCode và TerritoryHierarchy.", "error"); return true; }
+        if (mdmPrc.groups.some(gr => gr.codes.some(x => x.c.toLowerCase() === code.toLowerCase()))) { toast(`PricingCode "${code}" đã có trong danh sách.`, "error"); return true; }
+        let gr = mdmPrc.groups.find(x => x.terr === terr); if (!gr) mdmPrc.groups.push(gr = { terr, codes: [] });
+        gr.codes.push({ c: code, on: true }); mdmPrc.newCode = mdmPrc.newTerr = "";
+      } else { const on = t.dataset.prcTgt === "all"; mdmPrc.groups.forEach(gr => gr.codes.forEach(x => { x.on = on; })); }
+      prcRedraw(); return true;
+    }
     function renderPrc() {
       const F = (k, l, ph) => `<div class="field" data-k="${k}"><label>${l}</label><input data-prc="${k}" value="${escapeHtml(mdmPrc[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt Giá Cho SKU</h2><p>Nhập thông số bảng giá, rồi dán danh sách ItemCode và giá vào bảng. Xuất Excel đúng mẫu pricingcontrol, sẵn sàng upload.</p></div></div><div class="panel-body">
-        <div class="adj-cfg" id="prc-cfg" style="grid-template-columns:repeat(3,minmax(0,1fr))">${F("code", "PricingCode")}${F("desc", "PricingDescription")}${F("date", "EffectiveDate", "dd/mm/yyyy")}${F("terr", "TerritoryHierarchy")}${F("active", "ActiveIndicator")}${F("type", "ItemTypeCode")}</div>
-        <div class="adj-bar"><h3>Danh sách SKU<small>ItemCode &amp; giá</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="prc-chips"></div><button type="button" class="btn btn-plain" data-prc-act="add">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-prc-act="clear">Xóa tất cả</button></div></div>
-        <div class="adj-grid"><div class="adj-head"><span style="text-align:center">#</span><span>ItemCode</span><span style="text-align:right">Giá <em>(Debit / Deposit / Damage)</em></span><span></span></div><div id="prc-rows">${mdmPrc.rows.map(prcRowHtml).join("")}</div></div>
-        <p class="adj-tip">💡 Copy 2 cột ItemCode + Giá từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>ItemCode</b> đầu tiên. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu (giá phải &gt; 0), ô vàng = ItemCode bị trùng.</p>
+      const tg = mdmPrc.groups.map((g, gi) => { const n = g.codes.filter(x => x.on).length; return `<div class="prc-grp ${n === g.codes.length ? "all" : n ? "some" : ""}"><button type="button" class="prc-gt" data-prc-grp="${gi}" title="Chọn / bỏ cả vùng">${escapeHtml(prcShort(g.terr))}</button>${g.codes.map((x, ci) => `<button type="button" class="prc-chip ${x.on ? "on" : ""}" data-prc-code="${gi}:${ci}">${escapeHtml(x.c)}</button>`).join("")}</div>`; }).join("");
+      return `<section class="panel tl-panel"><style>.prc-tg{border:1px solid #e8d5d5;border-radius:12px;padding:12px;margin-bottom:14px;display:grid;gap:8px}.prc-tg.bad{border-color:#dc2626;background:#fef2f2}.prc-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.prc-grp{display:flex;gap:6px;align-items:center;padding:4px 8px;border-radius:10px;background:#f7efef}.prc-grp.all{background:#fde4e4}.prc-gt{font:600 11px/1 inherit;border:0;background:none;color:#8a1c1c;cursor:pointer;padding:4px 6px;min-width:34px}.prc-chip{border:1px solid #d9c3c3;background:#fff;border-radius:999px;padding:5px 11px;font:600 12px/1 inherit;cursor:pointer;color:#555}.prc-chip.on{background:#b91c1c;border-color:#b91c1c;color:#fff}.prc-new input{height:34px;border:1px solid #d9c3c3;border-radius:8px;padding:0 10px;font-size:12px;width:150px}</style><div class="panel-head"><div><h2>Cài Đặt Giá Cho SKU</h2><p>① Chọn bảng giá (PricingCode) cần cài · ② dán ItemCode + giá từ Excel · ③ xuất 1 file chứa tất cả bảng giá, đúng mẫu pricingcontrol.</p></div></div><div class="panel-body">
+        <div class="prc-tg" id="prc-tg"><div class="prc-row"><b style="font-size:13px">Bảng giá áp dụng</b><span class="adj-chip" id="prc-tg-sum"></span><button type="button" class="btn btn-plain" data-prc-tgt="all">Chọn tất cả</button><button type="button" class="btn btn-plain" data-prc-tgt="none">Bỏ chọn</button></div><div class="prc-row">${tg}</div><div class="prc-row prc-new"><small style="color:#888">Thêm bảng giá khác:</small><input data-prc="newCode" value="${escapeHtml(mdmPrc.newCode)}" placeholder="PricingCode" autocomplete="off"><input data-prc="newTerr" value="${escapeHtml(mdmPrc.newTerr)}" placeholder="TerritoryHierarchy" autocomplete="off"><button type="button" class="btn btn-plain" data-prc-tgt="add">+ Thêm</button></div></div>
+        <div class="adj-cfg" id="prc-cfg" style="grid-template-columns:repeat(3,minmax(0,1fr))">${F("date", "EffectiveDate", "dd/mm/yyyy")}${F("active", "ActiveIndicator")}${F("type", "ItemTypeCode")}</div>
+        <div class="adj-bar"><h3>Danh sách SKU<small>ItemCode &amp; giá chung</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="prc-chips"></div><button type="button" class="btn btn-plain" data-prc-ovr title="Thêm cột giá riêng cho từng vùng đã chọn; để trống = dùng giá chung">${mdmPrc.ovr ? "✓ " : ""}Giá riêng theo vùng</button><button type="button" class="btn btn-plain" data-prc-act="add">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-prc-act="clear">Xóa tất cả</button></div></div>
+        <div class="adj-grid"><div class="adj-head" style="${prcGrid()}"><span style="text-align:center">#</span><span>ItemCode</span><span style="text-align:right">Giá chung <em>(Debit / Deposit / Damage)</em></span>${prcOvCols().map(t => `<span style="text-align:right">${escapeHtml(prcShort(t))}</span>`).join("")}<span></span></div><div id="prc-rows">${mdmPrc.rows.map(prcRowHtml).join("")}</div></div>
+        <p class="adj-tip">💡 Copy từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>ItemCode</b> đầu tiên: dán được 2 cột (ItemCode + Giá)${mdmPrc.ovr ? " hoặc thêm các cột giá theo vùng theo đúng thứ tự cột hiển thị" : ""}, tự bỏ dòng tiêu đề. Ô đỏ = sai (ItemCode phải là số, giá &gt; 0, không dùng dấu <code>15.000</code> hay <code>3083,33</code>, trùng ItemCode khác giá); ô vàng = ItemCode trùng cùng giá (tự gộp).</p>
         <div class="adj-foot"><div class="meta" id="prc-meta"></div><button type="button" id="prc-export" class="btn btn-primary btn-lg">⬇ Xuất Excel (.xlsx)</button></div></div></section>`;
     }
 
@@ -5435,6 +5486,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (proDel) { mdmPro.slabs.splice(Number(proDel.closest(".pro-slab").dataset.si), 1); return proDraw(); }
         if (e.target.closest("#adj-export")) return adjExport();
         if (e.target.closest("#ini-export")) return iniExport();
+        if (prcClick(e)) return;
         if (e.target.closest("#prc-export")) return prcExport();
         const pdel = e.target.closest("[data-prc-del]");
         if (pdel) { mdmPrc.rows.splice(Number(pdel.closest(".adj-row").dataset.r), 1); return prcDrawRows(); }
