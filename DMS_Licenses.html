@@ -1051,7 +1051,7 @@
     .mobile-menu svg { width: 20px; height: 20px; }
 
     /* ---------- Responsive ---------- */
-    @media (max-width: 1050px) { .grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two-col { grid-template-columns: 1fr; } }
+    @media (max-width: 1050px) { .grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two-col { grid-template-columns: minmax(0, 1fr); } }
     @media (max-width: 760px) {
       :root { --sidebar: 0px; }
       .sidebar { transform: translateX(-100%); transition: transform .2s; width: 262px; }
@@ -1080,7 +1080,7 @@
       .stat-value { font-size: 23px; }
       .panel-head, .panel-body { padding: 15px; }
       .toolbar { padding: 12px 15px; }
-      .form-grid { grid-template-columns: 1fr; }
+      .form-grid { grid-template-columns: minmax(0, 1fr); }
       .field.full { grid-column: auto; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -1337,7 +1337,7 @@
 
     /* ---------- Auth: responsive ---------- */
     @media (max-width: 960px) {
-      .auth-split { width: 100%; padding: 0; margin: 0; grid-template-columns: 1fr; grid-template-rows: auto 1fr; column-gap: 0; align-items: stretch; }
+      .auth-split { width: 100%; padding: 0; margin: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: 0; align-items: stretch; }
       .auth-showcase { padding: 30px 26px 56px; gap: 22px; }
       .auth-brand { display: flex; }
       .card-brand { display: none; }
@@ -1388,7 +1388,7 @@
     .tl-multi .warn { color: var(--warning); font-weight: 650; }
     #tl-export:disabled { opacity: .5; cursor: not-allowed; }
     @media (max-width: 900px) { .tl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 600px) { .tl-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .tl-grid { grid-template-columns: minmax(0, 1fr); } }
 
     /* ---------- Cập Nhật Thông Tin: đánh dấu trường / ô dữ liệu đã thay đổi ---------- */
     .field.changed input, .field.changed textarea { border-color: var(--gold); background: #fffbea; box-shadow: 0 0 0 3px rgba(255, 200, 87, .22); }
@@ -1552,7 +1552,7 @@
     .adj-foot .meta { font-size: 12px; color: var(--muted); }
     .adj-foot .meta b { color: var(--ink-2); }
     @media (max-width: 900px) { .adj-cfg { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: minmax(0, 1fr); } }
   
     /* ---------- Lịch Coke (445) ở Tổng quan ---------- */
     .cal-wrap { max-width: 1000px; margin-bottom: 22px; }
@@ -1693,13 +1693,13 @@
       .cal-d { min-height: 54px; padding: 5px; border-radius: 10px; }
       .cal-d .n, .cal-d.today .n { font-size: 13px; }
       .cal-dh { font-size: 10px; letter-spacing: 0; }
-      .cal-side { grid-template-columns: 1fr; }
+      .cal-side { grid-template-columns: minmax(0, 1fr); }
     }
     @media (prefers-reduced-motion: reduce) { .cal-d.today, .cal-today .dot { animation: none; } .cal-wrap.cal-anim .cal-grid, .cal-wrap.cal-anim .cal-side { animation: none; } }
   
     /* ---------- Hàng lịch + thẻ Ngày quan trọng ---------- */
     .cal-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 420px); gap: 18px; align-items: stretch; margin-bottom: 22px; }
-    @media (max-width: 1080px) { .cal-row { grid-template-columns: 1fr; } .cal-side-col { flex-direction: row; align-items: stretch; } .cal-side-col > * { flex: 1 1 0; min-width: 0; } .cal-side-col .cal-imp { flex: 1 1 0; } }
+    @media (max-width: 1080px) { .cal-row { grid-template-columns: minmax(0, 1fr); } .cal-side-col { flex-direction: row; align-items: stretch; } .cal-side-col > * { flex: 1 1 0; min-width: 0; } .cal-side-col .cal-imp { flex: 1 1 0; } }
     @media (max-width: 680px) { .cal-side-col { flex-direction: column; } .cal-side-col > * { flex: 0 0 auto; } }
     .cal-row .cal-wrap { margin: 0; max-width: none; }
     .cal-imp { display: flex; flex-direction: column; contain: size; min-height: 0; border-radius: 22px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 24px 54px rgba(140, 18, 24, .12), 0 2px 4px rgba(90, 13, 18, .05); }
@@ -1812,8 +1812,8 @@
     
     .pro-col-auto { position: relative; }
     .pro-col-auto::after { content: "auto"; position: absolute; top: -2px; right: -2px; font-size: 8.5px; font-weight: 700; color: var(--success); background: var(--success-soft); padding: 1px 5px; border-radius: 99px; }
-    @media (max-width: 800px) { .pro-col-grp .pro-grid { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 520px) { .pro-col-grp .pro-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 800px) { .pro-col-grp .pro-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+    @media (max-width: 520px) { .pro-col-grp .pro-grid { grid-template-columns: minmax(0, 1fr); } }
 
     .pro-slab { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; background: #fff; }
     .pro-slab-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 700; font-size: 13px; }
@@ -1821,7 +1821,7 @@
     .pro-slab-t { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .pro-slab .field textarea { min-height: 84px; resize: vertical; font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .pro-slab .field.bad input, .pro-slab .field.bad textarea { border-color: var(--danger); background: var(--danger-soft); }
-    @media (max-width: 700px) { .pro-slab-f, .pro-slab-t { grid-template-columns: 1fr; } }
+    @media (max-width: 700px) { .pro-slab-f, .pro-slab-t { grid-template-columns: minmax(0, 1fr); } }
     .pro-lay { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
     .pro-main { display: grid; gap: 16px; min-width: 0; }
     .pro-aside { position: sticky; top: 12px; display: grid; gap: 12px; min-width: 0; }
@@ -1866,9 +1866,20 @@
     .pd-tag { font-style: normal; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px; } .pd-tag.in { background: var(--brand-soft); color: var(--brand); } .pd-tag.auto { background: var(--success-soft); color: var(--success); } .pd-tag.blank { background: #f4eeee; color: var(--muted); }
     .pd-b { padding: 0 12px 11px; color: var(--ink-2); } .pd-ex { margin-top: 6px; font-size: 12px; color: var(--muted); }
     .pd-item.flash { box-shadow: 0 0 0 3px rgba(229, 57, 53, .35); }
-    @media (max-width: 1100px) { .pro-lay { grid-template-columns: 1fr; } .pro-aside { position: static; } }
-    @media (max-width: 800px) { .pro-grid { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 520px) { .pro-grid { grid-template-columns: 1fr; } }
+    /* ---- Fix tràn cột phải (Kiểm tra / Xem trước / Xuất) ---- */
+    .pro-main, .pro-aside { grid-template-columns: minmax(0, 1fr); }
+    .pro-aside { max-height: calc(100vh - 24px); overflow-y: auto; overflow-x: hidden; padding-right: 2px; scrollbar-width: thin; }
+    .pro-aside > *, .pro-main > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+    .pro-aside .field select, .pro-aside .field input { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; text-overflow: ellipsis; }
+    .pro-aside .btn { max-width: 100%; box-sizing: border-box; }
+    .pro-pv { max-width: 100%; scrollbar-width: thin; }
+    .pro-issues li, .adj-foot .meta { overflow-wrap: anywhere; }
+    .field { min-width: 0; }
+    @media (max-width: 1100px) { .pro-aside { max-height: none; overflow: visible; } }
+
+    @media (max-width: 1100px) { .pro-lay { grid-template-columns: minmax(0, 1fr); } .pro-aside { position: static; } }
+    @media (max-width: 800px) { .pro-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+    @media (max-width: 520px) { .pro-grid { grid-template-columns: minmax(0, 1fr); } }
 
 </style>
 <style>
