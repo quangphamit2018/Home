@@ -1864,6 +1864,13 @@
     .pro-card h3 em, .pro-det summary em { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff; display: inline-grid; place-items: center; font-size: 12px; font-weight: 700; }
     .pro-det > summary { cursor: pointer; margin: 0; font-weight: 700; list-style: none; } .pro-det > summary::-webkit-details-marker { display: none; }
     .pro-det > summary small { font-weight: 500; color: var(--muted); }
+    /* thu gọn / mở rộng mượt: mũi tên chỉ trạng thái, chiều cao chạy bằng JS (xem proDetailsAnim) */
+    .pro-det > summary, .pro-cols > summary { user-select: none; -webkit-tap-highlight-color: transparent; }
+    .pro-det > summary::after, .pro-cols > summary::after { content: ""; flex: 0 0 auto; width: 8px; height: 8px; margin: 0 5px 0 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(-45deg); transition: transform .34s var(--ease), border-color .2s; }
+    .pro-det > summary::after { margin-left: auto; }
+    .pro-det > summary:hover::after, .pro-cols > summary:hover::after { border-color: var(--brand); }
+    details.pro-det[open]:not(.is-closing) > summary::after, details.pro-cols[open]:not(.is-closing) > summary::after { transform: rotate(45deg); }
+    #pro-adv > summary::after { display: none; }
     .pro-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .pro-card .field.bad input, .pro-card .field.bad select, .pro-card .field.bad textarea { border-color: var(--danger); background: var(--danger-soft); }
     .pro-i { width: 16px; height: 16px; margin-left: 5px; border-radius: 50%; border: 1px solid var(--brand-soft-2); background: #fff; color: var(--brand); font: italic 700 10px Georgia, serif; line-height: 1; cursor: pointer; padding: 0; vertical-align: 1px; place-items: center; }
@@ -2464,6 +2471,39 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const mb = document.querySelector("#mobile-menu");
       if (mb) { mb.setAttribute("aria-expanded", String(open)); MI.to(mb.querySelector("morph-icon"), (open ? ICON_D.close : ICON_D.menu)[0]); }
     }
+
+    /* ---- Thu gọn / mở rộng mượt cho các khối <details> trong Cài đặt CTKM (mặc định của trình duyệt đóng/mở tức thì nên bị giật) ---- */
+    (function proDetailsAnim() {
+      const EASE = "cubic-bezier(.22, 1, .36, 1)";
+      const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      function toggle(d) {
+        const sm = d.querySelector(":scope > summary"); if (!sm) return;
+        const opening = !d.open || d.classList.contains("is-closing");
+        const from = d.getBoundingClientRect().height;
+        if (d._anim) { d._anim.cancel(); d._anim = null; }
+        if (d._fades) { d._fades.forEach(a => a.cancel()); d._fades = null; }
+        d.style.height = d.style.overflow = d.style.boxSizing = ""; d.classList.remove("is-closing");
+        if (reduce()) { d.open = opening; return; }
+        const cs = getComputedStyle(d), pad = ["paddingTop", "paddingBottom", "borderTopWidth", "borderBottomWidth"].reduce((a, k) => a + (parseFloat(cs[k]) || 0), 0);
+        d.style.boxSizing = "border-box"; d.style.overflow = "hidden";
+        let to;
+        if (opening) { d.open = true; to = d.getBoundingClientRect().height; }
+        else { to = sm.getBoundingClientRect().height + pad; d.classList.add("is-closing"); }
+        const kids = [...d.children].filter(c => c !== sm);
+        d._fades = kids.map(k => k.animate({ opacity: opening ? [0, 1] : [1, 0] }, { duration: opening ? 280 : 180, easing: "ease", fill: "forwards" }));
+        d._anim = d.animate([{ height: from + "px" }, { height: to + "px" }], { duration: 340, easing: EASE });
+        d._anim.onfinish = () => {
+          d._anim = null; if (d._fades) { d._fades.forEach(a => a.cancel()); d._fades = null; }
+          d.style.height = d.style.overflow = d.style.boxSizing = ""; d.classList.remove("is-closing"); if (!opening) d.open = false;
+        };
+      }
+      document.addEventListener("click", e => {
+        const sm = e.target.closest && e.target.closest("details.pro-det > summary, details.pro-cols > summary"); if (!sm) return;
+        const d = sm.parentElement; if (d.id === "pro-adv") { e.preventDefault(); return; }   // mục 3 của Slab in Slab luôn mở (giữ nguyên hành vi cũ)
+        if (e.target.closest("[data-help]")) return;
+        e.preventDefault(); toggle(d);
+      });
+    })();
 
     // ---------- Sidebar thu gọn / mở rộng ----------
     const SB_KEY = "masterdata_sidebar", sbMQ = window.matchMedia("(min-width: 761px)");
