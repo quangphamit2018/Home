@@ -2924,6 +2924,54 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const prdHidden = k => /^(@odata|ItemInternalId$)/.test(k);
     const prdFmt = v => { if (v == null || v === "") return ""; if (typeof v === "string") { const m = /^(\d{4})-(\d{2})-(\d{2})T/.exec(v); if (m) return `${m[3]}/${m[2]}/${m[1]}`; } return typeof v === "object" ? JSON.stringify(v) : String(v); };
     const prdCmp = (a, b) => { const x = prdFmt(a), y = prdFmt(b), nx = Number(x), ny = Number(y); return x !== "" && y !== "" && !isNaN(nx) && !isNaN(ny) ? nx - ny : x.localeCompare(y, "vi", { numeric: true }); };
+
+    const prdHue = s => { let h = 0; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+    function prdKinds() {
+      const sample = PRD.rows.slice(0, 300);
+      return PRD.cols.map(c => {
+        if (/item\s*code|sku\s*code|^sku$|^code$/i.test(c)) return "code";
+        if (/item\s*name/i.test(c)) return "name";
+        if (/^brand$/i.test(c)) return "brand";
+        if (/pack\s*type/i.test(c)) return "tag";
+        if (/thông tin|define/i.test(c)) return "vn";
+        const vals = sample.map(r => prdFmt(r[c]).trim()).filter(v => v !== "");
+        return vals.length && vals.every(v => !isNaN(Number(v))) ? "num" : "";
+      });
+    }
+
+    Object.assign(PRD, { f: {}, fx: new Set(), pop: "", fq: "" });
+    const prdKey = (r, c) => prdFmt(r[c]);
+    function prdFCols() {
+      if (PRD._fr === PRD.rows && PRD._fn === PRD.cols.join("|")) return PRD.fcols;
+      PRD._fr = PRD.rows; PRD._fn = PRD.cols.join("|");
+      const kd = prdKinds(); PRD.fk = Object.fromEntries(PRD.cols.map((c, j) => [c, kd[j]]));
+      PRD.fcols = PRD.cols.filter((c, j) => { if (/^(code|name|vn)$/.test(kd[j])) return false; const n = new Set(PRD.rows.map(r => prdKey(r, c))).size; return n >= 2 && n <= 40; });
+      return PRD.fcols;
+    }
+    function prdFacet(c) {
+      const q = PRD.q.trim().toLowerCase().split(/\s+/).filter(Boolean), act = Object.entries(PRD.f).filter(([k, s]) => k !== c && s.size), cnt = new Map(), all = new Set();
+      PRD.rows.forEach((r, i) => { const v = prdKey(r, c); all.add(v); if (q.length && !q.every(t => PRD.idx[i].includes(t))) return; if (!act.every(([k, s]) => s.has(prdKey(r, k)))) return; cnt.set(v, (cnt.get(v) || 0) + 1); });
+      return [...all].sort((a, b) => a === "" ? 1 : b === "" ? -1 : a.localeCompare(b, "vi", { numeric: true })).map(v => [v, cnt.get(v) || 0]);
+    }
+    function prdPopList(c) {
+      const sel = PRD.f[c] || new Set(), t = PRD.fq.trim().toLowerCase();
+      return prdFacet(c).filter(([v]) => !t || v.toLowerCase().includes(t)).map(([v, n]) => `<label class="prd-opt${n ? "" : " z"}"><input type="checkbox" data-c="${escapeHtml(c)}" data-v="${escapeHtml(v)}"${sel.has(v) ? " checked" : ""}>${PRD.fk[c] === "brand" && v ? `<i class="d" style="--h:${prdHue(v)}"></i>` : ""}<span>${v === "" ? "<em>(Trống)</em>" : escapeHtml(v)}</span><b>${nf(n)}</b></label>`).join("") || `<div class="prd-optnone">Không có giá trị phù hợp</div>`;
+    }
+    function prdFilterDraw() {
+      const el = $("#prd-filters"); if (!el) return;
+      const cands = prdFCols(); for (const k of Object.keys(PRD.f)) if (!cands.includes(k)) delete PRD.f[k];
+      if (!cands.length) { el.innerHTML = ""; return; }
+      const act = c => PRD.f[c]?.size > 0;
+      let pri = cands.filter(c => /brand|pack\s*type|flavou?r|pack\s*size/i.test(c)).slice(0, 5); if (!pri.length) pri = cands.slice(0, 4);
+      const vis = cands.filter(c => pri.includes(c) || PRD.fx.has(c) || act(c)), more = cands.filter(c => !vis.includes(c));
+      const old = el.querySelector(".prd-list")?.scrollTop || 0;
+      const pill = c => { const n = PRD.f[c]?.size || 0, open = PRD.pop === c, e = escapeHtml(c); return `<div class="prd-fp"><button type="button" class="prd-pill${n ? " on" : ""}${open ? " open" : ""}" data-prd-fp="${e}">${e}${n ? `<span class="cnt">${n}</span>` : ""}</button>${open ? `<div class="prd-pop"><div class="prd-pop-h"><input id="prd-fq" placeholder="Tìm trong ${e}…" value="${escapeHtml(PRD.fq)}" autocomplete="off">${n ? `<button type="button" data-prd-fcol="${e}">Bỏ chọn</button>` : ""}</div><div class="prd-list">${prdPopList(c)}</div></div>` : ""}</div>`; };
+      const morePill = more.length ? `<div class="prd-fp"><button type="button" class="prd-pill add${PRD.pop === "__more" ? " open" : ""}" data-prd-fp="__more">＋ Thêm bộ lọc</button>${PRD.pop === "__more" ? `<div class="prd-pop menu">${more.map(c => `<button type="button" data-prd-fadd="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("")}</div>` : ""}</div>` : "";
+      const chips = Object.entries(PRD.f).flatMap(([c, s]) => [...s].map(v => `<span class="prd-ch"><em>${escapeHtml(c)}</em> ${v === "" ? "(Trống)" : escapeHtml(v)}<button type="button" data-prd-fx="${escapeHtml(c)}" data-v="${escapeHtml(v)}" aria-label="Bỏ lọc">×</button></span>`)).join("");
+      el.innerHTML = `<div class="prd-fbar"><span class="prd-fl">Bộ lọc</span>${vis.map(pill).join("")}${morePill}</div>${chips ? `<div class="prd-fchips">${chips}<button type="button" data-prd-fclear>Xóa tất cả</button></div>` : ""}`;
+      const l = el.querySelector(".prd-list"); if (l) l.scrollTop = old;
+      const p = el.querySelector(".prd-pop"); if (p && p.getBoundingClientRect().right > innerWidth - 12) p.classList.add("r");
+    }
     const prdTime = s => { try { return new Date(s).toLocaleString("vi-VN"); } catch (_) { return ""; } };
     async function prdLoad(silent) {
       const sb = state.supabase; if (!sb) return;
@@ -2947,6 +2995,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     function prdView() {
       const q = PRD.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
       let ix = PRD.rows.map((_, i) => i); if (q.length) ix = ix.filter(i => q.every(t => PRD.idx[i].includes(t)));
+      const fa = Object.entries(PRD.f).filter(([, s]) => s.size); if (fa.length) ix = ix.filter(i => fa.every(([k, s]) => s.has(prdFmt(PRD.rows[i][k]))));
       const c = PRD.sort.c; if (c) ix.sort((a, b) => prdCmp(PRD.rows[a][c], PRD.rows[b][c]) * PRD.sort.d);
       return ix;
     }
@@ -2961,8 +3010,12 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const ix = prdView(), pages = Math.max(1, Math.ceil(ix.length / PRD.size)); PRD.page = Math.min(PRD.page, pages);
       const from = (PRD.page - 1) * PRD.size, sl = ix.slice(from, from + PRD.size);
       $("#prd-chips").innerHTML = `<span class="adj-chip ok">${nf(ix.length)}${ix.length !== PRD.rows.length ? " / " + nf(PRD.rows.length) : ""} dòng</span><span class="adj-chip">${PRD.cols.length} cột</span>`;
-      const th = PRD.cols.map(c => `<th data-prd-sort="${escapeHtml(c)}"${PRD.sort.c === c ? ' class="on"' : ""}>${escapeHtml(c)}<i>${PRD.sort.c === c ? (PRD.sort.d > 0 ? "▲" : "▼") : ""}</i></th>`).join("");
-      const tr = sl.map((i, k) => `<tr><td class="n">${from + k + 1}</td>${PRD.cols.map(c => { const v = prdFmt(PRD.rows[i][c]); return `<td title="${escapeHtml(v)}">${escapeHtml(v)}</td>`; }).join("")}</tr>`).join("");
+      prdFilterDraw(); const kd = prdKinds();
+      const th = PRD.cols.map((c, j) => { const cl = [kd[j] ? "k-" + kd[j] : "", PRD.sort.c === c ? "on" : ""].filter(Boolean).join(" "); return `<th data-prd-sort="${escapeHtml(c)}"${cl ? ` class="${cl}"` : ""}>${escapeHtml(c)}<i>${PRD.sort.c === c ? (PRD.sort.d > 0 ? "▲" : "▼") : ""}</i></th>`; }).join("");
+      const tr = sl.map((i, k) => `<tr><td class="n">${from + k + 1}</td>${PRD.cols.map((c, j) => { const v = prdFmt(PRD.rows[i][c]), e = escapeHtml(v), kk = kd[j], cl = kk ? "k-" + kk : "";
+        if (v === "") return `<td class="${cl} nil">–</td>`;
+        const inner = kk === "code" ? `<span class="code">${e}</span>` : kk === "brand" ? `<span class="chip-b" style="--h:${prdHue(v)}">${e}</span>` : kk === "tag" ? `<span class="chip-t">${e}</span>` : e;
+        return `<td${cl ? ` class="${cl}"` : ""} title="${e}">${inner}</td>`; }).join("")}</tr>`).join("");
       el.innerHTML = `<div class="prd-wrap"><table class="prd-t"><thead><tr><th class="n">#</th>${th}</tr></thead><tbody>${tr || `<tr><td colspan="${PRD.cols.length + 1}" class="prd-none">Không có dòng nào khớp.</td></tr>`}</tbody></table></div>
         <div class="prd-foot"><span>Hiển thị ${ix.length ? nf(from + 1) : 0}–${nf(from + sl.length)} / ${nf(ix.length)}</span><div><select id="prd-size">${[50, 100, 200].map(n => `<option value="${n}"${n === PRD.size ? " selected" : ""}>${n} dòng/trang</option>`).join("")}</select><button type="button" class="btn btn-plain" data-prd-pg="-1"${PRD.page <= 1 ? " disabled" : ""}>‹ Trước</button><b>${PRD.page} / ${pages}</b><button type="button" class="btn btn-plain" data-prd-pg="1"${PRD.page >= pages ? " disabled" : ""}>Sau ›</button></div></div>`;
     }
@@ -2999,14 +3052,26 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         document.addEventListener("click", e => {
           if (state.tab !== "product") return;
           const sh = e.target.closest("[data-prd-sheet]"), so = e.target.closest("[data-prd-sort]"), pg = e.target.closest("[data-prd-pg]");
-          if (sh) { PRD.sheet = sh.dataset.prdSheet; PRD.page = 1; PRD.sort = { c: "", d: 1 }; PRD.loaded = false; prdLoad(); }
+          if (sh) { PRD.sheet = sh.dataset.prdSheet; PRD.f = {}; PRD.fx = new Set(); PRD.pop = ""; PRD.page = 1; PRD.sort = { c: "", d: 1 }; PRD.loaded = false; prdLoad(); }
           else if (so) { const c = so.dataset.prdSort; PRD.sort = PRD.sort.c === c ? { c, d: -PRD.sort.d } : { c, d: 1 }; PRD.page = 1; prdDraw(); }
           else if (pg) { PRD.page += Number(pg.dataset.prdPg); prdDraw(); }
           else if (e.target.closest("[data-prd-reload]")) prdLoad();
           else if (e.target.closest("[data-prd-export]")) prdExport();
           else if (e.target.closest("[data-prd-upload]")) $("#prd-file").click();
         });
-        document.addEventListener("input", e => { if (e.target.id !== "prd-q") return; clearTimeout(PRD.qt); PRD.qt = setTimeout(() => { PRD.q = e.target.value; PRD.page = 1; prdDraw(); }, 150); });
+        document.addEventListener("click", e => {
+          if (state.tab !== "product" || !e.target.isConnected) return;
+          const t = e.target, fp = t.closest("[data-prd-fp]"), ad = t.closest("[data-prd-fadd]"), fc = t.closest("[data-prd-fcol]"), fx = t.closest("[data-prd-fx]"), done = () => { PRD.page = 1; prdDraw(); };
+          if (fp) { const c = fp.dataset.prdFp; PRD.pop = PRD.pop === c ? "" : c; PRD.fq = ""; prdFilterDraw(); $("#prd-fq")?.focus(); }
+          else if (ad) { PRD.fx.add(ad.dataset.prdFadd); PRD.pop = ad.dataset.prdFadd; PRD.fq = ""; prdFilterDraw(); $("#prd-fq")?.focus(); }
+          else if (fc) { delete PRD.f[fc.dataset.prdFcol]; done(); }
+          else if (fx) { PRD.f[fx.dataset.prdFx]?.delete(fx.dataset.v); done(); }
+          else if (t.closest("[data-prd-fclear]")) { PRD.f = {}; done(); }
+          else if (PRD.pop && !t.closest(".prd-pop")) { PRD.pop = ""; prdFilterDraw(); }
+        });
+        document.addEventListener("keydown", e => { if (e.key === "Escape" && PRD.pop && state.tab === "product") { PRD.pop = ""; prdFilterDraw(); } });
+        document.addEventListener("change", e => { const t = e.target; if (!t.matches || !t.matches(".prd-opt input")) return; const s = PRD.f[t.dataset.c] || (PRD.f[t.dataset.c] = new Set()); t.checked ? s.add(t.dataset.v) : s.delete(t.dataset.v); PRD.page = 1; prdDraw(); });
+        document.addEventListener("input", e => { if (e.target.id === "prd-fq") { PRD.fq = e.target.value; const l = $(".prd-list"); if (l) l.innerHTML = prdPopList(PRD.pop); return; } if (e.target.id !== "prd-q") return; clearTimeout(PRD.qt); PRD.qt = setTimeout(() => { PRD.q = e.target.value; PRD.page = 1; prdDraw(); }, 150); });
         document.addEventListener("change", e => { if (e.target.id === "prd-file") { const f = e.target.files[0]; e.target.value = ""; prdUpload(f); } if (e.target.id === "prd-size") { PRD.size = Number(e.target.value); PRD.page = 1; prdDraw(); } });
       }
       if (state.supabase && !PRD.ch) PRD.ch = state.supabase.channel(`${APP_CHANNEL_PREFIX}:product`).on("postgres_changes", { event: "*", schema: "public", table: "product_sync_meta" }, () => prdLoad(true).then(() => { if (state.tab === "product") toast("Dữ liệu Product vừa được cập nhật.", "success"); })).subscribe();
@@ -3015,9 +3080,88 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     function renderProduct() {
       prdEnsure();
-      return `<section class="panel tl-panel"><style>.prd-status{display:flex;align-items:center;gap:8px;font-size:12px;color:#6b5555}.prd-live{width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.15);animation:prdp 2s infinite}@keyframes prdp{50%{box-shadow:0 0 0 7px rgba(22,163,74,0)}}.prd-sheets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.prd-sheets:empty{display:none}.prd-sh{border:1px solid #dcc9c9;background:#fff;border-radius:999px;padding:6px 14px;font:600 12.5px/1 inherit;cursor:pointer;color:#555}.prd-sh em{font-style:normal;opacity:.6;margin-left:4px}.prd-sh.on{background:#b91c1c;border-color:#b91c1c;color:#fff}.prd-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.prd-bar input{flex:1;min-width:220px;height:38px;border:1px solid #dcc9c9;border-radius:10px;padding:0 12px;font-size:13px}#prd-chips{display:flex;gap:6px}.prd-wrap{overflow:auto;max-height:62vh;border:1px solid #ecdcdc;border-radius:12px}.prd-t{border-collapse:collapse;width:100%;font-size:12.5px}.prd-t th{position:sticky;top:0;background:#fbeeee;color:#8a1c1c;text-align:left;padding:9px 12px;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:1px solid #ecdcdc;font-weight:700}.prd-t th i{font-style:normal;font-size:9px;margin-left:5px}.prd-t th.on{background:#f7d9d9}.prd-t td{padding:7px 12px;border-bottom:1px solid #f4eaea;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}.prd-t tbody tr:hover{background:#fdf6f6}.prd-t .n{color:#aa9;text-align:center;width:46px;cursor:default}.prd-none{text-align:center;color:#999;padding:28px!important}.prd-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:#6b5555}.prd-foot>div{display:flex;gap:8px;align-items:center}.prd-foot select{height:32px;border:1px solid #dcc9c9;border-radius:8px;padding:0 8px}</style>
+      return `<section class="panel tl-panel"><style>.prd-status{display:flex;align-items:center;gap:8px;font-size:12px;color:#6b5555}.prd-live{width:8px;height:8px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 4px rgba(22,163,74,.15);animation:prdp 2s infinite}@keyframes prdp{50%{box-shadow:0 0 0 7px rgba(22,163,74,0)}}.prd-sheets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.prd-sheets:empty{display:none}.prd-sh{border:1px solid #dcc9c9;background:#fff;border-radius:999px;padding:6px 14px;font:600 12.5px/1 inherit;cursor:pointer;color:#555}.prd-sh em{font-style:normal;opacity:.6;margin-left:4px}.prd-sh.on{background:#b91c1c;border-color:#b91c1c;color:#fff}.prd-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.prd-bar input{flex:1;min-width:220px;height:38px;border:1px solid #dcc9c9;border-radius:10px;padding:0 12px;font-size:13px}#prd-chips{display:flex;gap:6px}.prd-wrap{overflow:auto;max-height:62vh;border:1px solid #ecdcdc;border-radius:12px}.prd-t{border-collapse:collapse;width:100%;font-size:12.5px}.prd-t th{position:sticky;top:0;background:#fbeeee;color:#8a1c1c;text-align:left;padding:9px 12px;white-space:nowrap;cursor:pointer;user-select:none;border-bottom:1px solid #ecdcdc;font-weight:700}.prd-t th i{font-style:normal;font-size:9px;margin-left:5px}.prd-t th.on{background:#f7d9d9}.prd-t td{padding:7px 12px;border-bottom:1px solid #f4eaea;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}.prd-t tbody tr:hover{background:#fdf6f6}.prd-t .n{color:#aa9;text-align:center;width:46px;cursor:default}.prd-none{text-align:center;color:#999;padding:28px!important}.prd-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:#6b5555}.prd-foot>div{display:flex;gap:8px;align-items:center}.prd-foot select{height:32px;border:1px solid #dcc9c9;border-radius:8px;padding:0 8px}
+/* ===== Product table — professional restyle ===== */
+.prd-wrap{border:1px solid #efdcdb;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(90,13,18,.04),0 8px 24px -12px rgba(90,13,18,.18);scrollbar-width:thin;scrollbar-color:#e3b9b6 transparent}
+.prd-wrap::-webkit-scrollbar{width:10px;height:10px}.prd-wrap::-webkit-scrollbar-thumb{background:#e3b9b6;border-radius:8px;border:2px solid #fff}
+.prd-t{border-collapse:separate;border-spacing:0;font-size:12.5px;color:#2a1416;--rb:#fff}
+.prd-t thead th{background:linear-gradient(180deg,#fff6f5,#fbe9e7);color:#7d1b1f;font-size:10.5px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;padding:0 14px;height:42px;border-bottom:2px solid #efc6c3;transition:background .15s,color .15s}
+.prd-t thead th:hover{background:#fbdedb;color:#5a0d12}
+.prd-t thead th.on{background:#f8d3d0;color:#5a0d12}
+.prd-t th i{color:#b71c1c;font-size:9px;margin-left:6px}
+.prd-t tbody tr{--rb:#fff}.prd-t tbody tr:nth-child(even){--rb:#fffafa}.prd-t tbody tr:hover{--rb:#fff0ee}
+.prd-t td{background:var(--rb);padding:0 14px;height:40px;border-bottom:1px solid #f6ebea;transition:background .12s}
+.prd-t tbody tr:last-child td{border-bottom:0}
+.prd-t tbody tr:hover td:first-child{box-shadow:inset 3px 0 0 #b71c1c}
+.prd-t .n{width:52px;min-width:52px;text-align:center;color:#b9a3a5;font-size:11px;font-variant-numeric:tabular-nums}
+.prd-t th.n{color:#b9a3a5}
+.prd-t th:nth-child(-n+2),.prd-t td:nth-child(-n+2){position:sticky;z-index:1}
+.prd-t th:nth-child(-n+2){z-index:3}
+.prd-t th:nth-child(1),.prd-t td:nth-child(1){left:0}
+.prd-t th:nth-child(2),.prd-t td:nth-child(2){left:52px;box-shadow:1px 0 0 #efdcdb}
+.prd-t .k-num{text-align:right;font-variant-numeric:tabular-nums;font-weight:550}
+.prd-t th.k-num{text-align:right}
+.prd-t .k-name{font-weight:650;color:#2a1416}
+.prd-t .k-vn{background:linear-gradient(90deg,rgba(183,28,28,.05),rgba(183,28,28,.02));color:#6b1519;font-weight:550}
+.prd-t thead th.k-vn{background:linear-gradient(180deg,#fbe3e1,#f8d3d0);color:#7d1b1f}
+.prd-t tbody tr:hover td.k-vn{background:#fde6e4}
+.prd-t .nil{color:#dcc7c8;text-align:inherit}
+.prd-t td.nil.k-num{text-align:right}
+.prd-t .code{display:inline-block;font:600 12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#8e1216;background:#fdeceb;border:1px solid #f6cfcc;border-radius:7px;padding:5px 8px;letter-spacing:.02em}
+.prd-t .chip-b{display:inline-flex;align-items:center;gap:7px;font-weight:650}
+.prd-t .chip-b::before{content:"";width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 62% 48%);box-shadow:0 0 0 3px hsl(var(--h) 62% 48%/.16)}
+.prd-t .chip-t{display:inline-block;font-size:11px;font-weight:650;color:#5b4446;background:#f6eeee;border:1px solid #ecdcdc;border-radius:999px;padding:3px 10px}
+.prd-none{padding:40px!important;color:#9a8587!important}
+.prd-foot{margin-top:14px;padding:0 4px;color:#80666a}
+.prd-foot b{font-variant-numeric:tabular-nums;color:#2a1416;padding:0 4px}
+.prd-foot select{height:34px;border:1px solid #e6d2d1;border-radius:10px;background:#fff;padding:0 10px;font-weight:600;color:#4a2f31}
+.prd-foot .btn-plain{border:1px solid #e6d2d1;border-radius:10px;background:#fff;padding:6px 12px;font-weight:600;color:#4a2f31}
+.prd-foot .btn-plain:hover:not(:disabled){background:#fff0ee;border-color:#e29a96;color:#8e1216}
+.prd-foot .btn-plain:disabled{opacity:.4}
+.prd-bar input{height:42px;border:1px solid #e6d2d1;border-radius:12px;background:#fffdfd;transition:border-color .15s,box-shadow .15s}
+.prd-bar input:focus{outline:none;border-color:#e29a96;box-shadow:0 0 0 4px rgba(229,57,53,.10)}
+.prd-fbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 12px}
+.prd-fl{font-size:11px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;color:#9a8587;margin-right:4px}
+.prd-fp{position:relative}
+.prd-pill{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px;border:1px solid #e6d2d1;border-radius:999px;background:#fff;font:650 12.5px/1 inherit;color:#4a2f31;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.prd-pill::after{content:"▾";font-size:10px;opacity:.55;transition:transform .15s}
+.prd-pill.add::after{content:none}
+.prd-pill:hover{border-color:#e29a96;background:#fff7f6}
+.prd-pill.open{border-color:#e29a96;box-shadow:0 0 0 4px rgba(229,57,53,.10)}
+.prd-pill.open::after{transform:rotate(180deg)}
+.prd-pill.on{background:#fdeceb;border-color:#e29a96;color:#8e1216}
+.prd-pill.add{border-style:dashed;color:#80666a}
+.prd-pill .cnt{min-width:18px;height:18px;border-radius:9px;background:#b71c1c;color:#fff;font-size:10.5px;display:inline-grid;place-items:center;padding:0 5px}
+.prd-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:30;width:272px;background:#fff;border:1px solid #efdcdb;border-radius:14px;box-shadow:0 18px 40px -12px rgba(90,13,18,.28);padding:8px;animation:prdpop .14s ease-out}
+@keyframes prdpop{from{opacity:0;transform:translateY(-4px)}}
+.prd-pop.r{left:auto;right:0}
+.prd-pop-h{display:flex;gap:6px;align-items:center;padding:2px 2px 8px}
+.prd-pop-h input{flex:1;min-width:0;height:34px;border:1px solid #e6d2d1;border-radius:9px;padding:0 10px;font-size:12.5px}
+.prd-pop-h input:focus{outline:none;border-color:#e29a96}
+.prd-pop-h button{border:0;background:none;color:#b71c1c;font:650 12px/1 inherit;cursor:pointer;white-space:nowrap;padding:6px}
+.prd-list{max-height:264px;overflow:auto;scrollbar-width:thin}
+.prd-opt{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:9px;cursor:pointer;font-size:12.5px}
+.prd-opt:hover{background:#fff3f2}
+.prd-opt input{width:16px;height:16px;accent-color:#b71c1c;margin:0}
+.prd-opt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prd-opt em{font-style:normal;color:#9a8587}
+.prd-opt b{font-size:11px;font-weight:600;color:#9a8587;font-variant-numeric:tabular-nums}
+.prd-opt.z{opacity:.45}
+.prd-opt .d{width:8px;height:8px;border-radius:50%;background:hsl(var(--h) 62% 48%)}
+.prd-optnone{padding:16px;text-align:center;color:#9a8587;font-size:12px}
+.prd-pop.menu{width:220px;display:flex;flex-direction:column}
+.prd-pop.menu button{text-align:left;border:0;background:none;padding:9px 10px;border-radius:9px;font:600 12.5px/1 inherit;color:#4a2f31;cursor:pointer}
+.prd-pop.menu button:hover{background:#fff3f2;color:#8e1216}
+.prd-fchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-2px 0 12px}
+.prd-ch{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 4px 0 10px;border-radius:999px;background:#fdeceb;border:1px solid #f6cfcc;color:#6b1519;font-size:12px;font-weight:600}
+.prd-ch em{font-style:normal;font-weight:500;opacity:.65}
+.prd-ch button{width:18px;height:18px;border:0;border-radius:50%;background:transparent;color:#8e1216;cursor:pointer;font-size:14px;line-height:1;padding:0}
+.prd-ch button:hover{background:#f6cfcc}
+.prd-fchips>[data-prd-fclear]{border:0;background:none;color:#b71c1c;font:650 12px/1 inherit;cursor:pointer;padding:6px}
+
+</style>
         <div class="panel-head"><div><h2>Product</h2><p>Dữ liệu từ file Excel MDM_Product data promotion. Super-admin tải file mới lên để cập nhật cho mọi người.</p></div><div class="prd-status" id="prd-status"></div></div>
-        <div class="panel-body"><div class="prd-sheets" id="prd-sheets"></div><div class="prd-bar"><input id="prd-q" placeholder="Tìm theo bất kỳ cột nào (nhiều từ khóa = khớp tất cả)…" value="${escapeHtml(PRD.q)}" autocomplete="off"><div id="prd-chips"></div><button type="button" class="btn btn-plain" data-prd-reload>↻ Tải lại</button>${isAdmin() ? `<button type="button" class="btn btn-primary" data-prd-upload>⬆ Tải Excel lên</button><input type="file" id="prd-file" accept=".xlsx,.xlsm" hidden>` : ""}<button type="button" class="btn btn-plain" data-prd-export>⬇ Xuất Excel</button></div><div id="prd-body"></div></div></section>`;
+        <div class="panel-body"><div class="prd-sheets" id="prd-sheets"></div><div class="prd-bar"><input id="prd-q" placeholder="Tìm theo bất kỳ cột nào (nhiều từ khóa = khớp tất cả)…" value="${escapeHtml(PRD.q)}" autocomplete="off"><div id="prd-chips"></div><button type="button" class="btn btn-plain" data-prd-reload>↻ Tải lại</button>${isAdmin() ? `<button type="button" class="btn btn-primary" data-prd-upload>⬆ Tải Excel lên</button><input type="file" id="prd-file" accept=".xlsx,.xlsm" hidden>` : ""}<button type="button" class="btn btn-plain" data-prd-export>⬇ Xuất Excel</button></div><div id="prd-filters"></div><div id="prd-body"></div></div></section>`;
     }
 
     function renderPage() {
