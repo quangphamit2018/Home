@@ -2966,7 +2966,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const vis = cands.filter(c => pri.includes(c) || PRD.fx.has(c) || act(c)), more = cands.filter(c => !vis.includes(c));
       const old = el.querySelector(".prd-list")?.scrollTop || 0;
       const pill = c => { const n = PRD.f[c]?.size || 0, open = PRD.pop === c, e = escapeHtml(c); return `<div class="prd-fp"><button type="button" class="prd-pill${n ? " on" : ""}${open ? " open" : ""}" data-prd-fp="${e}">${e}${n ? `<span class="cnt">${n}</span>` : ""}</button>${open ? `<div class="prd-pop"><div class="prd-pop-h"><input id="prd-fq" placeholder="Tìm trong ${e}…" value="${escapeHtml(PRD.fq)}" autocomplete="off">${n ? `<button type="button" data-prd-fcol="${e}">Bỏ chọn</button>` : ""}</div><div class="prd-list">${prdPopList(c)}</div></div>` : ""}</div>`; };
-      const morePill = more.length ? `<div class="prd-fp"><button type="button" class="prd-pill add${PRD.pop === "__more" ? " open" : ""}" data-prd-fp="__more">＋ Thêm bộ lọc</button>${PRD.pop === "__more" ? `<div class="prd-pop menu">${more.map(c => `<button type="button" data-prd-fadd="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("")}</div>` : ""}</div>` : "";
+      const morePill = more.length ? `<div class="prd-fp"><button type="button" class="prd-pill add${PRD.pop === "__more" ? " open" : ""}" data-prd-fp="__more">＋ Thêm</button>${PRD.pop === "__more" ? `<div class="prd-pop menu">${more.map(c => `<button type="button" data-prd-fadd="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("")}</div>` : ""}</div>` : "";
       const chips = Object.entries(PRD.f).flatMap(([c, s]) => [...s].map(v => `<span class="prd-ch"><em>${escapeHtml(c)}</em> ${v === "" ? "(Trống)" : escapeHtml(v)}<button type="button" data-prd-fx="${escapeHtml(c)}" data-v="${escapeHtml(v)}" aria-label="Bỏ lọc">×</button></span>`)).join("");
       el.innerHTML = `<div class="prd-fbar"><span class="prd-fl">Bộ lọc</span>${vis.map(pill).join("")}${morePill}</div>${chips ? `<div class="prd-fchips">${chips}<button type="button" data-prd-fclear>Xóa tất cả</button></div>` : ""}`;
       const l = el.querySelector(".prd-list"); if (l) l.scrollTop = old;
@@ -3158,10 +3158,42 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
 .prd-ch button{width:18px;height:18px;border:0;border-radius:50%;background:transparent;color:#8e1216;cursor:pointer;font-size:14px;line-height:1;padding:0}
 .prd-ch button:hover{background:#f6cfcc}
 .prd-fchips>[data-prd-fclear]{border:0;background:none;color:#b71c1c;font:650 12px/1 inherit;cursor:pointer;padding:6px}
+/* ===== Product toolbar + filters — compact refinement ===== */
+.prd-bar{gap:8px;margin-bottom:10px}
+.prd-bar input{height:36px;font-size:12.5px;border-radius:10px;padding:0 12px}
+.prd-bar input::placeholder{color:#a59093}
+#prd-chips{gap:6px;margin-right:2px}
+#prd-chips .adj-chip{font-size:11px;font-weight:650;padding:4px 10px;line-height:1.2;white-space:nowrap}
+.prd-bar>.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:36px;padding:0 13px;border-radius:10px;font-family:inherit;font-size:12px;font-weight:650;letter-spacing:0;line-height:1;white-space:nowrap;box-shadow:none;transition:background .15s,border-color .15s,box-shadow .15s,transform .15s}
+.prd-bar>.btn svg{flex:none}
+.prd-bar>.btn-plain{background:#fff;border:1px solid #e6d2d1;color:#4a2f31}
+.prd-bar>.btn-plain:hover{background:#fff4f3;border-color:#e29a96;color:#8e1216}
+.prd-bar>[data-prd-reload]{width:36px;padding:0}
+.prd-bar>.btn-primary{background:linear-gradient(180deg,#d32f2f,#b71c1c);border:1px solid #a31818;color:#fff;box-shadow:0 4px 12px -4px rgba(183,28,28,.55),inset 0 1px 0 rgba(255,255,255,.18)}
+.prd-bar>.btn-primary:hover{background:linear-gradient(180deg,#dc3a3a,#c02020);transform:translateY(-1px)}
+.prd-bar>.btn:active{transform:none}
+.prd-fbar{gap:6px;margin-bottom:10px}
+.prd-fl{font-size:10px;font-weight:700;letter-spacing:.09em;color:#a59093;margin-right:2px}
+.prd-pill{height:30px;gap:6px;padding:0 11px;font-family:inherit;font-size:12px;font-weight:600;letter-spacing:0;color:#4a2f31;border-color:#ebdadb}
+.prd-pill::after{font-size:9px}
+.prd-pill .cnt{min-width:16px;height:16px;border-radius:8px;font-size:10px;font-weight:700}
+.prd-pill.add{color:#8d777a;font-weight:600}
+.prd-pop{width:250px;padding:6px;border-radius:12px}
+.prd-pop-h input{height:32px;font-size:12px;font-family:inherit}
+.prd-pop-h button{font-family:inherit;font-size:11.5px;font-weight:650}
+.prd-opt{padding:6px 8px;font-size:12px;gap:8px}
+.prd-opt input{width:14px;height:14px}
+.prd-opt b{font-size:10.5px}
+.prd-pop.menu button{font-family:inherit;font-size:12px;font-weight:600;padding:8px 10px}
+.prd-fchips{gap:5px;margin:-2px 0 10px}
+.prd-ch{height:24px;font-size:11.5px;padding:0 3px 0 9px}
+.prd-fchips>[data-prd-fclear]{font-family:inherit;font-size:11.5px;font-weight:650}
+.prd-sh{font-family:inherit;font-size:12px}
+
 
 </style>
         <div class="panel-head"><div><h2>Product</h2><p>Dữ liệu từ file Excel MDM_Product data promotion. Super-admin tải file mới lên để cập nhật cho mọi người.</p></div><div class="prd-status" id="prd-status"></div></div>
-        <div class="panel-body"><div class="prd-sheets" id="prd-sheets"></div><div class="prd-bar"><input id="prd-q" placeholder="Tìm theo bất kỳ cột nào (nhiều từ khóa = khớp tất cả)…" value="${escapeHtml(PRD.q)}" autocomplete="off"><div id="prd-chips"></div><button type="button" class="btn btn-plain" data-prd-reload>↻ Tải lại</button>${isAdmin() ? `<button type="button" class="btn btn-primary" data-prd-upload>⬆ Tải Excel lên</button><input type="file" id="prd-file" accept=".xlsx,.xlsm" hidden>` : ""}<button type="button" class="btn btn-plain" data-prd-export>⬇ Xuất Excel</button></div><div id="prd-filters"></div><div id="prd-body"></div></div></section>`;
+        <div class="panel-body"><div class="prd-sheets" id="prd-sheets"></div><div class="prd-bar"><input id="prd-q" placeholder="Tìm theo bất kỳ cột nào (nhiều từ khóa = khớp tất cả)…" value="${escapeHtml(PRD.q)}" autocomplete="off"><div id="prd-chips"></div><button type="button" class="btn btn-plain" data-prd-reload title="Tải lại dữ liệu" aria-label="Tải lại"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></button>${isAdmin() ? `<button type="button" class="btn btn-primary" data-prd-upload><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m6 10 6-6 6 6"/><path d="M4 20h16"/></svg>Tải Excel lên</button><input type="file" id="prd-file" accept=".xlsx,.xlsm" hidden>` : ""}<button type="button" class="btn btn-plain" data-prd-export><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v12"/><path d="m6 10 6 6 6-6"/><path d="M4 20h16"/></svg>Xuất Excel</button></div><div id="prd-filters"></div><div id="prd-body"></div></div></section>`;
     }
 
     function renderPage() {
