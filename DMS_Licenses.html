@@ -2437,6 +2437,13 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const nav = document.querySelector("#sidebar .nav"); if (!nav) return;
       const ind = nav.querySelector(".nav-indicator"), act = nav.querySelector("button.active");
       if (!ind) return;
+      // Menu con đóng/mở có animation (.3s): đo vị trí lúc đang co/giãn sẽ sai → đo lại mỗi khi kích thước menu đổi và khi animation kết thúc
+      if (!nav._ro && window.ResizeObserver) {
+        nav._ro = new ResizeObserver(() => { cancelAnimationFrame(nav._rr); nav._rr = requestAnimationFrame(() => positionNavIndicator(true)); });
+        nav._ro.observe(nav);
+        const sw = nav.querySelector(".nav-sub-wrap");
+        if (sw) { nav._ro.observe(sw); sw.addEventListener("transitionend", () => positionNavIndicator(true)); }
+      }
       if (!act) { ind.style.opacity = "0"; nav.classList.remove("has-indicator"); return; }
       const jump = instant || !nav.classList.contains("has-indicator");
       if (jump) ind.style.transition = "none";
