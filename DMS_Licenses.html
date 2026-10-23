@@ -507,6 +507,7 @@
     import { defineMorphIcon } from "https://esm.sh/morphicons@1.7.1/element";
     defineMorphIcon();
   </script>
+  <script>try{var __sb=localStorage.getItem("masterdata_sidebar");if(__sb==="1"||(__sb===null&&window.innerWidth>760&&window.innerWidth<1180))document.documentElement.classList.add("sb-collapsed")}catch(e){}</script>
   <style>
     /* =====================================================================
        Masterdata DMS — Crimson theme
@@ -1051,7 +1052,7 @@
     .mobile-menu svg { width: 20px; height: 20px; }
 
     /* ---------- Responsive ---------- */
-    @media (max-width: 1050px) { .grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two-col { grid-template-columns: minmax(0, 1fr); } }
+    @container main (max-width: 788px) { .grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two-col { grid-template-columns: minmax(0, 1fr); } }
     @media (max-width: 760px) {
       :root { --sidebar: 0px; }
       .sidebar { transform: translateX(-100%); transition: transform .2s; width: 262px; }
@@ -1387,8 +1388,8 @@
     .tl-multi .bad { color: var(--danger); font-weight: 650; }
     .tl-multi .warn { color: var(--warning); font-weight: 650; }
     #tl-export:disabled { opacity: .5; cursor: not-allowed; }
-    @media (max-width: 900px) { .tl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 600px) { .tl-grid { grid-template-columns: minmax(0, 1fr); } }
+    @container main (max-width: 638px) { .tl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @container main (max-width: 600px) { .tl-grid { grid-template-columns: minmax(0, 1fr); } }
 
     /* ---------- Cập Nhật Thông Tin: đánh dấu trường / ô dữ liệu đã thay đổi ---------- */
     .field.changed input, .field.changed textarea { border-color: var(--gold); background: #fffbea; box-shadow: 0 0 0 3px rgba(255, 200, 87, .22); }
@@ -1551,8 +1552,8 @@
     .adj-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line-strong); }
     .adj-foot .meta { font-size: 12px; color: var(--muted); }
     .adj-foot .meta b { color: var(--ink-2); }
-    @media (max-width: 900px) { .adj-cfg { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: minmax(0, 1fr); } }
+    @container main (max-width: 638px) { .adj-cfg { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @container main (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: minmax(0, 1fr); } }
   
     /* ---------- Lịch Coke (445) ở Tổng quan ---------- */
     .cal-wrap { max-width: 1000px; margin-bottom: 22px; }
@@ -1676,8 +1677,8 @@
     @keyframes cal-pulse { 0%, 100% { box-shadow: 0 0 0 3px rgba(229, 57, 53, .18); } 50% { box-shadow: 0 0 0 7px rgba(229, 57, 53, .05); } }
     @keyframes cal-ring { 0%, 100% { box-shadow: 0 0 0 3px rgba(255, 200, 87, .85), 0 14px 28px rgba(183, 28, 28, .40); } 50% { box-shadow: 0 0 0 6px rgba(255, 200, 87, .35), 0 14px 28px rgba(183, 28, 28, .40); } }
     @keyframes cal-swap { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    @media (max-width: 1060px) { .cal-body { grid-template-columns: minmax(0, 1fr); } .cal-side { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px 0 0; border-left: 0; border-top: 1px solid var(--line); } }
-    @media (max-width: 760px) {
+    @container main (max-width: 798px) { .cal-body { grid-template-columns: minmax(0, 1fr); } .cal-side { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px 0 0; border-left: 0; border-top: 1px solid var(--line); } }
+    @container main (max-width: 760px) {
       .cal { border-radius: 20px; }
       .cal-hero { padding: 16px 14px 34px; }
       .cal-ghost { font-size: 150px; right: 8px; top: -20px; }
@@ -1699,8 +1700,8 @@
   
     /* ---------- Hàng lịch + thẻ Ngày quan trọng ---------- */
     .cal-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 420px); gap: 18px; align-items: stretch; margin-bottom: 22px; }
-    @media (max-width: 1080px) { .cal-row { grid-template-columns: minmax(0, 1fr); } .cal-side-col { flex-direction: row; align-items: stretch; } .cal-side-col > * { flex: 1 1 0; min-width: 0; } .cal-side-col .cal-imp { flex: 1 1 0; } }
-    @media (max-width: 680px) { .cal-side-col { flex-direction: column; } .cal-side-col > * { flex: 0 0 auto; } }
+    @container main (max-width: 818px) { .cal-row { grid-template-columns: minmax(0, 1fr); } .cal-side-col { flex-direction: row; align-items: stretch; } .cal-side-col > * { flex: 1 1 0; min-width: 0; } .cal-side-col .cal-imp { flex: 1 1 0; } }
+    @container main (max-width: 680px) { .cal-side-col { flex-direction: column; } .cal-side-col > * { flex: 0 0 auto; } }
     .cal-row .cal-wrap { margin: 0; max-width: none; }
     .cal-imp { display: flex; flex-direction: column; contain: size; min-height: 0; border-radius: 22px; overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 24px 54px rgba(140, 18, 24, .12), 0 2px 4px rgba(90, 13, 18, .05); }
     .cal-imp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: linear-gradient(135deg, var(--brand-soft) 0%, #fff 70%); border-bottom: 1px solid var(--line); }
@@ -1737,12 +1738,12 @@
     .cal-imp-del:hover { background: var(--danger-soft); color: var(--danger); }
     .cal-imp-i:not(:has(.cal-imp-act)) { grid-template-columns: 46px minmax(0, 1fr) auto; }
     .cal-imp-foot { padding: 10px 18px 14px; font-size: 11.5px; color: var(--muted); border-top: 1px dashed var(--line-strong); }
-    @media (max-width: 1360px) {
+    @container main (max-width: 1098px) {
       .cal-row { grid-template-columns: minmax(0, 1fr); }
       .cal-imp { contain: none; }
       .cal-imp-list { max-height: 340px; }
     }
-    @media (max-width: 760px) {
+    @container main (max-width: 760px) {
       .cal-imp { border-radius: 20px; }
       .cal-imp-head, .cal-imp-list { padding-left: 12px; padding-right: 12px; }
       .cal-imp-i { grid-template-columns: 42px minmax(0, 1fr) auto auto auto; gap: 8px; }
@@ -1796,6 +1797,39 @@
     .tmx-cap-d { color: var(--brand-dark); font-size: 11px; }
     .tmx-x { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; border-radius: 6px; padding: 3px 7px; }
     .tmx-x:hover { color: var(--danger); background: var(--danger-soft); }
+    /* ---- Đánh dấu mức độ cần điền: BẮT BUỘC (vàng cam) · XÁC NHẬN (xanh dương) · TÙY CHỌN (xám) ---- */
+    .rq-tag { display: inline-flex; align-items: center; margin-left: 6px; padding: 0 7px; border-radius: 99px; font-size: 9px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase; line-height: 16px; vertical-align: 1px; white-space: nowrap; }
+    .rq-tag.must { background: #ffe9b8; color: #8a4b00; box-shadow: inset 0 0 0 1px #f2c35c; }
+    .rq-tag.set { background: #e6efff; color: #1e4fbf; box-shadow: inset 0 0 0 1px #b9cdf5; }
+    .rq-tag.opt { background: #f1eeee; color: #7d7173; box-shadow: inset 0 0 0 1px #e1dada; }
+    .rq-row { margin-top: 4px; font-weight: 500; }
+    .rq-row .rq-tag { margin-left: 0; }
+    .rq-note { font-size: 10.5px; font-weight: 500; color: var(--muted); }
+    .rq-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: 12px; background: #fff; font-size: 12px; color: var(--ink-2); }
+    .rq-legend .i { display: inline-flex; align-items: center; gap: 7px; }
+    .rq-legend .rq-tag { margin-left: 0; }
+    .pro-card .field.rq-must input, .pro-card .field.rq-must select, .pro-card .field.rq-must textarea { border-left: 4px solid #e9a400; }
+    .pro-card .field.rq-must:not(.bad) input:placeholder-shown, .pro-card .field.rq-must:not(.bad) textarea:placeholder-shown { background: #fff8e1; }
+    .pro-card .field.rq-must > label { color: #7a4300; }
+    .pro-card .field.rq-set input, .pro-card .field.rq-set select, .pro-card .field.rq-set textarea { border-left: 4px solid #6b93e8; }
+    .pro-card .field.rq-opt > label { color: var(--muted); font-weight: 600; }
+    .pro-card .field.rq-opt input:not(:focus):not([type="checkbox"]), .pro-card .field.rq-opt select:not(:focus) { background: #faf8f8; }
+    .tmx thead th.rq-must { box-shadow: inset 0 3px 0 #e9a400; }
+    .tmx thead th.rq-set { box-shadow: inset 0 3px 0 #6b93e8; }
+    .tmx-rgt { flex-wrap: wrap; gap: 2px 4px; }
+    .tmx td input[data-c="0"], .tmx td input[data-c="1"], .tmx input[data-mx="rg"][data-f="code"], .tmx input[data-mx="rg"][data-f="ky"] { border-left: 4px solid #e9a400; }
+    .tmx td input[data-c="0"]:placeholder-shown:not(.bad), .tmx td input[data-c="1"]:placeholder-shown:not(.bad), .tmx input[data-mx="rg"][data-f="code"]:placeholder-shown:not(.bad), .tmx input[data-mx="rg"][data-f="ky"]:placeholder-shown:not(.bad) { background: #fff8e1; }
+    .tmx td input[data-c="2"] { border-left: 4px solid #6b93e8; }
+    .tmx input[data-mx="rg"][data-f="n0"] { background: #faf8f8; }
+    .tmx td input.bad, .tmx th input.bad { border-left-color: var(--danger); }
+    /* màu nhóm cột: dùng chung cho bảng xem trước và file Excel */
+    .pro-pv th.g-in, .pro-pv td.g-in { background: #fff8dc; }
+    .pro-pv th.g-cfg, .pro-pv td.g-cfg { background: #eaf2fb; }
+    .pro-pv th.g-auto, .pro-pv td.g-auto { background: #edf6e8; }
+    .xl-legend { display: grid; gap: 6px; font-size: 11.5px; color: var(--ink-2); padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    .xl-legend b { font-size: 12px; }
+    .xl-legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -3px; margin-right: 7px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14); }
+    .xl-legend small { color: var(--muted); line-height: 1.45; }
     .pro-mode-seg button.on { color: #fff; background: var(--g-brand); box-shadow: 0 6px 16px rgba(183, 28, 28, .28); }
     /* ---- Section 4: Tất cả các cột template ---- */
     .pro-cols > summary { cursor: pointer; margin: 0; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style: none; }
@@ -1812,8 +1846,8 @@
     
     .pro-col-auto { position: relative; }
     .pro-col-auto::after { content: "auto"; position: absolute; top: -2px; right: -2px; font-size: 8.5px; font-weight: 700; color: var(--success); background: var(--success-soft); padding: 1px 5px; border-radius: 99px; }
-    @media (max-width: 800px) { .pro-col-grp .pro-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-    @media (max-width: 520px) { .pro-col-grp .pro-grid { grid-template-columns: minmax(0, 1fr); } }
+    @container main (max-width: 538px) { .pro-col-grp .pro-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+    @container main (max-width: 520px) { .pro-col-grp .pro-grid { grid-template-columns: minmax(0, 1fr); } }
 
     .pro-slab { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 12px; background: #fff; }
     .pro-slab-h { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 700; font-size: 13px; }
@@ -1821,7 +1855,7 @@
     .pro-slab-t { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .pro-slab .field textarea { min-height: 84px; resize: vertical; font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .pro-slab .field.bad input, .pro-slab .field.bad textarea { border-color: var(--danger); background: var(--danger-soft); }
-    @media (max-width: 700px) { .pro-slab-f, .pro-slab-t { grid-template-columns: minmax(0, 1fr); } }
+    @container main (max-width: 700px) { .pro-slab-f, .pro-slab-t { grid-template-columns: minmax(0, 1fr); } }
     .pro-lay { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
     .pro-main { display: grid; gap: 16px; min-width: 0; }
     .pro-aside { position: sticky; top: 12px; display: grid; gap: 12px; min-width: 0; }
@@ -1875,11 +1909,11 @@
     .pro-pv { max-width: 100%; scrollbar-width: thin; }
     .pro-issues li, .adj-foot .meta { overflow-wrap: anywhere; }
     .field { min-width: 0; }
-    @media (max-width: 1100px) { .pro-aside { max-height: none; overflow: visible; } }
+    @container main (max-width: 838px) { .pro-aside { max-height: none; overflow: visible; } }
 
-    @media (max-width: 1100px) { .pro-lay { grid-template-columns: minmax(0, 1fr); } .pro-aside { position: static; } }
-    @media (max-width: 800px) { .pro-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-    @media (max-width: 520px) { .pro-grid { grid-template-columns: minmax(0, 1fr); } }
+    @container main (max-width: 838px) { .pro-lay { grid-template-columns: minmax(0, 1fr); } .pro-aside { position: static; } }
+    @container main (max-width: 538px) { .pro-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+    @container main (max-width: 520px) { .pro-grid { grid-template-columns: minmax(0, 1fr); } }
 
 </style>
 <style>
@@ -1889,7 +1923,7 @@
   .cal-imp-list::-webkit-scrollbar { width: 8px; }
   .cal-imp-list::-webkit-scrollbar-thumb { background: rgba(140,18,24,.22); border-radius: 99px; }
   .cal-imp-i { min-height: 74px; }
-  @media (min-width: 1081px) { .cal-imp { flex: 0 0 auto; } }
+  @container main (min-width: 818.01px) { .cal-imp { flex: 0 0 auto; } }
   /* Super-admin / senior: cal-wrap cao bằng cal-side-col; Member: thẻ Ngày quan trọng co gọn theo nội dung */
   .cal-row--admin .cal-wrap { display: flex; }
   .cal-row--admin .cal-wrap > .cal { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
@@ -1999,7 +2033,7 @@
 
   /* Màn nhỏ (≤1360px): cột phải nằm dưới lịch → nút chung là thanh ngang, tab là thanh ngang xếp dọc */
   /* Màn rộng (≥1361px): nút chung là "tay nắm" nổi ở mép trái cột phải, thu gọn thành 2 thanh dọc */
-  @media (min-width: 1361px) {
+  @container main (min-width: 1098.01px) {
     .cal-row--rail { grid-template-columns: minmax(0, 1fr) 68px; }
     .cal-side-col > .cal-side-toggle { position: absolute; z-index: 6; left: -22px; top: 50%; transform: translateY(-50%); width: 26px; height: 96px; flex-direction: column; gap: 8px; padding: 0; border-radius: 13px; }
     .cal-side-toggle span { writing-mode: vertical-rl; letter-spacing: .3px; }
@@ -2009,7 +2043,7 @@
     .cal-row--rail .cal-tab { flex-direction: column; justify-content: flex-start; gap: 14px; padding: 16px 0 14px; }
     .cal-row--rail .cal-tab .v { flex: 1 1 auto; writing-mode: vertical-rl; text-align: left; white-space: nowrap; }
   }
-  @media (max-width: 760px) { .cal-ev { font-size: 8px; } }
+  @container main (max-width: 760px) { .cal-ev { font-size: 8px; } }
 </style>
   <style id="ui-upgrade">
 /* =====================================================================
@@ -2150,7 +2184,80 @@ h1, h2, h3 { text-wrap: balance; }
   .nav button:hover, .stat-card:hover, .pager-btn:hover:not(:disabled):not(.active),
   .user-card:hover, .btn-plain:hover:not(:disabled), .signout:hover { transform: none; }
 }
-  </style>
+  
+/* ============ Sidebar thu gọn / mở rộng (rail) ============ */
+:root { --sidebar-rail: 78px; --sb-dur: .42s; --sb-ease: cubic-bezier(.22, 1, .36, 1); }
+.main { container-type: inline-size; container-name: main; }   /* nội dung co giãn theo bề rộng thật của vùng chứa */
+@media (min-width: 761px) {
+  .sidebar { transition: width var(--sb-dur) var(--sb-ease), flex-basis var(--sb-dur) var(--sb-ease); }
+  .main { transition: margin-left var(--sb-dur) var(--sb-ease); }
+}
+.brand { transition: padding var(--sb-dur) var(--sb-ease), gap var(--sb-dur) var(--sb-ease); }
+.brand > div:last-child { overflow: hidden; white-space: nowrap; max-width: 180px; padding: 4px 0; margin: -4px 0; transition: opacity .25s ease .12s, max-width var(--sb-dur) var(--sb-ease); }
+.nav-label { position: relative; transition: opacity .25s ease .1s; }
+.nav-label::after { content: ""; position: absolute; left: 15px; right: 15px; top: 7px; height: 1px; background: rgba(255, 255, 255, .16); opacity: 0; transition: opacity .3s ease; }
+.nav button {
+  transition: background-color var(--dur-base) var(--ease-swift), color var(--dur-base) var(--ease-swift), box-shadow var(--dur-base) var(--ease-swift),
+              transform var(--dur-base) var(--ease-premium), padding var(--sb-dur) var(--sb-ease), gap var(--sb-dur) var(--sb-ease);
+}
+.nav button > span { overflow: hidden; white-space: nowrap; max-width: 190px; padding: 4px 0; margin: -4px 0; transition: opacity .25s ease .12s, max-width var(--sb-dur) var(--sb-ease); }
+.nav button.nav-parent .nav-chev { transition: transform .3s var(--ease), opacity .2s ease .1s, width var(--sb-dur) var(--sb-ease), margin var(--sb-dur) var(--sb-ease); }
+.user-chip { transition: gap var(--sb-dur) var(--sb-ease); }
+.user-chip > div:last-child { overflow: hidden; max-width: 150px; transition: opacity .25s ease .12s, max-width var(--sb-dur) var(--sb-ease); }
+
+.sb-toggle {
+  position: fixed; top: 29px; left: calc(var(--sidebar) - 14px); z-index: 21; width: 28px; height: 28px; padding: 0;
+  display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line-strong); background: #fff; color: var(--brand);
+  box-shadow: 0 4px 12px rgba(60, 8, 12, .24); cursor: pointer;
+  transition: left var(--sb-dur) var(--sb-ease), background-color .2s, color .2s, border-color .2s, box-shadow .2s, transform .25s var(--sb-ease);
+}
+.sb-toggle svg { width: 15px; height: 15px; transition: transform var(--sb-dur) var(--sb-ease); }
+html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
+.sb-toggle:hover { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: 0 6px 16px rgba(183, 28, 28, .42); transform: scale(1.1); }
+.sb-toggle:active { transform: scale(.94); }
+.sb-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+@media (min-width: 761px) {
+  html.sb-collapsed { --sidebar: var(--sidebar-rail); }
+  html.sb-collapsed .brand { padding-left: 5px; padding-right: 5px; gap: 0; }
+  html.sb-collapsed .brand > div:last-child { opacity: 0; max-width: 0; transition: opacity .12s ease, max-width var(--sb-dur) var(--sb-ease); }
+  html.sb-collapsed .nav-label { opacity: 0; transition: opacity .12s ease; }
+  html.sb-collapsed .nav-label::after { opacity: 1; }
+  html.sb-collapsed .nav button { padding-left: 14.5px; padding-right: 14.5px; gap: 0; }
+  html.sb-collapsed .nav button > span { opacity: 0; max-width: 0; transition: opacity .12s ease, max-width var(--sb-dur) var(--sb-ease); }
+  html.sb-collapsed .nav button.nav-parent .nav-chev { opacity: 0; width: 0; margin-left: 0; transition: opacity .12s ease, width var(--sb-dur) var(--sb-ease), margin var(--sb-dur) var(--sb-ease); }
+  html.sb-collapsed .nav button, html.sb-collapsed .nav button:hover { transform: none; }
+  html.sb-collapsed .sidebar-foot { padding-left: 0; padding-right: 0; }
+  html.sb-collapsed .user-card { flex-direction: column; padding: 8px 0; gap: 8px; }
+  html.sb-collapsed .user-chip { flex: 0 0 auto; gap: 0; }
+  html.sb-collapsed .user-chip > div:last-child { opacity: 0; max-width: 0; transition: opacity .12s ease, max-width var(--sb-dur) var(--sb-ease); }
+}
+@media (max-width: 760px) { .sb-toggle { display: none; } }
+
+#sb-tip {
+  position: fixed; z-index: 60; left: 0; top: 0; padding: 7px 11px; border-radius: 9px; background: #2a1416; color: #fff;
+  font-size: 12.5px; font-weight: 600; line-height: 1.2; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-6px, -50%);
+  transition: opacity .16s ease, transform .22s var(--sb-ease); box-shadow: 0 10px 24px rgba(30, 4, 7, .35);
+}
+#sb-tip::before { content: ""; position: absolute; left: -4px; top: 50%; width: 8px; height: 8px; background: inherit; border-radius: 2px; transform: translateY(-50%) rotate(45deg); }
+#sb-tip.show { opacity: 1; transform: translate(0, -50%); }
+#sb-fly {
+  position: fixed; z-index: 61; min-width: 206px; padding: 8px; border-radius: 14px; color: #f0d4d2; display: grid; gap: 3px; align-content: start;
+  background: linear-gradient(165deg, #6b1117 0%, #3d080c 70%, #1e0407 100%); border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 18px 44px rgba(30, 4, 7, .45); opacity: 0; visibility: hidden; transform: translateX(-8px) scale(.98); transform-origin: left top;
+  transition: opacity .18s ease, transform .26s var(--sb-ease), visibility 0s .26s;
+}
+#sb-fly::before { content: ""; position: absolute; left: -26px; top: 0; bottom: 0; width: 26px; }   /* cầu nối để rê chuột không bị tắt */
+#sb-fly.show { opacity: 1; visibility: visible; transform: none; transition: opacity .18s ease, transform .26s var(--sb-ease), visibility 0s; }
+#sb-fly .fly-h { font-size: 11px; font-weight: 700; letter-spacing: .03em; color: rgba(255, 220, 217, .55); padding: 5px 10px 7px; }
+#sb-fly .fly-i { border: 0; background: transparent; color: #f0d4d2; text-align: left; font-weight: 550; font-size: 13px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: background-color .18s, color .18s; }
+#sb-fly .fly-i:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+#sb-fly .fly-i.active { color: #fff; font-weight: 650; background: linear-gradient(100deg, #e53935 0%, #b71c1c 70%, #94141a 100%); box-shadow: inset 3px 0 0 var(--gold); }
+#sb-fly .fly-i:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .main, .sb-toggle, .sb-toggle svg, .brand, .brand > div:last-child, .nav button, .nav button > span, .nav-chev, .user-chip, .user-chip > div:last-child, #sb-tip, #sb-fly { transition: none !important; }
+}
+</style>
 </head>
 <body class="auth">
   <div class="aurora" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i><i class="grid"></i></div>
@@ -2305,11 +2412,11 @@ h1, h2, h3 { text-wrap: balance; }
     }
     function syncToolsNav() {
       const p = document.querySelector("#sidebar .nav-parent"); if (!p) return;
-      const inG = state.tab === "tools" || state.tab === "tools_mdm";
-      p.classList.toggle("group-on", inG && toolsOpen);
-      p.classList.toggle("active", inG && !toolsOpen);   // thu lại → tab cha mang dấu "đang chọn"
-      p.setAttribute("aria-expanded", String(toolsOpen));
-      document.querySelector("#nav-tools-sub")?.classList.toggle("collapsed", !toolsOpen);
+      const inG = state.tab === "tools" || state.tab === "tools_mdm", open = toolsOpen && !isRail();   // sidebar thu gọn → nhóm hiện bằng menu bay
+      p.classList.toggle("group-on", inG && open);
+      p.classList.toggle("active", inG && !open);   // thu lại → tab cha mang dấu "đang chọn"
+      p.setAttribute("aria-expanded", String(open));
+      document.querySelector("#nav-tools-sub")?.classList.toggle("collapsed", !open);
     }
     function afterPageRender() {
       const page = document.querySelector(".page"); if (!page) return;
@@ -2357,6 +2464,71 @@ h1, h2, h3 { text-wrap: balance; }
       const mb = document.querySelector("#mobile-menu");
       if (mb) { mb.setAttribute("aria-expanded", String(open)); MI.to(mb.querySelector("morph-icon"), (open ? ICON_D.close : ICON_D.menu)[0]); }
     }
+
+    // ---------- Sidebar thu gọn / mở rộng ----------
+    const SB_KEY = "masterdata_sidebar", sbMQ = window.matchMedia("(min-width: 761px)");
+    const isRail = () => document.documentElement.classList.contains("sb-collapsed") && sbMQ.matches;
+    const sbTip = Object.assign(document.createElement("div"), { id: "sb-tip" }), sbFly = Object.assign(document.createElement("div"), { id: "sb-fly" });
+    sbTip.setAttribute("role", "tooltip"); document.body.append(sbTip, sbFly);
+    let flyTimer = 0, flyOpen = false;
+    function showSbTip(el, force) {
+      const txt = el && el.dataset.tip; if (!txt || (!force && !isRail())) return hideSbTip();
+      sbTip.textContent = txt; const r = el.getBoundingClientRect();
+      sbTip.style.left = (el.id === "sb-toggle" ? r.right + 12 : document.querySelector("#sidebar").getBoundingClientRect().right + 10) + "px"; sbTip.style.top = (r.top + r.height / 2) + "px"; sbTip.classList.add("show");
+    }
+    function hideSbTip() { sbTip.classList.remove("show"); }
+    function showFly() {
+      const p = document.querySelector("#sidebar .nav-parent"); if (!p || !isRail()) return;
+      clearTimeout(flyTimer); hideSbTip();
+      const subs = [...document.querySelectorAll("#nav-tools-sub button[data-tab]")];
+      sbFly.innerHTML = `<div class="fly-h">${escapeHtml(p.dataset.tip || "")}</div>` + subs.map(b => `<button type="button" class="fly-i${b.classList.contains("active") ? " active" : ""}" data-tab="${b.dataset.tab}">${escapeHtml(b.textContent.trim())}</button>`).join("");
+      const r = p.getBoundingClientRect();
+      sbFly.style.left = (document.querySelector("#sidebar").getBoundingClientRect().right + 8) + "px";
+      sbFly.style.top = Math.max(8, Math.min(r.top - 6, innerHeight - sbFly.offsetHeight - 12)) + "px";
+      sbFly.classList.add("show"); flyOpen = true;
+    }
+    function hideFly(now) {
+      clearTimeout(flyTimer);
+      const go = () => { sbFly.classList.remove("show"); flyOpen = false; };
+      if (now) go(); else flyTimer = setTimeout(go, 200);
+    }
+    function applySidebar(collapsed, persist = true) {
+      document.documentElement.classList.toggle("sb-collapsed", collapsed);
+      if (persist) saveKey(SB_KEY, collapsed ? "1" : "0");
+      const b = document.querySelector("#sb-toggle");
+      if (b) { const t = collapsed ? "Mở rộng menu" : "Thu gọn menu"; b.setAttribute("aria-expanded", String(!collapsed)); b.setAttribute("aria-label", t); b.dataset.tip = t + " (Ctrl+B)"; }
+      hideSbTip(); hideFly(true); syncToolsNav();
+      positionNavIndicator(); setTimeout(() => positionNavIndicator(), 340);   // nhóm Công cụ xổ/thu → mốc vị trí đổi
+    }
+    const toggleSidebar = () => applySidebar(!document.documentElement.classList.contains("sb-collapsed"));
+    document.addEventListener("mouseover", e => {
+      const t = e.target.closest ? e.target : e.target.parentElement; if (!t) return;
+      if (t.closest("#sb-fly")) { clearTimeout(flyTimer); return; }
+      const el = t.closest("#sidebar [data-tip], #sb-toggle");
+      if (!el) { if (sbTip.classList.contains("show")) hideSbTip(); if (flyOpen) hideFly(); return; }
+      if (el.matches(".nav-parent") && isRail()) { showFly(); return; }
+      if (flyOpen) hideFly();
+      showSbTip(el, el.id === "sb-toggle");
+    });
+    document.addEventListener("focusin", e => {
+      const el = e.target.closest && e.target.closest("#sidebar [data-tip], #sb-toggle"); if (!el || !el.matches(":focus-visible")) return;
+      if (el.matches(".nav-parent") && isRail()) showFly(); else showSbTip(el, el.id === "sb-toggle");
+    });
+    document.addEventListener("focusout", e => { if (e.target.closest && e.target.closest("#sidebar, #sb-toggle")) hideSbTip(); });
+    document.addEventListener("click", e => {
+      if (e.target.closest("#sb-toggle")) toggleSidebar();
+      if (e.target.closest("#sb-fly")) hideFly(true);
+      else if (flyOpen && !e.target.closest(".nav-parent")) hideFly(true);
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && flyOpen) hideFly(true);
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "b" && sbMQ.matches && document.querySelector("#sidebar")) {
+        const t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+        e.preventDefault(); toggleSidebar();
+      }
+    });
+    sbMQ.addEventListener("change", () => { hideSbTip(); hideFly(true); syncToolsNav(); positionNavIndicator(true); setTimeout(() => positionNavIndicator(true), 340); });
+    window.addEventListener("scroll", () => { if (flyOpen) hideFly(true); hideSbTip(); }, { passive: true });
     function goTab(id) {
       setSidebar(false);
       if (id === state.tab) return;
@@ -2676,19 +2848,21 @@ h1, h2, h3 { text-wrap: balance; }
       const tabs = appTabs();
       if (!tabs.some(x => x[0] === state.tab)) state.tab = "dashboard";
       const activeTab = tabs.find(x => x[0] === state.tab) || tabs[0];
+      const rail = isRail(), sbCol = document.documentElement.classList.contains("sb-collapsed");
       return `<div class="app-shell">
         <aside class="sidebar" id="sidebar">
           <div class="brand"><div class="brand-mark">${ICONS.database}</div><div><strong>Masterdata DMS</strong><small>CCVN data workspace</small></div></div>
           <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.filter(t => t[0] !== "tools_mdm").map(([id, label, icon]) => id === "tools"
-            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? (toolsOpen ? " group-on" : " active") : ""}" data-tools-parent aria-expanded="${toolsOpen}" aria-controls="nav-tools-sub">${icon}<span>${label}</span><svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="nav-sub-wrap${toolsOpen ? "" : " collapsed"}" id="nav-tools-sub"><div class="nav-sub-inner">` + [["tools", "L1 Team"], ["tools_mdm", "L2 / MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("") + `</div></div>`
-            : `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
+            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? (toolsOpen && !rail ? " group-on" : " active") : ""}" data-tools-parent data-tip="${escapeHtml(label)}" aria-expanded="${toolsOpen && !rail}" aria-controls="nav-tools-sub">${icon}<span>${label}</span><svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="nav-sub-wrap${toolsOpen && !rail ? "" : " collapsed"}" id="nav-tools-sub"><div class="nav-sub-inner">` + [["tools", "L1 Team"], ["tools_mdm", "L2 / MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("") + `</div></div>`
+            : `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}" data-tip="${escapeHtml(label)}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
           <div class="sidebar-foot">
             <div class="user-card">
-              <div class="user-chip"><div class="avatar">${initials(state.profile.display_name || state.profile.email)}</div><div><b>${escapeHtml(state.profile.display_name || "Người dùng")}</b><span>${escapeHtml(roleLabel(state.profile.role))}</span></div></div>
-              <button class="signout" id="logout" data-hover-icon="arrowRight" title="Đăng xuất" aria-label="Đăng xuất">${ICONS.logout}</button>
+              <div class="user-chip" data-tip="${escapeHtml(state.profile.display_name || "Người dùng")}"><div class="avatar">${initials(state.profile.display_name || state.profile.email)}</div><div><b>${escapeHtml(state.profile.display_name || "Người dùng")}</b><span>${escapeHtml(roleLabel(state.profile.role))}</span></div></div>
+              <button class="signout" id="logout" data-hover-icon="arrowRight" title="Đăng xuất" data-tip="Đăng xuất" aria-label="Đăng xuất">${ICONS.logout}</button>
             </div>
           </div>
         </aside>
+        <button type="button" class="sb-toggle" id="sb-toggle" data-tip="${sbCol ? "Mở rộng menu" : "Thu gọn menu"} (Ctrl+B)" aria-label="${sbCol ? "Mở rộng menu" : "Thu gọn menu"}" aria-controls="sidebar" aria-expanded="${!sbCol}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
         <div class="scrim" id="scrim"></div>
         <main class="main">
           <header class="topbar">
@@ -4599,13 +4773,13 @@ h1, h2, h3 { text-wrap: balance; }
       return s;
     }
     function tacGroupHtml(g, i) {
-      const F = (k, l, key, ph, st) => `<div class="field" data-k="${k}"${st ? ` style="${st}"` : ""}><label>${l}${key ? H(key) : ""}</label><input data-tg="${k}" value="${escapeHtml(g[k])}" placeholder="${ph}" autocomplete="off"></div>`;
+      const F = (k, l, key, ph, st, rq) => `<div class="field${rqCls(rq)}" data-k="${k}"${st ? ` style="${st}"` : ""}><label>${l}${key ? H(key) : ""}${rqTag(rq)}</label><input data-tg="${k}" value="${escapeHtml(g[k])}" placeholder="${ph}" autocomplete="off"></div>`;
       const dist = g.scope === "dist";
       return `<div class="pro-slab" data-gi="${i}"><div class="pro-slab-h"><span>Nhóm ${i + 1}</span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Tạo nhóm mới, giữ phạm vi & số liệu, xóa danh sách SKU">⧉ Nhân đôi</button>${mdmTac.groups.length > 1 ? '<button type="button" class="btn btn-plain" data-tac-del>× Xóa</button>' : ""}</span></div>
-        <div class="pro-slab-f">${F("desc", "PromotionDescription", "PromotionDescription", "vd: 6 lon Coke ZERO giảm 11k (để trống = lấy theo PromotionCode)", "grid-column:1/-1")}${F("qty", "SLABFROM = SLABTO", "SLABFROM", "vd: 6")}${F("disc", "DISCOUNT", "DISCOUNT", "vd: 11000")}${F("pfx", "PromotionCode · tiền tố riêng", "", "trống = dùng chung")}${F("n0", "PromotionCode · số bắt đầu riêng", "", "trống = nối tiếp")}</div>
+        <div class="pro-slab-f">${F("desc", "PromotionDescription", "PromotionDescription", "vd: 6 lon Coke ZERO giảm 11k (để trống = lấy theo PromotionCode)", "grid-column:1/-1", "nen")}${F("qty", "SLABFROM = SLABTO", "SLABFROM", "vd: 6", "", "must")}${F("disc", "DISCOUNT", "DISCOUNT", "vd: 11000", "", "must")}${F("pfx", "PromotionCode · tiền tố riêng", "", "trống = dùng chung", "", "opt")}${F("n0", "PromotionCode · số bắt đầu riêng", "", "trống = nối tiếp", "", "opt")}</div>
         <div class="pro-sum">${tacSum(g, null)}</div>
-        <div class="pro-slab-t"><div class="field" data-k="sku"><label>SKUCode (ProductGroup = Q)${H("SKUCode")}<span class="pro-cnt" data-cnt="sku">${tacCnt(g.sku, "SKU")}</span></label><textarea data-tg="sku" placeholder="Dán SKU, mỗi dòng 1 SKU&#10;1533&#10;1537" spellcheck="false">${escapeHtml(g.sku)}</textarea></div>
-        <div class="field" data-k="sv"><label>${dist ? "DistributorCode" : "Territory"}${H(dist ? "DistributorCode" : "Territory")}<span class="pro-cnt" data-cnt="sv">${tacCnt(g.sv, dist ? "NPP" : "vùng")}</span></label><select data-tg="scope" style="margin-bottom:6px"><option value="terr"${dist ? "" : " selected"}>Áp dụng theo Territory (mã vùng)</option><option value="dist"${dist ? " selected" : ""}>Áp dụng theo DistributorCode (NPP)</option></select><textarea data-tg="sv" style="min-height:52px" placeholder="${dist ? "Mỗi dòng 1 NPP&#10;0084000460" : "Mỗi dòng 1 mã vùng&#10;VN10VN13"}" spellcheck="false">${escapeHtml(g.sv)}</textarea></div></div></div>`;
+        <div class="pro-slab-t"><div class="field rq-must" data-k="sku"><label>SKUCode (ProductGroup = Q)${H("SKUCode")}${rqTag("must")}<span class="pro-cnt" data-cnt="sku">${tacCnt(g.sku, "SKU")}</span></label><textarea data-tg="sku" placeholder="Dán SKU, mỗi dòng 1 SKU&#10;1533&#10;1537" spellcheck="false">${escapeHtml(g.sku)}</textarea></div>
+        <div class="field rq-must" data-k="sv"><label>${dist ? "DistributorCode" : "Territory"}${H(dist ? "DistributorCode" : "Territory")}${rqTag("must")}<span class="pro-cnt" data-cnt="sv">${tacCnt(g.sv, dist ? "NPP" : "vùng")}</span></label><select data-tg="scope" style="margin-bottom:6px"><option value="terr"${dist ? "" : " selected"}>Áp dụng theo Territory (mã vùng)</option><option value="dist"${dist ? " selected" : ""}>Áp dụng theo DistributorCode (NPP)</option></select><textarea data-tg="sv" style="min-height:52px" placeholder="${dist ? "Mỗi dòng 1 NPP&#10;0084000460" : "Mỗi dòng 1 mã vùng&#10;VN10VN13"}" spellcheck="false">${escapeHtml(g.sv)}</textarea></div></div></div>`;
     }
     function tacColFieldHtml(key, kind, def, type, opts) {
       const v = mdmTac.cols[key] != null ? mdmTac.cols[key] : "", autoTag = kind === "auto" ? " pro-col-auto" : "";
@@ -4614,6 +4788,20 @@ h1, h2, h3 { text-wrap: balance; }
     }
     const tacColGroupHtml = g => `<div class="pro-col-grp"><h4>${g.name}</h4><div class="pro-grid">${g.cols.map(([k, kind, d, t, o]) => tacColFieldHtml(k, kind, d, t, o)).join("")}</div></div>`;
     /* ======== Tactical · chế độ MA TRẬN (SKU × Vùng/NPP) — mỗi ô = mức giảm của 1 SKU ở 1 vùng; ô trống = không áp dụng ======== */
+    /* ---- Mức độ cần điền trên giao diện: must = phải nhập · set = có mặc định, cần soát lại · opt = tùy chọn · nen = nên điền ---- */
+    const RQ_LBL = { must: "Bắt buộc", set: "Xác nhận", opt: "Tùy chọn", nen: "Nên điền" };
+    const rqTag = l => l ? `<span class="rq-tag ${l === "nen" ? "set" : l}">${RQ_LBL[l]}</span>` : "";
+    const rqCls = l => l ? ` rq-${l === "nen" ? "set" : l}` : "";
+    const TAC_RQ = { start: "must", end: "must", pfx: "must", n0: "opt", uom: "set", type: "set", seq: "set", apply: "opt", rep: "set", excl: "set", rb: "set", dm: "set", batch: "set", scope: "set", suffix: "opt", lower: "opt" };
+    const rqLegendHtml = () => `<div class="rq-legend"><b>Cách đọc màu:</b><span class="i">${rqTag("must")} phải nhập mỗi lần — ô trống có nền vàng</span><span class="i">${rqTag("set")} đã có giá trị mặc định — chỉ cần soát lại cho đúng CTKM</span><span class="i">${rqTag("opt")} không dùng thì bỏ qua</span></div>`;
+    /* ---- Nhóm cột tô màu nhẹ khi xuất Excel để soát lại (chỉ là màu nền — giá trị giữ nguyên) ---- */
+    const TAC_CHK_GROUPS = [
+      { id: "in", name: "Bạn nhập", desc: "SKUCode · SLABFROM/SLABTO · DISCOUNT · PromotionDescription · Territory/DistributorCode", cell: "FFFFF4CC", head: "FFFFE699", cols: ["PromotionDescription", "SKUCode", "SLABFROM", "SLABTO", "DISCOUNT", "Territory", "DistributorCode"] },
+      { id: "cfg", name: "Thông tin chung", desc: "StartDate · EndDate · UnitOfMeasure · PromotionTypeCode · SequenceNumber · Repeating_Range · ExclusionOption · RangeBasis · DisbursementMethod", cell: "FFE3EEF9", head: "FFBDD7EE", cols: ["StartDate", "EndDate", "UnitOfMeasure", "PromotionTypeCode", "SequenceNumber", "Repeating_Range", "ExclusionOption", "RangeBasis", "DisbursementMethod"] },
+      { id: "auto", name: "Tool tự sinh / cố định", desc: "PromotionCode · ProRata · SLABNUM · Bundle_Promotion · ProductGroup · PromotionQuantity · SpecialPromotion", cell: "FFE6F2DF", head: "FFC6E0B4", cols: ["PromotionCode", "ProRata", "SLABNUM", "Bundle_Promotion", "ProductGroup", "PromotionQuantity", "SpecialPromotion"] }
+    ];
+    const TAC_CHK_EXTRA = { id: "x", name: "Cột khác có dữ liệu", cell: "FFEFE6F7", head: "FFD9C9EE" };
+    const tacChkGroup = c => (TAC_CHK_GROUPS.find(g => g.cols.includes(c)) || {}).id || "x";
     const TAC_VIEW_KEY = "masterdata_tac_view", TAC_FMT_KEY = "masterdata_tac_fmt";
     let mdmTacView = loadKey(TAC_VIEW_KEY, ["matrix", "group"], "matrix"), mdmTacFmt = loadKey(TAC_FMT_KEY, ["67", "75"], "67");
     const tmxVal = s => String(s ?? "").trim();
@@ -4698,12 +4886,12 @@ h1, h2, h3 { text-wrap: balance; }
     }
     function tmxTableHtml() {
       const M = mdmTac.mx, dist = M.scope === "dist";
-      const head = `<tr><th class="n">#</th><th class="c-sku">SKUCode${H("SKUCode")}</th><th class="c-qty">SLABFROM = SLABTO${H("SLABFROM")}</th><th class="c-desc">PromotionDescription${H("PromotionDescription")}</th>${M.rg.map((g, j) => `<th class="c-rg" data-j="${j}"><div class="tmx-rgt"><span>${dist ? "DistributorCode" : "Territory"} ${j + 1}</span><span><button type="button" data-pro-act="mx-dup-rg" title="Nhân đôi cột này (giữ nguyên mức giảm)">⧉</button>${M.rg.length > 1 ? '<button type="button" data-pro-act="mx-del-rg" title="Xóa cột này">×</button>' : ""}</span></div><input data-mx="rg" data-j="${j}" data-f="code" value="${escapeHtml(g.code)}" placeholder="${dist ? "0084000460" : "VN10VN11"}" autocomplete="off" spellcheck="false" title="${dist ? "DistributorCode" : "Territory"}"><div class="tmx-cap">PromotionCode (ký hiệu · số bắt đầu)</div><div class="tmx-rg2"><input data-mx="rg" data-j="${j}" data-f="ky" value="${escapeHtml(g.ky)}" placeholder="HC" autocomplete="off" spellcheck="false" title="Gõ chữ ngắn (vd HC) → mã HC_&lt;mã đợt&gt;_1, 2, 3… Gõ đầy đủ (vd HC_261021_) → dùng nguyên văn"><input data-mx="rg" data-j="${j}" data-f="n0" value="${escapeHtml(g.n0)}" placeholder="1" title="Số bắt đầu của mã" autocomplete="off"></div><div class="tmx-rgm" data-j="${j}">—</div><div class="tmx-cap tmx-cap-d">DISCOUNT ↓</div></th>`).join("")}<th class="x"></th></tr>`;
+      const head = `<tr><th class="n">#</th><th class="c-sku rq-must">SKUCode${H("SKUCode")}<div class="rq-row">${rqTag("must")}</div></th><th class="c-qty rq-must">SLABFROM = SLABTO${H("SLABFROM")}<div class="rq-row">${rqTag("must")}</div></th><th class="c-desc rq-set">PromotionDescription${H("PromotionDescription")}<div class="rq-row">${rqTag("nen")} <span class="rq-note">trống = lấy theo mã</span></div></th>${M.rg.map((g, j) => `<th class="c-rg rq-must" data-j="${j}"><div class="tmx-rgt"><span>${dist ? "DistributorCode" : "Territory"} ${j + 1}${rqTag("must")}</span><span><button type="button" data-pro-act="mx-dup-rg" title="Nhân đôi cột này (giữ nguyên mức giảm)">⧉</button>${M.rg.length > 1 ? '<button type="button" data-pro-act="mx-del-rg" title="Xóa cột này">×</button>' : ""}</span></div><input data-mx="rg" data-j="${j}" data-f="code" value="${escapeHtml(g.code)}" placeholder="${dist ? "0084000460" : "VN10VN11"}" autocomplete="off" spellcheck="false" title="${dist ? "DistributorCode" : "Territory"}"><div class="tmx-cap">PromotionCode (ký hiệu · số bắt đầu)</div><div class="tmx-rg2"><input data-mx="rg" data-j="${j}" data-f="ky" value="${escapeHtml(g.ky)}" placeholder="HC" autocomplete="off" spellcheck="false" title="Gõ chữ ngắn (vd HC) → mã HC_&lt;mã đợt&gt;_1, 2, 3… Gõ đầy đủ (vd HC_261021_) → dùng nguyên văn"><input data-mx="rg" data-j="${j}" data-f="n0" value="${escapeHtml(g.n0)}" placeholder="1" title="Số bắt đầu của mã" autocomplete="off"></div><div class="tmx-rgm" data-j="${j}">—</div><div class="tmx-cap tmx-cap-d">DISCOUNT ↓ ${rqTag("must")}</div></th>`).join("")}<th class="x"></th></tr>`;
       return `<table class="tmx" id="tmx"><thead>${head}</thead><tbody id="tmx-body">${M.rows.map(tmxRowHtml).join("")}</tbody></table>`;
     }
     function tmxCfgHtml() {
       const M = mdmTac.mx;
-      return `<div class="field" data-k="batch"><label>Mã đợt (ghép vào ký hiệu)</label><input data-mx="batch" value="${escapeHtml(M.batch)}" placeholder="vd: 261023" autocomplete="off"></div><div class="field" data-k="scope"><label>Áp dụng theo</label><select data-mx="scope"><option value="terr"${M.scope === "dist" ? "" : " selected"}>Territory (mã vùng)</option><option value="dist"${M.scope === "dist" ? " selected" : ""}>DistributorCode (NPP)</option></select></div><div class="field" data-k="suffix"><label>Tự thêm vào cuối PromotionDescription</label><input data-mx="suffix" value="${escapeHtml(M.suffix)}" placeholder="vd: giảm {gia} (trống = không thêm)" autocomplete="off"></div><div class="field" data-k="lower"><label>Kiểu hiển thị giá trong PromotionDescription</label><select data-mx="lower"><option value="auto"${M.lower === "auto" ? " selected" : ""}>Tự động (tên “nT” → 4K · còn lại → 1k, 750đ)</option><option value="0"${M.lower === false ? " selected" : ""}>Luôn K hoa: 4K · 750đ</option><option value="1"${M.lower === true ? " selected" : ""}>Luôn k thường: 4k · 750đ</option></select></div>`;
+      return `<div class="field rq-set" data-k="batch"><label>Mã đợt (ghép vào ký hiệu)${rqTag("set")}</label><input data-mx="batch" value="${escapeHtml(M.batch)}" placeholder="vd: 261023" autocomplete="off"></div><div class="field rq-set" data-k="scope"><label>Áp dụng theo${rqTag("set")}</label><select data-mx="scope"><option value="terr"${M.scope === "dist" ? "" : " selected"}>Territory (mã vùng)</option><option value="dist"${M.scope === "dist" ? " selected" : ""}>DistributorCode (NPP)</option></select></div><div class="field rq-opt" data-k="suffix"><label>Tự thêm vào cuối PromotionDescription${rqTag("opt")}</label><input data-mx="suffix" value="${escapeHtml(M.suffix)}" placeholder="vd: giảm {gia} (trống = không thêm)" autocomplete="off"></div><div class="field rq-opt" data-k="lower"><label>Kiểu hiển thị giá trong PromotionDescription${rqTag("opt")}</label><select data-mx="lower"><option value="auto"${M.lower === "auto" ? " selected" : ""}>Tự động (tên “nT” → 4K · còn lại → 1k, 750đ)</option><option value="0"${M.lower === false ? " selected" : ""}>Luôn K hoa: 4K · 750đ</option><option value="1"${M.lower === true ? " selected" : ""}>Luôn k thường: 4k · 750đ</option></select></div>`;
     }
     function tmxCardHtml() {
       return `<div class="pro-card"><h3><em>2</em>Bảng CTKM: SKUCode × ${mdmTac.mx.scope === "dist" ? "DistributorCode" : "Territory"}<span class="adj-chips" id="tac-chips" style="margin-left:auto"></span></h3>
@@ -4728,7 +4916,7 @@ h1, h2, h3 { text-wrap: balance; }
       if (v.issues.length) chips.push(`<span class="adj-chip err">${v.issues.length} lỗi</span>`);
       $("#tac-chips").innerHTML = chips.join("");
       $("#tac-issues").innerHTML = v.issues.slice(0, 14).map(x => `<li data-goto='${x.sel}'>✖ ${escapeHtml(x.msg)}</li>`).join("") + (v.issues.length > 14 ? `<li class="w">… và ${v.issues.length - 14} lỗi nữa</li>` : "") + v.warns.slice(0, 6).map(w => `<li class="w">⚠ ${escapeHtml(w)}</li>`).join("") + (!v.issues.length ? `<li class="ok">✔ Dữ liệu hợp lệ, sẵn sàng xuất file</li>` : "");
-      $("#tac-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 12).map(r => `<tr>${PV.map(c => `<td>${escapeHtml(r[TAC_I[c]] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 12 ? `<div class="pro-more">… và ${nf(v.out.length - 12)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — nhập SKU, số lượng mua, mức giảm và mã vùng để xem trước.</div>`;
+      $("#tac-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th class="g-${tacChkGroup(c)}">${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 12).map(r => `<tr>${PV.map(c => `<td class="g-${tacChkGroup(c)}">${escapeHtml(r[TAC_I[c]] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 12 ? `<div class="pro-more">… và ${nf(v.out.length - 12)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — nhập SKU, số lượng mua, mức giảm và mã vùng để xem trước.</div>`;
       $("#tac-export").disabled = !v.out.length || !!v.issues.length;
     }
     function tmxSet(r, c, v) {
@@ -4844,7 +5032,7 @@ h1, h2, h3 { text-wrap: balance; }
       if (v.issues.length) chips.push(`<span class="adj-chip err">${v.issues.length} lỗi</span>`);
       $("#tac-chips").innerHTML = chips.join("");
       $("#tac-issues").innerHTML = v.issues.map(x => `<li data-goto='${x.sel}'>✖ ${escapeHtml(x.msg)}</li>`).join("") + v.warns.map(w => `<li class="w">⚠ ${escapeHtml(w)}</li>`).join("") + (!v.issues.length ? `<li class="ok">✔ Dữ liệu hợp lệ, sẵn sàng xuất file</li>` : "");
-      $("#tac-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 8).map(r => `<tr>${PV.map(c => `<td>${r[TAC_I[c]] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 8 ? `<div class="pro-more">… và ${nf(v.out.length - 8)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — điền nhóm, SKU và phạm vi để xem trước.</div>`;
+      $("#tac-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th class="g-${tacChkGroup(c)}">${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 8).map(r => `<tr>${PV.map(c => `<td>${r[TAC_I[c]] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 8 ? `<div class="pro-more">… và ${nf(v.out.length - 8)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — điền nhóm, SKU và phạm vi để xem trước.</div>`;
       $("#tac-export").disabled = !v.out.length || !!v.issues.length;
     }
     async function tacAct(a, el) {
@@ -4864,17 +5052,41 @@ h1, h2, h3 { text-wrap: balance; }
       }
       tacDraw();
     }
+    // Ghi file có tô màu nhẹ theo nhóm cột (ExcelJS). Cột nào không có dữ liệu thì để trắng.
+    async function tacSaveStyled(XC, XR, fileName) {
+      const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("Sheet1", { views: [{ state: "frozen", ySplit: 1 }] });
+      const fill = argb => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+      const edge = { style: "thin", color: { argb: "FFD9D9D9" } }, border = { top: edge, left: edge, bottom: edge, right: edge };
+      const filled = (x) => x != null && String(x).trim() !== "";
+      const pal = XC.map((c, i) => XR.some(r => filled(r[i])) ? (TAC_CHK_GROUPS.find(g => g.cols.includes(c)) || TAC_CHK_EXTRA) : null);
+      const hdr = ws.addRow(XC);
+      XC.forEach((_, i) => { const c = hdr.getCell(i + 1); c.font = { bold: true }; c.fill = fill(pal[i] ? pal[i].head : "FFF2F2F2"); c.border = border; c.alignment = { vertical: "middle" }; });
+      XR.forEach(r => {
+        const row = ws.addRow(r.map(x => x == null ? null : x));
+        XC.forEach((h, i) => { const c = row.getCell(i + 1); if (pal[i]) { c.fill = fill(pal[i].cell); c.border = border; } if (h === "StartDate" || h === "EndDate") c.numFmt = "dd/mm/yyyy"; });
+      });
+      XC.forEach((h, i) => { const mx = XR.reduce((m, r) => Math.max(m, filled(r[i]) ? String(r[i]).length : 0), 0); ws.getColumn(i + 1).width = Math.min(Math.max(h.length + 2, mx + 2, 12), 50); });
+      ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: XC.length } };
+      const buf = await wb.xlsx.writeBuffer();
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: XLSX_MIME })), download: fileName });
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    }
     async function tacExport() {
       const v = mdmTacView === "matrix" ? tmxParse() : tacParse(); if (!v.out.length || v.issues.length) return;
-      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
       const XC = mdmTacFmt === "67" ? FOC_COLS : TAC_COLS, XR = XC === TAC_COLS ? v.out : v.out.map(r => XC.map(c => r[TAC_I[c]]));
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Tactical_${stamp}.xlsx`;
+      try { await loadLib("exceljs"); } catch (_) { /* dùng phương án dự phòng bên dưới */ }
+      if (window.ExcelJS) {
+        try { await tacSaveStyled(XC, XR, fileName); return toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — các cột dữ liệu đã được tô màu nhẹ để soát lại.`, "success"); }
+        catch (err) { console.warn("Xuất có màu lỗi, chuyển sang file thường:", err); }
+      }
+      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
       const ws = XLSX.utils.aoa_to_sheet([XC, ...XR]);
       ["StartDate", "EndDate"].forEach(c => { const col = XLSX.utils.encode_col(XC.indexOf(c)); v.out.forEach((_, i) => { const cell = ws[col + (i + 2)]; if (cell) cell.z = "dd/mm/yyyy"; }); });
       ws["!cols"] = XC.map(h => ({ wch: Math.max(h.length + 2, 12) }));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Tactical_${stamp}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
+      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — lần này không tô màu được vì chưa tải được thư viện ExcelJS.`, "success");
     }
     function tacGuideHtml() {
       return `<h4>⚡ Chế độ Ma trận (khuyên dùng — như file 3 vùng)</h4><ol class="pd-steps"><li><b>Thông tin chung</b> — chọn ngày, đơn vị, loại KM, mã đợt (vd 261023) và áp dụng theo Territory hay NPP.</li><li><b>Cột vùng</b> — mỗi vùng/NPP 1 cột: nhập mã vùng + ký hiệu (HC, SP, MK…). Mã sẽ là <code>HC_261023_1, 2, 3…</code> riêng cho từng vùng. Có thể dán cả hàng mã vùng từ Excel.</li><li><b>Dòng SKU</b> — mỗi SKU 1 dòng: SKU, số lượng mua, PromotionDescription (chỉ gõ tên, vd <code>1T Dasani</code> → tự thành “1T Dasani giảm 4K” theo từng vùng) và mức giảm cho từng vùng. Ô trống = SKU không áp dụng ở vùng đó. Dán nguyên khối từ Excel được.</li><li><b>Kiểm tra &amp; xuất</b> — mục đỏ bên phải bấm để nhảy tới ô lỗi; chọn 67 hoặc 75 cột rồi xuất. Có nút <b>Nạp từ Excel cũ</b> để sửa tiếp một file Tactical đã tạo.</li></ol><h4>▤ Chế độ Theo nhóm</h4><ol class="pd-steps"><li><b>Thông tin chung</b> — nhập tiền tố PromotionCode (vd <code>CP_261008_update</code>) và số bắt đầu, ngày bắt đầu/kết thúc, đơn vị. Mã mỗi dòng = tiền tố + số tăng dần (1, 2, 3…).</li><li><b>Nhóm CTKM</b> — mỗi nhóm có chung mô tả, số lượng mua (SLABFROM = SLABTO) và DISCOUNT. Mỗi mức giảm khác nhau = 1 nhóm (bấm <b>Nhân đôi</b> để tạo nhanh).</li><li><b>Dán SKU và phạm vi</b> — mỗi SKU × mỗi Territory (hoặc mỗi NPP) ra 1 dòng với 1 PromotionCode riêng, đúng như file mẫu PROMOTIONbosung_CP_OCT26.</li><li><b>Kiểm tra</b> — đọc câu diễn giải dưới mỗi nhóm, xem checklist và bảng xem trước; bấm vào mục đỏ để nhảy tới ô lỗi.</li><li><b>Xuất Excel</b> — file theo mẫu Tactical (67 hoặc 75 cột tùy chọn ở mục Xuất), sheet <code>Sheet1</code>, sẵn sàng upload.</li></ol>
@@ -4884,25 +5096,26 @@ h1, h2, h3 { text-wrap: balance; }
     }
     function renderProTactical() {
       const P = mdmTac, MX = mdmTacView === "matrix";
-      const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${key ? H(key) : ""}</label><input data-tac="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
-      const S = (k, l, key, opts) => `<div class="field" data-k="${k}"><label>${l}${key ? H(key) : ""}</label><select data-tac="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
+      const F = (k, l, key, ph) => `<div class="field${rqCls(TAC_RQ[k])}" data-k="${k}"><label>${l}${key ? H(key) : ""}${rqTag(TAC_RQ[k])}</label><input data-tac="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+      const S = (k, l, key, opts) => `<div class="field${rqCls(TAC_RQ[k])}" data-k="${k}"><label>${l}${key ? H(key) : ""}${rqTag(TAC_RQ[k])}</label><select data-tac="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tactical: mỗi SKU × mỗi vùng/NPP = 1 PromotionCode, xuất Excel đúng mẫu Tactical (chọn 67 hoặc 75 cột khi xuất). Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
-        <div class="panel-body"><div class="tmx-top">${proModeSeg()}<div class="tmx-view"><button type="button" data-pro-act="view-matrix" class="${MX ? "on" : ""}">⚡ Ma trận SKU × Vùng</button><button type="button" data-pro-act="view-group" class="${MX ? "" : "on"}">▤ Theo nhóm</button></div></div><div class="pro-lay"><div class="pro-main">
+        <div class="panel-body"><div class="tmx-top">${proModeSeg()}<div class="tmx-view"><button type="button" data-pro-act="view-matrix" class="${MX ? "on" : ""}">⚡ Ma trận SKU × Vùng</button><button type="button" data-pro-act="view-group" class="${MX ? "" : "on"}">▤ Theo nhóm</button></div></div>${rqLegendHtml()}<div class="pro-lay"><div class="pro-main">
           <div class="pro-card"><h3><em>1</em>Thông tin chung</h3>
             <div class="pro-grid" id="tac-cfg">${MX ? `${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${S("type", "PromotionTypeCode", "PromotionTypeCode", TAC_TYPE_OPTS)}${tmxCfgHtml()}` : `${F("pfx", "PromotionCode (tiền tố)", "PromotionCode", "vd: CP_261008_update")}${F("n0", "PromotionCode · số bắt đầu", "", "vd: 1")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("type", "PromotionTypeCode", "PromotionTypeCode", TAC_TYPE_OPTS)}`}</div></div>
           ${MX ? tmxCardHtml() : `<div class="pro-card"><h3><em>2</em>Nhóm CTKM (số lượng mua &amp; mức giảm)<span class="adj-chips" id="tac-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm nhóm</button></h3><div id="tac-groups">${P.groups.map(tacGroupHtml).join("")}</div>
             <p class="adj-tip">💡 Sao chép cột SKU (hoặc cột mã vùng / NPP) từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô tương ứng, mỗi dòng 1 giá trị. Nhiều SKU × nhiều vùng/NPP = mỗi tổ hợp 1 dòng và 1 PromotionCode. Nhóm có tiền tố/số bắt đầu riêng sẽ đánh số mã độc lập với các nhóm còn lại.</p></div>`}
-          <details class="pro-card pro-det" id="tac-adv" open><summary><em>3</em>Tùy chọn nâng cao <small>giữ mặc định theo file mẫu — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
+          <details class="pro-card pro-det" id="tac-adv" open><summary><em>3</em>Tùy chọn nâng cao ${rqTag("set")} <small>đã điền sẵn theo file mẫu — chỉ cần soát lại, thường không phải đổi</small></summary><div class="pro-grid" style="margin-top:12px">
             ${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "để trống = không giới hạn")}${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – Không lặp lại"], ["1", "1 – Có lặp lại"]])}
             ${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Có (được hưởng thêm CTKM khác)"], ["1", "1 – Không (chỉ CTKM này)"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Dựa trên số lượng sản phẩm mua"], ["2", "2 – Dựa trên giá trị sản phẩm mua"]])}${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Áp dụng KM trên hóa đơn"], ["2", "2 – Áp dụng KM ngoài hóa đơn"]])}
-            <div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-tac="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu Tactical để trống)</label></div></div></details>
-          <details class="pro-card pro-cols" id="tac-cols"><summary><em>4</em>Tất cả các cột template <small>— các cột còn lại trong 75 cột, hệ thống tự điền, bạn có thể điều chỉnh</small><span class="pro-cols-cnt" id="tac-cols-cnt"></span></summary><div class="pro-cols-body">${TAC_EXTRA_GROUPS.map(tacColGroupHtml).join("")}</div></details>
+            <div class="field rq-opt"><label>PromotionQuotaCode${H("PromotionQuotaCode")}${rqTag("opt")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-tac="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu Tactical để trống)</label></div></div></details>
+          <details class="pro-card pro-cols" id="tac-cols"><summary><em>4</em>Tất cả các cột template ${rqTag("opt")} <small>— các cột còn lại trong 75 cột, hệ thống tự điền, bạn có thể điều chỉnh</small><span class="pro-cols-cnt" id="tac-cols-cnt"></span></summary><div class="pro-cols-body">${TAC_EXTRA_GROUPS.map(tacColGroupHtml).join("")}</div></details>
         </div>
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="tac-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="tac-pv"></div></div>
           <div class="field"><label>Định dạng cột khi xuất</label><select id="tac-fmt"><option value="67"${mdmTacFmt === "67" ? " selected" : ""}>67 cột — đúng như file mẫu 3 vùng</option><option value="75"${mdmTacFmt === "75" ? " selected" : ""}>75 cột — đủ ForEach, SegmentCode, DistributorCategoryCode…</option></select></div>
           <button type="button" id="tac-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
+          <div class="xl-legend"><b>Màu nền trong file Excel (để soát lại)</b>${TAC_CHK_GROUPS.map(g => `<span><i style="background:#${g.cell.slice(2)}"></i>${g.name}<br><small>${g.desc}</small></span>`).join("")}<span><i style="background:#${TAC_CHK_EXTRA.cell.slice(2)}"></i>${TAC_CHK_EXTRA.name}<br><small>Cột ngoài danh sách trên nhưng có điền dữ liệu (vd ApplyCount) — soát kỹ vì không nằm trong mẫu 3 vùng.</small></span><small>Chỉ là màu nền, giá trị ô giữ nguyên. Cột không có dữ liệu thì để trắng.</small></div>
           <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">Mỗi dòng: SLABNUM = 1 · SLABFROM = SLABTO · ProductGroup = Q · Bundle_Promotion = 0 · ProRata tự tính theo loại KM</div></div></aside></div></div></section>`;
     }
     // FOC dùng mẫu riêng (cp_foc_09oct26.xlsx, 67 cột) — tách khỏi Tactical
@@ -6004,7 +6217,8 @@ h1, h2, h3 { text-wrap: balance; }
       if (tabBtn && state.profile && document.querySelector(".app-shell")) goTab(tabBtn.dataset.tab);
       if (e.target.closest("[data-tools-parent]") && state.profile && document.querySelector(".app-shell")) {
         const inG = state.tab === "tools" || state.tab === "tools_mdm";
-        if (!inG) { toolsOpen = true; saveKey(TOOLS_OPEN_KEY, "1"); goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools")); syncToolsNav(); }
+        if (isRail()) { if (!inG) goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools")); showFly(); }
+        else if (!inG) { toolsOpen = true; saveKey(TOOLS_OPEN_KEY, "1"); goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools")); syncToolsNav(); }
         else { toolsOpen = !toolsOpen; saveKey(TOOLS_OPEN_KEY, toolsOpen ? "1" : "0"); syncToolsNav(); positionNavIndicator(); setTimeout(() => positionNavIndicator(), 330); }
       }
       if (e.target.closest("#mobile-menu")) setSidebar(!document.querySelector("#sidebar")?.classList.contains("open"));
