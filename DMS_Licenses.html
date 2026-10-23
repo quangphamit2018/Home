@@ -4582,6 +4582,15 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (it) { it.open = true; it.scrollIntoView({ block: "center" }); it.classList.add("flash"); setTimeout(() => it.classList.remove("flash"), 1800); }
       }
     }
+    /* ---- Slab in Slab: mức độ cần điền + nhóm cột tô màu khi xuất Excel ---- */
+    const PRO_RQ = { code: "must", desc: "nen", dist: "must", start: "must", end: "must", uom: "set", type: "set", terr: "opt", seq: "set", apply: "opt", rep: "set", excl: "set", rb: "set", dm: "set" };
+    const PRO_CHK_GROUPS = [
+      { id: "in", name: "Bạn nhập", desc: "PromotionCode · PromotionDescription · DistributorCode · Territory · SLABFROM/SLABTO · ForEach · DISCOUNT · ProductGroup (Q/A) · SKUCode", cell: "FFFFF4CC", head: "FFFFE699", cols: ["PromotionCode", "PromotionDescription", "DistributorCode", "Territory", "SLABFROM", "SLABTO", "ForEach", "DISCOUNT", "ProductGroup", "SKUCode"] },
+      { id: "cfg", name: "Thông tin chung", desc: "StartDate · EndDate · UnitOfMeasure · PromotionTypeCode · SequenceNumber · Repeating_Range · ExclusionOption · RangeBasis · DisbursementMethod", cell: "FFE3EEF9", head: "FFBDD7EE", cols: ["StartDate", "EndDate", "UnitOfMeasure", "PromotionTypeCode", "SequenceNumber", "Repeating_Range", "ExclusionOption", "RangeBasis", "DisbursementMethod"] },
+      { id: "auto", name: "Tool tự sinh / cố định", desc: "SLABNUM · ProRata · Bundle_Promotion · PromotionQuantity · PromotionQuotaCode · SpecialPromotion", cell: "FFE6F2DF", head: "FFC6E0B4", cols: ["SLABNUM", "ProRata", "Bundle_Promotion", "PromotionQuantity", "PromotionQuotaCode", "SpecialPromotion"] }
+    ];
+    const proChkGroup = c => (PRO_CHK_GROUPS.find(g => g.cols.includes(c)) || {}).id || "x";
+    const xlLegendHtml = (groups, extraNote) => `<div class="xl-legend"><b>Màu nền trong file Excel (để soát lại)</b>${groups.map(g => `<span><i style="background:#${g.cell.slice(2)}"></i>${g.name}<br><small>${g.desc}</small></span>`).join("")}<span><i style="background:#${TAC_CHK_EXTRA.cell.slice(2)}"></i>${TAC_CHK_EXTRA.name}<br><small>${extraNote}</small></span><small>Chỉ là màu nền, giá trị ô giữ nguyên. Cột không có dữ liệu thì để trắng.</small></div>`;
     function proParse() {
       const P = mdmPro, out = [], cfgBad = {}, slabBad = {}, issues = [], warns = [], ok = [];
       const ptype = Number(P.type), foc = ptype === 4;
@@ -4634,12 +4643,12 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const H = k => `<button type="button" class="pro-i" data-help="${k}" title="Xem giải thích cột ${k}">i</button>`;
     function proSlabHtml(s, i) {
       const foc = mdmPro.type === "4";
-      const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><input data-ps="${k}" value="${escapeHtml(s[k])}" placeholder="${ph}" autocomplete="off" inputmode="numeric"></div>`;
-      const T = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}<span class="pro-cnt" data-cnt="${k}">${proCnt(s[k])}</span></label><textarea data-ps="${k}" placeholder="${ph}" spellcheck="false">${escapeHtml(s[k])}</textarea></div>`;
+      const F = (k, l, key, ph) => `<div class="field rq-must" data-k="${k}"><label>${l}${H(key)}${rqTag("must")}</label><input data-ps="${k}" value="${escapeHtml(s[k])}" placeholder="${ph}" autocomplete="off" inputmode="numeric"></div>`;
+      const T = (k, l, key, ph) => `<div class="field rq-must" data-k="${k}"><label>${l}${H(key)}${rqTag("must")}<span class="pro-cnt" data-cnt="${k}">${proCnt(s[k])}</span></label><textarea data-ps="${k}" placeholder="${ph}" spellcheck="false">${escapeHtml(s[k])}</textarea></div>`;
       return `<div class="pro-slab" data-si="${i}"><div class="pro-slab-h"><span>Slab ${i + 1}</span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Tạo slab tiếp theo, giữ nguyên SKU">⧉ Nhân đôi</button>${mdmPro.slabs.length > 1 ? '<button type="button" class="btn btn-plain" data-pro-del>× Xóa</button>' : ""}</span></div>
         <div class="pro-slab-f">${F("from", "SLABFROM", "SLABFROM", "vd: 100")}${F("to", "SLABTO", "SLABTO", "vd: 299")}${F("each", "ForEach", "ForEach", "vd: 10")}${F("disc", "DISCOUNT", "DISCOUNT", "vd: 1")}</div>
         <div class="pro-sum">${proSum(s)}</div>
-        <div class="pro-slab-t">${T("q", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${(foc ? T("a", "ProductGroup", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862") : "")}</div></div>`;
+        <div class="pro-slab-t">${T("q", "ProductGroup = Q · SKU điều kiện (mua)", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862\n3459")}${(foc ? T("a", "ProductGroup = A · SKU quà tặng (tặng)", "ProductGroup", "Dán SKU, mỗi dòng 1 SKU\n7862") : "")}</div></div>`;
     }
     function proDraw() {
       if (mdmProMode === "tactical") return tacDraw();
@@ -4657,13 +4666,13 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       document.querySelectorAll("#pro-slabs .pro-slab").forEach(el => {
         const i = Number(el.dataset.si), b = v.slabBad[i] || {}, s = mdmPro.slabs[i];
         el.querySelectorAll(".field").forEach(f => f.classList.toggle("bad", !!b[f.dataset.k]));
-        el.querySelector(".pro-sum").innerHTML = proSum(s); el.querySelector('[data-cnt="q"]').innerHTML = proCnt(s.q); el.querySelector('[data-cnt="a"]').innerHTML = proCnt(s.a);
+        el.querySelector(".pro-sum").innerHTML = proSum(s); el.querySelector('[data-cnt="q"]').innerHTML = proCnt(s.q); const _ca = el.querySelector('[data-cnt="a"]'); if (_ca) _ca.innerHTML = proCnt(s.a);
       });
       const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng xuất ra</span>`, `<span class="adj-chip">${mdmPro.slabs.length} slab</span>`];
       if (v.issues.length) chips.push(`<span class="adj-chip err">${v.issues.length} lỗi</span>`);
       $("#pro-chips").innerHTML = chips.join("");
       $("#pro-issues").innerHTML = v.issues.map(x => `<li data-goto='${x.sel}'>✖ ${escapeHtml(x.msg)}</li>`).join("") + v.warns.map(w => `<li class="w">⚠ ${escapeHtml(w)}</li>`).join("") + (!v.issues.length ? `<li class="ok">✔ Dữ liệu hợp lệ, sẵn sàng xuất file</li>` : "");
-      $("#pro-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 6).map(r => `<tr>${PV.map(c => `<td>${r[PRO_I[c]] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 6 ? `<div class="pro-more">… và ${nf(v.out.length - 6)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — điền slab và SKU để xem trước.</div>`;
+      $("#pro-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th class="g-${proChkGroup(c)}">${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 6).map(r => `<tr>${PV.map(c => `<td class="g-${proChkGroup(c)}">${r[PRO_I[c]] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 6 ? `<div class="pro-more">… và ${nf(v.out.length - 6)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — điền slab và SKU để xem trước.</div>`;
       $("#pro-export").disabled = !v.out.length || !!v.nbad || !!v.ncfg;
     }
     async function proAct(a, el) {
@@ -4684,14 +4693,19 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     async function proExport() {
       const v = proParse(); if (!v.out.length || v.nbad || v.ncfg) return;
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Upload_${stamp}.xlsx`; // khác tên file mẫu
+      try { await loadLib("exceljs"); } catch (_) { /* dùng phương án dự phòng bên dưới */ }
+      if (window.ExcelJS) {
+        try { await tacSaveStyled(PRO_COLS, v.out, fileName, PRO_CHK_GROUPS, "PromotionUploadTemplateMapping_", "mm-dd-yy"); return toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — các cột dữ liệu đã được tô màu nhẹ để soát lại.`, "success"); }
+        catch (err) { console.warn("Xuất có màu lỗi, chuyển sang file thường:", err); }
+      }
       try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
       const ws = XLSX.utils.aoa_to_sheet([PRO_COLS, ...v.out]);
       v.out.forEach((_, i) => { ["Q", "R"].forEach(c => { const cell = ws[c + (i + 2)]; if (cell) cell.z = "mm-dd-yy"; }); });
       ws["!cols"] = PRO_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "PromotionUploadTemplateMapping_");
-      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Upload_${stamp}.xlsx`; // khác tên file mẫu
       XLSX.writeFile(wb, fileName);
-      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
+      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — lần này không tô màu được vì chưa tải được thư viện ExcelJS.`, "success");
     }
     const proModeSeg = () => `<div class="pro-mode-seg"><button type="button" data-pro-mode="slab" class="${mdmProMode === "slab" ? "on" : ""}">📊 Slab in Slab</button><button type="button" data-pro-mode="tactical" class="${mdmProMode === "tactical" ? "on" : ""}">🎯 Tactical</button><button type="button" data-pro-mode="foc" class="${mdmProMode === "foc" ? "on" : ""}">🎁 FOC</button></div>`;
     function proColFieldHtml(key, kind, def, type, opts) {
@@ -5053,17 +5067,17 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       tacDraw();
     }
     // Ghi file có tô màu nhẹ theo nhóm cột (ExcelJS). Cột nào không có dữ liệu thì để trắng.
-    async function tacSaveStyled(XC, XR, fileName) {
-      const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("Sheet1", { views: [{ state: "frozen", ySplit: 1 }] });
+    async function tacSaveStyled(XC, XR, fileName, groups = TAC_CHK_GROUPS, sheetName = "Sheet1", dateFmt = "dd/mm/yyyy") {
+      const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet(sheetName, { views: [{ state: "frozen", ySplit: 1 }] });
       const fill = argb => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
       const edge = { style: "thin", color: { argb: "FFD9D9D9" } }, border = { top: edge, left: edge, bottom: edge, right: edge };
       const filled = (x) => x != null && String(x).trim() !== "";
-      const pal = XC.map((c, i) => XR.some(r => filled(r[i])) ? (TAC_CHK_GROUPS.find(g => g.cols.includes(c)) || TAC_CHK_EXTRA) : null);
+      const pal = XC.map((c, i) => XR.some(r => filled(r[i])) ? (groups.find(g => g.cols.includes(c)) || TAC_CHK_EXTRA) : null);
       const hdr = ws.addRow(XC);
       XC.forEach((_, i) => { const c = hdr.getCell(i + 1); c.font = { bold: true }; c.fill = fill(pal[i] ? pal[i].head : "FFF2F2F2"); c.border = border; c.alignment = { vertical: "middle" }; });
       XR.forEach(r => {
         const row = ws.addRow(r.map(x => x == null ? null : x));
-        XC.forEach((h, i) => { const c = row.getCell(i + 1); if (pal[i]) { c.fill = fill(pal[i].cell); c.border = border; } if (h === "StartDate" || h === "EndDate") c.numFmt = "dd/mm/yyyy"; });
+        XC.forEach((h, i) => { const c = row.getCell(i + 1); if (pal[i]) { c.fill = fill(pal[i].cell); c.border = border; } if (h === "StartDate" || h === "EndDate") c.numFmt = dateFmt; });
       });
       XC.forEach((h, i) => { const mx = XR.reduce((m, r) => Math.max(m, filled(r[i]) ? String(r[i]).length : 0), 0); ws.getColumn(i + 1).width = Math.min(Math.max(h.length + 2, mx + 2, 12), 50); });
       ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: XC.length } };
@@ -5257,24 +5271,25 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       if (mdmProMode === "tactical") return renderProTactical();
       if (mdmProMode === "foc") return renderProFoc();
       const P = mdmPro;
-      const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><input data-pro="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
-      const S = (k, l, key, opts) => `<div class="field" data-k="${k}"><label>${l}${H(key)}</label><select data-pro="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
+      const F = (k, l, key, ph) => `<div class="field${rqCls(PRO_RQ[k])}" data-k="${k}"><label>${l}${H(key)}${rqTag(PRO_RQ[k])}</label><input data-pro="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+      const S = (k, l, key, opts) => `<div class="field${rqCls(PRO_RQ[k])}" data-k="${k}"><label>${l}${H(key)}${rqTag(PRO_RQ[k])}</label><select data-pro="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tạo CTKM theo 4 bước, xuất Excel đúng mẫu PromotionUploadTemplateMapping (75 cột). Mọi cột đều hiển thị để bạn điền hoặc điều chỉnh. Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
-        <div class="panel-body">${proModeSeg()}<div class="pro-lay"><div class="pro-main">
+        <div class="panel-body">${proModeSeg()}${rqLegendHtml()}<div class="pro-lay"><div class="pro-main">
           <div class="pro-card"><h3><em>1</em>Thông tin chương trình</h3>
             <div class="pro-grid" id="pro-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: SIS_MultiSKU_xxx")}${F("desc", "PromotionDescription", "PromotionDescription")}${F("dist", "DistributorCode", "DistributorCode", "vd: 0070259604")}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["CS", "CS – Thùng"], ["EA", "EA – Chai / lon"]])}${S("type", "PromotionTypeCode", "PromotionTypeCode", PRO_TYPE_OPTS)}</div></div>
           <div class="pro-card"><h3><em>2</em>Cấu hình Slab (mức mua)<span class="adj-chips" id="pro-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm slab</button></h3><div id="pro-slabs">${P.slabs.map(proSlabHtml).join("")}</div>
             <p class="adj-tip">💡 Sao chép cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. Nhiều SKU điều kiện = nhiều dòng Q, nhiều SKU quà tặng = nhiều dòng A. Với nhiều mức mua → bấm <b>Nhân đôi</b> rồi đổi SLABFROM/TO.</p></div>
-          <details class="pro-card pro-det" id="pro-adv" open><summary><em>3</em>Tùy chọn nâng cao <small>giữ mặc định — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
+          <details class="pro-card pro-det" id="pro-adv" open><summary><em>3</em>Tùy chọn nâng cao ${rqTag("set")} <small>đã điền sẵn theo file mẫu — chỉ cần soát lại, thường không phải đổi (Territory & ApplyCount: bỏ trống nếu không dùng)</small></summary><div class="pro-grid" style="margin-top:12px">
             ${F("terr", "Territory", "Territory", "vd: VN10VN11")}${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "để trống = không giới hạn")}
             ${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – Không lặp lại"], ["1", "1 – Có lặp lại"]])}${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Có (được hưởng thêm CTKM khác)"], ["1", "1 – Không (chỉ CTKM này)"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Dựa trên số lượng sản phẩm mua"], ["2", "2 – Dựa trên giá trị sản phẩm mua"]])}
-            ${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Áp dụng KM trên hóa đơn"], ["2", "2 – Áp dụng KM ngoài hóa đơn"]])}<div class="field"><label>PromotionQuotaCode${H("PromotionQuotaCode")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-pro="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu MultiSKU)</label></div></div></details>
-          <details class="pro-card pro-cols" id="pro-cols"><summary><em>4</em>Tất cả các cột template <small>— hiển thị đầy đủ 75 cột, hệ thống tự điền, bạn có thể điều chỉnh</small><span class="pro-cols-cnt" id="pro-cols-cnt"></span></summary><div class="pro-cols-body" id="pro-cols-body">${PRO_EXTRA_GROUPS.map(proColGroupHtml).join("")}</div></details>
+            ${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Áp dụng KM trên hóa đơn"], ["2", "2 – Áp dụng KM ngoài hóa đơn"]])}<div class="field rq-opt"><label>PromotionQuotaCode${H("PromotionQuotaCode")}${rqTag("opt")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-pro="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu MultiSKU)</label></div></div></details>
+          <details class="pro-card pro-cols" id="pro-cols"><summary><em>4</em>Tất cả các cột template ${rqTag("opt")} <small>— hiển thị đầy đủ 75 cột, hệ thống tự điền, bạn có thể điều chỉnh</small><span class="pro-cols-cnt" id="pro-cols-cnt"></span></summary><div class="pro-cols-body" id="pro-cols-body">${PRO_EXTRA_GROUPS.map(proColGroupHtml).join("")}</div></details>
         </div>
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="pro-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="pro-pv"></div></div>
           <button type="button" id="pro-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
+          ${xlLegendHtml(PRO_CHK_GROUPS, "Cột ngoài danh sách trên nhưng có điền dữ liệu (vd ApplyCount, các cột trong mục 4) — soát kỹ vì không nằm trong mẫu thường dùng.")}
           <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode chọn ở mục 1 · ProRata tự tính theo loại KM · Bundle_Promotion = 0 · các cột còn lại để trống</div></div></aside></div></div></section>`;
     }
     function renderMdmBody() {
