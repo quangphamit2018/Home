@@ -1763,6 +1763,37 @@
     .pro-mode-seg button { border: 0; background: transparent; color: var(--ink-2); font-weight: 650; font-size: 13px; padding: 8px 18px; border-radius: 9px; display: inline-flex; align-items: center; gap: 7px; transition: .18s; }
     .pro-mode-seg button svg { width: 15px; height: 15px; }
     .pro-mode-seg button:hover:not(.on) { background: var(--brand-soft); color: var(--brand-dark); }
+
+    /* ---- Tactical · chế độ Ma trận SKU × Vùng ---- */
+    .tmx-top { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .tmx-top .pro-mode-seg { margin-bottom: 0; }
+    .tmx-view { display: inline-flex; gap: 3px; padding: 3px; background: #fff; border: 1px solid var(--line-strong); border-radius: 10px; }
+    .tmx-view button { border: 0; background: transparent; color: var(--ink-2); font-weight: 650; font-size: 12.5px; padding: 7px 14px; border-radius: 8px; transition: .18s; cursor: pointer; }
+    .tmx-view button:hover:not(.on) { background: var(--brand-soft); color: var(--brand-dark); }
+    .tmx-view button.on { background: var(--brand-soft); color: var(--brand-dark); box-shadow: inset 0 0 0 1.5px var(--brand); }
+    .tmx-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+    .tmx-file { cursor: pointer; }
+    .pro-main > .pro-card, .pro-main > .pro-det { min-width: 0; }
+    .tmx-wrap { max-width: 100%; overflow: auto; max-height: 620px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    .tmx { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 12.5px; }
+    .tmx th, .tmx td { padding: 6px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); vertical-align: top; background: #fff; text-align: left; }
+    .tmx thead th { position: sticky; top: 0; z-index: 2; background: #fbf4f4; font-size: 11.5px; font-weight: 700; color: var(--ink-2); }
+    .tmx thead th.c-rg { background: #fff3f2; }
+    .tmx th.n, .tmx td.n { width: 30px; min-width: 30px; text-align: center; color: var(--muted); font-weight: 700; }
+    .tmx .c-sku { min-width: 96px; } .tmx .c-qty { min-width: 104px; } .tmx .c-desc { min-width: 230px; } .tmx .c-rg { min-width: 172px; }
+    .tmx input { width: 100%; box-sizing: border-box; min-width: 0; border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 8px; font: 600 12.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #fff; color: var(--ink); }
+    .tmx input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+    .tmx input.bad { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+    .tmx td input[data-c="2"] { font-family: inherit; font-weight: 500; }
+    .tmx-rgt { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; color: var(--brand-dark); }
+    .tmx-rgt button { border: 0; background: transparent; cursor: pointer; color: var(--muted); font-size: 14px; padding: 0 5px; border-radius: 6px; }
+    .tmx-rgt button:hover { background: var(--brand-soft); color: var(--brand-dark); }
+    .tmx-rg2 { display: grid; grid-template-columns: 1fr 54px; gap: 5px; margin-top: 5px; }
+    .tmx-rgm { margin-top: 5px; font-size: 11px; font-weight: 600; color: var(--muted); white-space: normal; min-height: 14px; }
+    .tmx-rgm code { font-size: 10.5px; }
+    .tmx th.x, .tmx td.x { width: 30px; min-width: 30px; text-align: center; }
+    .tmx-x { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; border-radius: 6px; padding: 3px 7px; }
+    .tmx-x:hover { color: var(--danger); background: var(--danger-soft); }
     .pro-mode-seg button.on { color: #fff; background: var(--g-brand); box-shadow: 0 6px 16px rgba(183, 28, 28, .28); }
     /* ---- Section 4: Tất cả các cột template ---- */
     .pro-cols > summary { cursor: pointer; margin: 0; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style: none; }
@@ -4495,7 +4526,11 @@ h1, h2, h3 { text-wrap: balance; }
     const TAC_EXTRA_KEYS = TAC_EXTRA_GROUPS.flatMap(g => g.cols.map(([k]) => k));
     const TAC_COL_DEFAULTS = Object.fromEntries(TAC_EXTRA_GROUPS.flatMap(g => g.cols.map(([k, , d]) => [k, d])));
     const tacGroup = () => ({ desc: "", qty: "", disc: "", sku: "", scope: "terr", sv: "", pfx: "", n0: "" });
-    const tacInit = () => ({ pfx: "", n0: "1", start: adjToday(), end: "", uom: "EA", type: "1", seq: "555", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, groups: [tacGroup()], cols: { ...TAC_COL_DEFAULTS }, touched: new Set() });
+    function tmxToday6() { const d = new Date(); return String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0"); }
+    function tmxRg(M, o) { return Object.assign({ id: M.seq++, code: "", ky: "", n0: "1" }, o || {}); }
+    function tmxRow(o) { return Object.assign({ sku: "", qty: "", desc: "", d: {} }, o || {}); }
+    function tmxInit() { const M = { seq: 1, batch: tmxToday6(), scope: "terr", rg: [], rows: [] }; M.rg.push(tmxRg(M)); for (let i = 0; i < 4; i++) M.rows.push(tmxRow()); return M; }
+    const tacInit = () => ({ mx: tmxInit(), pfx: "", n0: "1", start: adjToday(), end: "", uom: "EA", type: "1", seq: "555", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, groups: [tacGroup()], cols: { ...TAC_COL_DEFAULTS }, touched: new Set() });
     let mdmTac = tacInit();
     const tacList = s => [...new Set(proSkus(s))];
     function tacSyncAuto() { const P = mdmTac; if (!P.touched.has("ProRata")) P.cols.ProRata = proRataFor(Number(P.type), ["x"], P.rb); }
@@ -4565,8 +4600,217 @@ h1, h2, h3 { text-wrap: balance; }
       return `<div class="field${autoTag}" data-k="${key}"><label>${key}</label><input data-tac-col="${key}" value="${escapeHtml(v)}" placeholder="${kind === "auto" ? "tự điền" : "để trống"}" autocomplete="off"></div>`;
     }
     const tacColGroupHtml = g => `<div class="pro-col-grp"><h4>${g.name}</h4><div class="pro-grid">${g.cols.map(([k, kind, d, t, o]) => tacColFieldHtml(k, kind, d, t, o)).join("")}</div></div>`;
-    function tacDraw() { $("#tac-groups").innerHTML = mdmTac.groups.map(tacGroupHtml).join(""); tacMeta(); }
+    /* ======== Tactical · chế độ MA TRẬN (SKU × Vùng/NPP) — mỗi ô = mức giảm của 1 SKU ở 1 vùng; ô trống = không áp dụng ======== */
+    const TAC_VIEW_KEY = "masterdata_tac_view", TAC_FMT_KEY = "masterdata_tac_fmt";
+    let mdmTacView = loadKey(TAC_VIEW_KEY, ["matrix", "group"], "matrix"), mdmTacFmt = loadKey(TAC_FMT_KEY, ["67", "75"], "67");
+    const tmxVal = s => String(s ?? "").trim();
+    const tmxNum = s => { s = tmxVal(s).replace(/\s/g, ""); return /^\d{1,3}([.,]\d{3})+$/.test(s) ? s.replace(/[.,]/g, "") : s.replace(",", "."); };
+    function tmxFmtGia(n, ptype, lower) { n = Number(n); if (ptype === 2) return n + "%"; if (n >= 1000 && n % 1000 === 0) return (n / 1000) + (lower ? "k" : "K"); return n + "đ"; }
+    const tmxDesc = (tpl, dc, ptype) => String(tpl).replace(/\{gia:k\}/gi, () => tmxFmtGia(dc, ptype, true)).replace(/\{gia\}/gi, () => tmxFmtGia(dc, ptype, false));
+    // Ký hiệu ngắn (chỉ chữ, ≤6 ký tự, vd HC) → HC_<mã đợt>_ ; nhập đầy đủ (vd HC_261021_) → dùng nguyên văn
+    function tmxPfx(g, batch) { const k = tmxVal(g.ky); if (!k) return ""; if (!/^[A-Za-z]{1,6}$/.test(k)) return k; const b = tmxVal(batch); return b ? `${k}_${b}_` : `${k}_`; }
+    function tmxDirty() { const M = mdmTac.mx; return M.rows.some(r => tmxVal(r.sku) || tmxVal(r.qty) || tmxVal(r.desc) || Object.values(r.d).some(x => tmxVal(x))) || M.rg.some(g => tmxVal(g.code) || tmxVal(g.ky)); }
+    function tacBuildRow(code, desc, q, dc, x, scope, t) {
+      const P = mdmTac, ptype = Number(P.type), d1 = prcDateSerial(P.start), d2 = prcDateSerial(P.end);
+      const r = Array(TAC_COLS.length).fill(null), set = (c, v) => { r[TAC_I[c]] = v; };
+      set("PromotionCode", code); set("PromotionDescription", desc || code); if (P.quota) set("PromotionQuotaCode", code);
+      set("DisbursementMethod", Number(P.dm)); set("RangeBasis", Number(P.rb)); set("PromotionTypeCode", ptype); set("ProRata", proRataFor(ptype, [x], P.rb)); set("Bundle_Promotion", 0);
+      set("ExclusionOption", Number(P.excl)); set("SequenceNumber", Number(P.seq || 0)); set("StartDate", d1); set("EndDate", d2);
+      set("SLABNUM", 1); set("SLABFROM", q); set("SLABTO", q); set("DISCOUNT", dc); set("Repeating_Range", Number(P.rep));
+      set("ProductGroup", "Q"); set("PromotionQuantity", 0); set("UnitOfMeasure", P.uom.trim()); set("SKUCode", /^\d+$/.test(x) ? Number(x) : x);
+      set(scope === "dist" ? "DistributorCode" : "Territory", t);
+      if (P.apply.trim()) set("ApplyCount", Number(P.apply));
+      const C = P.cols || {};
+      if (String(C.ProRata ?? "").trim() !== "") r[TAC_I.ProRata] = C.ProRata;
+      TAC_EXTRA_KEYS.forEach(c => { if (c === "ProRata") return; const v = C[c]; if (v != null && String(v).trim() !== "" && TAC_I[c] != null) r[TAC_I[c]] = TAC_NUM.has(c) && /^\d+$/.test(String(v).trim()) ? Number(String(v).trim()) : String(v).trim(); });
+      return r;
+    }
+    function tmxParse() {
+      tacSyncAuto();
+      const P = mdmTac, M = P.mx, out = [], cfgBad = {}, bad = new Set(), ginfo = {}, issues = [], warns = [], codes = new Set(), dupCodes = new Set();
+      const ptype = Number(P.type), d1 = prcDateSerial(P.start), d2 = prcDateSerial(P.end), dist = M.scope === "dist", lbl = dist ? "DistributorCode" : "Territory";
+      const cfg = (k, msg) => { cfgBad[k] = 1; issues.push({ msg, sel: `[data-tac="${k}"]` }); };
+      if (d1 == null) cfg("start", "StartDate sai định dạng (dd/mm/yyyy)"); else { const _nd = new Date(); if (d1 < Date.UTC(_nd.getFullYear(), _nd.getMonth(), _nd.getDate()) / 86400000 + 25569) cfg("start", "StartDate không được là ngày trong quá khứ"); }
+      if (d2 == null) cfg("end", "EndDate sai định dạng (dd/mm/yyyy)"); else if (d1 != null && d2 < d1) cfg("end", "EndDate phải ≥ StartDate");
+      if (!/^\d+$/.test(P.seq.trim())) cfg("seq", "SequenceNumber phải là số nguyên ≥ 0");
+      if (P.apply.trim() && !/^[1-9]\d*$/.test(P.apply.trim())) cfg("apply", "ApplyCount phải là số nguyên ≥ 1 (hoặc để trống)");
+      const cellOf = (row, g) => tmxVal(row.d[g.id]);
+      const rgs = M.rg.map((g, j) => ({ g, j })).filter(({ g }) => tmxVal(g.code) || tmxVal(g.ky) || M.rows.some(r => cellOf(r, g)));
+      const rows = M.rows.map((r, i) => ({ r, i })).filter(({ r }) => tmxVal(r.sku) || tmxVal(r.qty) || tmxVal(r.desc) || rgs.some(({ g }) => cellOf(r, g)));
+      if (!rgs.length) issues.push({ msg: `Chưa có ${lbl} nào`, sel: `#tmx input[data-mx="rg"][data-f="code"]` });
+      if (!rows.length) issues.push({ msg: "Chưa có SKU nào", sel: `#tmx input[data-mx="cell"][data-c="0"]` });
+      const seenRg = new Map();
+      rgs.forEach(({ g, j }) => {
+        const nm = tmxVal(g.code) || `cột ${j + 1}`, sel = f => `#tmx input[data-mx="rg"][data-j="${j}"][data-f="${f}"]`;
+        if (!tmxVal(g.code)) { bad.add(`g|${j}|code`); issues.push({ msg: `Cột ${j + 1}: thiếu ${lbl}`, sel: sel("code") }); }
+        else if (seenRg.has(tmxVal(g.code))) warns.push(`${lbl} ${tmxVal(g.code)} bị lặp ở cột ${seenRg.get(tmxVal(g.code)) + 1} và cột ${j + 1}`); else seenRg.set(tmxVal(g.code), j);
+        if (!tmxPfx(g, M.batch)) { bad.add(`g|${j}|ky`); issues.push({ msg: `${nm}: thiếu ký hiệu / tiền tố mã`, sel: sel("ky") }); }
+        if (!/^\d+$/.test(tmxVal(g.n0))) { bad.add(`g|${j}|n0`); issues.push({ msg: `${nm}: số bắt đầu phải là số nguyên ≥ 0`, sel: sel("n0") }); }
+      });
+      const seenSku = new Map();
+      rows.forEach(({ r, i }) => {
+        const sk = tmxVal(r.sku), q = proNum(tmxNum(r.qty)), who = `Dòng ${i + 1}${sk ? " (SKU " + sk + ")" : ""}`, sel = c => `#tmx input[data-mx="cell"][data-r="${i}"][data-c="${c}"]`;
+        if (!sk) { bad.add(`c|${i}|0`); issues.push({ msg: `${who}: thiếu SKU`, sel: sel(0) }); }
+        if (q == null || q <= 0) { bad.add(`c|${i}|1`); issues.push({ msg: `${who}: số lượng mua phải là số > 0`, sel: sel(1) }); }
+        let any = false;
+        rgs.forEach(({ g, j }) => {
+          const raw = cellOf(r, g); if (!raw) return; any = true;
+          const dc = proNum(tmxNum(raw));
+          if (dc == null || dc <= 0 || (ptype === 2 && dc > 100)) { bad.add(`c|${i}|${3 + j}`); issues.push({ msg: `${who}: mức giảm ở ${tmxVal(g.code) || "cột " + (j + 1)} ${ptype === 2 ? "phải trong khoảng 0–100 (%)" : "phải là số > 0"}`, sel: sel(3 + j) }); }
+        });
+        if (!any) { issues.push({ msg: `${who}: chưa nhập mức giảm ở vùng nào (để trống cả dòng thì xóa dòng)`, sel: sel(rgs.length ? 3 + rgs[0].j : 2) }); }
+        if (sk && q != null) { const k = sk + "|" + q; if (seenSku.has(k)) warns.push(`SKU ${sk} (SL ${q}) bị lặp ở dòng ${seenSku.get(k) + 1} và dòng ${i + 1}`); else seenSku.set(k, i); }
+      });
+      rgs.forEach(({ g, j }) => {
+        const pfx = tmxPfx(g, M.batch), t = tmxVal(g.code); if (!pfx || !t || !/^\d+$/.test(tmxVal(g.n0))) return;
+        let n = Number(tmxVal(g.n0)), cnt = 0, first = "", last = "";
+        rows.forEach(({ r }) => {
+          const raw = cellOf(r, g); if (!raw) return;
+          const q = proNum(tmxNum(r.qty)), dc = proNum(tmxNum(raw)), sk = tmxVal(r.sku);
+          if (!sk || q == null || q <= 0 || dc == null || dc <= 0 || (ptype === 2 && dc > 100)) return;
+          const code = pfx + n++; if (!first) first = code; last = code; cnt++;
+          if (codes.has(code)) dupCodes.add(code); codes.add(code);
+          out.push(tacBuildRow(code, tmxVal(r.desc) ? tmxDesc(tmxVal(r.desc), dc, ptype) : "", q, dc, sk, M.scope, t));
+        });
+        ginfo[j] = { n: cnt, first, last };
+      });
+      if (dupCodes.size) issues.push({ msg: `Trùng PromotionCode (${[...dupCodes].slice(0, 3).join(", ")}${dupCodes.size > 3 ? "…" : ""}) — hai vùng đang dùng cùng tiền tố, hãy đổi ký hiệu`, sel: `#tmx input[data-mx="rg"][data-f="ky"]` });
+      return { out, cfgBad, bad, ginfo, issues, warns, nRg: rgs.length, nRows: rows.length };
+    }
+    function tmxRowHtml(row, i) {
+      const M = mdmTac.mx, I = (c, v, ph) => `<td><input data-mx="cell" data-r="${i}" data-c="${c}" value="${escapeHtml(v)}" placeholder="${ph}" autocomplete="off" spellcheck="false"></td>`;
+      return `<tr data-r="${i}"><td class="n">${i + 1}</td>${I(0, row.sku, "SKU")}${I(1, row.qty, "vd 24")}${I(2, row.desc, "vd: 1T Dasani giảm {gia}")}${M.rg.map((g, j) => I(3 + j, row.d[g.id] || "", "—")).join("")}<td class="x"><button type="button" class="tmx-x" data-pro-act="mx-del-row" title="Xóa dòng">×</button></td></tr>`;
+    }
+    function tmxTableHtml() {
+      const M = mdmTac.mx, dist = M.scope === "dist";
+      const head = `<tr><th class="n">#</th><th class="c-sku">SKUCode${H("SKUCode")}</th><th class="c-qty">Mua (SLABFROM = SLABTO)${H("SLABFROM")}</th><th class="c-desc">Mô tả mẫu${H("PromotionDescription")}</th>${M.rg.map((g, j) => `<th class="c-rg" data-j="${j}"><div class="tmx-rgt"><span>${dist ? "NPP" : "Vùng"} ${j + 1}</span><span><button type="button" data-pro-act="mx-dup-rg" title="Nhân đôi cột này (giữ nguyên mức giảm)">⧉</button>${M.rg.length > 1 ? '<button type="button" data-pro-act="mx-del-rg" title="Xóa cột này">×</button>' : ""}</span></div><input data-mx="rg" data-j="${j}" data-f="code" value="${escapeHtml(g.code)}" placeholder="${dist ? "0084000460" : "VN10VN11"}" autocomplete="off" spellcheck="false" title="${dist ? "DistributorCode" : "Territory"}"><div class="tmx-rg2"><input data-mx="rg" data-j="${j}" data-f="ky" value="${escapeHtml(g.ky)}" placeholder="Ký hiệu: HC" autocomplete="off" spellcheck="false" title="Gõ chữ ngắn (vd HC) → mã HC_&lt;mã đợt&gt;_1, 2, 3… Gõ đầy đủ (vd HC_261021_) → dùng nguyên văn"><input data-mx="rg" data-j="${j}" data-f="n0" value="${escapeHtml(g.n0)}" placeholder="1" title="Số bắt đầu của mã" autocomplete="off"></div><div class="tmx-rgm" data-j="${j}">—</div></th>`).join("")}<th class="x"></th></tr>`;
+      return `<table class="tmx" id="tmx"><thead>${head}</thead><tbody id="tmx-body">${M.rows.map(tmxRowHtml).join("")}</tbody></table>`;
+    }
+    function tmxCfgHtml() {
+      const M = mdmTac.mx;
+      return `<div class="field" data-k="batch"><label>Mã đợt (ghép vào ký hiệu)</label><input data-mx="batch" value="${escapeHtml(M.batch)}" placeholder="vd: 261023" autocomplete="off"></div><div class="field" data-k="scope"><label>Áp dụng theo</label><select data-mx="scope"><option value="terr"${M.scope === "dist" ? "" : " selected"}>Territory (mã vùng)</option><option value="dist"${M.scope === "dist" ? " selected" : ""}>DistributorCode (NPP)</option></select></div>`;
+    }
+    function tmxCardHtml() {
+      return `<div class="pro-card"><h3><em>2</em>Bảng CTKM: SKU × Vùng / NPP<span class="adj-chips" id="tac-chips" style="margin-left:auto"></span></h3>
+        <div class="tmx-bar"><button type="button" class="btn btn-secondary" data-pro-act="mx-add-row">+ Thêm SKU</button><button type="button" class="btn btn-secondary" data-pro-act="mx-add-rg">+ Thêm cột vùng / NPP</button><label class="btn btn-plain tmx-file" title="Chọn file Excel Tactical đã tạo trước đó để sửa tiếp">📥 Nạp từ Excel cũ<input type="file" id="tmx-file" accept=".xlsx,.xls" hidden></label></div>
+        <div class="tmx-wrap" id="tmx-box">${tmxTableHtml()}</div>
+        <p class="adj-tip">💡 <b>Mỗi cột = 1 vùng/NPP, mỗi ô = mức giảm của SKU đó ở vùng đó</b> (ô trống = không áp dụng). Dán nhanh từ Excel: bôi đen các ô → <kbd>Ctrl</kbd>+<kbd>C</kbd> → bấm ô đầu → <kbd>Ctrl</kbd>+<kbd>V</kbd> (dán được cả cột SKU, cả khối mức giảm, cả hàng mã vùng). <kbd>Enter</kbd> / <kbd>↑</kbd> <kbd>↓</kbd> để đi giữa các dòng. Ký hiệu: gõ <code>HC</code> → mã <code>HC_&lt;mã đợt&gt;_1, 2, 3…</code>; gõ đủ <code>HC_261021_</code> → dùng nguyên văn. Mô tả mẫu: <code>{gia}</code> → 4K / 750đ, <code>{gia:k}</code> → 4k / 750đ; bỏ trống = lấy theo PromotionCode. Vùng giống hệt nhau chỉ khác mã → bấm ⧉ để nhân đôi cột.</p></div>`;
+    }
+    function tmxDraw(focusSel) {
+      const b = $("#tmx-box"); if (b) b.innerHTML = tmxTableHtml();
+      tmxMeta();
+      if (focusSel) { const el = document.querySelector(focusSel); if (el) { el.focus(); el.scrollIntoView({ block: "nearest", inline: "nearest" }); } }
+    }
+    function tmxMeta() {
+      if (!$("#tac-chips")) return;
+      const v = tmxParse(), P = mdmTac, M = P.mx, PV = ["PromotionCode", "PromotionDescription", "SLABFROM", "DISCOUNT", "SKUCode", M.scope === "dist" ? "DistributorCode" : "Territory"];
+      const prc = document.querySelector('[data-tac-col="ProRata"]'); if (prc && !P.touched.has("ProRata")) prc.value = P.cols.ProRata;
+      const cc = $("#tac-cols-cnt"); if (cc) cc.textContent = TAC_EXTRA_KEYS.filter(k => String(P.cols[k] ?? "").trim() !== "").length + " / " + TAC_EXTRA_KEYS.length + " cột đã điền";
+      document.querySelectorAll("#tac-cfg .field, #tac-adv .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
+      document.querySelectorAll("#tmx input[data-mx]").forEach(el => { const d = el.dataset; el.classList.toggle("bad", v.bad.has(d.mx === "cell" ? `c|${d.r}|${d.c}` : `g|${d.j}|${d.f}`)); });
+      document.querySelectorAll("#tmx .tmx-rgm").forEach(el => { const i = v.ginfo[el.dataset.j]; el.innerHTML = i && i.n ? `<code>${escapeHtml(i.first)}</code>${i.n > 1 ? ` → <code>${escapeHtml(i.last)}</code>` : ""} · <b>${i.n}</b> dòng` : "—"; });
+      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng xuất ra</span>`, `<span class="adj-chip">${v.nRows} SKU × ${v.nRg} ${M.scope === "dist" ? "NPP" : "vùng"}</span>`];
+      if (v.issues.length) chips.push(`<span class="adj-chip err">${v.issues.length} lỗi</span>`);
+      $("#tac-chips").innerHTML = chips.join("");
+      $("#tac-issues").innerHTML = v.issues.slice(0, 14).map(x => `<li data-goto='${x.sel}'>✖ ${escapeHtml(x.msg)}</li>`).join("") + (v.issues.length > 14 ? `<li class="w">… và ${v.issues.length - 14} lỗi nữa</li>` : "") + v.warns.slice(0, 6).map(w => `<li class="w">⚠ ${escapeHtml(w)}</li>`).join("") + (!v.issues.length ? `<li class="ok">✔ Dữ liệu hợp lệ, sẵn sàng xuất file</li>` : "");
+      $("#tac-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 12).map(r => `<tr>${PV.map(c => `<td>${escapeHtml(r[TAC_I[c]] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 12 ? `<div class="pro-more">… và ${nf(v.out.length - 12)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — nhập SKU, số lượng mua, mức giảm và mã vùng để xem trước.</div>`;
+      $("#tac-export").disabled = !v.out.length || !!v.issues.length;
+    }
+    function tmxSet(r, c, v) {
+      const M = mdmTac.mx; while (M.rows.length <= r) M.rows.push(tmxRow());
+      const row = M.rows[r];
+      if (c === 0) row.sku = v; else if (c === 1) row.qty = v; else if (c === 2) row.desc = v;
+      else { while (M.rg.length <= c - 3) M.rg.push(tmxRg(M)); row.d[M.rg[c - 3].id] = v; }
+    }
+    function tmxInput(t) {
+      const M = mdmTac.mx, d = t.dataset;
+      if (d.mx === "batch") M.batch = t.value;
+      else if (d.mx === "scope") { M.scope = t.value; return tmxDraw(); }
+      else if (d.mx === "rg") M.rg[Number(d.j)][d.f] = t.value;
+      else if (d.mx === "cell") {
+        const r = Number(d.r); tmxSet(r, Number(d.c), t.value);
+        if (r === M.rows.length - 1 && t.value.trim()) { M.rows.push(tmxRow()); const tb = $("#tmx-body"); if (tb) tb.insertAdjacentHTML("beforeend", tmxRowHtml(M.rows[M.rows.length - 1], M.rows.length - 1)); }
+      }
+      tmxMeta();
+    }
+    function tmxPaste(e) {
+      const t = e.target; if (!t || !t.dataset || !t.closest || !t.closest("#tmx")) return;
+      const txt = ((e.clipboardData || window.clipboardData).getData("text") || "").replace(/\r/g, "").replace(/\n+$/, "");
+      if (!/[\t\n]/.test(txt)) return;   // 1 giá trị đơn → dán bình thường
+      e.preventDefault();
+      const M = mdmTac.mx;
+      if (t.dataset.mx === "rg") {
+        txt.split(/[\t\n]+/).map(x => x.trim()).filter(Boolean).forEach((v, k) => { const j = Number(t.dataset.j) + k; while (M.rg.length <= j) M.rg.push(tmxRg(M)); M.rg[j][t.dataset.f] = v; });
+        return tmxDraw();
+      }
+      if (t.dataset.mx !== "cell") return;
+      const r0 = Number(t.dataset.r), c0 = Number(t.dataset.c);
+      txt.split("\n").map(l => l.split("\t")).forEach((cells, di) => cells.forEach((v, dj) => { const c = c0 + dj; tmxSet(r0 + di, c, c === 0 || c === 2 ? v.trim() : tmxNum(v)); }));
+      const last = M.rows[M.rows.length - 1]; if (tmxVal(last.sku) || tmxVal(last.qty) || tmxVal(last.desc) || Object.values(last.d).some(x => tmxVal(x))) M.rows.push(tmxRow());
+      tmxDraw();
+    }
+    function tmxAct(a, el) {
+      const M = mdmTac.mx;
+      if (a === "mx-add-row") { M.rows.push(tmxRow()); return tmxDraw(`#tmx input[data-r="${M.rows.length - 1}"][data-c="0"]`); }
+      if (a === "mx-del-row") { const i = Number(el.closest("tr").dataset.r); if (M.rows.length > 1) M.rows.splice(i, 1); else M.rows[0] = tmxRow(); return tmxDraw(); }
+      if (a === "mx-add-rg") { M.rg.push(tmxRg(M)); return tmxDraw(`#tmx input[data-j="${M.rg.length - 1}"][data-f="code"]`); }
+      if (a === "mx-del-rg") { M.rg.splice(Number(el.closest("th").dataset.j), 1); return tmxDraw(); }
+      if (a === "mx-dup-rg") { const j = Number(el.closest("th").dataset.j), src = M.rg[j], g = tmxRg(M, { n0: src.n0 }); M.rows.forEach(r => { if (r.d[src.id] != null) r.d[g.id] = r.d[src.id]; }); M.rg.splice(j + 1, 0, g); return tmxDraw(`#tmx input[data-j="${j + 1}"][data-f="code"]`); }
+    }
+    function tmxExample() {
+      const P = mdmTac, M = P.mx, e = new Date(); e.setDate(e.getDate() + 21);
+      P.end = [String(e.getDate()).padStart(2, "0"), String(e.getMonth() + 1).padStart(2, "0"), e.getFullYear()].join("/");
+      M.rg = []; M.rows = [];
+      const mk = (code, ky) => { const g = tmxRg(M, { code, ky }); M.rg.push(g); return g; };
+      const a = mk("VN10VN11", "HC"), b = mk("VN10VN17", "SP"), c = mk("VN10VN15", "MK");
+      [["2702", "24", "1T Dasani giảm {gia}", [4000, 3000, 3000]], ["2717", "6", "6 chai Dasani giảm {gia:k}", [1000, 750, 750]], ["2718", "24", "1T Dasani giảm {gia}", [4000, 3000, 3000]], ["2704", "6", "6 chai Dasani giảm {gia:k}", [1000, 750, 750]]]
+        .forEach(([sku, qty, desc, ds]) => M.rows.push(tmxRow({ sku, qty, desc, d: { [a.id]: String(ds[0]), [b.id]: String(ds[1]), [c.id]: String(ds[2]) } })));
+      M.rows.push(tmxRow());
+    }
+    async function tmxImport(inp) {
+      const f = inp.files && inp.files[0]; inp.value = ""; if (!f) return;
+      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
+      let rows;
+      try { const wb = XLSX.read(await f.arrayBuffer(), { type: "array" }); rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "", raw: true }); }
+      catch (err) { return toast("Không đọc được file: " + err.message, "error"); }
+      rows = rows.filter(r => tmxVal(r.PromotionCode));
+      if (!rows.length) return toast("Không thấy dòng PromotionCode nào ở sheet đầu tiên.", "error");
+      const miss = ["SLABFROM", "DISCOUNT", "SKUCode"].filter(k => !(k in rows[0])); if (miss.length) return toast("File thiếu cột: " + miss.join(", "), "error");
+      if (!("Territory" in rows[0]) && !("DistributorCode" in rows[0])) return toast("File thiếu cột Territory hoặc DistributorCode.", "error");
+      const s = tmxVal, dist = rows.some(r => s(r.DistributorCode) && !s(r.Territory)), keyOf = r => s(dist ? r.DistributorCode : r.Territory);
+      const P = mdmTac, M = tmxInit(); M.rg = []; M.rows = []; M.scope = dist ? "dist" : "terr";
+      const first = rows[0], pick = (col, vals, key) => { const v = s(first[col]); if (vals.includes(v)) P[key] = v; };
+      pick("PromotionTypeCode", TAC_TYPE_OPTS.map(o => o[0]), "type"); pick("UnitOfMeasure", ["EA", "CS"], "uom"); pick("RangeBasis", ["1", "2"], "rb"); pick("DisbursementMethod", ["1", "2"], "dm"); pick("ExclusionOption", ["0", "1"], "excl"); pick("Repeating_Range", ["0", "1"], "rep");
+      if (/^\d+$/.test(s(first.SequenceNumber))) P.seq = s(first.SequenceNumber);
+      const ds = v => { if (typeof v === "number") { const d = new Date(Math.round((v - 25569) * 86400000)); return [String(d.getUTCDate()).padStart(2, "0"), String(d.getUTCMonth() + 1).padStart(2, "0"), d.getUTCFullYear()].join("/"); } return s(v); };
+      const _n = new Date(), today = Date.UTC(_n.getFullYear(), _n.getMonth(), _n.getDate()) / 86400000 + 25569, eD = ds(first.EndDate), sD = ds(first.StartDate);
+      if (prcDateSerial(eD) != null) P.end = eD;
+      let note = ""; if (prcDateSerial(sD) != null) { if (prcDateSerial(sD) >= today) P.start = sD; else note = " StartDate trong file đã ở quá khứ nên giữ ngày hôm nay."; }
+      const rgMap = new Map(), rowMap = new Map(); let dupCell = 0, mixed = 0;
+      rows.forEach(r => {
+        const t = keyOf(r); if (!t) return;
+        let g = rgMap.get(t);
+        if (!g) { const m = /^(.*?)(\d+)$/.exec(s(r.PromotionCode)); g = tmxRg(M, { code: t, ky: m ? m[1] : s(r.PromotionCode), n0: m ? String(Number(m[2])) : "1" }); rgMap.set(t, g); M.rg.push(g); }
+        const k = s(r.SKUCode) + "|" + s(r.SLABFROM);
+        let row = rowMap.get(k); if (!row) { row = tmxRow({ sku: s(r.SKUCode), qty: s(r.SLABFROM) }); row.ents = []; rowMap.set(k, row); M.rows.push(row); }
+        if (row.d[g.id] != null) dupCell++;
+        row.d[g.id] = s(r.DISCOUNT); row.ents.push({ desc: s(r.PromotionDescription), dc: Number(r.DISCOUNT) });
+      });
+      const ptn = Number(P.type);
+      M.rows.forEach(row => {
+        const ents = row.ents || []; delete row.ents;
+        const tryTpl = lower => { const tag = lower ? "{gia:k}" : "{gia}", arr = ents.map(e => { const tok = tmxFmtGia(e.dc, ptn, lower), i = e.desc.indexOf(tok); return i < 0 ? null : e.desc.slice(0, i) + tag + e.desc.slice(i + tok.length); }); return arr.length && arr.every(x => x != null && x === arr[0]) ? arr[0] : null; };
+        row.desc = tryTpl(false) ?? tryTpl(true) ?? (ents[0] ? ents[0].desc : "");
+        if (!/\{gia/.test(row.desc) && new Set(ents.map(e => e.desc)).size > 1) mixed++;
+      });
+      const nRows = M.rows.length; M.rows.push(tmxRow()); P.mx = M;
+      mdmTacView = "matrix"; saveKey(TAC_VIEW_KEY, mdmTacView);
+      $("#mdm-root").innerHTML = renderPro(); tacDraw();
+      toast(`Đã nạp ${nf(rows.length)} dòng → ${M.rg.length} ${dist ? "NPP" : "vùng"} × ${nRows} SKU.${note}${mixed ? ` ${mixed} SKU có mô tả khác nhau giữa các vùng — đang lấy mô tả của vùng đầu tiên, hãy kiểm tra lại.` : ""}${dupCell ? ` ${dupCell} ô bị trùng SKU/vùng — lấy dòng cuối.` : ""}`, mixed || dupCell ? "" : "success");
+    }
+    function tacDraw() { if (mdmTacView === "matrix") return tmxDraw(); $("#tac-groups").innerHTML = mdmTac.groups.map(tacGroupHtml).join(""); tacMeta(); }
     function tacMeta() {
+      if (mdmTacView === "matrix") return tmxMeta();
       const v = tacParse(), P = mdmTac, PV = ["PromotionCode", "SLABFROM", "SLABTO", "DISCOUNT", "ProductGroup", "SKUCode", "Territory", "DistributorCode"];
       const prc = document.querySelector('[data-tac-col="ProRata"]'); if (prc && !P.touched.has("ProRata")) prc.value = P.cols.ProRata;
       const cc = document.querySelector("#tac-cols-cnt"); if (cc) cc.textContent = TAC_EXTRA_KEYS.filter(k => String(P.cols[k] ?? "").trim() !== "").length + " / " + TAC_EXTRA_KEYS.length + " cột đã điền";
@@ -4585,13 +4829,15 @@ h1, h2, h3 { text-wrap: balance; }
     }
     async function tacAct(a, el) {
       if (a === "help") return proHelp();
+      if (a.startsWith("view-")) { mdmTacView = a.slice(5) === "group" ? "group" : "matrix"; saveKey(TAC_VIEW_KEY, mdmTacView); $("#mdm-root").innerHTML = renderPro(); return tacDraw(); }
+      if (a.startsWith("mx-")) return tmxAct(a, el);
       if (a === "add") mdmTac.groups.push(tacGroup());
       else if (a === "dup") { const i = Number(el.closest(".pro-slab").dataset.gi); mdmTac.groups.splice(i + 1, 0, { ...mdmTac.groups[i], sku: "" }); }
       else {
-        const dirty = mdmTac.pfx || mdmTac.end || mdmTac.groups.some(g => g.sku || g.sv || g.qty || g.disc || g.desc);
+        const dirty = mdmTac.pfx || mdmTac.end || mdmTac.groups.some(g => g.sku || g.sv || g.qty || g.disc || g.desc) || tmxDirty();
         if (dirty && !(await confirmDialog({ title: a === "example" ? "Thay bằng ví dụ?" : "Làm mới form?", message: "Dữ liệu đang nhập trong form sẽ bị thay thế.", confirmText: a === "example" ? "Điền ví dụ" : "Làm mới", danger: true }))) return;
         mdmTac = tacInit();
-        if (a === "example") { const e = new Date(); e.setDate(e.getDate() + 21); Object.assign(mdmTac, { pfx: "CP_261008_update", n0: "1", end: [String(e.getDate()).padStart(2, "0"), String(e.getMonth() + 1).padStart(2, "0"), e.getFullYear()].join("/"), groups: [
+        if (a === "example" && mdmTacView === "matrix") tmxExample(); else if (a === "example") { const e = new Date(); e.setDate(e.getDate() + 21); Object.assign(mdmTac, { pfx: "CP_261008_update", n0: "1", end: [String(e.getDate()).padStart(2, "0"), String(e.getMonth() + 1).padStart(2, "0"), e.getFullYear()].join("/"), groups: [
           { desc: "6 lon Coke ZERO giảm 11k", qty: "6", disc: "11000", sku: "1533\n1537\n1545\n1546", scope: "terr", sv: "VN10VN13", pfx: "", n0: "" },
           { desc: "1T Coke 320ml giảm 11k", qty: "24", disc: "11000", sku: "4216", scope: "dist", sv: "0084000460\n0084000467\n0084000541\n0084000570", pfx: "CP_261008update_", n0: "8000" }] }); }
         $("#mdm-root").innerHTML = renderPro(); return tacDraw();
@@ -4599,33 +4845,34 @@ h1, h2, h3 { text-wrap: balance; }
       tacDraw();
     }
     async function tacExport() {
-      const v = tacParse(); if (!v.out.length || v.issues.length) return;
+      const v = mdmTacView === "matrix" ? tmxParse() : tacParse(); if (!v.out.length || v.issues.length) return;
       try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
-      const ws = XLSX.utils.aoa_to_sheet([TAC_COLS, ...v.out]);
-      ["StartDate", "EndDate"].forEach(c => { const col = XLSX.utils.encode_col(TAC_I[c]); v.out.forEach((_, i) => { const cell = ws[col + (i + 2)]; if (cell) cell.z = "mm-dd-yy"; }); });
-      ws["!cols"] = TAC_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
+      const XC = mdmTacFmt === "67" ? FOC_COLS : TAC_COLS, XR = XC === TAC_COLS ? v.out : v.out.map(r => XC.map(c => r[TAC_I[c]]));
+      const ws = XLSX.utils.aoa_to_sheet([XC, ...XR]);
+      ["StartDate", "EndDate"].forEach(c => { const col = XLSX.utils.encode_col(XC.indexOf(c)); v.out.forEach((_, i) => { const cell = ws[col + (i + 2)]; if (cell) cell.z = "dd/mm/yyyy"; }); });
+      ws["!cols"] = XC.map(h => ({ wch: Math.max(h.length + 2, 12) }));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Tactical_${stamp}.xlsx`;
       XLSX.writeFile(wb, fileName);
       toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng).`, "success");
     }
     function tacGuideHtml() {
-      return `<ol class="pd-steps"><li><b>Thông tin chung</b> — nhập tiền tố PromotionCode (vd <code>CP_261008_update</code>) và số bắt đầu, ngày bắt đầu/kết thúc, đơn vị. Mã mỗi dòng = tiền tố + số tăng dần (1, 2, 3…).</li><li><b>Nhóm CTKM</b> — mỗi nhóm có chung mô tả, số lượng mua (SLABFROM = SLABTO) và DISCOUNT. Mỗi mức giảm khác nhau = 1 nhóm (bấm <b>Nhân đôi</b> để tạo nhanh).</li><li><b>Dán SKU và phạm vi</b> — mỗi SKU × mỗi Territory (hoặc mỗi NPP) ra 1 dòng với 1 PromotionCode riêng, đúng như file mẫu PROMOTIONbosung_CP_OCT26.</li><li><b>Kiểm tra</b> — đọc câu diễn giải dưới mỗi nhóm, xem checklist và bảng xem trước; bấm vào mục đỏ để nhảy tới ô lỗi.</li><li><b>Xuất Excel</b> — file đủ 67 cột theo mẫu Tactical, sheet <code>Sheet1</code>, sẵn sàng upload.</li></ol>
+      return `<h4>⚡ Chế độ Ma trận (khuyên dùng — như file 3 vùng)</h4><ol class="pd-steps"><li><b>Thông tin chung</b> — chọn ngày, đơn vị, loại KM, mã đợt (vd 261023) và áp dụng theo Territory hay NPP.</li><li><b>Cột vùng</b> — mỗi vùng/NPP 1 cột: nhập mã vùng + ký hiệu (HC, SP, MK…). Mã sẽ là <code>HC_261023_1, 2, 3…</code> riêng cho từng vùng. Có thể dán cả hàng mã vùng từ Excel.</li><li><b>Dòng SKU</b> — mỗi SKU 1 dòng: SKU, số lượng mua, mô tả mẫu (<code>{gia}</code> tự thành 4K / 750đ) và mức giảm cho từng vùng. Ô trống = SKU không áp dụng ở vùng đó. Dán nguyên khối từ Excel được.</li><li><b>Kiểm tra &amp; xuất</b> — mục đỏ bên phải bấm để nhảy tới ô lỗi; chọn 67 hoặc 75 cột rồi xuất. Có nút <b>Nạp từ Excel cũ</b> để sửa tiếp một file Tactical đã tạo.</li></ol><h4>▤ Chế độ Theo nhóm</h4><ol class="pd-steps"><li><b>Thông tin chung</b> — nhập tiền tố PromotionCode (vd <code>CP_261008_update</code>) và số bắt đầu, ngày bắt đầu/kết thúc, đơn vị. Mã mỗi dòng = tiền tố + số tăng dần (1, 2, 3…).</li><li><b>Nhóm CTKM</b> — mỗi nhóm có chung mô tả, số lượng mua (SLABFROM = SLABTO) và DISCOUNT. Mỗi mức giảm khác nhau = 1 nhóm (bấm <b>Nhân đôi</b> để tạo nhanh).</li><li><b>Dán SKU và phạm vi</b> — mỗi SKU × mỗi Territory (hoặc mỗi NPP) ra 1 dòng với 1 PromotionCode riêng, đúng như file mẫu PROMOTIONbosung_CP_OCT26.</li><li><b>Kiểm tra</b> — đọc câu diễn giải dưới mỗi nhóm, xem checklist và bảng xem trước; bấm vào mục đỏ để nhảy tới ô lỗi.</li><li><b>Xuất Excel</b> — file theo mẫu Tactical (67 hoặc 75 cột tùy chọn ở mục Xuất), sheet <code>Sheet1</code>, sẵn sàng upload.</li></ol>
         <h4>Ví dụ theo file mẫu</h4>
         <div class="pd-card"><b>Territory:</b> 6 lon Coke ZERO giảm 11k — SLABFROM = SLABTO = 6, DISCOUNT 11000, Territory VN10VN13, mỗi SKU 1 dòng (mã <code>CP_261008_update1…</code>).<br><b>NPP:</b> 1T Coke 320ml giảm 11k — SLABFROM = SLABTO = 24, SKU 4216 × 4 DistributorCode, mã riêng <code>CP_261008update_8000…8003</code> (dùng ô “Tiền tố mã riêng” và “Số bắt đầu riêng”).<br><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ này vào form</button></div>
         <h4>Lưu ý</h4><ul class="pd-notes"><li>Mẫu Tactical chỉ có dòng ProductGroup = Q, ForEach mặc định 1, nên tool chỉ hỗ trợ các hình thức giảm (không có 4 – Tặng hàng FOC, 8 – Tích điểm).</li><li>Giá trị mặc định theo file mẫu: PromotionTypeCode 1, SequenceNumber 555, Repeating_Range 1, SpecialPromotion 1, ProRata N, PromotionQuotaCode để trống.</li></ul>`;
     }
     function renderProTactical() {
-      const P = mdmTac;
+      const P = mdmTac, MX = mdmTacView === "matrix";
       const F = (k, l, key, ph) => `<div class="field" data-k="${k}"><label>${l}${key ? H(key) : ""}</label><input data-tac="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
       const S = (k, l, key, opts) => `<div class="field" data-k="${k}"><label>${l}${key ? H(key) : ""}</label><select data-tac="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tactical: mỗi SKU × mỗi vùng/NPP = 1 PromotionCode, xuất Excel đúng mẫu Tactical (75 cột). Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>Tactical: mỗi SKU × mỗi vùng/NPP = 1 PromotionCode, xuất Excel đúng mẫu Tactical (chọn 67 hoặc 75 cột khi xuất). Bấm biểu tượng <span class="pro-i" style="display:inline-grid">i</span> cạnh mỗi ô để đọc ý nghĩa cột.</p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
-        <div class="panel-body">${proModeSeg()}<div class="pro-lay"><div class="pro-main">
+        <div class="panel-body"><div class="tmx-top">${proModeSeg()}<div class="tmx-view"><button type="button" data-pro-act="view-matrix" class="${MX ? "on" : ""}">⚡ Ma trận SKU × Vùng</button><button type="button" data-pro-act="view-group" class="${MX ? "" : "on"}">▤ Theo nhóm</button></div></div><div class="pro-lay"><div class="pro-main">
           <div class="pro-card"><h3><em>1</em>Thông tin chung</h3>
-            <div class="pro-grid" id="tac-cfg">${F("pfx", "Tiền tố PromotionCode", "PromotionCode", "vd: CP_261008_update")}${F("n0", "Số bắt đầu của mã", "", "vd: 1")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("type", "PromotionTypeCode", "PromotionTypeCode", TAC_TYPE_OPTS)}</div></div>
-          <div class="pro-card"><h3><em>2</em>Nhóm CTKM (số lượng mua &amp; mức giảm)<span class="adj-chips" id="tac-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm nhóm</button></h3><div id="tac-groups">${P.groups.map(tacGroupHtml).join("")}</div>
-            <p class="adj-tip">💡 Sao chép cột SKU (hoặc cột mã vùng / NPP) từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô tương ứng, mỗi dòng 1 giá trị. Nhiều SKU × nhiều vùng/NPP = mỗi tổ hợp 1 dòng và 1 PromotionCode. Nhóm có tiền tố/số bắt đầu riêng sẽ đánh số mã độc lập với các nhóm còn lại.</p></div>
+            <div class="pro-grid" id="tac-cfg">${MX ? `${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${S("type", "PromotionTypeCode", "PromotionTypeCode", TAC_TYPE_OPTS)}${tmxCfgHtml()}` : `${F("pfx", "Tiền tố PromotionCode", "PromotionCode", "vd: CP_261008_update")}${F("n0", "Số bắt đầu của mã", "", "vd: 1")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("type", "PromotionTypeCode", "PromotionTypeCode", TAC_TYPE_OPTS)}`}</div></div>
+          ${MX ? tmxCardHtml() : `<div class="pro-card"><h3><em>2</em>Nhóm CTKM (số lượng mua &amp; mức giảm)<span class="adj-chips" id="tac-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm nhóm</button></h3><div id="tac-groups">${P.groups.map(tacGroupHtml).join("")}</div>
+            <p class="adj-tip">💡 Sao chép cột SKU (hoặc cột mã vùng / NPP) từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô tương ứng, mỗi dòng 1 giá trị. Nhiều SKU × nhiều vùng/NPP = mỗi tổ hợp 1 dòng và 1 PromotionCode. Nhóm có tiền tố/số bắt đầu riêng sẽ đánh số mã độc lập với các nhóm còn lại.</p></div>`}
           <details class="pro-card pro-det" id="tac-adv" open><summary><em>3</em>Tùy chọn nâng cao <small>giữ mặc định theo file mẫu — thường không cần đổi</small></summary><div class="pro-grid" style="margin-top:12px">
             ${F("seq", "SequenceNumber", "SequenceNumber")}${F("apply", "ApplyCount", "ApplyCount", "để trống = không giới hạn")}${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – Không lặp lại"], ["1", "1 – Có lặp lại"]])}
             ${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Có (được hưởng thêm CTKM khác)"], ["1", "1 – Không (chỉ CTKM này)"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Dựa trên số lượng sản phẩm mua"], ["2", "2 – Dựa trên giá trị sản phẩm mua"]])}${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Áp dụng KM trên hóa đơn"], ["2", "2 – Áp dụng KM ngoài hóa đơn"]])}
@@ -4634,6 +4881,7 @@ h1, h2, h3 { text-wrap: balance; }
         </div>
         <aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="tac-issues"></ul></div>
           <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="tac-pv"></div></div>
+          <div class="field"><label>Định dạng cột khi xuất</label><select id="tac-fmt"><option value="67"${mdmTacFmt === "67" ? " selected" : ""}>67 cột — đúng như file mẫu 3 vùng</option><option value="75"${mdmTacFmt === "75" ? " selected" : ""}>75 cột — đủ ForEach, SegmentCode, DistributorCategoryCode…</option></select></div>
           <button type="button" id="tac-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
           <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">Mỗi dòng: SLABNUM = 1 · SLABFROM = SLABTO · ProductGroup = Q · Bundle_Promotion = 0 · ProRata tự tính theo loại KM</div></div></aside></div></div></section>`;
     }
@@ -4816,6 +5064,9 @@ h1, h2, h3 { text-wrap: balance; }
         if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.type === "checkbox" ? t.checked : t.value; if (t.dataset.pro === "type" || t.dataset.pro === "rb") { proSyncAuto(); return proDraw(); } return proMeta(); }
         if (t.dataset.proCol) { mdmPro.cols[t.dataset.proCol] = t.value; mdmPro.touched.add(t.dataset.proCol); return proMeta(); }
         if (t.dataset.ps) { mdmPro.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.ps] = t.value; return proMeta(); }
+        if (t.id === "tac-fmt") { mdmTacFmt = t.value === "75" ? "75" : "67"; saveKey(TAC_FMT_KEY, mdmTacFmt); return; }
+        if (t.id === "tmx-file") return tmxImport(t);
+        if (t.dataset.mx) return tmxInput(t);
         if (t.dataset.tac) { mdmTac[t.dataset.tac] = t.type === "checkbox" ? t.checked : t.value; return tacMeta(); }
         if (t.dataset.tacCol) { mdmTac.cols[t.dataset.tacCol] = t.value; mdmTac.touched.add(t.dataset.tacCol); return tacMeta(); }
         if (t.dataset.tg) { mdmTac.groups[Number(t.closest(".pro-slab").dataset.gi)][t.dataset.tg] = t.value; return t.dataset.tg === "scope" ? tacDraw() : tacMeta(); }
@@ -4845,9 +5096,10 @@ h1, h2, h3 { text-wrap: balance; }
         if (Number(row.dataset.r) === last) { mdmAdj.rows.push(adjBlank()); $("#adj-rows").insertAdjacentHTML("beforeend", adjRowHtml(adjBlank(), last + 1)); }
         adjMeta();
       });
-      pg.addEventListener("paste", e => { prcPaste(e); iniPaste(e); adjPaste(e); });
+      pg.addEventListener("paste", e => { prcPaste(e); iniPaste(e); adjPaste(e); tmxPaste(e); });
       pg.addEventListener("keydown", e => {
         const t = e.target;
+        if (t.dataset && t.dataset.mx === "cell" && ["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) { e.preventDefault(); const nr = Number(t.dataset.r) + (e.key === "ArrowUp" ? -1 : 1), nx = document.querySelector(`#tmx input[data-mx="cell"][data-r="${nr}"][data-c="${t.dataset.c}"]`); if (nx) { nx.focus(); nx.select(); } return; }
         if (t.closest && t.closest("#prc-rows") && ["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) {
           e.preventDefault();
           const r = Number(t.closest(".adj-row").dataset.r) + (e.key === "ArrowUp" ? -1 : 1);
