@@ -4736,12 +4736,12 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_Upload_${stamp}.xlsx`; // khác tên file mẫu
       try { await loadLib("exceljs"); } catch (_) { /* dùng phương án dự phòng bên dưới */ }
       if (window.ExcelJS) {
-        try { await tacSaveStyled(PRO_COLS, v.out, fileName, PRO_CHK_GROUPS, "PromotionUploadTemplateMapping_", "mm-dd-yy"); return toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — các cột dữ liệu đã được tô màu nhẹ để soát lại.`, "success"); }
+        try { await tacSaveStyled(PRO_COLS, v.out, fileName, PRO_CHK_GROUPS, "PromotionUploadTemplateMapping_", "dd/mm/yyyy"); return toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — các cột dữ liệu đã được tô màu nhẹ để soát lại.`, "success"); }
         catch (err) { console.warn("Xuất có màu lỗi, chuyển sang file thường:", err); }
       }
       try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
       const ws = XLSX.utils.aoa_to_sheet([PRO_COLS, ...v.out]);
-      v.out.forEach((_, i) => { ["Q", "R"].forEach(c => { const cell = ws[c + (i + 2)]; if (cell) cell.z = "mm-dd-yy"; }); });
+      v.out.forEach((_, i) => { ["Q", "R"].forEach(c => { const cell = ws[c + (i + 2)]; if (cell) cell.z = "dd/mm/yyyy"; }); });
       ws["!cols"] = PRO_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "PromotionUploadTemplateMapping_");
       XLSX.writeFile(wb, fileName);
@@ -5281,12 +5281,12 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_FOC_${stamp}.xlsx`;
       try { await loadLib("exceljs"); } catch (_) { /* dùng phương án dự phòng bên dưới */ }
       if (window.ExcelJS) {
-        try { await tacSaveStyled(FOC_COLS, v.out, fileName, FOC_CHK_GROUPS, "Sheet1", "mm-dd-yy"); return toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — các cột dữ liệu đã được tô màu nhẹ để soát lại.`, "success"); }
+        try { await tacSaveStyled(FOC_COLS, v.out, fileName, FOC_CHK_GROUPS, "Sheet1", "dd/mm/yyyy"); return toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — các cột dữ liệu đã được tô màu nhẹ để soát lại.`, "success"); }
         catch (err) { console.warn("Xuất có màu lỗi, chuyển sang file thường:", err); }
       }
       try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
       const ws = XLSX.utils.aoa_to_sheet([FOC_COLS, ...v.out]);
-      ["StartDate", "EndDate"].forEach(c => { const col = XLSX.utils.encode_col(FOC_I[c]); v.out.forEach((_, i) => { const cell = ws[col + (i + 2)]; if (cell) cell.z = "mm-dd-yy"; }); });
+      ["StartDate", "EndDate"].forEach(c => { const col = XLSX.utils.encode_col(FOC_I[c]); v.out.forEach((_, i) => { const cell = ws[col + (i + 2)]; if (cell) cell.z = "dd/mm/yyyy"; }); });
       ws["!cols"] = FOC_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
       const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
       XLSX.writeFile(wb, fileName);
