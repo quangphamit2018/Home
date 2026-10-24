@@ -8838,27 +8838,71 @@ function toast(msg, type="info", title, sticky=false){
 --------------------------------------------------------------------------- */
 // Thông tin dự án Supabase — anon public key, an toàn để đặt ở phía client.
 const SUPABASE_URL = "https://rnsjiqbbeywgbnqsojce.supabase.co";
-const SUPABASE_ANON_KEY = (window.CR_MANAGEMENT_CONFIG && window.CR_MANAGEMENT_CONFIG.supabaseAnonKey) || "";
+// Dán anon public key của dự án Supabase vào đây để cố định (Supabase > Project Settings > API > anon / publishable key).
+const SUPABASE_ANON_KEY_EMBEDDED = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuc2ppcWJiZXl3Z2JucXNvamNlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0OTExNjAsImV4cCI6MjA5MzA2NzE2MH0.1BrlS__GNAMFbBmudl6gUJwJ9j_zoDdAj9rtfhBkhdk";
+const SUPABASE_KEY_STORAGE = "cr_supabase_anon_key";
+function readStoredAnonKey(){ try{ return (localStorage.getItem(SUPABASE_KEY_STORAGE) || "").trim(); }catch(_){ return ""; } }
+function looksLikeAnonKey(k){ return /^(eyJ[\w-]+\.[\w-]+\.[\w-]+|sb_publishable_[\w-]+)$/.test((k || "").trim()); }
+const SUPABASE_ANON_KEY = ((window.CR_MANAGEMENT_CONFIG && window.CR_MANAGEMENT_CONFIG.supabaseAnonKey) || SUPABASE_ANON_KEY_EMBEDDED || readStoredAnonKey() || "").trim();
+
+function showConfigNotice(message, withForm){
+  const login = document.getElementById("loginScreen");
+  const btn = document.getElementById("btnGoogleLogin");
+  const label = document.getElementById("googleButtonLabel");
+  if(btn) btn.disabled = true;
+  if(btn) btn.classList.remove("is-loading");
+  if(label) label.textContent = withForm ? "Cần cấu hình Supabase" : "Không tải được thư viện";
+  if(!login || document.getElementById("supabaseConfigNotice")) return;
+  const notice = document.createElement("div");
+  notice.id = "supabaseConfigNotice";
+  notice.style.cssText = "max-width:520px;margin:16px auto;padding:14px 16px;border:1px solid #e4b85d;border-radius:12px;background:#fff8e8;color:#59451e;font:13px/1.6 system-ui,sans-serif;text-align:left";
+  const msg = document.createElement("div");
+  msg.innerHTML = message;
+  notice.appendChild(msg);
+  if(withForm){
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap";
+    const input = document.createElement("input");
+    input.type = "password"; input.id = "supabaseKeyInput"; input.autocomplete = "off"; input.spellcheck = false;
+    input.placeholder = "Dán Supabase anon / publishable key";
+    input.style.cssText = "flex:1 1 260px;padding:8px 10px;border:1px solid #d6b26a;border-radius:8px;font:12px ui-monospace,Consolas,monospace;background:#fff;color:#333";
+    const save = document.createElement("button");
+    save.type = "button"; save.textContent = "Lưu & tải lại";
+    save.style.cssText = "padding:8px 14px;border:0;border-radius:8px;background:#b8801f;color:#fff;font:600 12px system-ui,sans-serif;cursor:pointer";
+    const err = document.createElement("div");
+    err.style.cssText = "width:100%;color:#a12;font-size:12px;display:none";
+    const doSave = ()=>{
+      const v = input.value.trim();
+      if(!looksLikeAnonKey(v)){ err.textContent = "Khóa không hợp lệ — cần chuỗi JWT (bắt đầu bằng eyJ...) hoặc sb_publishable_..."; err.style.display = "block"; return; }
+      try{ localStorage.setItem(SUPABASE_KEY_STORAGE, v); }catch(_){ err.textContent = "Trình duyệt chặn lưu trữ cục bộ — hãy dán khóa vào hằng SUPABASE_ANON_KEY_EMBEDDED trong file."; err.style.display = "block"; return; }
+      window.location.reload();
+    };
+    save.addEventListener("click", doSave);
+    input.addEventListener("keydown", e=>{ if(e.key === "Enter") doSave(); });
+    row.append(input, save, err);
+    notice.appendChild(row);
+  }
+  login.appendChild(notice);
+}
 
 function initClient(){
   if(!SUPABASE_ANON_KEY){
-    const login = document.getElementById("loginScreen");
-    const btn = document.getElementById("btnGoogleLogin");
-    const label = document.getElementById("googleButtonLabel");
-    if(btn) btn.disabled = true;
-    if(label) label.textContent = "Cần cấu hình Supabase";
-    if(login && !document.getElementById("supabaseConfigNotice")){
-      const notice = document.createElement("div");
-      notice.id = "supabaseConfigNotice";
-      notice.style.cssText = "max-width:520px;margin:16px auto;padding:14px 16px;border:1px solid #e4b85d;border-radius:12px;background:#fff8e8;color:#59451e;font:13px/1.6 system-ui,sans-serif;text-align:left";
-      notice.innerHTML = "<b>Bản tải xuống đã bỏ khóa Supabase khỏi mã nguồn.</b><br>Để bật đăng nhập và dữ liệu hiện có, môi trường triển khai cần nạp <code>window.CR_MANAGEMENT_CONFIG.supabaseAnonKey</code> trước khi chạy ứng dụng. Không thay bản production bằng file này trước khi cấu hình và kiểm tra hồi quy.";
-      login.appendChild(notice);
-    }
+    showConfigNotice("<b>Chưa có Supabase anon key.</b><br>Dán khóa vào ô bên dưới (lưu trong trình duyệt này), hoặc đặt vào hằng <code>SUPABASE_ANON_KEY_EMBEDDED</code> / <code>window.CR_MANAGEMENT_CONFIG.supabaseAnonKey</code>.", true);
     return false;
   }
-  STATE.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, detectSessionInUrl: true, autoRefreshToken: true }
-  });
+  if(!window.supabase || typeof window.supabase.createClient !== "function"){
+    showConfigNotice("<b>Không tải được thư viện Supabase từ CDN.</b><br>Kiểm tra mạng/tường lửa (cdn.jsdelivr.net) rồi tải lại trang.", false);
+    return false;
+  }
+  try{
+    STATE.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: true, detectSessionInUrl: true, autoRefreshToken: true }
+    });
+  }catch(e){
+    console.error("Supabase createClient lỗi:", e);
+    showConfigNotice("<b>Khóa Supabase không hợp lệ.</b><br>" + String(e && e.message || e), true);
+    return false;
+  }
   return true;
 }
 
@@ -8929,7 +8973,7 @@ function installHistoryGuard(){
   // DOM có thể đang hiển thị trạng thái CŨ tại thời điểm rời trang. Luôn
   // kiểm tra lại phiên thật sự với Supabase để UI phản ánh đúng thực tế.
   window.addEventListener("pageshow", async (e)=>{
-    if(e.persisted){
+    if(e.persisted && STATE.sb){
       const { data:{ session } } = await STATE.sb.auth.getSession();
       STATE.session = session;
       await handleAuthState();
@@ -23281,11 +23325,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   function eb2bStart(){
     if(!eb2bBuildShell()) return;
     eb2bEvents();
+    let waitTries = 0;
     const waitForSession = ()=>{
       if(activeDb()){
         eb2bLoad();
         return;
       }
+      if(++waitTries > 50) return; // dừng sau ~30s nếu chưa có client Supabase (tránh poll vô hạn)
       window.setTimeout(waitForSession, 600);
     };
     waitForSession();
