@@ -2508,6 +2508,19 @@ async function loadActivity(reset){
   state.activityDone = rows.length < limit;
   state.activity = rows;
   state.loaded.activity = true;
+  state.errors.activity = "";
+}
+/* Tự tải lịch sử khi tab được mở bằng bất kỳ cách nào (bấm menu, F5 giữ nguyên tab, link, drill) — chỉ chạy một lần tại một thời điểm */
+function ensureActivityLoaded(){
+  if (state.loaded.activity || state.activityLoading) return;
+  state.activityLoading = true;
+  loadActivity(true).catch(function(e){
+    state.errors.activity = (e && e.message) || "Không tải được lịch sử";
+    toast("Không tải được lịch sử: " + state.errors.activity, "error");
+  }).then(function(){
+    state.activityLoading = false;
+    if (state.tab === "activity") renderShell();
+  });
 }
 async function loadSavedFilters(){
   const r = await state.client.from(FILTER_TABLE).select("*").order("created_at", { ascending: false }).limit(200);
@@ -5192,6 +5205,15 @@ function feedIcon(log){
   return '<span class="feed-icon ' + tone + '">' + glyph + "</span>";
 }
 function renderActivity(){
+  if (!state.loaded.activity) {
+    setActions('<button class="btn" data-action="refresh-activity">' + icon("refresh") + 'Làm mới</button>');
+    state.listPaint = null;
+    if (!state.errors.activity) ensureActivityLoaded();
+    $("#pageContent").innerHTML = state.errors.activity
+      ? errorNotice("activity") + '<div style="margin-top:12px"><button class="btn" data-action="refresh-activity">' + icon("refresh") + 'Thử tải lại</button></div>'
+      : '<div class="panel"><div class="panel-head"><div><div class="panel-title">Dòng thời gian thay đổi</div><div class="panel-sub">Đang tải lịch sử…</div></div></div>' + loadingBox(6) + '</div>';
+    return;
+  }
   const f = state.filters.activity;
   const logs = activityFiltered();
   setActions('<button class="btn" data-action="refresh-activity">' + icon("refresh") + 'Làm mới</button>' +
@@ -6013,9 +6035,7 @@ document.addEventListener("click", async function(event){
       if (tab !== "workload") state.focusMember = null;
       closeDrawer();
       state.listPaint = null;
-      if (tab === "activity" && !state.loaded.activity) {
-        loadActivity(true).then(function(){ renderShell(); }).catch(function(e){ toast("Không tải được lịch sử: " + e.message, "error"); });
-      }
+      if (tab === "activity") { state.errors.activity = ""; ensureActivityLoaded(); }
       $$(".nav-btn").forEach(function(n){ n.classList.toggle("active", n.dataset.tab === tab); });
       requestAnimationFrame(function(){ renderShell(); });
       window.scrollTo({ top: 0, behavior: "auto" });
@@ -6039,7 +6059,11 @@ document.addEventListener("click", async function(event){
   if (action === "test-notification-settings") { await testNotificationSettings(); return; }
   if (action === "refresh-notification-settings") { state.alertSettingsLoaded = false; state.alertSettingsError = ""; await loadNotificationSettings(); renderShell(); return; }
   if (action === "sync-jira") { await runJiraSync(); return; }
-  if (action === "refresh-activity") { await loadActivity(true); renderShell(); toast("Đã tải lại lịch sử", "good"); return; }
+  if (action === "refresh-activity") {
+    try { await loadActivity(true); renderShell(); toast("Đã tải lại lịch sử", "good"); }
+    catch (e) { state.errors.activity = (e && e.message) || "Không tải được lịch sử"; renderShell(); toast("Không tải được lịch sử: " + state.errors.activity, "error"); }
+    return;
+  }
   if (action === "load-more-activity") {
     const feedEl = $("#activityFeed"), keepTop = feedEl ? feedEl.scrollTop : 0;
     await loadActivity(false); renderShell();
