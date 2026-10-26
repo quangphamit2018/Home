@@ -857,9 +857,11 @@ tbody tr.detail-selected td.cell-actions{ background:#163a4a; }
 #crTable th[data-sort-key="title"]{ z-index:17; background: var(--bg-topbar-solid); box-shadow:none; }
 #crTable tbody tr:hover td.cell-check,
 #crTable tbody tr:hover td.cell-id,
+#crTable tbody tr:hover td.cell-jira,
 #crTable tbody tr:hover td.cell-title{ background: var(--bg-surface-hover); }
 #crTable tbody tr.detail-selected td.cell-check,
 #crTable tbody tr.detail-selected td.cell-id,
+#crTable tbody tr.detail-selected td.cell-jira,
 #crTable tbody tr.detail-selected td.cell-title{ background:#163a4a; }
 .row-actions{ display:flex; gap:6px; justify-content:flex-end; }
 .icon-btn{
@@ -976,11 +978,14 @@ tbody tr.detail-selected td.cell-actions{ background:#163a4a; }
 .view td.cell-actions{ background:#ffffff; box-shadow: inset 1px 0 0 #e4ebf0; }
 .view tbody tr:hover td.cell-actions{ background:#f0f7f7; z-index:20; }
 
-.view #crTable td.cell-check, .view #crTable td.cell-id, .view #crTable td.cell-title{ background:#ffffff; }
-.view #crTable th.col-check, .view #crTable th[data-sort-key="cr_id"], .view #crTable th[data-sort-key="title"]{ background:#f6fafb; }
+.view #crTable td.cell-check, .view #crTable td.cell-id,
+.view #crTable td.cell-jira, .view #crTable td.cell-title{ background:#ffffff; }
+.view #crTable th.col-check, .view #crTable th[data-sort-key="cr_id"],
+.view #crTable th[data-sort-key="jira_tickets"], .view #crTable th[data-sort-key="title"]{ background:#f6fafb; }
 .view #crTable td.cell-title{ box-shadow: inset -1px 0 0 #e4ebf0; }
 .view #crTable tbody tr:hover td.cell-check,
 .view #crTable tbody tr:hover td.cell-id,
+.view #crTable tbody tr:hover td.cell-jira,
 .view #crTable tbody tr:hover td.cell-title{ background:#f0f7f7; }
 
 .view .icon-btn{ background:#f2f6f8; border-color:#dde7ec; color:#3a4f60; }
@@ -6356,10 +6361,12 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
 /* Cột ghim (checkbox / CR ID / Title) và cột thao tác — khớp đúng nền hover */
 .view #crTable td.cell-check,
 .view #crTable td.cell-id,
+.view #crTable td.cell-jira,
 .view #crTable td.cell-title,
 .view td.cell-actions{ background:#ffffff; }
 .view #crTable tbody tr:hover td.cell-check,
 .view #crTable tbody tr:hover td.cell-id,
+.view #crTable tbody tr:hover td.cell-jira,
 .view #crTable tbody tr:hover td.cell-title,
 .view tbody tr:hover td.cell-actions{ background: var(--ref-wash); }
 .view #crTable td.cell-title{ box-shadow: inset -1px 0 0 var(--ref-line-soft); }
@@ -6379,6 +6386,7 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
 }
 .view #crTable tbody tr.detail-selected td.cell-check,
 .view #crTable tbody tr.detail-selected td.cell-id,
+.view #crTable tbody tr.detail-selected td.cell-jira,
 .view #crTable tbody tr.detail-selected td.cell-title,
 .view tbody tr.detail-selected td.cell-actions{ background:#eaf6f5; }
 
@@ -8062,7 +8070,7 @@ STATE.relColumns = loadRelColumnPrefs();
 --------------------------------------------------------------------------- */
 const COL_WIDTH_DEFAULTS = {
   cr: {
-    __check:44, cr_id:106, title:220, requester:130, category:140,
+    __check:44, cr_id:106, jira_tickets:150, title:220, requester:130, category:140,
     priority:110, status:140, sub_status:170, brd:92, fsd:92, deadline:130, note:260, __actions:112,
   },
   tc: {
@@ -8082,7 +8090,7 @@ const COL_WIDTH_MIN = 64;
    width saved from before this cap existed) can never blow the column — and
    the whole table — out to an unreasonable width again. */
 const COL_WIDTH_MAX = {
-  cr: { title:320, note:420 },
+  cr: { title:320, note:420, jira_tickets:320 },
   tc: { scenario:420 },
   rel: {},
 };
@@ -8269,8 +8277,11 @@ function updateCrFreezeOffsets(){
   const idTh = table.querySelector('thead th[data-sort-key="cr_id"]');
   const checkW = checkTh ? checkTh.getBoundingClientRect().width : 44;
   const idW = idTh ? idTh.getBoundingClientRect().width : 106;
+  const jiraTh = table.querySelector('thead th[data-sort-key="jira_tickets"]');
+  const jiraW = jiraTh ? jiraTh.getBoundingClientRect().width : 150;
   table.style.setProperty("--cr-freeze-id-left", checkW + "px");
-  table.style.setProperty("--cr-freeze-title-left", (checkW + idW) + "px");
+  table.style.setProperty("--cr-freeze-jira-left", (checkW + idW) + "px");
+  table.style.setProperty("--cr-freeze-title-left", (checkW + idW + jiraW) + "px");
 }
 
 function updateHScrollUI(kind){
@@ -8368,7 +8379,7 @@ function wireHScroll(kind){
    Shift-click adds that column as a secondary / tertiary sort key.
 --------------------------------------------------------------------------- */
 const TABLE_SORT_KEYS = {
-  cr: new Set(["cr_id", ...CR_COLUMNS.map(c=>c.key)]),
+  cr: new Set(["cr_id", "jira_tickets", ...CR_COLUMNS.map(c=>c.key)]),
   tc: new Set(["cr_id", ...TC_COLUMNS.map(c=>c.key)]),
   rel: new Set(["cr_id", ...REL_COLUMNS.map(c=>c.key)]),
 };
@@ -9818,7 +9829,7 @@ function crRowsForFacet(excludeKey){
     if(f.requester && c.requester !== f.requester) return false;
     if(f.overdueOnly && !isOverdue(c)) return false;
     if(f.search){
-      const hay = [c.cr_id, c.old_name, c.rename_folder, c.app, c.requester, c.department, c.owner, c.status, c.sub_status].join(" ").toLowerCase();
+      const hay = [c.cr_id, c.jira_tickets, c.old_name, c.rename_folder, c.app, c.requester, c.department, c.owner, c.status, c.sub_status].join(" ").toLowerCase();
       if(!hay.includes(f.search)) return false;
     }
     return true;
@@ -10492,7 +10503,7 @@ function gsMatchTier(record, idFields, titleFields, otherFields, q){
 }
 
 function gsSearchCr(q){
-  const idFields = ["cr_id"];
+  const idFields = ["cr_id","jira_tickets"];
   const titleFields = ["app","rename_folder","old_name"];
   const otherFields = ["requester","department","owner","category","priority","status","sub_status",
     "description_brd","description_fsd","progress","note","brd_link","fsd_link","quotation_link","loop_mail_header"];
@@ -12022,7 +12033,7 @@ function filteredCrList(){
     if(f.requester && c.requester !== f.requester) return false;
     if(f.overdueOnly && !isOverdue(c)) return false;
     if(f.search){
-      const hay = [c.cr_id, c.old_name, c.rename_folder, c.app, c.requester, c.department, c.owner, c.status, c.sub_status].join(" ").toLowerCase();
+      const hay = [c.cr_id, c.jira_tickets, c.old_name, c.rename_folder, c.app, c.requester, c.department, c.owner, c.status, c.sub_status].join(" ").toLowerCase();
       if(!hay.includes(f.search)) return false;
     }
     return true;
@@ -12043,6 +12054,46 @@ function renderCrKpis(){
     ${kpiCard("Đang xử lý", inProgress, "In Progress / In Review / UAT", "accent")}
     ${kpiCard("Critical", critical, "Mức ưu tiên cao nhất", "warn")}
   `;
+}
+
+/* ---------------------------------------------------------------------------
+   JIRA TICKETS (cột jira_tickets của cr_log — text, nhiều ticket cách nhau bằng dấu phẩy)
+   JIRA_BASE_URL: điền địa chỉ Jira công ty (vd "https://congty.atlassian.net") để mỗi
+   ticket trở thành link mở thẳng trên Jira. Để trống = chỉ hiển thị dạng nhãn.
+--------------------------------------------------------------------------- */
+const JIRA_BASE_URL = "";
+const JIRA_KEY_RE = /[A-Za-z][A-Za-z0-9_]*-\d+/;
+function parseJiraTickets(value){
+  if(value === null || value === undefined) return [];
+  return String(value).split(/[\s,;]+/).map(t=>t.trim()).filter(Boolean);
+}
+/* Chuẩn hóa chuỗi người dùng nhập: chấp nhận key (DMS-123) hoặc nguyên URL Jira
+   (…/browse/DMS-123), tách theo dấu phẩy/chấm phẩy/xuống dòng/khoảng trắng, viết hoa, bỏ trùng.
+   Trả về { ok, value, bad } — bad là các mục không nhận diện được. */
+function normalizeJiraTickets(raw){
+  const tokens = parseJiraTickets(raw);
+  const keys = [], bad = [];
+  tokens.forEach(t=>{
+    const m = JIRA_KEY_RE.exec(t);
+    if(m){ const k = m[0].toUpperCase(); if(!keys.includes(k)) keys.push(k); }
+    else bad.push(t);
+  });
+  return { ok: bad.length === 0, value: keys.join(", "), bad };
+}
+function isMissingJiraColumnError(error){
+  return !!(error && /jira_tickets/i.test(String(error.message || error.details || "")));
+}
+function jiraTicketsHtml(value){
+  const tickets = parseJiraTickets(value);
+  if(!tickets.length) return "";
+  return tickets.map(t=>{
+    const label = esc(t);
+    if(JIRA_BASE_URL && JIRA_KEY_RE.test(t)){
+      const href = JIRA_BASE_URL.replace(/\/+$/,"") + "/browse/" + encodeURIComponent(t);
+      return `<a class="jira-chip" href="${esc(href)}" target="_blank" rel="noopener">${label}</a>`;
+    }
+    return `<span class="jira-chip">${label}</span>`;
+  }).join("");
 }
 
 function crCellTitle(c){ return c.rename_folder || c.old_name || c.app || "—"; }
@@ -12279,10 +12330,11 @@ function renderCrThead(){
   tr.innerHTML =
     `<th class="col-check"><input type="checkbox" class="select-all-check" id="crSelectAll" title="Chọn tất cả"></th>` +
     sortHeaderHtml("cr", "cr_id", "CR ID") +
+    sortHeaderHtml("cr", "jira_tickets", "Jira Tickets") +
     cols.map(c=> sortHeaderHtml("cr", c.key, c.label)).join("") +
     `<th class="th-actions">Thao tác</th>`;
   bindSortHeaders(tr, "cr");
-  renderColgroup("cr", ["__check", "cr_id", ...cols.map(c=>c.key), "__actions"]);
+  renderColgroup("cr", ["__check", "cr_id", "jira_tickets", ...cols.map(c=>c.key), "__actions"]);
   attachColumnResize($("#crTable"), "cr");
   wireHScroll("cr");
   const selectAll = $("#crSelectAll");
@@ -12311,7 +12363,7 @@ function renderCrTable(){
   if(footEl) footEl.textContent = `Hiển thị ${rows.length} / ${STATE.crList.length} Change Request`;
 
   if(STATE.loadErrors.cr){
-    const colspan = cols.length + 3;
+    const colspan = cols.length + 4;
     tbody.innerHTML = `<tr><td colspan="${colspan}">${errorStateBlock("Không tải được CR Log", STATE.loadErrors.cr, "cr")}</td></tr>`;
     $("#crMobileList").innerHTML = errorStateBlock("Không tải được CR Log", STATE.loadErrors.cr, "cr");
     return;
@@ -12322,7 +12374,7 @@ function renderCrTable(){
   STATE.crSelection.forEach(id=>{ if(!allIds.has(id)) STATE.crSelection.delete(id); });
 
   if(!rows.length){
-    const colspan = cols.length + 3;
+    const colspan = cols.length + 4;
     tbody.innerHTML = `<tr><td colspan="${colspan}">${emptyStateBlock("Chưa có Change Request", "Bấm \"Tạo CR mới\" để bắt đầu ghi nhận Change Request đầu tiên.")}</td></tr>`;
     $("#crMobileList").innerHTML = emptyStateBlock("Chưa có Change Request", "Bấm \"Tạo CR mới\" để bắt đầu ghi nhận Change Request đầu tiên.");
     updateSelectAllState(rows);
@@ -12336,6 +12388,7 @@ function renderCrTable(){
     return `<tr data-cr="${esc(c.cr_id)}">
       <td class="cell-check"><input type="checkbox" class="row-check" data-cr-check="${esc(c.cr_id)}" ${checked}></td>
       <td class="cell-id"><span class="id-chip">${esc(c.cr_id)}</span></td>
+      <td class="cell-jira" title="${esc(c.jira_tickets || '')}">${c.jira_tickets ? `<div class="jira-list">${jiraTicketsHtml(c.jira_tickets)}</div>` : '<span class="cell-dim">—</span>'}</td>
       ${cols.map(col=> crRowCellHtml(col.key, c, overdue)).join("")}
       <td class="cell-actions">
         <div class="row-actions">
@@ -12359,6 +12412,7 @@ function renderCrTable(){
       const checkEl = e.target.closest("input[type=checkbox]");
       const crId = tr.dataset.cr;
       if(checkEl) return; // handled by its own change listener
+      if(e.target.closest("a.jira-chip")) return; // link Jira mở tab mới, không mở drawer
       if(!actBtn){ selectDetailRow("cr", crId); openDrawer(crId); return; }
       const act = actBtn.dataset.act;
       if(act === "view"){ selectDetailRow("cr", crId); openDrawer(crId); }
@@ -12401,6 +12455,7 @@ function renderCrMobileList(rows){
         ${c.sub_status ? badge("sub_status", c.sub_status) : ""}
       </div>
       <div class="cr-card-title">${esc(crCellTitle(c))}</div>
+      ${c.jira_tickets ? `<div class="cr-card-jira jira-list">${jiraTicketsHtml(c.jira_tickets)}</div>` : ""}
       <div class="cr-card-badges">${badge("category", c.category)}${badge("priority", c.priority)}</div>
       <div class="cr-card-meta">
         <span>${esc(c.requester || "—")}</span>
@@ -12502,6 +12557,11 @@ function crModalTemplate(cr){
         <div class="field">
           <label>App</label>
           <input id="f_app" type="text" value="${esc(v.app||'')}" placeholder="DMS, XnappReports...">
+        </div>
+        <div class="field span-2">
+          <label>Jira Tickets</label>
+          <input id="f_jira_tickets" type="text" value="${esc(v.jira_tickets||'')}" placeholder="DMS-123, DMS-124">
+          <div class="hint">Nhập một hoặc nhiều ticket, cách nhau bằng dấu phẩy. Có thể dán nguyên link Jira — hệ thống tự lấy mã ticket.</div>
         </div>
         <div class="field">
           <label>Old Name From InterK</label>
@@ -12623,8 +12683,14 @@ async function saveCr(overlay, isEdit){
     toast("Vui lòng chọn Status. Admin cần tạo ít nhất một Status trước.", "err");
     return;
   }
+  const jiraRes = normalizeJiraTickets($("#f_jira_tickets") ? $("#f_jira_tickets").value : "");
+  if(!jiraRes.ok){
+    toast(`Jira Tickets không hợp lệ: "${jiraRes.bad.join('", "')}". Định dạng đúng ví dụ: DMS-123`, "err");
+    return;
+  }
   const payload = {
     cr_id: $("#f_cr_id").value.trim(),
+    jira_tickets: jiraRes.value || null,
     old_name: $("#f_old_name").value.trim(),
     rename_folder: $("#f_rename_folder").value.trim(),
     app: $("#f_app").value.trim(),
@@ -12652,10 +12718,17 @@ async function saveCr(overlay, isEdit){
 
   const btn = $("#crModalSave"); btn.disabled = true; btn.textContent = "Đang lưu...";
   let error;
-  if(isEdit){
-    ({ error } = await STATE.sb.from("cr_log").update(payload).eq("id", STATE.editingCrId));
-  } else {
-    ({ error } = await STATE.sb.from("cr_log").insert(payload));
+  const sendCr = (body)=> isEdit
+    ? STATE.sb.from("cr_log").update(body).eq("id", STATE.editingCrId)
+    : STATE.sb.from("cr_log").insert(body);
+  ({ error } = await sendCr(payload));
+  // An toàn khi deploy: nếu DB chưa được thêm cột jira_tickets, vẫn lưu phần còn lại như cũ
+  // (không làm hỏng chức năng tạo/sửa CR đang chạy) và báo rõ để bổ sung cột.
+  let jiraSkipped = false;
+  if(error && isMissingJiraColumnError(error)){
+    const { jira_tickets: _omit, ...legacyPayload } = payload;
+    ({ error } = await sendCr(legacyPayload));
+    jiraSkipped = !error && !!payload.jira_tickets;
   }
   btn.disabled = false; btn.textContent = isEdit? "Lưu thay đổi":"Tạo CR";
   if(error){
@@ -12663,6 +12736,7 @@ async function saveCr(overlay, isEdit){
     return;
   }
   toast(isEdit? "Đã cập nhật CR" : "Đã tạo CR mới", "ok");
+  if(jiraSkipped) toast("CR đã lưu nhưng chưa lưu được Jira Tickets: bảng cr_log chưa có cột jira_tickets. Hãy chạy SQL thêm cột trong Supabase.", "info", "Thiếu cột Jira", true);
   overlay.classList.remove("show");
   await refreshAll();
   if(STATE.drawerCrId === payload.cr_id) openDrawer(payload.cr_id);
@@ -12675,6 +12749,7 @@ async function saveCr(overlay, isEdit){
    priority/approval/sub-status) như form tạo/sửa CR thủ công.
 --------------------------------------------------------------------------- */
 const CR_IMPORT_COLUMNS = [
+  { header: "Jira Tickets",                   key: "jira_tickets" },
   { header: "Old Name From InterK",           key: "old_name" },
   { header: "Rename Folder",                  key: "rename_folder" },
   { header: "App",                            key: "app" },
@@ -12745,6 +12820,7 @@ async function downloadCrTemplate(){
     const headerRow = CR_IMPORT_COLUMNS.map(c=>c.header);
     const todayStr = todayISO();
     const exampleRow = CR_IMPORT_COLUMNS.map(c=>{
+      if(c.key === "jira_tickets") return "DMS-123, DMS-124";
       if(c.key === "old_name") return "CR_Old_Folder_Name_Demo";
       if(c.key === "rename_folder") return "[CR_0xx] Tên mô tả ngắn gọn cho CR";
       if(c.key === "app") return "DMS";
@@ -13276,6 +13352,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
     const crColumns = [
       {label:"No", width:7, value:c=>crLogNo(c)},
       {label:"CR ID", width:13, value:c=>c.cr_id},
+      {label:"Jira Tickets", width:22, value:c=>c.jira_tickets},
       {label:"Old Name From InterK", width:24, value:c=>c.old_name},
       {label:"Description", width:28, value:c=>c.rename_folder},
       {label:"App", width:16, value:c=>c.app},
@@ -13317,7 +13394,7 @@ async function downloadProgressReport(selectedCrIds = null, sheetFilter = "all",
       "CR PROGRESS REPORT",
       "Nguồn dữ liệu: CR Log và các UAT Test Case liên kết",
       crColumns,
-      { defaultWidth:20, specialWidths:{ K:52, L:52, Y:52, Z:52 } }
+      { defaultWidth:20, specialWidths:{ L:52, M:52, Z:52, AA:52 } }
     );
     selectedCrList.forEach((record, index)=>{
       const row = crSheet.addRow([]);
@@ -14091,6 +14168,9 @@ function validateImportRows(rows){
         }
       }
     });
+    const jiraRes = normalizeJiraTickets(row.jira_tickets);
+    if(!jiraRes.ok) errors.push(`"Jira Tickets" = "${row.jira_tickets}" không hợp lệ (ví dụ đúng: DMS-123)`);
+    else row.jira_tickets = jiraRes.value;
     return { rowIndex: i+1, data: row, errors, valid: errors.length===0 };
   });
 }
@@ -14113,11 +14193,12 @@ function renderImportPreview(overlay, annotated){
     </p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>#</th><th>Tiêu đề</th><th>Category</th><th>Priority</th><th>Status</th><th>Kết quả</th></tr></thead>
+        <thead><tr><th>#</th><th>Jira Tickets</th><th>Tiêu đề</th><th>Category</th><th>Priority</th><th>Status</th><th>Kết quả</th></tr></thead>
         <tbody>
           ${annotated.map(r=>`
             <tr>
               <td class="cell-dim">${r.rowIndex}</td>
+              <td class="cell-dim">${esc(r.data.jira_tickets||"—")}</td>
               <td class="cell-title" title="${esc(r.data.rename_folder||r.data.old_name||'')}">${esc(r.data.rename_folder || r.data.old_name || r.data.app || "—")}</td>
               <td>${esc(r.data.category||"—")}</td>
               <td>${esc(r.data.priority||"—")}</td>
@@ -14161,7 +14242,14 @@ async function executeImport(overlay, annotated){
     return p;
   });
 
-  const { error } = await STATE.sb.from("cr_log").insert(payloadRows);
+  let { error } = await STATE.sb.from("cr_log").insert(payloadRows);
+  let jiraSkipped = false;
+  if(error && isMissingJiraColumnError(error)){
+    // DB chưa có cột jira_tickets: nhập phần còn lại như cũ, báo rõ để bổ sung cột.
+    const legacyRows = payloadRows.map(({ jira_tickets: _omit, ...rest })=> rest);
+    jiraSkipped = payloadRows.some(p=> p.jira_tickets);
+    ({ error } = await STATE.sb.from("cr_log").insert(legacyRows));
+  }
   confirmBtn.disabled = false;
   confirmBtn.textContent = originalLabel;
   if(error){
@@ -14169,6 +14257,7 @@ async function executeImport(overlay, annotated){
     return;
   }
   toast(`Đã tạo mới thành công ${payloadRows.length} CR`, "ok");
+  if(jiraSkipped) toast("Các CR đã được tạo nhưng chưa lưu được Jira Tickets: bảng cr_log chưa có cột jira_tickets. Hãy chạy SQL thêm cột trong Supabase.", "info", "Thiếu cột Jira", true);
   overlay.classList.remove("show");
   await refreshAll();
 }
@@ -14536,6 +14625,8 @@ function crLogField(label, value, options={}){
   const isUrl = /^https?:\/\//i.test(raw);
   const valueHtml = empty
     ? "Chưa có dữ liệu"
+    : options.html
+      ? options.html
     : isUrl
       ? `<a href="${esc(raw)}" target="_blank" rel="noopener"><span class="field-link-icon"><mi-icon name="arrow-up-right" size="1em" stroke-width="2.4"></mi-icon></span>${esc(raw)}</a>`
       : esc(raw);
@@ -14557,6 +14648,7 @@ function crLogFieldGroups(cr){
           ${crLogField("Old Name From InterK", cr.old_name, {long:true})}
           ${crLogField("Rename Folder", cr.rename_folder, {long:true})}
           ${crLogField("App", cr.app)}
+          ${crLogField("Jira Tickets", cr.jira_tickets, {long:true, html: jiraTicketsHtml(cr.jira_tickets) ? `<div class="jira-list jira-list-wrap">${jiraTicketsHtml(cr.jira_tickets)}</div>` : ""})}
         </div>
       </div>
       <div class="crlog-field-group">
@@ -23332,6 +23424,26 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 #eb2bViewRoot .eb2b-cr-view-tools{display:contents}
 #eb2bViewRoot .table-tool-btn{min-height:34px;padding:7px 10px;border:1px solid #d5e2e7;border-radius:7px;background:#fff;color:#315267;font-size:12px;font-weight:750}
 @media(max-width:700px){.filter-chip.unified-filter{flex:1 1 140px}.filter-chip.unified-filter .cr-filter-menu{position:fixed;top:115px;left:12px;right:12px;width:auto;max-width:none;max-height:52vh;overflow:auto}}
+</style>
+
+<style id="jira-tickets-style">
+/* Cột Jira Tickets — ghim ngay sau CR ID (left được JS tính trong updateCrFreezeOffsets) */
+#crTable th[data-sort-key="jira_tickets"], #crTable td.cell-jira{
+  position:sticky; left: var(--cr-freeze-jira-left, 150px); z-index:3; background: var(--bg-surface);
+}
+#crTable th[data-sort-key="jira_tickets"]{ z-index:18; background: var(--bg-topbar-solid); }
+#crTable td.cell-jira{ overflow:hidden; }
+.jira-list{ display:flex; align-items:center; gap:6px; overflow:hidden; white-space:nowrap; }
+.jira-list.jira-list-wrap{ flex-wrap:wrap; white-space:normal; }
+.jira-chip{
+  display:inline-flex; align-items:center; flex-shrink:0; font-family: var(--font-mono);
+  font-size:11.5px; font-weight:700; letter-spacing:.02em; padding:3px 8px; border-radius:7px;
+  background:rgba(91,141,239,.12); border:1px solid rgba(91,141,239,.28); color:#8fb3ff; text-decoration:none;
+}
+a.jira-chip:hover{ background:rgba(91,141,239,.24); border-color:#5b8def; }
+.view .jira-chip{ background:#e8f0fe; border-color:#c5d8fb; color:#2a5bd7; }
+.view a.jira-chip:hover{ background:#d6e5fd; border-color:#2a5bd7; }
+.cr-card-jira{ margin:2px 0 6px; }
 </style>
 <script id="unified-filter-runtime">
 (()=>{
