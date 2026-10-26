@@ -956,6 +956,13 @@ table.resizable.fixed th.col-head{overflow:visible}
 table.resizable.fixed th .th-inner{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:flex}
 table.resizable.fixed td{overflow:hidden}
 .ms.right .ms-panel{left:auto;right:0}
+/* ---- Dòng thời gian thay đổi: khung cố định, cuộn bên trong ---- */
+.feed.feed-scroll{max-height:clamp(260px,calc(100vh - 430px),600px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#c3cedd transparent;border-top:1px solid var(--grid)}
+.feed.feed-scroll:focus-visible{outline:2px solid #b9cdf3;outline-offset:-2px}
+.feed.feed-scroll::-webkit-scrollbar{width:8px}
+.feed.feed-scroll::-webkit-scrollbar-thumb{background:#c3cedd;border-radius:99px;border:2px solid transparent;background-clip:padding-box}
+.feed.feed-scroll::-webkit-scrollbar-thumb:hover{background:#9fb0c6;background-clip:padding-box;border:2px solid transparent}
+
 .ms-head{flex-wrap:wrap}
 /* ===== BỘ THẺ FILTER THỐNG NHẤT: mọi control trên thanh lọc cùng cao 38px, bo 12px, cùng viền / đổ bóng ===== */
 .toolbar{gap:10px}
@@ -5210,7 +5217,7 @@ function renderActivity(){
     '<div class="panel"><div class="panel-head"><div><div class="panel-title">Dòng thời gian thay đổi</div>' +
       '<div class="panel-sub">Đã tải ' + fmtNum(state.activity.length) + " sự kiện gần nhất" + (state.activityDone ? "" : " · có thể còn sự kiện cũ hơn") + "</div></div>" +
       '<div class="panel-tools"><span class="muted" style="font-size:11.5px">' + fmtNum(logs.length) + " sự kiện khớp bộ lọc</span></div></div>" +
-      '<div id="listHost">' + (logs.length ? '<div class="feed">' + logs.map(function(log, index){
+      '<div id="listHost">' + (logs.length ? '<div class="feed feed-scroll" id="activityFeed" tabindex="0" aria-label="Dòng thời gian thay đổi, cuộn để xem thêm">' + logs.map(function(log, index){
         return '<div class="feed-item" style="cursor:pointer" data-action="open-log" data-index="' + index + '">' + feedIcon(log) +
           '<div style="min-width:0;flex:1"><div class="feed-text">' + logSentence(log) + "</div>" +
           '<div class="feed-meta"><span>' + esc(fmtStamp(log.created_at)) + "</span><span>" + esc(relTime(log.created_at)) + '</span><span class="badge outline">' + esc(log.entity_type) + "</span></div></div></div>";
@@ -6033,7 +6040,12 @@ document.addEventListener("click", async function(event){
   if (action === "refresh-notification-settings") { state.alertSettingsLoaded = false; state.alertSettingsError = ""; await loadNotificationSettings(); renderShell(); return; }
   if (action === "sync-jira") { await runJiraSync(); return; }
   if (action === "refresh-activity") { await loadActivity(true); renderShell(); toast("Đã tải lại lịch sử", "good"); return; }
-  if (action === "load-more-activity") { await loadActivity(false); renderShell(); return; }
+  if (action === "load-more-activity") {
+    const feedEl = $("#activityFeed"), keepTop = feedEl ? feedEl.scrollTop : 0;
+    await loadActivity(false); renderShell();
+    const again = $("#activityFeed"); if (again) { again.style.scrollBehavior = "auto"; again.scrollTop = keepTop; again.style.scrollBehavior = ""; }
+    return;
+  }
   if (action === "close-drawer") { closeDrawer(); return; }
   if (action === "close-record") { $("#recordDialog").close(); state.editing = null; return; }
   if (action === "close-history") { $("#historyDialog").close(); return; }
