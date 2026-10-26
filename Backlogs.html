@@ -2986,7 +2986,7 @@ function fMulti(scope, key, values, current, allLabel, title, names){
       (all ? "" : '<span class="ms-count">' + sel.length + "</span>") +
       '<span class="ms-caret">▼</span></button>' +
     '<div class="ms-panel"><div class="ms-head"><span>' + esc(title) + '</span><span>' +
-      '<button type="button" class="link-btn" data-ms-all="' + scope + ":" + key + '">Chọn tất cả (bỏ lọc)</button></span></div>' +
+      '<button type="button" class="link-btn" data-ms-all="' + scope + ":" + key + '">' + (all ? "Bỏ chọn tất cả" : "Chọn tất cả (bỏ lọc)") + '</button></span></div>' +
     '<div class="ms-list">' + opts + "</div></div></div>";
 }
 function statusFilterSelect(scope, list, current){
@@ -5776,7 +5776,7 @@ function onFilterChange(el, isText){
 /* ---------------- bộ lọc nhiều lựa chọn + kéo giãn cột ---------------- */
 let colDrag = null, colDraggedAt = 0;
 function closeMsPanels(keep){
-  $$(".ms.open").forEach(function(n){ if (n !== keep) n.classList.remove("open"); });
+  $$(".ms.open").forEach(function(n){ if (n !== keep) { n.classList.remove("open"); if (n.dataset.msRoot) msRestore(n); } });
 }
 function msSync(root){
   const parts = String(root.dataset.msRoot).split(":");
@@ -5816,23 +5816,41 @@ function msRepaint(){
     if (again) { again.classList.add("open"); placeMs(again); }
   }
 }
+function msBoxes(root){ return Array.prototype.slice.call(root.querySelectorAll("input[data-ms]")); }
+function msAllLabel(root){
+  const btn = root.querySelector("[data-ms-all]");
+  if (!btn) return;
+  const boxes = msBoxes(root);
+  btn.textContent = boxes.length && boxes.every(function(b){ return b.checked; }) ? "Bỏ chọn tất cả" : "Chọn tất cả (bỏ lọc)";
+}
+/* Đưa các ô tick về đúng theo bộ lọc thật (dùng khi đóng panel sau khi "bỏ chọn tất cả" mà chưa chọn lại gì) */
+function msRestore(root){
+  const parts = String(root.dataset.msRoot || "").split(":");
+  const f = state.filters[parts[0]];
+  if (!f) return;
+  const sel = msArr(f[parts.slice(1).join(":")]);
+  msBoxes(root).forEach(function(b){ b.checked = !sel.length || sel.indexOf(b.value) >= 0; });
+  msAllLabel(root);
+}
+/* Nút bật/tắt: đang chọn hết -> bỏ chọn hết (để tick lại mục cần); chưa chọn hết -> chọn hết = bỏ lọc */
 function msSetAll(key, on){
+  const root = document.querySelector('.ms[data-ms-root="' + key + '"]');
+  if (!root) return;
+  const boxes = msBoxes(root);
+  const allChecked = boxes.length > 0 && boxes.every(function(b){ return b.checked; });
+  if (allChecked) {
+    boxes.forEach(function(b){ b.checked = false; });
+    msAllLabel(root);
+    return;   /* chưa đổi bộ lọc: bảng giữ nguyên cho tới khi bạn tick mục cần xem */
+  }
   const parts = String(key).split(":");
   const scope = parts[0], field = parts.slice(1).join(":");
   const f = state.filters[scope];
   if (!f) return;
-  /* Ghi thẳng vào state (không phụ thuộc DOM): "chọn tất cả" = bỏ lọc trường này */
-  const had = msArr(f[field]).length > 0;
   f[field] = [];
-  /* Preset chip đang ẩn bớt theo trạng thái (Đang mở / Hoàn tất / Lưu trữ) cũng phải được bỏ khi bỏ lọc trạng thái */
-  let presetCleared = false;
-  if (field === "status" && on && (f.preset === "active" || f.preset === "done" || f.preset === "archived")) {
-    f.preset = ""; presetCleared = true;
-  }
+  if (field === "status" && (f.preset === "active" || f.preset === "done" || f.preset === "archived")) f.preset = "";
   state.page[scope] = 1;
   msRepaint();
-  if (had || presetCleared) toast(presetCleared ? "Đã bỏ lọc và chip trạng thái" : "Đã bỏ lọc, hiển thị tất cả", "good");
-  else toast("Chưa có bộ lọc nào ở mục này", "info");
 }
 document.addEventListener("change", function(event){
   const box = event.target.closest("input[data-ms]");
