@@ -958,6 +958,7 @@ table.resizable.fixed td{overflow:hidden}
 .ms.right .ms-panel{left:auto;right:0}
 /* ---- Dòng thời gian thay đổi: khung cố định, cuộn bên trong ---- */
 .feed.feed-scroll{max-height:clamp(260px,calc(100vh - 430px),600px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:#c3cedd transparent;border-top:1px solid var(--grid)}
+.feed.feed-scroll.feed-sm{max-height:clamp(220px,42vh,380px);border:1px solid var(--grid);border-radius:12px}
 .feed.feed-scroll:focus-visible{outline:2px solid #b9cdf3;outline-offset:-2px}
 .feed.feed-scroll::-webkit-scrollbar{width:8px}
 .feed.feed-scroll::-webkit-scrollbar-thumb{background:#c3cedd;border-radius:99px;border:2px solid transparent;background-clip:padding-box}
@@ -3786,7 +3787,7 @@ function linksBlock(items){
 }
 function historyFeed(list){
   if (!list.length) return '<div class="notice">Chưa có thay đổi nào được ghi cho mục này. Lịch sử chỉ bắt đầu từ khi bảng <span class="mono">' + ACTIVITY_TABLE + '</span> được tạo.</div>';
-  return '<div class="feed">' + list.map(function(log){
+  return '<div class="feed feed-scroll feed-sm" tabindex="0" aria-label="Lịch sử thay đổi, cuộn để xem thêm">' + list.map(function(log){
     const tone = log.action === "created" ? "blue" : log.action === "deleted" ? "red" : log.action === "blocked" ? "red" : log.action === "completed" ? "green" : "amber";
     return '<div class="feed-item"><span class="feed-icon ' + tone + '">' + (log.action === "completed" ? ICONS.check : log.action === "blocked" ? ICONS.block : log.action === "created" ? ICONS.plus : ICONS.edit) + "</span>" +
       '<div style="min-width:0"><div class="feed-text">' + logSentence(log) + "</div>" +
