@@ -5817,11 +5817,22 @@ function msRepaint(){
   }
 }
 function msSetAll(key, on){
-  const root = document.querySelector('.ms[data-ms-root="' + key + '"]');
-  if (!root) return;
-  Array.prototype.slice.call(root.querySelectorAll("input[data-ms]")).forEach(function(b){ b.checked = on; });
-  msSync(root);
+  const parts = String(key).split(":");
+  const scope = parts[0], field = parts.slice(1).join(":");
+  const f = state.filters[scope];
+  if (!f) return;
+  /* Ghi thẳng vào state (không phụ thuộc DOM): "chọn tất cả" = bỏ lọc trường này */
+  const had = msArr(f[field]).length > 0;
+  f[field] = [];
+  /* Preset chip đang ẩn bớt theo trạng thái (Đang mở / Hoàn tất / Lưu trữ) cũng phải được bỏ khi bỏ lọc trạng thái */
+  let presetCleared = false;
+  if (field === "status" && on && (f.preset === "active" || f.preset === "done" || f.preset === "archived")) {
+    f.preset = ""; presetCleared = true;
+  }
+  state.page[scope] = 1;
   msRepaint();
+  if (had || presetCleared) toast(presetCleared ? "Đã bỏ lọc và chip trạng thái" : "Đã bỏ lọc, hiển thị tất cả", "good");
+  else toast("Chưa có bộ lọc nào ở mục này", "info");
 }
 document.addEventListener("change", function(event){
   const box = event.target.closest("input[data-ms]");
@@ -5856,6 +5867,9 @@ document.addEventListener("click", function(event){
   const noneBtn = event.target.closest("button[data-ms-none]");
   if (noneBtn) { msSetAll(noneBtn.dataset.msNone, false); return; }
   if (!event.target.closest(".ms")) closeMsPanels(null);
+});
+document.addEventListener("mousedown", function(event){
+  if (event.target.closest("button[data-ms-all]")) event.preventDefault();
 });
 document.addEventListener("pointerdown", function(event){
   const handle = event.target.closest("[data-col-resize]");
