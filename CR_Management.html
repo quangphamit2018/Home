@@ -261,6 +261,16 @@ body.role-no-manage-users #adminUsersPanel,
 body.role-no-manage-users #adminAccessRequestsPanel,
 body.role-no-manage-users #supabaseTablesPanel{ display:none !important; }
 
+/* Phân quyền theo workspace (cột "Workspace" ở bảng người dùng + ẩn menu workspace không được phép) */
+.ws-chip{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:600; line-height:1.4; margin:1px 4px 1px 0; }
+.ws-chip::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.85; }
+.ws-chip.is-dms{ background:rgba(20,184,166,.14); color:#0f766e; }
+.ws-chip.is-eb2b{ background:rgba(59,130,246,.14); color:#1d4ed8; }
+body.ws-no-dms .workspace-nav[data-workspace="dms"],
+body.ws-no-eb2b .workspace-nav[data-workspace="eb2b"],
+body.ws-no-eb2b #eb2bNav,
+body.ws-single .nav-item[data-view="report"]{ display:none !important; }
+
 
 /* ==========================================================================
    CONFIG SCREEN
@@ -7480,6 +7490,13 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
                 <option value="viewer">Thành viên (chỉ xem)</option>
               </select>
             </div>
+            <div class="filter-chip"><span>Workspace</span>
+              <select id="filterUserWorkspace">
+                <option value="">Tất cả</option>
+                <option value="dms">DMS</option>
+                <option value="eb2b">e-B2B</option>
+              </select>
+            </div>
             <div class="filter-chip"><span>Trạng thái</span>
               <select id="filterUserStatus">
                 <option value="">Tất cả</option>
@@ -7493,7 +7510,7 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày thêm</th><th></th>
+              <th>Email</th><th>Vai trò</th><th>Workspace</th><th>Trạng thái</th><th>Ngày thêm</th><th></th>
             </tr></thead>
             <tbody id="userTableBody"></tbody>
           </table>
@@ -7897,6 +7914,33 @@ function canEditData(){ return roleLevel(STATE.userRole) >= ROLE_LEVEL.member; }
 function canManageWeeklyMom(){ return roleLevel(STATE.userRole) >= ROLE_LEVEL.senior_member; }
 function roleLabel(role){ return ROLE_LABELS[role] || role || "—"; }
 
+/* Workspace được phép truy cập (cột app_users.workspaces: mảng 'dms' / 'eb2b').
+   - super_admin luôn thấy cả 2 workspace.
+   - Chưa chạy SQL (cột chưa tồn tại / null) => giữ hành vi cũ: thấy cả 2. */
+const WORKSPACE_KEYS = ["dms", "eb2b"];
+const WORKSPACE_LABELS = { dms:"DMS", eb2b:"e-B2B" };
+function normalizeWorkspaces(role, arr){
+  if(role === "super_admin") return WORKSPACE_KEYS.slice();
+  if(!Array.isArray(arr)) return WORKSPACE_KEYS.slice();
+  return WORKSPACE_KEYS.filter(k=> arr.includes(k));
+}
+function canAccessWorkspace(ws){
+  if(STATE.userRole === "super_admin") return true;
+  const w = STATE.userWorkspaces;
+  return Array.isArray(w) ? w.includes(ws) : true;
+}
+function applyWorkspaceAccessToUI(){
+  const dms = canAccessWorkspace("dms"), eb = canAccessWorkspace("eb2b");
+  document.body.classList.toggle("ws-no-dms", !dms);
+  document.body.classList.toggle("ws-no-eb2b", !eb);
+  document.body.classList.toggle("ws-single", !(dms && eb));
+}
+function workspaceBadges(u){
+  const list = normalizeWorkspaces(u.role, u.workspaces);
+  if(!list.length) return `<span class="cell-dim">—</span>`;
+  return list.map(k=> `<span class="ws-chip is-${k}">${WORKSPACE_LABELS[k]}</span>`).join("");
+}
+
 /* Cập nhật các class trên <body> để CSS ẩn/hiện nút Thêm/Sửa/Xóa theo quyền,
    thay vì phải sửa từng nơi render danh sách (CR, Test case, Release, BRD...). */
 function applyRolePermissionsToUI(){
@@ -7926,6 +7970,7 @@ const STATE = {
   session: null,
   userEmail: null,
   userRole: null,
+  userWorkspaces: null,
   loginAttempted: false,
   booted: false,
   crList: [],
@@ -7945,7 +7990,7 @@ const STATE = {
   filters: loadCrFilterPrefs(),
   tcFilters: { cr:"", result:"", testor:"", owner:"", search:"" },
   relFilters: { cr:"", status:"", environment:"", owner:"", search:"" },
-  userFilters: { q:"", role:"", status:"" },
+  userFilters: { q:"", role:"", status:"", workspace:"" },
   editingCrId: null,      // uuid of cr_log row being edited (null = create)
   editingTcId: null,
   editingRelId: null,
@@ -9073,7 +9118,7 @@ async function finishIfOAuthPopup(){
 
 async function logout(){
   await STATE.sb.auth.signOut();
-  STATE.session = null; STATE.userEmail = null; STATE.userRole = null; STATE.booted = false;
+  STATE.session = null; STATE.userEmail = null; STATE.userRole = null; STATE.userWorkspaces = null; STATE.booted = false;
   STATE.loginAttempted = false;
   showScreen("login");
   setLoginButtonLoading(false);
@@ -9101,7 +9146,7 @@ async function handleAuthState(){
   }
   if(!data || !data.active){
     const shouldReportLoginFailure = STATE.loginAttempted;
-    STATE.userRole = null;
+    STATE.userRole = null; STATE.userWorkspaces = null;
     STATE.loginAttempted = false;
     setLoginButtonLoading(false);
     if(shouldReportLoginFailure) toast("Đăng nhập chưa hoàn tất: tài khoản chưa được cấp quyền.", "err");
@@ -9112,6 +9157,8 @@ async function handleAuthState(){
     return;
   }
   STATE.userRole = data.role;
+  STATE.userWorkspaces = normalizeWorkspaces(data.role, data.workspaces);
+  applyWorkspaceAccessToUI();
   const shouldCelebrateLogin = STATE.loginAttempted;
   STATE.loginAttempted = false;
   setLoginButtonLoading(false);
@@ -9339,7 +9386,17 @@ function subscribeRealtime(){
     })
     .subscribe();
   STATE.sb.channel("realtime-app_users")
-    .on("postgres_changes", { event:"*", schema:"public", table:"app_users" }, ()=>{
+    .on("postgres_changes", { event:"*", schema:"public", table:"app_users" }, payload=>{
+      // Quyền workspace của chính mình vừa bị đổi -> tải lại để áp dụng ngay.
+      const r = payload && payload.new;
+      if(r && r.email && r.email === STATE.userEmail && !isSuperAdmin()){
+        const next = normalizeWorkspaces(r.role, r.workspaces);
+        if(next.join() !== (STATE.userWorkspaces || []).join()){
+          toast("Quyền workspace của bạn vừa thay đổi — đang tải lại...", "info");
+          setTimeout(()=> location.reload(), 1200);
+          return;
+        }
+      }
       if(STATE.currentView === "admin"){ loadAndRenderAdmin(); }
     })
     .subscribe();
@@ -9687,9 +9744,10 @@ function initShell(){
   }, 220));
   $("#filterUserRole").addEventListener("change", e=>{ STATE.userFilters.role = e.target.value; renderAdminTable(); });
   $("#filterUserStatus").addEventListener("change", e=>{ STATE.userFilters.status = e.target.value; renderAdminTable(); });
+  $("#filterUserWorkspace").addEventListener("change", e=>{ STATE.userFilters.workspace = e.target.value; renderAdminTable(); });
   $("#clearUserFilters").addEventListener("click", ()=>{
-    STATE.userFilters = { q:"", role:"", status:"" };
-    $("#userSearchInput").value=""; $("#filterUserRole").value=""; $("#filterUserStatus").value="";
+    STATE.userFilters = { q:"", role:"", status:"", workspace:"" };
+    $("#userSearchInput").value=""; $("#filterUserRole").value=""; $("#filterUserStatus").value=""; $("#filterUserWorkspace").value="";
     renderAdminTable();
   });
 
@@ -9787,6 +9845,7 @@ function initShell(){
   // ghi "dms" vào localStorage ngay tại đây, nên điều kiện mở lại e-B2B luôn sai.
   let restoreEb2b = false;
   try{ restoreEb2b = localStorage.getItem(WORKSPACE_STORAGE_KEY) === "eb2b"; }catch(_){}
+  if(!canAccessWorkspace("eb2b")) restoreEb2b = false;
   setView(STATE.currentView, { persistWorkspace: !restoreEb2b });
   if(restoreEb2b){
     if(typeof window.__eb2bRestoreSavedTab === "function"){
@@ -10352,6 +10411,14 @@ function clearDmsNavState(){
 
 function setView(view, options){
   if(!VALID_VIEWS.has(view)) view = "dashboard";
+  // Không có quyền workspace DMS -> chuyển sang e-B2B (DMS và Tổng Quan bị chặn).
+  if(!canAccessWorkspace("dms") && (isDmsView(view) || view === "report")){
+    try{ localStorage.setItem(WORKSPACE_STORAGE_KEY, "eb2b"); }catch(_){}
+    if(typeof window.__eb2bRestoreSavedTab === "function") window.__eb2bRestoreSavedTab(0);
+    else window.__eb2bPendingRestore = true;
+    return;
+  }
+  if(view === "report" && !canAccessWorkspace("eb2b")) view = "dashboard";
   if(view === "admin" && !canViewAdminTab()) view = "dashboard";
   if(view === "recycle" && !isSuperAdmin()) view = "dashboard";
   const prevView = STATE.currentView;
@@ -19036,7 +19103,7 @@ async function loadAndRenderAdmin(){
   // cùng vào tab Quản Trị Dữ Liệu.
   if(canManageUsers()){
     const tbody = $("#userTableBody");
-    if(tbody) skeletonTableRows(tbody, 5, 4);
+    if(tbody) skeletonTableRows(tbody, 6, 4);
     tasks.push(fetchAppUsers());
     tasks.push(fetchAccessRequests());
   }
@@ -19231,6 +19298,7 @@ function filteredUserList(){
   return STATE.userList.filter(u=>{
     if(f.q && !(u.email||"").toLowerCase().includes(f.q)) return false;
     if(f.role && u.role !== f.role) return false;
+    if(f.workspace && !normalizeWorkspaces(u.role, u.workspaces).includes(f.workspace)) return false;
     if(f.status === 'active' && !u.active) return false;
     if(f.status === 'locked' && u.active) return false;
     return true;
@@ -19246,21 +19314,22 @@ function renderAdminTable(){
   const footEl = $("#userFootCount");
   if(footEl) footEl.textContent = `Hiển thị ${rows.length} / ${STATE.userList.length} người dùng`;
   if(STATE.loadErrors.admin){
-    tbody.innerHTML = `<tr><td colspan="5">${errorStateBlock("Không tải được danh sách người dùng", STATE.loadErrors.admin, "admin")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">${errorStateBlock("Không tải được danh sách người dùng", STATE.loadErrors.admin, "admin")}</td></tr>`;
     return;
   }
   if(!STATE.userList.length){
-    tbody.innerHTML = `<tr><td colspan="5">${emptyStateBlock("Chưa có ai được cấp quyền", "Bấm \"+ Thêm người dùng\" để cấp quyền cho một email Gmail.")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">${emptyStateBlock("Chưa có ai được cấp quyền", "Bấm \"+ Thêm người dùng\" để cấp quyền cho một email Gmail.")}</td></tr>`;
     return;
   }
   if(!rows.length){
-    tbody.innerHTML = `<tr><td colspan="5">${emptyStateBlock("Không tìm thấy người dùng", "Thử đổi từ khóa tìm kiếm hoặc bộ lọc.")}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6">${emptyStateBlock("Không tìm thấy người dùng", "Thử đổi từ khóa tìm kiếm hoặc bộ lọc.")}</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(u=>`
     <tr data-user="${u.id}">
       <td class="cell-title">${esc(u.email)} ${u.email===STATE.userEmail? '<span style="color:var(--text-faint); font-weight:500;">(bạn)</span>':''}</td>
       <td>${badge("role", roleLabel(u.role))}</td>
+      <td>${workspaceBadges(u)}</td>
       <td>${u.active? `<span class="badge" style="background:var(--success-dim); color:var(--success);"><span class="dot" style="background:var(--success)"></span>Đang hoạt động</span>` : `<span class="badge" style="background:var(--danger-dim); color:var(--danger);"><span class="dot" style="background:var(--danger)"></span>Đã khóa</span>`}</td>
       <td class="cell-dim">${fmtDate(u.added_at)}</td>
       <td class="cell-actions">
@@ -20164,6 +20233,7 @@ async function deleteStatus(status){
 function userModalTemplate(u){
   const v = u || {};
   const isEdit = !!u;
+  const wsSel = u ? normalizeWorkspaces(u.role, u.workspaces) : WORKSPACE_KEYS.slice();
   return `
   <div class="modal modal-sm">
     <div class="modal-head">
@@ -20186,6 +20256,13 @@ function userModalTemplate(u){
           ${isSuperAdmin() ? `<option value="super_admin" ${v.role==='super_admin'?'selected':''}>Quản trị viên (toàn quyền, thấy Recycle Bin — không ai được xóa tài khoản này)</option>` : ``}
         </select>
         ${!isSuperAdmin() ? `<div class="hint">Chỉ Quản trị viên mới có thể cấp/đổi quyền Quản trị viên.</div>` : ``}
+      </div>
+      <div class="field">
+        <label>Workspace được truy cập</label>
+        <div id="u_ws_wrap" style="display:flex; gap:20px; flex-wrap:wrap; padding:4px 0;">
+          ${WORKSPACE_KEYS.map(k=>`<label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px; font-weight:500;"><input type="checkbox" class="u_ws" value="${k}" ${wsSel.includes(k)?'checked':''}> ${WORKSPACE_LABELS[k]}</label>`).join("")}
+        </div>
+        <div class="hint" id="u_ws_hint">Chọn ít nhất 1 workspace. Quản trị viên luôn thấy cả DMS và e-B2B.</div>
       </div>
       <div class="field" style="margin-bottom:0;">
         <label>Trạng thái</label>
@@ -20222,6 +20299,12 @@ function openUserModal(u, prefillEmail){
     overlay.addEventListener("click", e=>{ if(e.target===overlay) overlay.classList.remove("show"); });
   }
   $("#userModalSave").addEventListener("click", ()=> saveUser(overlay, !!u));
+  const syncWsByRole = ()=>{
+    const isAdminRole = $("#u_role").value === "super_admin";
+    Array.from($all(".u_ws")).forEach(c=>{ if(isAdminRole) c.checked = true; c.disabled = isAdminRole; });
+  };
+  $("#u_role").addEventListener("change", syncWsByRole);
+  syncWsByRole();
 }
 
 async function saveUser(overlay, isEdit){
@@ -20231,11 +20314,14 @@ async function saveUser(overlay, isEdit){
     return;
   }
   const active = $("#u_active").value === "true";
+  let workspaces = Array.from($all(".u_ws")).filter(c=>c.checked).map(c=>c.value);
+  if(role === "super_admin") workspaces = WORKSPACE_KEYS.slice();
+  if(!workspaces.length){ toast("Vui lòng chọn ít nhất 1 workspace.", "err"); return; }
   const btn = $("#userModalSave"); btn.disabled = true; btn.textContent = "Đang lưu...";
   let error;
   if(isEdit){
     let data;
-    ({ data, error } = await STATE.sb.from("app_users").update({ role, active }).eq("id", STATE.editingUserId).select());
+    ({ data, error } = await STATE.sb.from("app_users").update({ role, active, workspaces }).eq("id", STATE.editingUserId).select());
     if(!error && (!data || data.length === 0)){
       btn.disabled = false; btn.textContent = "Lưu thay đổi";
       toast("Không lưu được thay đổi — có thể do quyền (RLS) trên bảng app_users đang chặn cập nhật.", "err");
@@ -20244,11 +20330,12 @@ async function saveUser(overlay, isEdit){
   } else {
     const email = $("#u_email").value.trim().toLowerCase();
     if(!email || !email.includes("@")){ toast("Vui lòng nhập email hợp lệ", "err"); btn.disabled=false; btn.textContent="Cấp quyền"; return; }
-    ({ error } = await STATE.sb.from("app_users").insert({ email, role, active }));
+    ({ error } = await STATE.sb.from("app_users").insert({ email, role, active, workspaces }));
   }
   btn.disabled = false; btn.textContent = isEdit? "Lưu thay đổi":"Cấp quyền";
   if(error){
     if(String(error.message||"").includes("duplicate")){ toast("Email này đã được cấp quyền trước đó.", "err"); }
+    else if(String(error.message||"").includes("workspaces")){ toast("Chưa có cột workspaces trong bảng app_users — hãy chạy SQL cập nhật trong Supabase SQL Editor.", "err"); }
     else toast("Lưu thất bại: " + error.message, "err");
     return;
   }
@@ -20900,6 +20987,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }
 
   function eb2bShow(tab){
+    if(typeof canAccessWorkspace === "function" && !canAccessWorkspace("eb2b")) return;
     if(!EB2B.ready && !eb2bBuildShell()) return;
     // Entering e-B2B: DMS must go fully dark (no active leaf, no context parent,
     // no open CR form / drawer / modal left behind) and any e-B2B form from the
@@ -23349,7 +23437,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
 
   // Gọi từ DMS (handleAuthState) sau khi đăng nhập xong.
   window.__eb2bStartSync = function(){
-    const go = ()=>{ if(!activeDb()) return; eb2bSubscribeRealtime(); eb2bLoad({ queue:true, soft:true }); };
+    const go = ()=>{ if(!activeDb()) return; if(typeof canAccessWorkspace === "function" && !canAccessWorkspace("eb2b")) return; eb2bSubscribeRealtime(); eb2bLoad({ queue:true, soft:true }); };
     if($e("#eb2bViewRoot")) go();
     else document.addEventListener("DOMContentLoaded", ()=>setTimeout(go, 0), { once:true });
   };
