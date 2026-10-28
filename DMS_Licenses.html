@@ -5107,8 +5107,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const TAC_COL_DEFAULTS = Object.fromEntries(TAC_EXTRA_GROUPS.flatMap(g => g.cols.map(([k, , d]) => [k, d])));
     const tacGroup = () => ({ desc: "", qty: "", disc: "", sku: "", scope: "terr", sv: "", pfx: "", n0: "" });
     function tmxToday6() { const d = new Date(); return String(d.getFullYear()).slice(2) + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0"); }
-    function tmxRg(M, o) { return Object.assign({ id: M.seq++, code: "", ky: "", n0: "1" }, o || {}); }
-    function tmxRow(o) { return Object.assign({ sku: "", qty: "", desc: "", d: {} }, o || {}); }
+    function tmxRg(M, o) { return Object.assign({ id: M.seq++, code: "", ky: "", n0: "1", base: "" }, o || {}); }
+    function tmxRow(o) { return Object.assign({ sku: "", qty: "", desc: "", d: {}, qa: false, ov: {}, af: {} }, o || {}); }
     function tmxInit() { const M = { seq: 1, batch: tmxToday6(), scope: "terr", suffix: "giảm {gia}", lower: "auto", rg: [], rows: [] }; M.rg.push(tmxRg(M)); for (let i = 0; i < 4; i++) M.rows.push(tmxRow()); return M; }
     const tacInit = () => ({ mx: tmxInit(), pfx: "", n0: "1", start: adjToday(), end: "", uom: "EA", type: "1", seq: "555", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, groups: [tacGroup()], cols: { ...TAC_COL_DEFAULTS }, touched: new Set() });
     let mdmTac = tacInit();
@@ -5199,6 +5199,26 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     let mdmTacView = loadKey(TAC_VIEW_KEY, ["matrix", "group"], "matrix"), mdmTacFmt = loadKey(TAC_FMT_KEY, ["67", "75"], "67");
     const tmxVal = s => String(s ?? "").trim();
     const tmxNum = s => { s = tmxVal(s).replace(/\s/g, ""); return /^\d{1,3}([.,]\d{3})+$/.test(s) ? s.replace(/[.,]/g, "") : s.replace(",", "."); };
+    /* ---- Logic theo SKU (file logic_prmotion.xlsx): mã SKU → [SLABFROM = SLABTO, số chia giá giảm]. Chỉ tự điền khi cột Territory có nhập "Giá giảm gốc"; ô nhập tay luôn được giữ nguyên ---- */
+    const TAC_LOGIC = {"2736":[6,4],"2778":[6,4],"4862":[6,4],"6442":[6,4],"3462":[6,4],"6464":[6,4],"1742":[6,4],"4279":[6,4],"1702":[6,4],"1840":[6,4],"7862":[6,4],"4492":[6,4],"4822":[6,4],"7618":[6,4],"7408":[6,4],"7500":[6,4],"7501":[6,4],"4295":[6,4],"6999":[6,4],"4946":[6,4],"4959":[6,4],"6633":[6,4],"7784":[6,4],"7791":[6,4],"7783":[6,4],"7785":[6,4],"5108":[6,4],"1762":[6,4],"3709":[6,4],"2481":[6,4],"2489":[6,4],"2201":[6,4],"1900":[6,4],"1903":[6,4],"7410":[6,4],"5959":[6,4],"4290":[6,4],"1744":[6,4],"4251":[6,4],"7701":[6,4],"3699":[6,4],"7779":[6,4],"3422":[6,4],"7866":[6,4],"3435":[6,4],"3436":[6,4],"2710":[6,4],"2711":[6,4],"7427":[6,4],"7428":[6,4],"7429":[6,4],"2713":[6,4],"1769":[6,4],"4939":[6,4],"3894":[6,4],"4650":[6,4],"7702":[6,4],"7704":[6,4],"3430":[6,4],"4283":[6,4],"1533":[6,4],"1761":[6,4],"3890":[6,4],"4202":[6,4],"4240":[6,4],"1741":[6,4],"2407":[6,4],"3601":[6,4],"4651":[6,4],"4253":[6,4],"2586":[6,4],"3427":[6,4],"4204":[6,4],"6462":[6,4],"2589":[6,4],"4484":[6,4],"2482":[6,4],"1535":[6,4],"4941":[6,4],"2406":[6,4],"4246":[6,4],"2436":[6,4],"2402":[6,4],"4470":[6,4],"7420":[6,4],"5858":[6,4],"7421":[6,4],"7413":[6,4],"7424":[6,4],"7422":[6,4],"2789":[6,4],"2403":[6,4],"4948":[6,4],"2375":[6,4],"4085":[6,4],"7787":[6,4],"7789":[6,4],"5100":[6,4],"3700":[6,4],"5101":[6,4],"2491":[6,4],"2490":[6,4],"3701":[6,4],"3442":[6,4],"3441":[6,4],"1841":[6,4],"7708":[6,4],"7709":[6,4],"2714":[6,4],"3710":[6,4],"6845":[6,4],"3055":[6,4],"2780":[6,4],"1537":[6,4],"7456":[6,4],"7457":[6,4],"1539":[6,4],"6400":[6,4],"5102":[6,4],"7804":[6,4],"5103":[6,4],"7775":[6,4],"7711":[6,4],"4205":[6,4],"6060":[6,4],"4291":[6,4],"1540":[6,4],"1541":[6,4],"1542":[6,4],"1545":[6,4],"2409":[6,4],"2492":[6,4],"4287":[6,4],"1748":[6,4],"7452":[6,4],"7453":[6,4],"2717":[6,4],"3607":[6,4],"3608":[6,4],"3443":[6,4],"6471":[6,4],"3604":[6,4],"2411":[6,4],"3500":[6,4],"3501":[6,4],"3502":[6,4],"3504":[6,4],"3505":[6,4],"6808":[6,4],"3508":[6,4],"3503":[6,4],"1546":[6,4],"4207":[6,4],"4206":[6,4],"2772":[6,4],"2412":[6,4],"6472":[6,4],"1547":[6,4],"2704":[6,4],"2705":[6,4],"2095":[6,4],"2096":[6,4],"2097":[6,4],"2098":[6,4],"2099":[6,4],"4280":[6,4],"7760":[6,4],"7807":[6,4],"4209":[6,4],"3510":[6,4],"4208":[6,4],"4261":[6,4],"7712":[6,4],"3525":[6,4],"3526":[6,4],"3527":[6,4],"3528":[6,4],"7713":[6,4],"7891":[6,4],"4217":[6,4],"1554":[6,4],"2102":[6,4],"2113":[6,4],"3445":[6,4],"3447":[6,4],"3511":[6,4],"3512":[6,4],"3610":[6,4],"3611":[6,4],"3702":[6,4],"3703":[6,4],"5104":[6,4],"5105":[6,4],"4501":[6,4],"1555":[6,4],"7714":[6,4],"3520":[6,4],"3521":[6,4],"3522":[6,4],"3523":[6,4],"3424":[6,4],"2715":[6,4],"2771":[6,4],"3612":[6,4],"7863":[6,4],"3530":[6,4],"3531":[6,4],"4607":[6,4],"4608":[6,4],"6484":[6,4],"6485":[6,4],"6475":[6,4],"6486":[6,4],"3532":[6,4],"3533":[6,4],"3534":[6,4],"3535":[6,4],"4241":[6,4],"1749":[6,4],"2376":[6,4],"6443":[6,4],"7790":[6,4],"1557":[6,4],"1046":[6,4],"3529":[6,4],"3524":[6,4],"1045":[6,4],"1054":[6,4],"1050":[6,4],"1051":[6,4],"1000":[6,4],"1058":[6,4],"1057":[6,4],"1059":[6,4],"1047":[6,4],"1055":[6,4],"1080":[6,4],"1079":[6,4],"1071":[6,4],"1064":[6,4],"1089":[6,4],"7700":[6,4],"7780":[6,4],"7796":[6,4],"1048":[6,4],"1074":[6,4],"1084":[6,4],"1088":[6,4],"1090":[6,4],"1065":[6,4],"1092":[6,4],"4039":[24,1],"2030":[24,1],"2469":[24,1],"4884":[24,1],"3896":[24,1],"4656":[24,1],"3156":[24,1],"3459":[24,1],"6476":[24,1],"2737":[24,1],"3656":[24,1],"3606":[24,1],"6469":[24,1],"6479":[24,1],"1363":[24,1],"4277":[24,1],"4223":[24,1],"1746":[24,1],"1538":[24,1],"4489":[24,1],"4299":[24,1],"6873":[24,1],"6880":[24,1],"4935":[24,1],"5597":[24,1],"2593":[24,1],"1902":[24,1],"4480":[24,1],"4252":[24,1],"7890":[24,1],"2019":[24,1],"3420":[24,1],"6877":[24,1],"4250":[24,1],"4254":[24,1],"7771":[24,1],"4211":[24,1],"4481":[24,1],"1534":[24,1],"1763":[24,1],"3891":[24,1],"4652":[24,1],"3602":[24,1],"4483":[24,1],"2587":[24,1],"3426":[24,1],"4203":[24,1],"6062":[24,1],"7705":[24,1],"6871":[24,1],"4485":[24,1],"7802":[24,1],"7800":[24,1],"2264":[24,1],"4200":[24,1],"4210":[24,1],"4879":[24,1],"2408":[24,1],"7801":[24,1],"1536":[24,1],"4260":[24,1],"6467":[24,1],"3428":[24,1],"3603":[24,1],"7803":[24,1],"7773":[24,1],"7710":[24,1],"2918":[24,1],"6404":[24,1],"2404":[24,1],"4486":[24,1],"2718":[24,1],"2702":[24,1],"2809":[24,1],"2808":[24,1],"2094":[24,1],"2110":[24,1],"6063":[24,1],"6874":[24,1],"6875":[24,1],"4218":[24,1],"4216":[24,1],"1553":[24,1],"2112":[24,1],"6481":[24,1],"2114":[24,1],"6405":[24,1],"4500":[24,1],"4653":[24,1],"3613":[24,1],"6406":[24,1],"4504":[24,1],"4219":[24,1],"6878":[24,1],"1020":[24,1],"2022":[24,1],"3020":[24,1],"1558":[24,1],"1052":[24,1],"1044":[24,1],"2821":[12,1],"2016":[12,1],"1757":[12,1],"1016":[12,1],"1582":[12,1],"7837":[12,1],"4226":[12,1],"6403":[12,1],"3438":[12,1],"3593":[12,1],"4286":[12,1],"2401":[12,1],"3016":[12,1],"2410":[12,1],"6468":[12,1],"3423":[12,1],"3466":[12,1],"1473":[12,1],"2812":[12,1],"4302":[12,1],"2413":[12,1],"6482":[12,1],"1093":[12,1],"1094":[12,1],"1095":[12,1],"1096":[12,1],"1097":[12,1],"2393":[6,2],"2090":[6,2],"4093":[6,2],"3089":[6,2],"3433":[6,2],"1263":[6,2],"1108":[6,2],"4488":[6,2],"1468":[6,2],"7075":[6,2],"4433":[6,2],"4613":[6,2],"7675":[6,2],"7475":[6,2],"2439":[6,2],"4924":[6,2],"4927":[6,2],"4649":[6,2],"3437":[6,2],"2712":[6,2],"4281":[6,2],"4282":[6,2],"3439":[6,2],"3090":[6,2],"3421":[6,2],"2091":[6,2],"4285":[6,2],"7706":[6,2],"2824":[6,2],"1281":[6,2],"4292":[6,2],"3385":[6,2],"3432":[6,2],"2365":[6,2],"1543":[6,2],"4498":[6,2],"7476":[6,2],"7477":[6,2],"4495":[6,2],"3506":[6,2],"2092":[6,2],"3507":[6,2],"1548":[6,2],"7777":[6,2],"2093":[6,2],"2107":[6,2],"2111":[6,2],"3444":[6,2],"2716":[6,2],"3449":[6,2],"3448":[6,2],"3450":[6,2],"4288":[6,2],"2440":[6,2],"3091":[6,2],"7778":[6,2],"4297":[6,2],"4303":[6,2],"2441":[6,2],"3092":[6,2],"4284":[6,2],"1559":[6,2],"1049":[6,2],"1056":[6,2],"1053":[6,2],"1075":[6,2],"1082":[6,2],"1081":[6,2],"1083":[6,2],"1076":[6,2],"1078":[6,2],"1085":[6,2],"1091":[6,2]};
+    const tmxLogic = sku => TAC_LOGIC[tmxVal(sku)] || null;
+    const tmxAutoDc = (base, lg) => { const b = proNum(tmxNum(base)); if (b == null || b <= 0 || !lg) return ""; return String(Math.round(b / lg[1] * 100) / 100); };
+    function tmxSync(row) {
+      const M = mdmTac.mx, lg = tmxLogic(row.sku);
+      if (lg) { if (row.qa || !tmxVal(row.qty)) { row.qty = String(lg[0]); row.qa = true; } }
+      else if (row.qa) { row.qty = ""; row.qa = false; }
+      M.rg.forEach(g => {
+        const id = g.id, cur = tmxVal(row.d[id]);
+        if (row.ov[id] || (cur && !row.af[id])) return;   // ô nhập tay (kể cả cố ý để trống) → không đụng
+        const v = lg ? tmxAutoDc(g.base, lg) : "";
+        if (v) { row.d[id] = v; row.af[id] = 1; } else if (row.af[id]) { delete row.d[id]; delete row.af[id]; }
+      });
+    }
+    function tmxRefreshRow(i) {
+      const M = mdmTac.mx, row = M.rows[i], tr = document.querySelector(`#tmx tr[data-r="${i}"]`); if (!row || !tr) return;
+      const put = (c, v) => { const el = tr.querySelector(`input[data-c="${c}"]`); if (el && el !== document.activeElement) el.value = v; };
+      put(1, row.qty); M.rg.forEach((g, j) => put(3 + j, row.d[g.id] || ""));
+    }
     function tmxFmtGia(n, ptype, lower) { n = Number(n); if (ptype === 2) return n + "%"; if (n >= 1000 && n % 1000 === 0) return (n / 1000) + (lower ? "k" : "K"); return n + "đ"; }
     const tmxDesc = (tpl, dc, ptype, lowerDef) => String(tpl).replace(/\{gia:k\}/g, () => tmxFmtGia(dc, ptype, true)).replace(/\{gia:K\}/g, () => tmxFmtGia(dc, ptype, false)).replace(/\{gia\}/gi, () => tmxFmtGia(dc, ptype, !!lowerDef));
     // Chỉ gõ tên (vd "1T Dasani") → tự thêm hậu tố "giảm {gia}"; nếu đã có {gia…} hoặc chữ "giảm" thì dùng nguyên văn
@@ -5242,6 +5262,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         else if (seenRg.has(tmxVal(g.code))) warns.push(`${lbl} ${tmxVal(g.code)} bị lặp ở cột ${seenRg.get(tmxVal(g.code)) + 1} và cột ${j + 1}`); else seenRg.set(tmxVal(g.code), j);
         if (!tmxPfx(g, M.batch)) { bad.add(`g|${j}|ky`); issues.push({ msg: `${nm}: thiếu PromotionCode (ký hiệu / tiền tố)`, sel: sel("ky") }); }
         if (!/^\d+$/.test(tmxVal(g.n0))) { bad.add(`g|${j}|n0`); issues.push({ msg: `${nm}: số bắt đầu phải là số nguyên ≥ 0`, sel: sel("n0") }); }
+        if (tmxVal(g.base) && !(proNum(tmxNum(g.base)) > 0)) { bad.add(`g|${j}|base`); issues.push({ msg: `${nm}: Giá giảm gốc phải là số > 0 (hoặc để trống)`, sel: sel("base") }); }
       });
       const seenSku = new Map();
       rows.forEach(({ r, i }) => {
@@ -5253,6 +5274,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           const raw = cellOf(r, g); if (!raw) return; any = true;
           const dc = proNum(tmxNum(raw));
           if (dc == null || dc <= 0 || (ptype === 2 && dc > 100)) { bad.add(`c|${i}|${3 + j}`); issues.push({ msg: `${who}: DISCOUNT ở ${tmxVal(g.code) || "cột " + (j + 1)} ${ptype === 2 ? "phải trong khoảng 0–100 (%)" : "phải là số > 0"}`, sel: sel(3 + j) }); }
+          else if (r.af && r.af[g.id] && dc % 1 && warns.length < 6) warns.push(`${who}: DISCOUNT tự tính ở ${tmxVal(g.code) || "cột " + (j + 1)} = ${dc} (không tròn) — kiểm tra lại giá giảm gốc`);
         });
         if (!any) { issues.push({ msg: `${who}: chưa nhập DISCOUNT ở vùng nào (để trống cả dòng thì xóa dòng)`, sel: sel(rgs.length ? 3 + rgs[0].j : 2) }); }
         if (sk && q != null) { const k = sk + "|" + q; if (seenSku.has(k)) warns.push(`SKUCode ${sk} (SLABFROM ${q}) bị lặp ở dòng ${seenSku.get(k) + 1} và dòng ${i + 1}`); else seenSku.set(k, i); }
@@ -5279,7 +5301,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     function tmxTableHtml() {
       const M = mdmTac.mx, dist = M.scope === "dist";
-      const head = `<tr><th class="n">#</th><th class="c-sku rq-must">SKUCode${H("SKUCode")}<div class="rq-row">${rqTag("must")}</div></th><th class="c-qty rq-must">SLABFROM = SLABTO${H("SLABFROM")}<div class="rq-row">${rqTag("must")}</div></th><th class="c-desc rq-set">PromotionDescription${H("PromotionDescription")}<div class="rq-row">${rqTag("nen")} <span class="rq-note">trống = lấy theo mã</span></div></th>${M.rg.map((g, j) => `<th class="c-rg rq-must" data-j="${j}"><div class="tmx-rgt"><span>${dist ? "DistributorCode" : "Territory"} ${j + 1}${rqTag("must")}</span><span><button type="button" data-pro-act="mx-dup-rg" title="Nhân đôi cột này (giữ nguyên mức giảm)">⧉</button>${M.rg.length > 1 ? '<button type="button" data-pro-act="mx-del-rg" title="Xóa cột này">×</button>' : ""}</span></div><input data-mx="rg" data-j="${j}" data-f="code" value="${escapeHtml(g.code)}" placeholder="${dist ? "0084000460" : "VN10VN11"}" autocomplete="off" spellcheck="false" title="${dist ? "DistributorCode" : "Territory"}"><div class="tmx-cap">PromotionCode (ký hiệu · số bắt đầu)</div><div class="tmx-rg2"><input data-mx="rg" data-j="${j}" data-f="ky" value="${escapeHtml(g.ky)}" placeholder="HC" autocomplete="off" spellcheck="false" title="Gõ chữ ngắn (vd HC) → mã HC_&lt;mã đợt&gt;_1, 2, 3… Gõ đầy đủ (vd HC_261021_) → dùng nguyên văn"><input data-mx="rg" data-j="${j}" data-f="n0" value="${escapeHtml(g.n0)}" placeholder="1" title="Số bắt đầu của mã" autocomplete="off"></div><div class="tmx-rgm" data-j="${j}">—</div><div class="tmx-cap tmx-cap-d">DISCOUNT ↓ ${rqTag("must")}</div></th>`).join("")}<th class="x"></th></tr>`;
+      const head = `<tr><th class="n">#</th><th class="c-sku rq-must">SKUCode${H("SKUCode")}<div class="rq-row">${rqTag("must")}</div></th><th class="c-qty rq-must">SLABFROM = SLABTO${H("SLABFROM")}<div class="rq-row">${rqTag("must")}</div></th><th class="c-desc rq-set">PromotionDescription${H("PromotionDescription")}<div class="rq-row">${rqTag("nen")} <span class="rq-note">trống = lấy theo mã</span></div></th>${M.rg.map((g, j) => `<th class="c-rg rq-must" data-j="${j}"><div class="tmx-rgt"><span>${dist ? "DistributorCode" : "Territory"} ${j + 1}${rqTag("must")}</span><span><button type="button" data-pro-act="mx-dup-rg" title="Nhân đôi cột này (giữ nguyên mức giảm)">⧉</button>${M.rg.length > 1 ? '<button type="button" data-pro-act="mx-del-rg" title="Xóa cột này">×</button>' : ""}</span></div><input data-mx="rg" data-j="${j}" data-f="code" value="${escapeHtml(g.code)}" placeholder="${dist ? "0084000460" : "VN10VN11"}" autocomplete="off" spellcheck="false" title="${dist ? "DistributorCode" : "Territory"}"><div class="tmx-cap">PromotionCode (ký hiệu · số bắt đầu)</div><div class="tmx-rg2"><input data-mx="rg" data-j="${j}" data-f="ky" value="${escapeHtml(g.ky)}" placeholder="HC" autocomplete="off" spellcheck="false" title="Gõ chữ ngắn (vd HC) → mã HC_&lt;mã đợt&gt;_1, 2, 3… Gõ đầy đủ (vd HC_261021_) → dùng nguyên văn"><input data-mx="rg" data-j="${j}" data-f="n0" value="${escapeHtml(g.n0)}" placeholder="1" title="Số bắt đầu của mã" autocomplete="off"></div><div class="tmx-rgm" data-j="${j}">—</div><div class="tmx-cap">Giá giảm gốc (VND) ${rqTag("opt")}</div><input data-mx="rg" data-j="${j}" data-f="base" value="${escapeHtml(g.base)}" placeholder="vd 4000" autocomplete="off" spellcheck="false" style="margin-top:5px" title="Nhập giá giảm gốc: SKU có trong bảng logic sẽ tự điền SLABFROM = SLABTO và DISCOUNT = giá ÷ 4 / ÷ 2 / giữ nguyên"><div class="tmx-cap tmx-cap-d">DISCOUNT ↓ ${rqTag("must")}</div></th>`).join("")}<th class="x"></th></tr>`;
       return `<table class="tmx" id="tmx"><thead>${head}</thead><tbody id="tmx-body">${M.rows.map(tmxRowHtml).join("")}</tbody></table>`;
     }
     function tmxCfgHtml() {
@@ -5290,7 +5312,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return `<div class="pro-card"><h3><em>2</em>Bảng CTKM: SKUCode × ${mdmTac.mx.scope === "dist" ? "DistributorCode" : "Territory"}<span class="adj-chips" id="tac-chips" style="margin-left:auto"></span></h3>
         <div class="tmx-bar"><button type="button" class="btn btn-secondary" data-pro-act="mx-add-row">+ Thêm SKU</button><button type="button" class="btn btn-secondary" data-pro-act="mx-add-rg">+ Thêm cột ${mdmTac.mx.scope === "dist" ? "DistributorCode" : "Territory"}</button><label class="btn btn-plain tmx-file" title="Chọn file Excel Tactical đã tạo trước đó để sửa tiếp">📥 Nạp từ Excel cũ<input type="file" id="tmx-file" accept=".xlsx,.xls" hidden></label></div>
         <div class="tmx-wrap" id="tmx-box">${tmxTableHtml()}</div>
-        <p class="adj-tip">💡 <b>Mỗi cột = 1 vùng/NPP, mỗi ô = mức giảm của SKU đó ở vùng đó</b> (ô trống = không áp dụng). Dán nhanh từ Excel: bôi đen các ô → <kbd>Ctrl</kbd>+<kbd>C</kbd> → bấm ô đầu → <kbd>Ctrl</kbd>+<kbd>V</kbd> (dán được cả cột SKU, cả khối mức giảm, cả hàng mã vùng). <kbd>Enter</kbd> / <kbd>↑</kbd> <kbd>↓</kbd> để đi giữa các dòng. Ký hiệu: gõ <code>HC</code> → mã <code>HC_&lt;mã đợt&gt;_1, 2, 3…</code>; gõ đủ <code>HC_261021_</code> → dùng nguyên văn. PromotionDescription: <b>chỉ gõ tên</b> (vd <code>1T Dasani</code>) → tool tự thêm <code>giảm 4K</code> / <code>giảm 1k</code> / <code>giảm 750đ</code> theo mức giảm từng vùng (tên bắt đầu bằng số + T = thùng → K hoa, còn lại → k thường; đổi ở ô “Kiểu hiển thị giá”). Cần kiểu riêng thì gõ <code>{gia}</code> / <code>{gia:k}</code> hoặc viết nguyên văn có chữ “giảm”; bỏ trống = lấy theo PromotionCode. Bấm ⧉ đầu dòng để nhân đôi SKU. Vùng giống hệt nhau chỉ khác mã → bấm ⧉ để nhân đôi cột.</p></div>`;
+        <p class="adj-tip">💡 <b>Mỗi cột = 1 vùng/NPP, mỗi ô = mức giảm của SKU đó ở vùng đó</b> (ô trống = không áp dụng). Dán nhanh từ Excel: bôi đen các ô → <kbd>Ctrl</kbd>+<kbd>C</kbd> → bấm ô đầu → <kbd>Ctrl</kbd>+<kbd>V</kbd> (dán được cả cột SKU, cả khối mức giảm, cả hàng mã vùng). <kbd>Enter</kbd> / <kbd>↑</kbd> <kbd>↓</kbd> để đi giữa các dòng. Ký hiệu: gõ <code>HC</code> → mã <code>HC_&lt;mã đợt&gt;_1, 2, 3…</code>; gõ đủ <code>HC_261021_</code> → dùng nguyên văn. PromotionDescription: <b>chỉ gõ tên</b> (vd <code>1T Dasani</code>) → tool tự thêm <code>giảm 4K</code> / <code>giảm 1k</code> / <code>giảm 750đ</code> theo mức giảm từng vùng (tên bắt đầu bằng số + T = thùng → K hoa, còn lại → k thường; đổi ở ô “Kiểu hiển thị giá”). Cần kiểu riêng thì gõ <code>{gia}</code> / <code>{gia:k}</code> hoặc viết nguyên văn có chữ “giảm”; bỏ trống = lấy theo PromotionCode. Bấm ⧉ đầu dòng để nhân đôi SKU. Vùng giống hệt nhau chỉ khác mã → bấm ⧉ để nhân đôi cột. <b>Giá giảm gốc</b> (dưới mỗi cột vùng): nhập 1 lần, SKU nằm trong bảng logic sẽ tự điền SLABFROM = SLABTO và DISCOUNT = giá ÷ 4 / ÷ 2 / giữ nguyên; ô nào bạn đã gõ tay thì giữ nguyên, ô xóa trống = không áp dụng vùng đó.</p></div>`;
     }
     function tmxDraw(focusSel) {
       const b = $("#tmx-box"); if (b) b.innerHTML = tmxTableHtml();
@@ -5315,8 +5337,10 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     function tmxSet(r, c, v) {
       const M = mdmTac.mx; while (M.rows.length <= r) M.rows.push(tmxRow());
       const row = M.rows[r];
-      if (c === 0) row.sku = v; else if (c === 1) row.qty = v; else if (c === 2) row.desc = v;
-      else { while (M.rg.length <= c - 3) M.rg.push(tmxRg(M)); row.d[M.rg[c - 3].id] = v; }
+      if (c === 0) { row.sku = v; row.ov = {}; tmxSync(row); }
+      else if (c === 1) { row.qty = v; row.qa = false; if (!tmxVal(v)) tmxSync(row); }
+      else if (c === 2) row.desc = v;
+      else { while (M.rg.length <= c - 3) M.rg.push(tmxRg(M)); const id = M.rg[c - 3].id; row.d[id] = v; delete row.af[id]; if (!tmxVal(v)) row.ov[id] = 1; else delete row.ov[id]; }
     }
     function tmxInput(t) {
       const M = mdmTac.mx, d = t.dataset;
@@ -5324,9 +5348,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       else if (d.mx === "suffix") M.suffix = t.value;
       else if (d.mx === "lower") M.lower = t.value === "auto" ? "auto" : t.value === "1";
       else if (d.mx === "scope") { M.scope = t.value; return tmxDraw(); }
-      else if (d.mx === "rg") M.rg[Number(d.j)][d.f] = t.value;
+      else if (d.mx === "rg") { M.rg[Number(d.j)][d.f] = t.value; if (d.f === "base") M.rows.forEach((rw, i) => { tmxSync(rw); tmxRefreshRow(i); }); }
       else if (d.mx === "cell") {
-        const r = Number(d.r); tmxSet(r, Number(d.c), t.value);
+        const r = Number(d.r); tmxSet(r, Number(d.c), t.value); if (Number(d.c) <= 1) tmxRefreshRow(r);
         if (r === M.rows.length - 1 && t.value.trim()) { M.rows.push(tmxRow()); const tb = $("#tmx-body"); if (tb) tb.insertAdjacentHTML("beforeend", tmxRowHtml(M.rows[M.rows.length - 1], M.rows.length - 1)); }
       }
       tmxMeta();
@@ -5339,6 +5363,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const M = mdmTac.mx;
       if (t.dataset.mx === "rg") {
         txt.split(/[\t\n]+/).map(x => x.trim()).filter(Boolean).forEach((v, k) => { const j = Number(t.dataset.j) + k; while (M.rg.length <= j) M.rg.push(tmxRg(M)); M.rg[j][t.dataset.f] = v; });
+        M.rows.forEach(tmxSync);
         return tmxDraw();
       }
       if (t.dataset.mx !== "cell") return;
@@ -5351,10 +5376,10 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const M = mdmTac.mx;
       if (a === "mx-add-row") { M.rows.push(tmxRow()); return tmxDraw(`#tmx input[data-r="${M.rows.length - 1}"][data-c="0"]`); }
       if (a === "mx-del-row") { const i = Number(el.closest("tr").dataset.r); if (M.rows.length > 1) M.rows.splice(i, 1); else M.rows[0] = tmxRow(); return tmxDraw(); }
-      if (a === "mx-dup-row") { const i = Number(el.closest("tr").dataset.r), s = M.rows[i]; M.rows.splice(i + 1, 0, tmxRow({ qty: s.qty, desc: s.desc, d: { ...s.d } })); return tmxDraw(`#tmx input[data-r="${i + 1}"][data-c="0"]`); }
+      if (a === "mx-dup-row") { const i = Number(el.closest("tr").dataset.r), s = M.rows[i]; M.rows.splice(i + 1, 0, tmxRow({ qty: s.qty, desc: s.desc, d: { ...s.d }, qa: s.qa, ov: { ...s.ov }, af: { ...s.af } })); return tmxDraw(`#tmx input[data-r="${i + 1}"][data-c="0"]`); }
       if (a === "mx-add-rg") { M.rg.push(tmxRg(M)); return tmxDraw(`#tmx input[data-j="${M.rg.length - 1}"][data-f="code"]`); }
       if (a === "mx-del-rg") { M.rg.splice(Number(el.closest("th").dataset.j), 1); return tmxDraw(); }
-      if (a === "mx-dup-rg") { const j = Number(el.closest("th").dataset.j), src = M.rg[j], g = tmxRg(M, { n0: src.n0 }); M.rows.forEach(r => { if (r.d[src.id] != null) r.d[g.id] = r.d[src.id]; }); M.rg.splice(j + 1, 0, g); return tmxDraw(`#tmx input[data-j="${j + 1}"][data-f="code"]`); }
+      if (a === "mx-dup-rg") { const j = Number(el.closest("th").dataset.j), src = M.rg[j], g = tmxRg(M, { n0: src.n0, base: src.base }); M.rows.forEach(r => { if (r.d[src.id] != null) r.d[g.id] = r.d[src.id]; if (r.af[src.id]) r.af[g.id] = 1; if (r.ov[src.id]) r.ov[g.id] = 1; }); M.rg.splice(j + 1, 0, g); return tmxDraw(`#tmx input[data-j="${j + 1}"][data-f="code"]`); }
     }
     function tmxExample() {
       const P = mdmTac, M = P.mx, e = new Date(); e.setDate(e.getDate() + 21);
