@@ -340,7 +340,7 @@ body.ws-single .nav-item[data-view="report"]{ display:none !important; }
    ========================================================================== */
 #app{ position:relative; z-index:auto; display:flex; min-height:100vh; }
 
-:root{ --sidebar-w: 236px; --sidebar-w-collapsed: 76px; }
+:root{ --sidebar-w: 236px; --sidebar-w-collapsed: 70px; }
 
 .sidebar{
   width: var(--sidebar-w); flex-shrink:0;
@@ -354,12 +354,7 @@ body.ws-single .nav-item[data-view="report"]{ display:none !important; }
   box-shadow: inset -1px 0 0 rgba(255,255,255,0.02);
 }
 
-/* Nút 3 gạch (hamburger) trên topbar — desktop: ẩn/hiện hoàn toàn sidebar.
-   (Mobile <900px giữ nguyên cơ chế off-canvas drawer sẵn có.) */
-body.sidebar-hidden .sidebar{ display:none; }
-body.sidebar-hidden .modal-overlay.full,
-body.sidebar-hidden .drawer-overlay,
-body.sidebar-hidden .drawer{ left:0; }
+/* Thu gọn / mở rộng sidebar: xem <style id="sidebar-collapse"> ở cuối <head>. */
 
 .sidebar .brand{ display:flex; align-items:center; gap:10px; padding:6px 8px 26px; overflow:hidden; transition: padding var(--duration-slow) var(--ease-standard); }
 
@@ -2025,95 +2020,13 @@ td.cell-id .id-chip{
 }
 
 /* ------------------------------------------------------------------
-   Mobile (<900px): sidebar becomes a true off-canvas drawer (QA fix —
-   previously `display:none` with no reopen affordance, which made
-   navigation unreachable below 900px). Opened via .mobile-nav-toggle
-   in the topbar; closed via backdrop click, ESC, or picking a nav item.
+   Mobile (<=900px): sidebar là rail icon luôn hiện, bấm tay nắm để bung ra
+   (xem <style id="sidebar-collapse"> ở cuối <head>).
    ------------------------------------------------------------------ */
 @media(max-width:900px){
   .view{ padding:22px 16px 60px; }
   .topbar{ padding:16px; }
-
-  .mobile-nav-toggle{ display:flex; }
-
-  .sidebar{
-    position:fixed; left:0; top:0; z-index:990;
-    transform: translateX(-100%);
-    box-shadow: var(--shadow-floating);
-    transition: transform var(--duration-slow) var(--ease-standard);
-  }
-  body.mobile-nav-open .sidebar{ transform: translateX(0); }
- /* collapse/expand is a desktop-only affordance */
-
-  .mobile-nav-backdrop{
-    display:none; position:fixed; inset:0; z-index:980;
-    background: rgba(3,10,18,0.55);
-  }
-  body.mobile-nav-open .mobile-nav-backdrop{ display:block; }
 }
-/* ==========================================================================
-   MOBILE / DETAIL NAV TOGGLE — single consolidated source of truth.
-   Always position:fixed with the SAME high-contrast styling in every state
-   (dashboard, table views, drawer open, full-screen modal open) so it never
-   blends into either the dark sidebar/topbar or a light detail surface.
-   (Previously this button had 3 separate, partially conflicting rule blocks
-   spread across the stylesheet — consolidated here on purpose.)
-   ========================================================================== */
-.mobile-nav-toggle{
-  position:fixed; top:16px; left:calc(var(--sidebar-w) + 20px); z-index:1000;
-  display:flex !important; align-items:center; justify-content:center; flex-shrink:0;
-  width:38px; height:38px; border-radius:10px;
-  background:#ffffff; border:1.5px solid var(--accent); color:#0e6f6a;
-  box-shadow:0 8px 20px -8px rgba(15,42,68,.55);
-  transition:var(--transition-hover), left var(--duration-slow) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
-}
-.mobile-nav-toggle:hover{ background:#effafa; transform:translateY(-1px); }
-.mobile-nav-toggle:active{ transform:translateY(0) scale(0.94); }
-.mobile-nav-toggle svg{ width:18px; height:18px; }
-
-body.sidebar-hidden .mobile-nav-toggle{ left:20px; }
-@media(max-width:900px){
-  .mobile-nav-toggle{ top:14px; left:14px; }
-  body.sidebar-hidden .mobile-nav-toggle{ left:14px; }
-}
-
-/* Detail pages use a separate stacking layer. The launcher moves to a
-   compact pill so it remains visible above CR drawer / UAT / Release detail
-   surfaces and is easy to hit on touch screens. */
-body.detail-nav-visible .mobile-nav-toggle{
-  top:calc(env(safe-area-inset-top, 0px) + 12px);
-  left:14px;
-  width:auto;
-  min-width:44px;
-  height:42px;
-  padding:0 13px;
-  gap:8px;
-  border-radius:999px;
-  background:#0b7f7a;
-  border-color:#0b7f7a;
-  color:#ffffff;
-  box-shadow:0 10px 24px -10px rgba(7,72,77,.78), 0 2px 8px rgba(7,72,77,.22);
-}
-body.detail-nav-visible .mobile-nav-toggle:hover{
-  background:#086b68;
-  border-color:#086b68;
-  color:#ffffff;
-}
-body.mobile-nav-open .mobile-nav-toggle{
-  background:#ffffff;
-  border-color:#0b7f7a;
-  color:#0b7f7a;
-}
-body.mobile-nav-open .mobile-nav-toggle:hover{
-  background:#effafa;
-  color:#086b68;
-}
-@media(min-width:901px){
-  body.detail-nav-visible .mobile-nav-toggle{ left:calc(var(--sidebar-w) + 20px); }
-
-  body.sidebar-hidden.detail-nav-visible .mobile-nav-toggle{ left:14px; }
-}
-
 /* ==========================================================================
    PHASE 06 — PREMIUM ENTERPRISE DEPTH, GLASS & MOTION SYSTEM
    Builds on the existing token system; no structural HTML changes required.
@@ -2622,20 +2535,17 @@ body.focus-mode .modal-overlay.full{ left:0 !important; }
               inset 0 1px 0 rgba(255,255,255,0.045);
 }
 .topbar .search-box input,
-.topbar .icon-btn,
-.topbar .mobile-nav-toggle{
+.topbar .icon-btn{
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.045);
 }
 .topbar .search-box input:hover,
-.topbar .icon-btn:hover,
-.topbar .mobile-nav-toggle:hover{
+.topbar .icon-btn:hover{
   transform:translateY(-1px);
   box-shadow:0 6px 14px -12px rgba(0,0,0,0.9),
              inset 0 1px 0 rgba(255,255,255,0.08);
 }
 .topbar .search-box input:active,
-.topbar .icon-btn:active,
-.topbar .mobile-nav-toggle:active{
+.topbar .icon-btn:active{
   transform:translateY(0);
   box-shadow:inset 0 2px 4px rgba(2,10,18,0.22);
 }
@@ -2688,8 +2598,7 @@ tbody tr.detail-selected:hover{ background:
 @media(prefers-reduced-motion: reduce){
   .nav-item:hover,
   .topbar .search-box input:hover,
-  .topbar .icon-btn:hover,
-  .topbar .mobile-nav-toggle:hover{ transform:none; }
+  .topbar .icon-btn:hover{ transform:none; }
   .drawer.detail-opening .drawer-head,
   .drawer.detail-opening .tabs,
   .drawer.detail-opening .drawer-body,
@@ -2749,11 +2658,6 @@ tbody tr.detail-selected:hover{ background:
    DETAIL SURFACES — shared visual system for drawer and large modals
    ========================================================================== */
 
-/* Mobile-nav-toggle: fully consolidated near the top of this stylesheet now
-   (single rule set, see "MOBILE / DETAIL NAV TOGGLE"). Nothing to add here —
-   this comment intentionally left so the section numbering below stays
-   unchanged for anyone diffing this file. */
-.topbar{ padding-left:76px; }
 
 /* Modal frame: head / tabs / body / foot are four distinct surfaces. */
 .modal-overlay{ padding:clamp(12px,3vw,32px); background:rgba(8,24,42,.58); backdrop-filter:blur(8px); }
@@ -2860,7 +2764,6 @@ tbody tr.detail-selected:hover{ background:
 .summary-item .v{ color:#18364f; font-size:13px; }
 
 @media(max-width:900px){
-  .topbar{ padding-left:66px; }
   .modal-overlay{ padding:0; }
   .modal,.modal.modal-lg{ width:100%; max-width:none; max-height:100vh; height:100%; border-radius:0; border-left:0; border-right:0; }
   .modal-head{ min-height:72px; padding:16px; }
@@ -4292,51 +4195,6 @@ tbody tr.detail-selected:hover{ background:
 }
 
 /* ==========================================================================
-   MOBILE NAV TOGGLE — one geometry, one alignment, every screen
-   --------------------------------------------------------------------------
-   The launcher stays outside .main so it remains available above a detail
-   drawer/full-screen editor. It must nevertheless occupy the same 38px slot
-   as the topbar button in every state: no "Menu" pill, no shifting title,
-   and no detail header text hidden underneath it.
-   ========================================================================== */
-body.detail-nav-visible .mobile-nav-toggle{
-  top:16px;
-  width:38px;
-  min-width:38px;
-  height:38px;
-  padding:0;
-  gap:0;
-  border-radius:10px;
-  background:#ffffff;
-  border:1.5px solid #0b7f7a;
-  color:#0b7f7a;
-  box-shadow:0 8px 20px -8px rgba(15,42,68,.55);
-}
-body.detail-nav-visible .mobile-nav-toggle:hover{
-  background:#effafa;
-  border-color:#086b68;
-  color:#086b68;
-}
-
-/* The title begins after exactly the same 38px button + 18px breathing room
-   used by the regular topbar (76px desktop / 66px mobile). */
-body.detail-nav-visible .drawer-head,
-body.detail-nav-visible .modal-overlay.full .modal-head{
-  padding-left:76px !important;
-}
-
-@media(max-width:900px){
-  body.detail-nav-visible .mobile-nav-toggle{
-    top:14px;
-    left:14px;
-  }
-  body.detail-nav-visible .drawer-head,
-  body.detail-nav-visible .modal-overlay.full .modal-head{
-    padding-left:66px !important;
-  }
-}
-
-/* ==========================================================================
    AUTH EXPERIENCE — calm, premium entry point + purposeful motion
    ========================================================================== */
 #loginScreen{
@@ -5093,11 +4951,8 @@ body.detail-nav-visible .modal-overlay.full .modal-head{
 }
 
 /* 2) Vùng an toàn (safe-area) cho iPhone có tai thỏ/Dynamic Island và thanh
-      cử chỉ ở đáy màn hình — để nút menu, toast không bị che/tràn ra mép. */
+      cử chỉ ở đáy màn hình — để toast không bị che/tràn ra mép. */
 @media (max-width:900px){
-  .mobile-nav-toggle{
-    top: calc(14px + env(safe-area-inset-top, 0px)) !important;
-  }
   #toastHost{
     bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
     right: calc(16px + env(safe-area-inset-right, 0px)) !important;
@@ -5282,7 +5137,7 @@ html{
     overflow:hidden;
   }
 
-  /* Keep the topbar compact and leave a clear lane for the fixed menu button. */
+  /* Keep the topbar compact. */
   .topbar{
     position:relative;
     gap:10px;
@@ -5293,7 +5148,6 @@ html{
   .topbar > div:first-child{
     min-width:0;
     flex:1 1 auto;
-    margin-left:48px;
   }
   .topbar h1{
     max-width:calc(100vw - 90px);
@@ -5347,14 +5201,6 @@ html{
     border-radius:12px;
   }
   .search-box .kbd-hint{ display:none; }
-
-  .mobile-nav-toggle{
-    top:calc(12px + env(safe-area-inset-top,0px)) !important;
-    left:12px !important;
-    width:40px;
-    height:40px;
-    border-radius:12px;
-  }
 
   /* Workspace canvas: small, stable gutters; content scrolls once, vertically. */
   .view,
@@ -5698,8 +5544,6 @@ html{
 
 @media(max-width:390px){
   .topbar{ padding-left:10px; padding-right:10px; }
-  .topbar > div:first-child{ margin-left:46px; }
-  .mobile-nav-toggle{ left:10px !important; }
   .view,
   .view#view-crlog{
     padding-left:10px;
@@ -5845,7 +5689,7 @@ html{
 
 /* Head */
 .modal-overlay.full .modal.modal-lg.import-modal > .modal-head{
-  padding-left:clamp(76px,7vw,96px); /* chừa chỗ cho nút ≡ nổi phía trên */
+  padding-left:clamp(20px,4vw,52px);
   background:rgba(255,255,255,.82); backdrop-filter:blur(14px);
   border-bottom:1px solid #dbe8ec; animation:impUp .45s var(--ease-standard) both;
 }
@@ -6629,7 +6473,6 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
 @media (hover: none){
   .topbar .search-box input:hover,
   .topbar .icon-btn:hover,
-  .topbar .mobile-nav-toggle:hover,
   .brd-card:hover,
   .view .kpi-card:hover,
   .view .cr-card:hover,
@@ -6658,6 +6501,209 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
    Rule cuối cùng của lớp. Nếu dấu này không xuất hiện trong CSSOM, nghĩa là
    stylesheet đã lỗi cú pháp ở đâu đó phía trên và bị trình duyệt cắt bỏ. */
 .__ref-motion-probe{ --ref-probe:1; }
+</style>
+<style id="sidebar-collapse">
+/* ==========================================================================
+   SIDEBAR THU GỌN / MỞ RỘNG
+   --------------------------------------------------------------------------
+   Trạng thái do JS (initSidebarVisibility) gán lên <body>:
+     body.sb-rail          → sidebar đang ở dạng rail chỉ có icon (thu gọn)
+     body.mobile-nav-open  → (≤900px) rail đang bung ra thành lớp phủ
+     body.sb-animating     → đang chạy chuyển động mở/thu (khóa ellipsis chữ)
+     body.sb-no-anim       → lần dựng đầu tiên, tắt chuyển động
+   Desktop: --sidebar-w đổi theo trạng thái nên drawer / modal toàn màn hình
+   (left: var(--sidebar-w)) trượt cùng nhịp với sidebar.
+   Hình học: icon luôn nằm cố định cách mép trái 26px (14 padding sidebar +
+   12 padding item) ở CẢ HAI trạng thái → khi thu gọn icon không bị nhảy,
+   chỉ có chữ mờ dần và nền item co lại. Rail = 2×26 + 17 icon + 1 viền = 70px.
+   ========================================================================== */
+:root{
+  --sb-dur: var(--duration-slow);
+  --sb-ease: var(--ease-standard);
+}
+
+.mobile-nav-backdrop{ display:none; }
+
+.sidebar{
+  transition: width var(--sb-dur) var(--sb-ease), box-shadow var(--sb-dur) var(--sb-ease);
+}
+@media (min-width:901px){
+  body.sb-rail{ --sidebar-w: var(--sidebar-w-collapsed); }
+  /* Trên topbar (z:20) để tay nắm ở mép phải không bị topbar che. */
+  .sidebar{ z-index:30; }
+}
+
+/* ---- Tay nắm thu gọn / mở rộng nằm trên mép phải sidebar ---------------- */
+.sidebar > .sb-toggle{
+  position:absolute; top:33px; right:-13px; z-index:5;
+  width:26px; height:26px; padding:0; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:#0c2a41; color:var(--accent);
+  border:1px solid rgba(63,208,201,.42);
+  box-shadow:0 6px 16px -6px rgba(2,10,18,.85), inset 0 1px 0 rgba(255,255,255,.08);
+  cursor:pointer;
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard),
+              box-shadow var(--duration-base) var(--ease-standard),
+              transform var(--duration-base) var(--ease-decel);
+}
+/* Vùng chạm rộng hơn hình tròn nhìn thấy (ngón tay / chuột đều dễ bấm). */
+.sidebar > .sb-toggle::before{ content:""; position:absolute; inset:-9px; border-radius:50%; }
+.sidebar > .sb-toggle:hover{
+  background:var(--accent); color:var(--on-accent-text, #062b2d); border-color:var(--accent);
+  transform:scale(1.1);
+  box-shadow:0 0 0 4px rgba(63,208,201,.18), 0 8px 18px -6px rgba(2,10,18,.8);
+}
+.sidebar > .sb-toggle:active{ transform:scale(.92); }
+.sidebar > .sb-toggle svg{
+  width:13px; height:13px;
+  transform:rotate(180deg);                 /* mở rộng → mũi tên chỉ trái = "thu gọn" */
+  transition: transform var(--sb-dur) var(--sb-ease);
+}
+body.sb-rail .sidebar > .sb-toggle svg{ transform:none; }  /* rail → chỉ phải = "mở rộng" */
+
+/* ---- Chữ mờ dần / hiện dần (hiện trễ một nhịp để không bị bóp méo) ------- */
+.sidebar .nav-label,
+.sidebar .brand > div:not(.mark),
+.sidebar .conn-info{
+  transition: opacity .22s ease .09s, transform var(--sb-dur) var(--sb-ease);
+}
+.sidebar .nav-item .count{
+  transition: background var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard),
+              opacity .22s ease .09s;
+}
+.sidebar .workspace-chevron{
+  transition: transform var(--duration-base) var(--ease-standard), opacity .22s ease .09s;
+}
+body.sb-animating .sidebar .nav-label{ flex-shrink:0; text-overflow:clip; }
+.sidebar .brand > div:not(.mark){ flex-shrink:0; }
+
+body.sb-rail .sidebar .nav-label,
+body.sb-rail .sidebar .brand > div:not(.mark),
+body.sb-rail .sidebar .conn-info{
+  opacity:0; transform:translateX(-6px); pointer-events:none;
+  transition: opacity .12s ease, transform var(--sb-dur) var(--sb-ease);
+}
+body.sb-rail .sidebar .nav-item .count{ opacity:0; pointer-events:none; transition: opacity .12s ease; }
+body.sb-rail .sidebar .workspace-chevron{ opacity:0 !important; transition: opacity .12s ease; }
+
+/* Rail: huy hiệu cần chú ý (Recycle Bin có mục, yêu cầu quyền chờ duyệt)
+   chuyển thành chấm nhỏ ở góc icon. */
+body.sb-rail .sidebar #navCountRecycle.has-items,
+body.sb-rail .sidebar #navAdminRequestBadge:not(.hidden){
+  opacity:1; position:absolute; top:6px; right:7px;
+  width:8px; min-width:8px; height:8px; padding:0;
+  font-size:0; line-height:0; border-radius:50%;
+  background:var(--warning, #f2b84b) !important;
+  box-shadow:0 0 0 2px #081b2c;
+  transition: opacity .2s ease .15s;
+}
+
+/* Nhãn nhóm "Workspace" → đường kẻ mảnh ngăn nhóm khi thu gọn. */
+.nav-group-label{
+  transition: color .15s ease, font-size var(--sb-dur) var(--sb-ease),
+              padding var(--sb-dur) var(--sb-ease), gap var(--sb-dur) var(--sb-ease);
+}
+.nav-group-label::before{ transition: opacity .15s ease; }
+body.sb-rail .nav-group-label{
+  color:transparent; font-size:0; gap:0;
+  padding-left:8px !important; padding-right:8px;
+}
+body.sb-rail .nav-group-label::before{ opacity:0; }
+
+/* Thương hiệu: chỉ còn logo. */
+body.sb-rail .sidebar .brand{ padding-left:2px; padding-right:0; }
+
+/* Nhóm workspace: các mục con chuyển thành hàng icon thẳng cột với mục cha. */
+.workspace-children{
+  transition: margin var(--sb-dur) var(--sb-ease), padding var(--sb-dur) var(--sb-ease),
+              border-color var(--sb-dur) var(--sb-ease);
+}
+body.sb-rail .workspace-children{ margin-left:0; padding-left:0; border-left-color:transparent; }
+body.sb-rail .workspace-children .nav-item{ padding-left:11px; padding-right:11px; }
+
+/* Chân sidebar: chỉ còn avatar. */
+.sidebar-foot .conn-pill{
+  transition: padding var(--sb-dur) var(--sb-ease), gap var(--sb-dur) var(--sb-ease),
+              background var(--duration-base) var(--ease-standard),
+              border-color var(--duration-base) var(--ease-standard);
+}
+body.sb-rail .sidebar-foot .conn-pill{
+  padding-left:3px; padding-right:3px; gap:0; justify-content:center;
+  background:transparent; border-color:transparent; overflow:visible;
+}
+
+/* ---- Tooltip nổi cho rail (nav-item có overflow:hidden nên dùng 1 phần tử fixed) */
+.sb-tip{
+  position:fixed; z-index:2000; left:0; top:0; pointer-events:none;
+  display:flex; align-items:center; gap:8px; white-space:nowrap;
+  padding:7px 11px; border-radius:9px;
+  font-size:12.5px; font-weight:600; color:#eaf6f7;
+  background:#0b2538; border:1px solid rgba(63,208,201,.3);
+  box-shadow:0 12px 28px -10px rgba(2,10,18,.8);
+  opacity:0; transform:translate(-4px,-50%);
+  transition: opacity .14s ease, transform .18s var(--ease-decel);
+}
+.sb-tip.show{ opacity:1; transform:translate(0,-50%); }
+.sb-tip::before{
+  content:""; position:absolute; left:-5px; top:50%; width:8px; height:8px;
+  background:#0b2538; border-left:1px solid rgba(63,208,201,.3); border-bottom:1px solid rgba(63,208,201,.3);
+  transform:translateY(-50%) rotate(45deg);
+}
+.sb-tip .sb-tip-count{
+  padding:1px 7px; border-radius:20px; font-size:11px; font-weight:700;
+  background:rgba(63,208,201,.18); color:var(--accent);
+}
+
+/* ---- Lần dựng đầu: không chạy chuyển động ------------------------------- */
+body.sb-no-anim .sidebar,
+body.sb-no-anim .sidebar *,
+body.sb-no-anim .nav-group-label,
+body.sb-no-anim .drawer-overlay,
+body.sb-no-anim .drawer,
+body.sb-no-anim .modal-overlay.full{ transition:none !important; }
+
+/* ---- Mobile / tablet nhỏ (≤900px): rail luôn hiện, bấm tay nắm để bung ra --
+   Rail = 2×(8 + 12) + 17 + 1 = 58px. Khi bung, sidebar phủ lên nội dung
+   (không đẩy layout) kèm lớp nền mờ; bấm nền / Esc / chọn mục để đóng. */
+@media (max-width:900px){
+  .sidebar{
+    position:fixed; left:0; top:0; bottom:0;
+    height:100vh; height:100dvh;
+    width:58px; padding-left:8px; padding-right:8px;
+    z-index:60;                      /* dưới drawer (195) và modal (300) */
+    box-shadow:none;
+    transition: width var(--sb-dur) var(--sb-ease),
+                box-shadow var(--sb-dur) var(--sb-ease),
+                z-index 0s linear var(--sb-dur);   /* hạ z-index sau khi thu xong */
+  }
+  body:not(.sb-rail) .sidebar{
+    width:252px; z-index:990;
+    box-shadow:18px 0 48px -12px rgba(2,8,15,.65);
+    transition: width var(--sb-dur) var(--sb-ease), box-shadow var(--sb-dur) var(--sb-ease), z-index 0s;
+  }
+  .main{ margin-left:58px; width:auto; }
+  body.focus-mode .main{ margin-left:0; }
+
+  .sidebar > .sb-toggle{ top:34px; right:-12px; width:24px; height:24px; }
+
+  .mobile-nav-backdrop{
+    display:block; position:fixed; inset:0; z-index:980;
+    background:rgba(3,10,18,.55);
+    opacity:0; visibility:hidden; pointer-events:none;
+    transition: opacity var(--sb-dur) var(--sb-ease), visibility 0s linear var(--sb-dur);
+  }
+  body.mobile-nav-open .mobile-nav-backdrop{
+    opacity:1; visibility:visible; pointer-events:auto;
+    transition: opacity var(--sb-dur) var(--sb-ease), visibility 0s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .sidebar, .sidebar *, .sb-tip, .nav-group-label, .mobile-nav-backdrop{ transition-duration:.01ms !important; transition-delay:0s !important; }
+}
 </style>
 </head>
 <body>
@@ -6833,6 +6879,9 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
 <div id="app" class="hidden">
 
   <aside class="sidebar" id="sidebar">
+    <button class="sb-toggle" id="btnSidebarToggle" type="button" aria-controls="sidebar" aria-expanded="true" aria-label="Thu gọn menu" title="Thu gọn menu (Ctrl+B)">
+      <mi-icon name="chevron-right" stroke-width="2.6"></mi-icon>
+    </button>
     <div class="brand">
       <div class="mark"><img src="https://rnsjiqbbeywgbnqsojce.supabase.co/storage/v1/object/public/Logo/DMS_eB2B.png" alt="CR Control logo"></div>
       <div>
@@ -6931,10 +6980,6 @@ thead th, tbody td, .kpi-value, .list-panel-count, .id-chip, td.cell-id,
   </aside>
 
   <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
-
-  <button class="mobile-nav-toggle" id="btnMobileNav" title="Mở / đóng menu" aria-label="Mở / đóng menu" aria-expanded="false" type="button">
-    <mi-icon name="menu" stroke-width="2.2"></mi-icon>
-  </button>
 
   <div class="main">
     <div class="topbar">
@@ -9475,8 +9520,7 @@ const VIEW_META = {
 
 function closeMobileNav(){
   document.body.classList.remove("mobile-nav-open");
-  const btn = $("#btnMobileNav");
-  if(btn) btn.setAttribute("aria-expanded", "false");
+  if(typeof _syncSidebarState === "function") _syncSidebarState();
 }
 
 function setDmsWorkspaceNavOpen(open, persist=true){
@@ -9578,43 +9622,150 @@ function closeDetailOverlay(overlay, kind){
   }, 300);
 }
 
-/* Nút 3 gạch duy nhất trên topbar:
-   - Desktop (>900px): bấm để ẩn hoàn toàn sidebar, bấm lần nữa để hiện lại
-     (trạng thái được lưu vào localStorage).
-   - Mobile (<=900px): giữ nguyên hành vi mở/đóng off-canvas drawer. */
+/* Sidebar thu gọn / mở rộng — thay cho nút 3 gạch nổi (mobile-nav-toggle).
+   - Desktop (>900px): bấm tay nắm trên mép sidebar (hoặc Ctrl/Cmd + B) để chuyển
+     giữa dạng đầy đủ ↔ rail chỉ có icon. Lựa chọn được lưu vào localStorage.
+   - Mobile (<=900px): rail icon luôn hiện; bấm tay nắm để bung thành lớp phủ,
+     bấm nền mờ / Esc / chọn một mục để đóng lại.
+   Trạng thái hiển thị gom vào một class duy nhất trên <body>: "sb-rail". */
+let _syncSidebarState = null;
+
 function initSidebarVisibility(){
-  const btn = $("#btnMobileNav");
+  const sidebar = $("#sidebar");
+  const btn = $("#btnSidebarToggle");
   const backdrop = $("#mobileNavBackdrop");
+  if(!sidebar || !btn || sidebar.dataset.sbInit) return;
+  sidebar.dataset.sbInit = "1";
+
+  const body = document.body;
   const mqMobile = window.matchMedia("(max-width: 900px)");
-  if(!btn) return;
-  // Icon nút điều hướng morph theo trạng thái (morphicons): mobile menu↔X, desktop panel đóng↔mở.
-  const syncNavIcon = ()=>{
-    const cl = document.body.classList;
-    const name = mqMobile.matches
-      ? (cl.contains("mobile-nav-open") ? "x" : "menu")
-      : (cl.contains("sidebar-hidden") ? "panel-left" : "panel-left-close");
-    if(window.MI) window.MI.morph(btn, name);
+  const canHover = window.matchMedia("(hover: hover)");
+  const STORE_KEY = "sidebarCollapsed";
+
+  let collapsed = false;
+  try{
+    collapsed = localStorage.getItem(STORE_KEY) === "1";
+    localStorage.removeItem("sidebarHidden"); // khóa cũ của chế độ ẩn hẳn sidebar
+  }catch(_){}
+
+  /* ---- Tooltip nổi cho rail ---- */
+  const tip = document.createElement("div");
+  tip.className = "sb-tip";
+  tip.setAttribute("role", "tooltip");
+  document.body.appendChild(tip);
+  let tipEl = null, tipTimer = 0;
+  const restoreTitle = el=>{
+    if(el && el._sbTitle != null){ el.setAttribute("title", el._sbTitle); el._sbTitle = null; }
   };
-  const syncButtonState = ()=>{
-    btn.setAttribute("aria-expanded", document.body.classList.contains("mobile-nav-open") ? "true" : "false");
-    syncNavIcon();
+  const hideTip = ()=>{
+    clearTimeout(tipTimer);
+    tip.classList.remove("show");
+    restoreTitle(tipEl);
+    tipEl = null;
   };
-  new MutationObserver(syncNavIcon).observe(document.body, { attributes:true, attributeFilter:["class"] });
-  mqMobile.addEventListener("change", syncNavIcon);
-  if(!mqMobile.matches && localStorage.getItem("sidebarHidden") === "1"){
-    document.body.classList.add("sidebar-hidden");
-  }
-  btn.addEventListener("click", ()=>{
-    if(mqMobile.matches){
-      document.body.classList.toggle("mobile-nav-open");
+  const showTip = el=>{
+    if(!body.classList.contains("sb-rail") || body.classList.contains("sb-animating") || !canHover.matches) return;
+    let text = "", count = "";
+    if(el.classList.contains("conn-pill")){
+      const mail = $("#sidebarUserEmail");
+      text = mail ? mail.textContent.trim() : "";
     }else{
-      const hidden = document.body.classList.toggle("sidebar-hidden");
-      localStorage.setItem("sidebarHidden", hidden ? "1" : "0");
+      const lab = el.querySelector(".nav-label");
+      text = lab ? lab.textContent.trim() : (el.getAttribute("title") || "");
+      const c = el.querySelector(".count");
+      if(c && !c.classList.contains("hidden")){
+        const n = c.textContent.trim();
+        if(n && n !== "0") count = n;
+      }
     }
-    syncButtonState();
+    if(!text) return;
+    if(el.hasAttribute("title")){ el._sbTitle = el.getAttribute("title"); el.removeAttribute("title"); }
+    tip.textContent = text;
+    if(count){
+      const s = document.createElement("span");
+      s.className = "sb-tip-count";
+      s.textContent = count;
+      tip.appendChild(s);
+    }
+    const r = el.getBoundingClientRect();
+    tip.style.top = (r.top + r.height / 2) + "px";
+    tip.style.left = (r.right + 12) + "px";
+    tip.classList.add("show");
+  };
+  sidebar.addEventListener("mouseover", e=>{
+    const el = e.target.closest && e.target.closest(".nav-item, .conn-pill");
+    if(!el || el === tipEl) return;
+    hideTip();
+    tipEl = el;
+    tipTimer = setTimeout(()=> showTip(el), 120);
   });
-  if(backdrop) backdrop.addEventListener("click", ()=>{ closeMobileNav(); syncButtonState(); });
-  syncButtonState();
+  sidebar.addEventListener("mouseout", e=>{
+    const el = e.target.closest && e.target.closest(".nav-item, .conn-pill");
+    if(!el || (e.relatedTarget && el.contains(e.relatedTarget))) return;
+    hideTip();
+  });
+  sidebar.addEventListener("mouseleave", hideTip);
+  sidebar.addEventListener("click", hideTip);
+
+  /* ---- Đồng bộ trạng thái ---- */
+  let animTimer = 0;
+  const endAnim = ()=>{ clearTimeout(animTimer); body.classList.remove("sb-animating"); };
+  const startAnim = ()=>{
+    body.classList.add("sb-animating");
+    clearTimeout(animTimer);
+    animTimer = setTimeout(endAnim, 420);
+  };
+
+  const sync = (animate = true)=>{
+    const mobile = mqMobile.matches;
+    if(!mobile) body.classList.remove("mobile-nav-open");
+    const rail = mobile ? !body.classList.contains("mobile-nav-open") : collapsed;
+    if(animate && rail !== body.classList.contains("sb-rail")){ startAnim(); hideTip(); }
+    body.classList.toggle("sb-rail", rail);
+    const label = rail ? "Mở rộng menu" : "Thu gọn menu";
+    btn.setAttribute("aria-expanded", rail ? "false" : "true");
+    btn.setAttribute("aria-label", label);
+    btn.title = mobile ? label : label + " (Ctrl+B)";
+  };
+  _syncSidebarState = sync;
+
+  const toggle = ()=>{
+    if(mqMobile.matches){
+      body.classList.toggle("mobile-nav-open");
+    }else{
+      collapsed = !collapsed;
+      try{ localStorage.setItem(STORE_KEY, collapsed ? "1" : "0"); }catch(_){}
+    }
+    sync();
+  };
+
+  btn.addEventListener("click", toggle);
+  if(backdrop) backdrop.addEventListener("click", ()=> closeMobileNav());
+  mqMobile.addEventListener("change", ()=> sync(false));
+
+  // Khi sidebar co/giãn xong: dọn cờ animating và báo cho các thành phần
+  // tự tính kích thước theo cửa sổ (bảng cuộn ngang, dropdown…) đo lại một lần.
+  sidebar.addEventListener("transitionend", e=>{
+    if(e.target !== sidebar || e.propertyName !== "width") return;
+    endAnim();
+    if(!mqMobile.matches) window.dispatchEvent(new Event("resize"));
+  });
+
+  // Ctrl/Cmd + B — không bắt khi đang gõ chữ (Ctrl+B là in đậm trong ô soạn thảo).
+  document.addEventListener("keydown", e=>{
+    if(!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || String(e.key).toLowerCase() !== "b") return;
+    const t = e.target;
+    if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    const app = $("#app");
+    if(!app || app.classList.contains("hidden") || body.classList.contains("focus-mode")) return;
+    e.preventDefault();
+    toggle();
+  });
+
+  // Lần dựng đầu: áp trạng thái đã lưu mà không chạy chuyển động.
+  body.classList.add("sb-no-anim");
+  sync(false);
+  requestAnimationFrame(()=> requestAnimationFrame(()=> body.classList.remove("sb-no-anim")));
 }
 
 function initShell(){
@@ -20659,7 +20810,6 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
        #eb2bUatModalOverlay .eb2b-uat-evidence-list{display:grid;gap:8px;margin-top:18px}
        #eb2bUatModalOverlay .eb2b-uat-evidence-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 13px;border:1px solid #dce8eb;border-radius:10px;background:#fff;font-size:12px}
        #eb2bUatModalOverlay .eb2b-uat-evidence-row small{color:#8196a4}
-        body.sidebar-hidden #eb2bUatModalOverlay{left:0}
         @media(max-width:900px){#eb2bUatModalOverlay{left:0}}
        /* EB2B uses the same typography, motion curve and interaction weight as DMS.
           The selectors stay inside the EB2B mount/overlays so DMS remains untouched. */
