@@ -6029,7 +6029,7 @@ html{
 <style id="admin-scope-style">
 /* Quản Trị Dữ Liệu: tách rõ phạm vi Dùng chung / DMS / e-B2B */
 #view-admin{ --scope-shared:#5d7688; --scope-dms:#0d8a93; --scope-eb2b:#2b7fd6; }
-.admin-scope-bar{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:0 0 16px; }
+.admin-scope-bar{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin:0 0 16px; }
 .admin-scope-tab{
   --c:var(--scope-shared); display:flex; align-items:flex-start; gap:11px; text-align:left; cursor:pointer; font:inherit;
   padding:12px 14px; border-radius:14px; border:1px solid #dbe8ec; background:rgba(255,255,255,.85); color:#5d7688;
@@ -6056,6 +6056,11 @@ body.role-no-manage-users .admin-scope-tab[data-admin-scope="shared"],
 body.role-no-manage-users #sharedTablesPanel,
 body.role-no-manage-users #sbUsagePanel,
 body.role-no-manage-users #eb2bSupabaseTablesPanel{ display:none !important; }
+/* Chỉ hiện phạm vi dữ liệu của workspace mà người dùng được cấp */
+body.ws-no-dms .admin-scope-tab[data-admin-scope="dms"],
+body.ws-no-dms .admin-scope-pane[data-admin-pane="dms"],
+body.ws-no-eb2b .admin-scope-tab[data-admin-scope="eb2b"],
+body.ws-no-eb2b .admin-scope-pane[data-admin-pane="eb2b"]{ display:none !important; }
 @media(max-width:760px){ .admin-scope-bar{ grid-template-columns:1fr; } }
 </style>
 <style id="morphicons-base">
@@ -18973,7 +18978,11 @@ function confirmDelete(title, msg, onConfirm, confirmLabel){
 let ADMIN_SCOPE = (()=>{ try{ return localStorage.getItem("adminScope") || ""; }catch(_){ return ""; } })();
 function setAdminScope(scope){
   if(!["shared","dms","eb2b"].includes(scope)) scope = "";
-  if(!scope || (scope === "shared" && !canManageUsers())) scope = canManageUsers() ? "shared" : "dms";
+  const allowedScopes = [];
+  if(canManageUsers()) allowedScopes.push("shared");
+  if(canAccessWorkspace("dms")) allowedScopes.push("dms");
+  if(canAccessWorkspace("eb2b")) allowedScopes.push("eb2b");
+  if(!scope || !allowedScopes.includes(scope)) scope = allowedScopes[0] || "";
   ADMIN_SCOPE = scope;
   try{ localStorage.setItem("adminScope", scope); }catch(_){}
   const view = $("#view-admin"); if(!view) return;
