@@ -4646,6 +4646,7 @@ function usDefaultRules(){
       { action: 'Update Information Telephone', aliases: ['TELEPHONE', 'PHONE NUMBER', 'MOBILE NUMBER', 'PHONE', 'SDT', 'SĐT'] },
       { action: 'Update FunctionLoc', aliases: ['FUNCTIONLOC', 'FUNCTION LOC'] },
       { action: 'Update Partner Function', aliases: ['PARTNER FUNCTION', 'PARTNERFUNCTION'] },
+      { action: 'UnBlock customer', aliases: ['UNBLOCK CUSTOMER', 'UNBLOCK'] },
       { action: 'Block customer', aliases: ['BLOCK CUSTOMER', 'BLOCK'] },
       { action: 'Unlock Customer', aliases: ['UNLOCK CUSTOMER', 'UNLOCK'] },
       { action: 'Customer Creation', aliases: ['CUSTOMER CREATION', 'CREATE CUSTOMER', 'NEW CUSTOMER'] },
@@ -4697,11 +4698,34 @@ function usDetectRegion(summary){
 /* ---- 4. Detect Action (rule engine ưu tiên: compound trước, đơn lẻ sau) ---- */
 function usDetectAction(summary){
   const compact = usNormalizeCompact(summary);
-  for(const rule of US_RULES.priorityOrder){
-    for(const alias of rule.aliases){
-      const aliasCompact = alias.replace(/\s+/g, '').toUpperCase();
-      if(aliasCompact && compact.includes(aliasCompact)){
-        return { action: rule.action, matchedAlias: alias };
+
+  // Vị trí bắt đầu / kết thúc của từng "từ" trong chuỗi compact → dùng để kiểm tra ranh giới từ.
+  // [FIX] Trước đây chỉ dùng compact.includes(alias) nên alias "BLOCK" khớp nhầm vào
+  // "UNBLOCK CUSTOMER" (vì UN-BLOCK chứa BLOCK) → ra "Block customer" thay vì "UnBlock customer".
+  const starts = new Set(), ends = new Set();
+  let pos = 0;
+  usNormalizeSpaced(summary).split(' ').filter(Boolean).forEach(tok => {
+    starts.add(pos); pos += tok.length; ends.add(pos);
+  });
+
+  const aliasHitsAtWordBoundary = (aliasCompact) => {
+    let from = 0, idx;
+    while((idx = compact.indexOf(aliasCompact, from)) !== -1){
+      if(starts.has(idx) && ends.has(idx + aliasCompact.length)) return true;
+      from = idx + 1;
+    }
+    return false;
+  };
+
+  // Lượt 1 (chính xác): alias phải khớp trọn từ/cụm từ → "UNBLOCK" KHÔNG còn bị "BLOCK" bắt nhầm.
+  // Lượt 2 (dự phòng): giữ hành vi cũ (khớp chuỗi con) cho các Summary viết dính như "UpdateGPS".
+  for(const strict of [true, false]){
+    for(const rule of US_RULES.priorityOrder){
+      for(const alias of rule.aliases){
+        const aliasCompact = alias.replace(/\s+/g, '').toUpperCase();
+        if(!aliasCompact) continue;
+        const hit = strict ? aliasHitsAtWordBoundary(aliasCompact) : compact.includes(aliasCompact);
+        if(hit) return { action: rule.action, matchedAlias: alias };
       }
     }
   }
