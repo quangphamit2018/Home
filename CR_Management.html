@@ -4910,6 +4910,17 @@ tbody tr.detail-selected:hover{ background:
 .brd-ai-actions{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 .brd-ai-status{ font-size:11.5px; color:#5c8583; }
 .brd-ai-status.err{ color:#c0392b; }
+.brd-ai-health{ margin-top:10px; border:1px solid #cfe3e1; border-radius:10px; background:#fff; padding:10px 12px; font-size:12px; }
+.brd-ai-health[hidden]{ display:none; }
+.brd-ai-health-title{ font-weight:600; color:#0f6f6a; margin-bottom:6px; display:flex; justify-content:space-between; gap:8px; }
+.brd-ai-health-row{ display:grid; grid-template-columns:150px 1fr; gap:8px; padding:6px 0; border-top:1px dashed #dbe9e7; }
+.brd-ai-health-name{ font-weight:600; }
+.brd-ai-health-name .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; background:#c0392b; }
+.brd-ai-health-row.ok .dot{ background:#1f9d6b; }
+.brd-ai-health-row.off .dot{ background:#9aa8a7; }
+.brd-ai-health-msg{ color:#33504f; word-break:break-word; }
+.brd-ai-health-row.bad .brd-ai-health-msg{ color:#c0392b; }
+.brd-ai-health-sub{ color:#6b8886; font-size:11px; margin-top:2px; }
 .brd-ai-conversation{ display:none; margin-top:12px; border:1px solid #cce5e2; border-radius:10px; background:rgba(255,255,255,.82); overflow:hidden; }
 .brd-ai-conversation.show{ display:block; }
 .brd-ai-conversation-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:11px 13px; border-bottom:1px solid #e5efed; background:rgba(255,255,255,.68); }
@@ -18139,8 +18150,10 @@ function brdModalTemplate(v){
               </span>
             </div>
             <span class="brd-ai-status" id="brdAiStatus"></span>
+            <button type="button" class="btn btn-ghost btn-sm" id="brdAiHealthBtn" title="Kiểm tra key nào dùng được, model nào đang chạy">Kiểm tra kết nối AI</button>
             <button type="button" class="btn btn-ai btn-sm" id="brdAiRunBtn"><span class="spin"></span><mi-icon name="sparkles" size="14" stroke-width="2"></mi-icon> Phân tích với AI &amp; tự động điền</button>
           </div>
+          <section class="brd-ai-health" id="brdAiHealth" aria-label="Kết quả kiểm tra kết nối AI" hidden></section>
           <section class="brd-ai-conversation" id="brdAiConversation" aria-label="Nhật ký phân tích AI">
             <div class="brd-ai-conversation-head">
               <div>
@@ -18585,6 +18598,87 @@ async function runBrdAiAssist(){
   }
 }
 
+// Kiểm tra kết nối AI: gọi Edge Function với action "health" -> hiển thị key nào dùng được, model nào đang chạy.
+async function runBrdAiHealthCheck(){
+  const btn = $("#brdAiHealthBtn");
+  const box = $("#brdAiHealth");
+  if(!btn || !box) return;
+  btn.disabled = true;
+  const oldLabel = btn.textContent;
+  btn.textContent = "Đang kiểm tra...";
+  box.hidden = false;
+  box.replaceChildren();
+  const title = document.createElement("div");
+  title.className = "brd-ai-health-title";
+  title.textContent = "Đang kiểm tra từng AI (có thể mất 10–40 giây)...";
+  box.append(title);
+  try{
+    const sessionResult = await STATE.sb.auth.getSession();
+    const accessToken = sessionResult?.data?.session?.access_token || SUPABASE_ANON_KEY;
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 90000);
+    let response;
+    try{
+      response = await fetch(`${SUPABASE_URL}/functions/v1/brd-ai-fill`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "apikey":SUPABASE_ANON_KEY, "Authorization":`Bearer ${accessToken}`, "Accept":"application/json" },
+        body:JSON.stringify({ action:"health" }),
+        signal:ctrl.signal,
+      });
+    } finally { clearTimeout(timer); }
+    const data = await response.json().catch(()=>null);
+    if(!response.ok || !data || data.error) throw new Error((data && data.error) || `HTTP ${response.status}`);
+    if(!Array.isArray(data.providers)) throw new Error("Edge Function chưa được cập nhật bản mới (thiếu chức năng kiểm tra). Hãy deploy lại brd-ai-fill.");
+
+    box.replaceChildren();
+    const head = document.createElement("div");
+    head.className = "brd-ai-health-title";
+    const t = document.createElement("span");
+    t.textContent = data.anyWorking ? "Kết quả kiểm tra kết nối AI" : "KHÔNG có AI nào dùng được lúc này";
+    const when = document.createElement("span");
+    when.style.fontWeight = "400";
+    when.textContent = `${Math.round((data.durationMs||0)/100)/10}s`;
+    head.append(t, when);
+    box.append(head);
+    data.providers.forEach(p=>{
+      const row = document.createElement("div");
+      row.className = "brd-ai-health-row " + (!p.configured ? "off" : p.ok ? "ok" : "bad");
+      const name = document.createElement("div");
+      name.className = "brd-ai-health-name";
+      const dot = document.createElement("span"); dot.className = "dot";
+      name.append(dot, document.createTextNode(p.name || "AI"));
+      const info = document.createElement("div");
+      const msg = document.createElement("div");
+      msg.className = "brd-ai-health-msg";
+      if(!p.configured) msg.textContent = "Chưa cấu hình API key.";
+      else if(p.ok) msg.textContent = `Dùng được — model đang chạy: ${p.model} (${p.latencyMs} ms)`;
+      else msg.textContent = p.message || "Không dùng được.";
+      info.append(msg);
+      const sub = [];
+      if(p.configured && Array.isArray(p.availableModels) && p.availableModels.length) sub.push("Model khả dụng: " + p.availableModels.slice(0,4).join(", "));
+      const failed = (p.attempts||[]).filter(a=>!a.ok);
+      if(p.ok && failed.length) sub.push("Đã thử lỗi trước đó: " + failed.map(a=>a.model).join(", "));
+      if(sub.length){
+        const s2 = document.createElement("div"); s2.className = "brd-ai-health-sub"; s2.textContent = sub.join(" · ");
+        info.append(s2);
+      }
+      row.append(name, info);
+      box.append(row);
+    });
+  }catch(e){
+    console.error(e);
+    box.replaceChildren();
+    const err = document.createElement("div");
+    err.className = "brd-ai-health-msg";
+    err.style.color = "#c0392b";
+    err.textContent = "Không kiểm tra được: " + (e.name === "AbortError" ? "quá thời gian chờ (90s)." : e.message);
+    box.append(err);
+  }finally{
+    btn.disabled = false;
+    btn.textContent = oldLabel;
+  }
+}
+
 function bindBrdAiPanel(overlay, v){
   const drop = $("#brdAiDrop", overlay);
   const input = $("#brdAiFileInput", overlay);
@@ -18643,6 +18737,7 @@ function bindBrdAiPanel(overlay, v){
   });
 
   $("#brdAiRunBtn", overlay).addEventListener("click", runBrdAiAssist);
+  $("#brdAiHealthBtn", overlay)?.addEventListener("click", runBrdAiHealthCheck);
 }
 
 function openBrdModal(v){
