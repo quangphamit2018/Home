@@ -1305,6 +1305,18 @@ body:has(.drawer.open) .toolbar{z-index:auto}
 .att-name a:hover{text-decoration:underline}
 .att-size{flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .att-note{font-size:11.5px;color:var(--muted)}
+.att-acts{flex:none;display:flex;align-items:center;gap:6px}
+.att-item .btn.small{height:30px;padding:0 10px;gap:6px;box-shadow:none}
+@media(max-width:560px){.att-item{flex-wrap:wrap}.att-name{flex:1 1 60%}.att-acts{flex:1 1 100%;justify-content:flex-end}}
+
+/* ---------- Region: chip chọn nhiều ---------- */
+.rg-box{display:flex;flex-wrap:wrap;gap:8px}
+.rg-chip{position:relative;cursor:pointer}
+.rg-chip input{position:absolute;opacity:0;width:0;height:0;padding:0;border:0;pointer-events:none}
+.rg-chip span{display:inline-flex;align-items:center;height:34px;padding:0 18px;border-radius:99px;border:1px solid #dfe6ef;background:linear-gradient(180deg,#fff,#f7fafd);font-weight:700;font-size:12.5px;color:#41505f;box-shadow:var(--e1);transition:background-color .16s,border-color .16s,color .16s,box-shadow .16s}
+.rg-chip:hover span{border-color:#b9cdf3}
+.rg-chip input:checked+span{background:var(--grad-brand);border-color:#3a5fd8;color:#fff;box-shadow:0 8px 16px -8px rgba(63,104,232,.9)}
+.rg-chip input:focus-visible+span{outline:2px solid #5b8cff;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -2889,6 +2901,7 @@ function haystack(item){
   const x = item.x;
   return [item.code, item.title, item.ownerName, item.project, item.type, item.status, item.priority,
     item.description, item.blockedReason, item.raw && item.raw.jira_key, item.raw && item.raw.sprint,
+    item.raw && item.raw.region, item.raw && item.raw.progress_note,
     item.reporter].concat(x ? [x.category, x.group, x.level, x.cause, x.resolutionCf, x.organizations, x.requestType, x.statusCategory] : [])
     .filter(Boolean).join(" ").toLowerCase();
 }
@@ -3916,6 +3929,7 @@ function openItemDrawer(kind, id){
         kv("Effort thực tế", item.actualEffort == null ? "" : esc(fmtHours(item.actualEffort))) +
         kv("Lý do bị chặn", esc(item.blockedReason), true) +
         (item.blocked && item.blockedSince ? kv("Blocked từ", esc(fmtDay(item.blockedSince)) + " · " + esc(String(diffDays(item.blockedSince, new Date()) || 0)) + " ngày") : "") +
+        (kind === "backlog" ? kv("Region", regionBadges(raw.region)) : "") +
         kv("Jira key", item.jiraKey || (raw.jira_key ? esc(raw.jira_key) : "")) +
         kv("Ngày tạo", esc(fmtStamp(item.created))) +
         kv("Cập nhật", esc(fmtStamp(item.updated))) +
@@ -3923,6 +3937,7 @@ function openItemDrawer(kind, id){
       "</dl>" +
       '<div class="section-label">Mô tả</div>' +
       (item.description ? '<div class="desc-box">' + esc(item.description) + "</div>" : '<div class="notice">Chưa có mô tả.</div>') +
+      (kind === "backlog" && raw.progress_note ? '<div class="section-label">Progress</div><div class="desc-box">' + esc(raw.progress_note) + "</div>" : "") +
       (kind === "backlog" ? '<div class="section-label">Tệp đính kèm</div><div id="drawerFiles">' + loadingBox(2) + "</div>" : "") +
       (ticketRelated.length ? '<div class="section-label">Jira ticket liên quan</div>' + linksBlock(ticketRelated) : "") +
       '<div class="section-label">' + (kind === "task" ? "Backlog chứa task" : "Task thuộc backlog") + "</div>" +
@@ -4018,8 +4033,10 @@ function openRecord(kind, id, preset){
     f += formField("actual_effort", "Effort thực tế (giờ)", "number", existing.actual_effort);
     f += formField("progress", "Tiến độ (%)", "number", existing.progress == null ? 0 : existing.progress);
     f += formField("jira_key", "Jira key liên kết", "jirakey", existing.jira_key, null, false, "Gõ để tìm và chọn ticket Jira");
+    f += regionField(existing.region);
     f += formField("blocked_reason", "Lý do bị chặn", "text", existing.blocked_reason, null, true, "Nên ghi khi trạng thái là Blocked (không bắt buộc)");
     f += formField("description", "Mô tả", "textarea", existing.description, null, true, "Mục tiêu, phạm vi, kết quả mong đợi…");
+    f += formField("progress_note", "Progress", "textarea", existing.progress_note, null, true, "Cập nhật tiến độ thực hiện, các bước đã làm…");
     f += attachField();
   } else {
     f += formField("title", "Tên task", "text", existing.title, null, true, "Việc cần làm");
@@ -4075,6 +4092,8 @@ function buildPayload(kind, data){
       jira_key: cleanText(data.jira_key)
     };
     payload.due_date = payload.target_date;
+    payload.region = cleanText(data.region);
+    payload.progress_note = cleanText(data.progress_note);
     if (status === "done" && !payload.completed_date) payload.completed_date = todayKey();
     if (!payload.progress && status === "done") payload.progress = 100;
     return payload;
@@ -4247,12 +4266,33 @@ async function attList(id){
     return { name: f.name, path: p, size: f.metadata && f.metadata.size, url: urlBy[p] || "" };
   });
 }
+/* Link tải: thêm tham số download để Supabase trả Content-Disposition: attachment đúng tên gốc */
+function attDlUrl(f){
+  return f.url ? f.url + (f.url.indexOf("?") >= 0 ? "&" : "?") + "download=" + encodeURIComponent(attDisplayName(f.name)) : "";
+}
 function attItemHtml(f, extra, action){
   const label = esc(attDisplayName(f.name));
-  return '<div class="att-item"><span class="att-ico">' + icon("link") + '</span><span class="att-name">' +
-    (f.url ? '<a href="' + escAttr(f.url) + '" target="_blank" rel="noopener noreferrer" title="Mở / tải ' + escAttr(attDisplayName(f.name)) + '">' + label + "</a>" : "<span>" + label + "</span>") +
+  const acts = f.url
+    ? '<a class="btn small" data-stop href="' + escAttr(f.url) + '" target="_blank" rel="noopener noreferrer" title="Mở tệp trong tab mới">' + icon("eye") + "Mở</a>" +
+      '<a class="btn small" data-stop href="' + escAttr(attDlUrl(f)) + '" download="' + escAttr(attDisplayName(f.name)) + '" title="Tải tệp về máy">' + icon("download") + "Tải xuống</a>"
+    : "";
+  return '<div class="att-item"><span class="att-ico">' + icon("link") + '</span><span class="att-name"><span title="' + escAttr(attDisplayName(f.name)) + '">' + label + "</span>" +
     (extra ? ' <span class="badge blue">' + extra + "</span>" : "") + '</span><span class="att-size">' + esc(fmtBytes(f.size)) + "</span>" +
-    (action || "") + "</div>";
+    '<span class="att-acts">' + acts + (action || "") + "</span></div>";
+}
+/* ---------- Region (chọn nhiều, lưu dạng "CP,SP,HCM" trong cột region) ---------- */
+const REGIONS = ["HN", "NW", "NE", "CP", "SP", "HCM", "MKD"];
+function regionList(value){
+  return String(value == null ? "" : value).split(/[,;|]/).map(function(s){ return s.trim(); }).filter(Boolean);
+}
+function regionBadges(value){
+  return regionList(value).map(function(r){ return '<span class="badge violet">' + esc(r) + "</span>"; }).join(" ");
+}
+function regionField(value){
+  const sel = regionList(value);
+  return '<div class="field full"><span>Region</span><div class="rg-box">' + REGIONS.map(function(r){
+    return '<label class="rg-chip"><input type="checkbox" name="region" value="' + r + '"' + (sel.indexOf(r) >= 0 ? " checked" : "") + "><span>" + r + "</span></label>";
+  }).join("") + "</div></div>";
 }
 function attReadonlyHtml(list){
   return list.length ? '<div class="att-list">' + list.map(function(f){ return attItemHtml(f); }).join("") + "</div>" : '<div class="notice">Chưa có tệp đính kèm.</div>';
@@ -4356,6 +4396,7 @@ async function saveRecord(event){
   const kind = state.editing.kind;
   const form = new FormData(event.currentTarget);
   const data = Object.fromEntries(form.entries());
+  data.region = form.getAll("region").join(",");
   const payload = buildPayload(kind, data);
   const invalid = validatePayload(kind, payload);
   if (invalid) { toast(invalid, "error"); return; }
@@ -4556,6 +4597,7 @@ function backlogRowCols(){
         return '<span class="primary-cell" title="' + escAttr(i.title) + '">' + esc(i.title) + "</span>" +
           '<span class="bl-meta"><span class="bl-code">' + esc(i.code) + "</span>" +
           (jk ? '<span class="ticket-key">' + esc(jk) + "</span>" : "") +
+          regionBadges(i.raw.region) +
           '<span class="bl-tasks' + (tasks.length && done === tasks.length ? " all" : "") + '">' + tasks.length + " task · " + done + " xong</span></span>";
       } },
     { label: "Người phụ trách", sort: "owner", render: function(i){ return personHtml(i, i.ownerName); } },
@@ -4681,10 +4723,10 @@ function exportBacklogsCsv(){
   const rows = list.map(function(i){
     return [i.title, labelStatus(i.status), i.priority, i.ownerName, fmtDay(i.start), fmtDay(i.due), fmtDay(i.actualStart), fmtDay(i.actualEnd),
       i.progress == null ? "" : i.progress, i.effort == null ? "" : i.effort, i.actualEffort == null ? "" : i.actualEffort,
-      i.raw.jira_key || "", i.blockedReason, i.description, fmtStamp(i.created), fmtStamp(i.updated)];
+      i.raw.jira_key || "", i.blockedReason, i.description, fmtStamp(i.created), fmtStamp(i.updated), regionList(i.raw.region).join(" | "), i.raw.progress_note || ""];
   });
   downloadFile("backlogs-" + stampName() + ".csv",
-    csvOf(["Title", "Status", "Priority", "Owner", "Start", "Target", "Actual start", "Completed", "Progress %", "Estimate (h)", "Actual (h)", "Jira key", "Blocked reason", "Description", "Created", "Updated"], rows));
+    csvOf(["Title", "Status", "Priority", "Owner", "Start", "Target", "Actual start", "Completed", "Progress %", "Estimate (h)", "Actual (h)", "Jira key", "Blocked reason", "Description", "Created", "Updated", "Region", "Progress"], rows));
   toast("Đã xuất " + fmtNum(rows.length) + " backlog", "good");
 }
 
