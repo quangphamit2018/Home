@@ -26,6 +26,9 @@ svg{flex:none}
 .nowrap{white-space:nowrap}
 .muted{color:var(--muted)}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.jira-acc-cell{display:flex;gap:6px;align-items:center;min-width:300px}
+.jira-acc-input{flex:1;min-width:0;padding:7px 10px;font-size:12px;border:1px solid #dbe3ee;border-radius:8px;background:#fff;color:inherit}
+.jira-acc-input:focus{outline:2px solid rgba(53,110,230,.35);border-color:#4c86ff}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
 /* ---------- gate ---------- */
@@ -2567,7 +2570,7 @@ async function loadDirectory(){
 }
 async function loadMembers(){
   if (!isAdmin()) { state.members = []; return; }
-  const r = await state.client.from(MEMBER_TABLE).select("user_id,email,full_name,avatar_url,role,status,created_at,reviewed_at,reviewed_by").order("created_at", { ascending: false });
+  const r = await state.client.from(MEMBER_TABLE).select("user_id,email,full_name,avatar_url,role,status,created_at,reviewed_at,reviewed_by,jira_account_id").order("created_at", { ascending: false });
   if (r.error) throw r.error;
   state.members = r.data || [];
   state.loaded.members = true;
@@ -3011,6 +3014,7 @@ function sortValue(item, key){
     case "name": return String(item.name || item.ownerName || item.title || "").toLowerCase();
     case "role": return String(item.role || "").toLowerCase();
     case "memberStatus": return String(item.status || "").toLowerCase();
+    case "jiraAccount": return String(item.jira_account_id || "").toLowerCase();
     case "riskLevel": return riskGroupOf(item).length;
     case "openTickets": case "openBacklogs": case "openTasks": case "doneTasks": case "doneWeek": case "doneMonth":
     case "tickets": case "backlogs": case "blockedDays": case "estimateLeft": case "actualEffort": case "score": case "count":
@@ -5948,22 +5952,42 @@ function exportReportCsv(key){
 }
 
 /* ---------------- THÀNH VIÊN ---------------- */
-function memberTable(list, withActions){
+function memberTable(list, withActions, showJira){
+  const cols = [
+    { label: "Tài khoản", sort: "name", render: function(m){
+        return '<span class="primary-cell">' + esc(m.full_name || "Google member") + '</span><span class="cell-sub">' + esc(m.email) + "</span>";
+      } },
+    { label: "Trạng thái", sort: "memberStatus", render: function(m){ return statusBadge(m.status); } }
+  ];
+  if (showJira) {
+    cols.push({ label: "Jira accountId", sort: "jiraAccount", render: function(m){
+      return '<div class="jira-acc-cell"><input type="text" class="jira-acc-input mono" data-jira-input="' + escAttr(m.user_id) + '" value="' + escAttr(m.jira_account_id || "") + '" placeholder="712020:xxxxxxxx-xxxx-..." spellcheck="false" autocomplete="off">' +
+        '<button class="btn small" data-action="save-jira-account" data-id="' + escAttr(m.user_id) + '">Lưu</button></div>';
+    } });
+  }
+  cols.push({ label: "Ngày gửi", sort: "created", cls: "nowrap", render: function(m){ return esc(fmtDay(m.created_at)); } });
+  cols.push({ label: "", render: function(m){
+      return withActions ? '<div class="row-actions"><button class="btn primary small" data-action="approve-member" data-id="' + escAttr(m.user_id) + '">Duyệt</button>' +
+        '<button class="btn danger small" data-action="reject-member" data-id="' + escAttr(m.user_id) + '">Từ chối</button></div>' : '<span class="muted">—</span>';
+    } });
   return dataTable({
     scope: "members", sort: state.sort.members, rows: list,
     emptyTitle: "Không có tài khoản trong nhóm này", emptyNote: "",
-    cols: [
-      { label: "Tài khoản", sort: "name", render: function(m){
-          return '<span class="primary-cell">' + esc(m.full_name || "Google member") + '</span><span class="cell-sub">' + esc(m.email) + "</span>";
-        } },
-      { label: "Trạng thái", sort: "memberStatus", render: function(m){ return statusBadge(m.status); } },
-      { label: "Ngày gửi", sort: "created", cls: "nowrap", render: function(m){ return esc(fmtDay(m.created_at)); } },
-      { label: "", render: function(m){
-          return withActions ? '<div class="row-actions"><button class="btn primary small" data-action="approve-member" data-id="' + escAttr(m.user_id) + '">Duyệt</button>' +
-            '<button class="btn danger small" data-action="reject-member" data-id="' + escAttr(m.user_id) + '">Từ chối</button></div>' : '<span class="muted">—</span>';
-        } }
-    ]
+    cols: cols
   });
+}
+async function saveJiraAccount(id){
+  const m = state.members.find(function(x){ return x.user_id === id; });
+  if (!m) return;
+  const input = document.querySelector('input[data-jira-input="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  if (!input) return;
+  const val = String(input.value || "").trim();
+  if (val && !/^[A-Za-z0-9:_\-]{10,}$/.test(val)) { toast("Jira accountId không hợp lệ (không chứa khoảng trắng/ký tự lạ)", "error"); return; }
+  if (val === String(m.jira_account_id || "")) { toast("Không có thay đổi", "good"); return; }
+  const r = await state.client.rpc("jtm_set_member_jira_account", { p_user_id: id, p_jira_account_id: val || null });
+  if (r.error) { toast("Không thể lưu Jira accountId: " + r.error.message, "error"); return; }
+  m.jira_account_id = val || null;
+  toast("Đã lưu Jira accountId cho " + (m.full_name || m.email), "good");
 }
 function renderMembers(){
   setActions('<button class="btn" data-action="refresh">' + icon("refresh") + 'Làm mới</button>');
@@ -5982,7 +6006,7 @@ function renderMembers(){
     "</div>" +
     '<div class="notice">Phê duyệt gọi RPC <span class="mono">jtm_review_member</span> kiểm tra quyền super_admin ngay trong database, không chỉ dựa vào nút bị ẩn trên giao diện. Quyền đọc dữ liệu áp dụng cho thành viên đã được duyệt qua RLS.</div>' +
     panel({ title: "Yêu cầu truy cập", sub: "Đã xác thực Google nhưng chưa được cấp quyền đọc dữ liệu", tight: true, body: memberTable(pending, true) }) +
-    panel({ title: "Thành viên đã được duyệt", sub: "Được phép quản lý backlog và task", tight: true, body: memberTable(approved, false) }) +
+    panel({ title: "Thành viên đã được duyệt", sub: "Được phép quản lý backlog và task", tight: true, body: memberTable(approved, false, true) }) +
     (rejected.length ? panel({ title: "Yêu cầu bị từ chối", tight: true, body: memberTable(rejected, false) }) : "");
 }
 async function reviewMember(id, approve){
@@ -6538,6 +6562,7 @@ document.addEventListener("click", async function(event){
     if (ok) { closeDrawer(); renderShell(); }
     return;
   }
+  if (action === "save-jira-account") { await saveJiraAccount(id); return; }
   if (action === "approve-member") { await reviewMember(id, true); return; }
   if (action === "reject-member") { await reviewMember(id, false); return; }
   if (action === "save-filter") { openSaveFilter(actionEl.dataset.scope); return; }
@@ -6601,6 +6626,7 @@ $("#historyDialog").addEventListener("click", function(e){ if (e.target === $("#
 $("#jiraResultDialog").addEventListener("click", function(e){ if (e.target === $("#jiraResultDialog")) $("#jiraResultDialog").close(); });
 document.addEventListener("keydown", function(e){
   if (e.key === "Escape" && $("#drawer").classList.contains("open")) closeDrawer();
+  if (e.key === "Enter" && e.target && e.target.matches && e.target.matches("input[data-jira-input]")) { e.preventDefault(); saveJiraAccount(e.target.getAttribute("data-jira-input")); }
 });
 /* ============================================================================
    ĐỒNG BỘ DỮ LIỆU JIRA — gọi Edge Function jira-sync (cùng cách với Dashboard),
