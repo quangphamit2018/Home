@@ -18623,7 +18623,7 @@ async function runBrdAiHealthCheck(){
   box.replaceChildren();
   const title = document.createElement("div");
   title.className = "brd-ai-health-title";
-  title.textContent = "Đang kiểm tra từng AI (có thể mất 10–40 giây)...";
+  title.textContent = "Đang kiểm tra từng AI (có thể mất 20–60 giây)...";
   box.append(title);
   try{
     const sessionResult = await STATE.sb.auth.getSession();
@@ -18664,7 +18664,15 @@ async function runBrdAiHealthCheck(){
       const msg = document.createElement("div");
       msg.className = "brd-ai-health-msg";
       if(!p.configured) msg.textContent = "Chưa cấu hình API key.";
-      else if(p.ok) msg.textContent = `Dùng được — model đang chạy: ${p.model} (${p.latencyMs} ms)`;
+      else if(p.ok){
+        msg.textContent = `Dùng được — model đang chạy: ${p.model} (${p.latencyMs} ms)`;
+        if(p.loadTest){
+          msg.textContent += p.loadTest.ok
+            ? ` · Thử tải thực tế (sinh BRD đầy đủ): OK ${Math.round(p.loadTest.ms/100)/10}s`
+            : ` · Thử tải thực tế: LỖI — ${p.loadTest.error}`;
+          if(!p.loadTest.ok) row.className = "brd-ai-health-row bad";
+        }
+      }
       else msg.textContent = p.message || "Không dùng được.";
       info.append(msg);
       const sub = [];
