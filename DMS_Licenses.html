@@ -1885,6 +1885,11 @@
     .tsl-del { color: var(--danger); }
     .tsl-pager { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; font-size: 12px; color: var(--muted); }
     .tsl-pager span:last-child { display: flex; gap: 6px; }
+    .tsl-io { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .tsl-file { cursor: pointer; }
+    .tsl-file.disabled { opacity: .5; pointer-events: none; }
+    .tsl-imp { margin-top: 14px; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 12px; background: #fffaf9; display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
+    .tsl-imp label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
     @media (max-width: 860px) { .tsl-test, .tsl-add { grid-template-columns: 1fr; } .tsl-arrow { display: none; } .tsl-banner { flex-direction: column; align-items: stretch; } }
     /* ---- Section 4: Tất cả các cột template ---- */
     .pro-cols > summary { cursor: pointer; margin: 0; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style: none; }
@@ -4223,7 +4228,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const TSL_TABLE = "tactical_sku_logic", TSL_SUB_KEY = "masterdata_admin_sub", TSL_PAGE = 50, TSL_EX = 4000;
     let adminSub = loadKey(TSL_SUB_KEY, ["sys", "tac"], "sys");
     const TSL = { rows: [], loaded: false, error: "", source: "default", q: "", rule: "all", page: 1, edit: null, sel: new Set(), busy: false, ch: null, tm: null,
-      add: { skus: "", qty: "6", div: "4", note: "" }, test: { sku: "", base: String(TSL_EX) } };
+      imp: null, add: { skus: "", qty: "6", div: "4", note: "" }, test: { sku: "", base: String(TSL_EX) } };
     const tslSub = () => (isAdmin() ? adminSub : "tac");
     const tslCan = () => canEdit() && TSL.source === "db" && !TSL.error;
     const tslNum = v => { const n = Number(String(v ?? "").trim().replace(",", ".")); return Number.isFinite(n) ? n : NaN; };
@@ -4366,13 +4371,94 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return `${tslBanner()}
         <section class="panel tsl-panel"><div class="panel-head"><div><h2>Logic SKU hoạt động thế nào</h2><p>Bảng này thay cho danh sách SKU cố định trong code. Công cụ Tactical đọc bảng để tự điền số lượng mua và mức giảm.</p></div></div><div class="panel-body">${tslFlow()}</div></section>
         <section class="panel tsl-panel"><div class="panel-head"><div><h2>Nhóm quy tắc</h2><p>Bấm vào một nhóm để lọc danh sách SKU bên dưới.</p></div></div><div class="panel-body">${tslRulesHtml()}</div></section>
-        ${tslTestHtml()}${tslAddHtml()}
+        ${tslTestHtml()}${tslIoHtml()}${tslAddHtml()}
         <section class="panel tsl-panel"><div class="panel-head"><div><h2>Danh sách SKU</h2><p>${tslCan() ? "Sửa từng dòng bằng nút ✎, hoặc tick chọn nhiều dòng để xóa." : "Chỉ xem."}</p></div></div>
           <div class="panel-body"><div class="tsl-bar"><input id="tsl-q" data-tsl-in="q" value="${escapeHtml(TSL.q)}" placeholder="Tìm SKU hoặc ghi chú (dán nhiều SKU cách nhau bằng dấu cách)…" autocomplete="off"><div class="tsl-bulk" id="tsl-bulk">${tslBulkHtml()}</div></div>
           <div id="tsl-list">${tslListHtml()}</div></div></section>`;
     }
     const tslDraw = () => { const el = $("#tsl-root"); if (el) el.innerHTML = tslInner(); };
     const tslDrawList = () => { const el = $("#tsl-list"); if (el) el.innerHTML = tslListHtml(); const b = $("#tsl-bulk"); if (b) b.innerHTML = tslBulkHtml(); };
+
+    /* ---- Xuất / Nhập Excel cho Logic SKU Tactical ---- */
+    const tslNorm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9]/g, "");
+    async function tslExport() {
+      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
+      const rows = tslView();
+      const aoa = [["SKUCode", "Số lượng mua (SLABFROM = SLABTO)", "Số chia", "Ghi chú"]].concat(rows.map(r => { const k = String(r.sku_code); return [String(Number(k)) === k ? Number(k) : k, Number(r.slab_qty), Number(r.divisor), r.note || ""]; }));
+      const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = [{ wch: 12 }, { wch: 34 }, { wch: 10 }, { wch: 32 }];
+      const gs = XLSX.utils.aoa_to_sheet([["Hướng dẫn"], ["Sheet “Logic SKU”: mỗi dòng 1 SKU."], ["Số lượng mua → tự điền SLABFROM = SLABTO trong công cụ Tactical."], ["Số chia → DISCOUNT = Giá giảm gốc ÷ Số chia."], ["Nhập lại bằng nút “Nhập từ Excel” ở tab Logic SKU Tactical; giữ nguyên tên 3 cột đầu."]]); gs["!cols"] = [{ wch: 80 }];
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Logic SKU"); XLSX.utils.book_append_sheet(wb, gs, "Hướng dẫn");
+      XLSX.writeFile(wb, `Tactical_SKU_Logic_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast(`Đã xuất ${nf(rows.length)} SKU.`, "success");
+    }
+    async function tslImpRead(file) {
+      try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
+      let aoa;
+      try { const wb = XLSX.read(await file.arrayBuffer(), { type: "array" }); const nm = wb.SheetNames.find(n => tslNorm(n) === "logicsku") || wb.SheetNames[0]; aoa = XLSX.utils.sheet_to_json(wb.Sheets[nm], { header: 1, defval: "", raw: true }); }
+      catch (err) { return toast("Không đọc được file: " + err.message, "error"); }
+      let start = -1, ix = { sku: 0, qty: 1, div: 2, note: 3 }, hasNote = false;
+      for (let i = 0; i < Math.min(aoa.length, 10) && start < 0; i++) {
+        const h = (aoa[i] || []).map(tslNorm), f = fn => h.findIndex(fn);
+        const s = f(x => /^(sku|skucode|masku)$/.test(x)), q = f(x => x.includes("soluongmua") || x.includes("slab") || x === "qty"), d = f(x => x.includes("sochia") || x === "divisor" || x === "chia"), n = f(x => x.includes("ghichu") || x === "note");
+        if (s >= 0 && q >= 0 && d >= 0) { start = i + 1; ix = { sku: s, qty: q, div: d, note: n }; hasNote = n >= 0; }
+      }
+      if (start < 0) { start = Number.isNaN(tslNum((aoa[0] || [])[1])) ? 1 : 0; hasNote = aoa.slice(start).some(r => String((r || [])[3] ?? "").trim() !== ""); }
+      const map = new Map(), bad = []; let dup = 0;
+      aoa.slice(start).forEach((c, k) => {
+        c = c || []; if (c.every(x => String(x ?? "").trim() === "")) return;
+        const ln = start + k + 1, sku = String(c[ix.sku] ?? "").trim(), q = tslNum(c[ix.qty]), d = tslNum(c[ix.div]), note = ix.note >= 0 ? String(c[ix.note] ?? "").trim() : "";
+        if (!/^[A-Za-z0-9_-]{1,30}$/.test(sku)) return bad.push(`Dòng ${ln}: SKU “${sku}” không hợp lệ`);
+        if (!(q > 0) || !(d > 0)) return bad.push(`Dòng ${ln}: SKU ${sku} cần Số lượng mua và Số chia là số > 0`);
+        if (map.has(sku)) dup++; map.set(sku, { sku, q, d, note });
+      });
+      TSL.imp = { name: file.name, items: [...map.values()], bad, dup, hasNote, mode: "merge" };
+      tslDraw();
+      if (!TSL.imp.items.length && !bad.length) toast("Không tìm thấy dòng dữ liệu nào trong file.", "error");
+    }
+    function tslImpPlan() {
+      const I = TSL.imp, cur = new Map(TSL.rows.map(r => [String(r.sku_code), r])), inFile = new Set(I.items.map(x => x.sku));
+      let nw = 0, same = 0; const todo = [], samples = [];
+      I.items.forEach(x => {
+        const o = cur.get(x.sku);
+        if (!o) { nw++; todo.push(x); samples.length < 8 && samples.push(["mới", x, null]); return; }
+        if (Number(o.slab_qty) !== x.q || Number(o.divisor) !== x.d || (I.hasNote && String(o.note || "") !== x.note)) { todo.push(x); samples.length < 8 && samples.push(["sửa", x, o]); } else same++;
+      });
+      const rm = I.mode === "replace" ? TSL.rows.map(r => String(r.sku_code)).filter(k => !inFile.has(k)) : [];
+      return { nw, chg: todo.length - nw, same, todo, rm, samples };
+    }
+    function tslIoHtml() {
+      const can = tslCan(), I = TSL.imp;
+      let h = `<section class="panel tsl-panel"><div class="panel-head"><div><h2>Xuất / Nhập Excel</h2><p>Xuất toàn bộ logic ra Excel để sao lưu hoặc chỉnh hàng loạt, rồi nhập lại. Cột cần có: SKUCode, Số lượng mua, Số chia (Ghi chú tùy chọn).</p></div></div><div class="panel-body"><div class="tsl-io"><button type="button" class="btn btn-secondary" data-tsl="export">⬇ Xuất Excel (${nf(tslView().length)} SKU)</button><label class="btn btn-secondary tsl-file${can ? "" : " disabled"}">⬆ Nhập từ Excel<input type="file" hidden accept=".xlsx,.xls,.csv" data-tsl-file${can ? "" : " disabled"}></label>${can ? "" : `<span class="tsl-mut">Nhập file chỉ dùng được khi bảng Supabase đã có dữ liệu.</span>`}</div>`;
+      if (I && can) {
+        const p = tslImpPlan(), nothing = !p.todo.length && !p.rm.length;
+        h += `<div class="tsl-imp"><div><b>📄 ${escapeHtml(I.name)}</b> · ${nf(I.items.length)} SKU hợp lệ trong file</div>
+          <label><input type="radio" name="tsl-mode" data-tsl-mode value="merge"${I.mode === "merge" ? " checked" : ""}> <b>Gộp</b> — thêm mới &amp; cập nhật, giữ nguyên SKU không có trong file</label>
+          <label><input type="radio" name="tsl-mode" data-tsl-mode value="replace"${I.mode === "replace" ? " checked" : ""}> <b>Thay thế toàn bộ</b> — xóa các SKU không có trong file</label>
+          <div class="tsl-sum"><span class="tsl-ok">${nf(p.nw)} mới</span> · <span class="tsl-warn">${nf(p.chg)} cập nhật</span> · ${nf(p.same)} giữ nguyên${p.rm.length ? ` · <span class="tsl-bad">xóa ${nf(p.rm.length)}</span>` : ""}${I.dup ? ` · <span class="tsl-warn">${I.dup} SKU lặp trong file (lấy dòng cuối)</span>` : ""}${I.bad.length ? ` · <span class="tsl-bad">${I.bad.length} lỗi</span>` : ""}${I.bad.slice(0, 6).map(b => `<div class="tsl-bad">✖ ${escapeHtml(b)}</div>`).join("")}${I.bad.length > 6 ? `<div class="tsl-bad">… và ${I.bad.length - 6} lỗi nữa</div>` : ""}</div>
+          ${p.samples.length ? `<div class="table-wrap"><table class="tsl-table"><thead><tr><th></th><th>SKUCode</th><th>Số lượng mua</th><th>Số chia</th></tr></thead><tbody>${p.samples.map(([t, x, o]) => `<tr><td>${t}</td><td><b>${escapeHtml(x.sku)}</b></td><td>${o && Number(o.slab_qty) !== x.q ? `<s class="tsl-mut">${tslFmt(o.slab_qty)}</s> → ` : ""}${tslFmt(x.q)}</td><td>${o && Number(o.divisor) !== x.d ? `<s class="tsl-mut">${tslFmt(o.divisor)}</s> → ` : ""}${tslFmt(x.d)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+          <div class="tsl-io"><button type="button" class="btn btn-primary" data-tsl="imp-apply"${TSL.busy || I.bad.length || nothing ? " disabled" : ""}>${I.bad.length ? "Sửa lỗi trong file trước" : nothing ? "Không có thay đổi" : "Áp dụng vào Supabase"}</button><button type="button" class="btn btn-secondary" data-tsl="imp-cancel">Hủy</button></div></div>`;
+      }
+      return h + `</div></section>`;
+    }
+    async function tslImpApply() {
+      const I = TSL.imp; if (!I || !tslCan()) return toast("Chỉ Super-admin và Senior-member được nhập logic.", "error");
+      const p = tslImpPlan(); if (I.bad.length || (!p.todo.length && !p.rm.length)) return;
+      if (I.mode === "replace" && !I.items.length) return toast("File không có SKU hợp lệ — không thể thay thế toàn bộ.", "error");
+      const ok = await confirmDialog({ title: "Áp dụng file vào logic Tactical?", message: `${nf(p.nw)} SKU mới, ${nf(p.chg)} cập nhật${p.rm.length ? `, XÓA ${nf(p.rm.length)} SKU không có trong file` : ""}. Thay đổi áp dụng ngay cho mọi người đang dùng công cụ Tactical.`, confirmText: "Áp dụng", danger: p.rm.length > 0 });
+      if (!ok) return;
+      if (p.todo.length && !(await tslUpsert(p.todo, I.hasNote))) return;   // ghi trước, xóa sau → bảng không bao giờ bị trống giữa chừng
+      let gone = 0;
+      try { for (let i = 0; i < p.rm.length; i += 200) { const { data, error } = await state.supabase.from(TSL_TABLE).delete().in("sku_code", p.rm.slice(i, i + 200)).select("sku_code"); if (error) throw error; gone += (data || []).length; } }
+      catch (err) { toast(`Không xóa được SKU thừa: ${err.message || err}`, "error"); }
+      if (gone < p.rm.length) toast(`Chỉ xóa được ${gone}/${p.rm.length} SKU — kiểm tra quyền RLS.`, "error");
+      TSL.imp = null; TSL.edit = null; TSL.sel.clear(); await tslLoad(); tslDraw();
+      toast(`Đã nhập: ${nf(p.nw)} mới, ${nf(p.chg)} cập nhật${gone ? `, xóa ${nf(gone)}` : ""}.`, "success");
+    }
+    document.addEventListener("change", e => {
+      const t = e.target; if (!t || !t.dataset || !$("#tsl-root")) return;
+      if (t.dataset.tslFile !== undefined) { const f = t.files && t.files[0]; t.value = ""; if (f && tslCan()) tslImpRead(f); }
+      else if (t.dataset.tslMode !== undefined && TSL.imp) { TSL.imp.mode = t.value === "replace" ? "replace" : "merge"; tslDraw(); }
+    });
 
     function renderTacticalLogic() {
       return `<div id="tsl-root">${tslInner()}</div>`;
@@ -4446,6 +4532,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       else if (a === "sel-all") { document.querySelectorAll('#tsl-list input[data-tsl="sel"]').forEach(c => { c.checked = b.checked; b.checked ? TSL.sel.add(c.dataset.sku) : TSL.sel.delete(c.dataset.sku); }); const x = $("#tsl-bulk"); if (x) x.innerHTML = tslBulkHtml(); }
       else if (a === "sel-clear") { TSL.sel.clear(); tslDrawList(); }
       else if (a === "bulk-del") tslDelete([...TSL.sel]);
+      else if (a === "export") tslExport();
+      else if (a === "imp-apply") tslImpApply();
+      else if (a === "imp-cancel") { TSL.imp = null; tslDraw(); }
     });
     document.addEventListener("input", e => {
       const t = e.target, k = t && t.dataset ? t.dataset.tslIn : undefined; if (k === undefined) return;
