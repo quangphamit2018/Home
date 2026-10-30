@@ -3950,6 +3950,8 @@ function openItemDrawer(kind, id){
       '<div class="section-label">Hành động</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
         '<button class="btn primary" data-action="edit-' + kind + '" data-id="' + escAttr(item.id) + '">' + icon("edit") + "Sửa</button>" +
+        /* Chỉ backlog CHƯA có Jira key mới hiện nút "Tạo Jira"; đã có key thì ẩn */
+        ((kind === "backlog" && !cleanText(raw.jira_key)) ? '<button class="btn" data-action="create-jira" data-id="' + escAttr(item.id) + '">' + icon("ticket") + "Tạo Jira</button>" : "") +
         ((item.statusGroup === "done" || (kind === "backlog" && item.fromJira)) ? "" : '<button class="btn" data-action="quick-done" data-kind="' + kind + '" data-id="' + escAttr(item.id) + '">' + icon("check") + "Đánh dấu hoàn thành</button>") +
         '<button class="btn danger" data-action="delete-' + kind + '" data-id="' + escAttr(item.id) + '">' + icon("trash") + "Xoá</button>" +
       "</div>" +
@@ -6486,6 +6488,7 @@ document.addEventListener("click", async function(event){
     openRecord("task", null, key ? { title: key + ": ", jira_key: key } : {});
     return;
   }
+  if (action === "create-jira") { await createJiraFromBacklog(id); return; }
   if (action === "edit-backlog") { openRecord("backlog", id); return; }
   if (action === "edit-task") { openRecord("task", id); return; }
   if (action === "restore-recycle") { await recycleAct("restore", id); return; }
@@ -6575,6 +6578,49 @@ document.addEventListener("keydown", function(e){
    ĐỒNG BỘ DỮ LIỆU JIRA — gọi Edge Function jira-sync (cùng cách với Dashboard),
    sau đó tải lại bảng jira_tickets để toàn bộ màn hình hiển thị dữ liệu mới.
    ============================================================================ */
+/* ============================================================================
+   TẠO JIRA TỪ BACKLOG NỘI BỘ (chỉ dành cho backlog chưa có Jira key)
+   Gọi Edge Function jira-create-from-backlog, sau đó backlog tự được gắn jira_key.
+   ============================================================================ */
+let createJiraRunning = false;
+async function createJiraFromBacklog(id){
+  if (createJiraRunning || !approvedNow()) return;
+  const raw = state.backlogs.find(function(b){ return b.id === id; });
+  if (!raw) { toast("Không tìm thấy backlog", "error"); return; }
+  if (cleanText(raw.jira_key)) { toast("Backlog này đã có Jira key: " + raw.jira_key, "error"); return; }
+  if (!window.confirm("Tạo Jira ticket từ backlog \"" + (raw.title || "") + "\"?\nToàn bộ nội dung và tệp đính kèm sẽ được đưa lên Jira.")) return;
+  const cfg = config();
+  const btn = document.querySelector('[data-action="create-jira"]');
+  const oldHtml = btn ? btn.innerHTML : "";
+  createJiraRunning = true;
+  if (btn) { btn.disabled = true; btn.textContent = "Đang tạo Jira…"; }
+  try {
+    const sess = await state.client.auth.getSession();
+    const token = sess && sess.data && sess.data.session ? sess.data.session.access_token : (state.session && state.session.access_token);
+    const resp = await fetch(cfg.url + "/functions/v1/jira-create-from-backlog", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: cfg.key, Authorization: "Bearer " + (token || cfg.key) },
+      body: JSON.stringify({ backlog_id: id })
+    });
+    const text = await resp.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch (e) {}
+    if (!(resp.ok && data && data.ok)) {
+      const detail = data ? (data.error || data.message || "") + (data.detail ? " · " + (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)).slice(0, 200) : "") : text.slice(0, 200);
+      throw new Error("HTTP " + resp.status + (detail ? " · " + detail : ""));
+    }
+    const warn = data.warnings && data.warnings.length ? " · Lưu ý: " + data.warnings.join("; ") : "";
+    toast("Đã tạo Jira " + data.new_key + warn, data.warnings && data.warnings.length ? "error" : "good");
+    await loadAll({ only: ["backlogs"] });
+    openItemDrawer("backlog", id);
+  } catch (e) {
+    toast("Tạo Jira thất bại: " + ((e && e.message) || e), "error");
+    if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+  } finally {
+    createJiraRunning = false;
+  }
+}
+
 let syncRunning = false;
 async function runJiraSync(){
   if (syncRunning || !approvedNow()) return;
