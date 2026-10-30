@@ -1441,6 +1441,17 @@ body:has(.drawer.open) .toolbar{z-index:auto}
   </div>
 </dialog>
 
+<dialog class="dialog" id="jiraResultDialog" style="max-width:min(640px,94vw)">
+  <div class="dialog-inner">
+    <div class="dialog-head">
+      <div><div class="dialog-title" id="jiraResultTitle"></div><div class="dialog-desc" id="jiraResultDesc"></div></div>
+      <button type="button" class="icon-btn" data-action="close-jira-result" aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div id="jiraResultBody"></div>
+    <div class="dialog-foot" id="jiraResultFoot"></div>
+  </div>
+</dialog>
+
 <dialog class="dialog" id="filterDialog">
   <form class="dialog-inner" id="filterForm" method="dialog">
     <div class="dialog-head">
@@ -3933,7 +3944,7 @@ function openItemDrawer(kind, id){
         kv("Lý do bị chặn", esc(item.blockedReason), true) +
         (item.blocked && item.blockedSince ? kv("Blocked từ", esc(fmtDay(item.blockedSince)) + " · " + esc(String(diffDays(item.blockedSince, new Date()) || 0)) + " ngày") : "") +
         (kind === "backlog" ? kv("Region", regionBadges(raw.region)) : "") +
-        kv("Jira key", item.jiraKey || (raw.jira_key ? esc(raw.jira_key) : "")) +
+        kv("Jira key", (function(){ const k = cleanText(item.jiraKey || raw.jira_key); if (!k) return ""; const base = config().jira; return base ? '<a href="' + escAttr(base + "/browse/" + k) + '" target="_blank" rel="noopener noreferrer"><b>' + esc(k) + "</b></a>" : "<b>" + esc(k) + "</b>"; })()) +
         kv("Ngày tạo", esc(fmtStamp(item.created))) +
         kv("Cập nhật", esc(fmtStamp(item.updated))) +
         kv("Người tạo", esc(actorName(raw.created_by))) +
@@ -4393,7 +4404,8 @@ document.addEventListener("drop", function(e){
 });
 function validatePayload(kind, payload){
   /* Không có trường bắt buộc: chỉ chuẩn hoá dữ liệu, không chặn lưu. */
-  if (payload.jira_key && jkTickets().length) {
+  const keepKey = state.editing && state.editing.base && String(state.editing.base.jira_key || "").toLowerCase() === String(payload.jira_key || "").toLowerCase();
+  if (payload.jira_key && !keepKey && jkTickets().length) {
     const hit = jkTickets().find(function(x){ return x.code.toLowerCase() === payload.jira_key.toLowerCase(); });
     if (!hit) return "Jira key phải là mã có trong Jira tickets.";
     payload.jira_key = hit.code;
@@ -6474,6 +6486,7 @@ document.addEventListener("click", async function(event){
   if (action === "close-drawer") { closeDrawer(); return; }
   if (action === "close-record") { $("#recordDialog").close(); state.editing = null; return; }
   if (action === "close-history") { $("#historyDialog").close(); return; }
+  if (action === "close-jira-result") { $("#jiraResultDialog").close(); return; }
   if (action === "close-filter") { $("#filterDialog").close(); return; }
   if (action === "open-log") { openLogDetail(Number(actionEl.dataset.index)); return; }
   if (action === "open-log-item") { $("#historyDialog").close(); openItemDrawer(actionEl.dataset.kind, actionEl.dataset.id); return; }
@@ -6571,6 +6584,7 @@ $("#filterForm").addEventListener("submit", async function(event){
 $("#recordDialog").addEventListener("click", function(e){ if (e.target === $("#recordDialog")) { $("#recordDialog").close(); state.editing = null; } });
 $("#filterDialog").addEventListener("click", function(e){ if (e.target === $("#filterDialog")) $("#filterDialog").close(); });
 $("#historyDialog").addEventListener("click", function(e){ if (e.target === $("#historyDialog")) $("#historyDialog").close(); });
+$("#jiraResultDialog").addEventListener("click", function(e){ if (e.target === $("#jiraResultDialog")) $("#jiraResultDialog").close(); });
 document.addEventListener("keydown", function(e){
   if (e.key === "Escape" && $("#drawer").classList.contains("open")) closeDrawer();
 });
@@ -6583,6 +6597,33 @@ document.addEventListener("keydown", function(e){
    Gọi Edge Function jira-create-from-backlog, sau đó backlog tự được gắn jira_key.
    ============================================================================ */
 let createJiraRunning = false;
+function jiraResultDialog(title, desc, bodyHtml, footHtml){
+  $("#jiraResultTitle").textContent = title;
+  $("#jiraResultDesc").textContent = desc || "";
+  $("#jiraResultBody").innerHTML = bodyHtml;
+  $("#jiraResultFoot").innerHTML = (footHtml || "") + '<button type="button" class="btn" data-action="close-jira-result">Đóng</button>';
+  const d = $("#jiraResultDialog");
+  if (!d.open) d.showModal();
+}
+function jiraFailHtml(status, data, rawText){
+  let html = '<div class="notice error"><b>' + esc((data && data.error) || ("Lỗi HTTP " + status)) + "</b></div>";
+  if (data && Array.isArray(data.missing_required_fields) && data.missing_required_fields.length) {
+    html += '<div class="section-label">Field bắt buộc chưa có giá trị</div>' +
+      '<div class="table-wrap"><table class="responsive"><thead><tr><th>Tên field</th><th>Field ID</th><th>Lựa chọn hợp lệ</th></tr></thead><tbody>' +
+      data.missing_required_fields.map(function(f){
+        return "<tr><td><b>" + esc(f.name) + "</b></td><td><span class=\"mono\">" + esc(f.id) + "</span></td><td>" +
+          (f.options && f.options.length ? f.options.map(function(o){ return '<span class="badge blue">' + esc(o) + "</span>"; }).join(" ") : '<span class="muted">Nhập nội dung tự do</span>') + "</td></tr>";
+      }).join("") + "</tbody></table></div>" +
+      '<div class="notice" style="margin-top:14px">Thêm các dòng dưới đây vào secret <span class="mono">JIRA_DEFAULT_FIELDS</span> (gộp chung với JSON hiện có), chọn giá trị phù hợp cho từng field rồi thử lại:</div>' +
+      '<pre class="mono" style="user-select:all;white-space:pre-wrap;background:#f6f8fa;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;margin:0">' + esc(data.suggested_json || "") + "</pre>";
+  } else if (data && data.detail) {
+    html += '<div class="section-label">Chi tiết từ Jira</div><pre class="mono" style="white-space:pre-wrap;background:#f6f8fa;border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;margin:0;max-height:260px;overflow:auto">' +
+      esc(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail, null, 2)) + "</pre>";
+  } else if (!data && rawText) {
+    html += '<pre class="mono" style="white-space:pre-wrap;font-size:12px">' + esc(String(rawText).slice(0, 400)) + "</pre>";
+  }
+  return html;
+}
 async function createJiraFromBacklog(id){
   if (createJiraRunning || !approvedNow()) return;
   const raw = state.backlogs.find(function(b){ return b.id === id; });
@@ -6606,15 +6647,26 @@ async function createJiraFromBacklog(id){
     let data = null;
     try { data = JSON.parse(text); } catch (e) {}
     if (!(resp.ok && data && data.ok)) {
-      const detail = data ? (data.error || data.message || "") + (data.detail ? " · " + (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)).slice(0, 200) : "") : text.slice(0, 200);
-      throw new Error("HTTP " + resp.status + (detail ? " · " + detail : ""));
+      jiraResultDialog("Không tạo được Jira ticket", raw.title || "", jiraFailHtml(resp.status, data, text));
+      if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
+      return;
     }
-    const warn = data.warnings && data.warnings.length ? " · Lưu ý: " + data.warnings.join("; ") : "";
-    toast("Đã tạo Jira " + data.new_key + warn, data.warnings && data.warnings.length ? "error" : "good");
+    /* Thành công: tải lại backlog để Jira key hiển thị ngay, rồi báo kết quả bằng popup */
     await loadAll({ only: ["backlogs"] });
     openItemDrawer("backlog", id);
+    const url = data.url || (cfg.jira ? cfg.jira + "/browse/" + data.new_key : "");
+    const att = data.attachments || { uploaded: 0, failed: 0 };
+    let body = '<div class="notice success"><b>Đã tạo ticket ' + esc(data.new_key) + "</b> và gắn vào Jira key của backlog" + (data.linked ? "." : " (chưa ghi được tự động — hãy gắn thủ công).") + "</div>" +
+      '<dl class="kv">' + kv("Jira key", url ? '<a href="' + escAttr(url) + '" target="_blank" rel="noopener noreferrer"><b>' + esc(data.new_key) + "</b></a>" : "<b>" + esc(data.new_key) + "</b>") +
+      kv("Tệp đính kèm", esc(att.uploaded + " tệp đã tải lên" + (att.failed ? " · " + att.failed + " tệp lỗi" : ""))) + "</dl>";
+    if (data.warnings && data.warnings.length) {
+      body += '<div class="notice warn" style="margin-top:12px"><b>Lưu ý:</b><ul style="margin:6px 0 0 18px;padding:0">' +
+        data.warnings.map(function(w){ return "<li>" + esc(w) + "</li>"; }).join("") + "</ul></div>";
+    }
+    jiraResultDialog("Đã tạo Jira ticket", raw.title || "", body,
+      url ? '<a class="btn primary" href="' + escAttr(url) + '" target="_blank" rel="noopener noreferrer">' + icon("external") + "Mở trên Jira</a>" : "");
   } catch (e) {
-    toast("Tạo Jira thất bại: " + ((e && e.message) || e), "error");
+    jiraResultDialog("Không tạo được Jira ticket", raw.title || "", '<div class="notice error"><b>' + esc((e && e.message) || String(e)) + "</b></div>");
     if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
   } finally {
     createJiraRunning = false;
