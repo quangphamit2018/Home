@@ -18522,8 +18522,12 @@ function applyBrdAiLang(lang){
   STATE.brdAiLang = lang;
 
   const setVal = (id, val)=>{ const el = $(id); if(el){ el.value = val || ""; el.dispatchEvent(new Event("input")); } };
-  const pick = (field)=> (d[field] && d[field][lang]) || "";
-  const pickArr = (field)=> (d[field] && d[field][lang]) || [];
+  // Lớp bảo vệ phía trình duyệt: loại ký hiệu markdown (**, `, #, >) nếu AI/backend cũ còn trả về.
+  const clean = (t)=> String(t==null?"":t)
+    .replace(/```[a-zA-Z]*\n?|```/g,"").replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm,"").replace(/^[ \t]{0,3}>[ \t]?/gm,"")
+    .replace(/(\*\*)(?=\S)([\s\S]*?\S)\1/g,"$2").replace(/`([^`\n]+)`/g,"$1").replace(/\*\*/g,"");
+  const pick = (field)=> clean((d[field] && d[field][lang]) || "");
+  const pickArr = (field)=> ((d[field] && d[field][lang]) || []).map(clean);
 
   setVal("#b_title", pick("brd_title"));
   setVal("#b_system", pick("system_name"));
