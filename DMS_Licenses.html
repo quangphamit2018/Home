@@ -5557,7 +5557,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       XLSX.writeFile(wb, fileName);
       toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — lần này không tô màu được vì chưa tải được thư viện ExcelJS.`, "success");
     }
-    const proModeSeg = () => `<div class="pro-mode-seg"><button type="button" data-pro-mode="slab" class="${mdmProMode === "slab" ? "on" : ""}">📊 Slab in Slab</button><button type="button" data-pro-mode="tactical" class="${mdmProMode === "tactical" ? "on" : ""}">🎯 Tactical</button><button type="button" data-pro-mode="foc" class="${mdmProMode === "foc" ? "on" : ""}">🎁 FOC</button><button type="button" data-pro-mode="focm" class="${mdmProMode === "focm" ? "on" : ""}">🗺️ FOC nhiều vùng</button></div>`;
+    const proModeSeg = () => `<div class="pro-mode-seg"><button type="button" data-pro-mode="slab" class="${mdmProMode === "slab" ? "on" : ""}">📊 Slab in Slab</button><button type="button" data-pro-mode="tactical" class="${mdmProMode === "tactical" ? "on" : ""}">🎯 Tactical</button><button type="button" data-pro-mode="${mdmProMode === "focm" ? "focm" : "foc"}" class="${mdmProMode === "foc" || mdmProMode === "focm" ? "on" : ""}">🎁 FOC</button></div>${mdmProMode === "foc" || mdmProMode === "focm" ? `<div class="pro-mode-seg" style="margin-top:10px"><button type="button" data-pro-mode="foc" class="${mdmProMode === "foc" ? "on" : ""}">FOC 1 vùng</button><button type="button" data-pro-mode="focm" class="${mdmProMode === "focm" ? "on" : ""}">FOC nhiều vùng</button></div>` : ""}`;
     function proColFieldHtml(key, kind, def, type, opts) {
       const v = mdmPro.cols[key] != null ? mdmPro.cols[key] : "";
       const autoTag = kind === "auto" ? ' pro-col-auto' : '';
@@ -6161,7 +6161,52 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
 /* ===== FOC NHIỀU VÙNG (mode "focm") — mẫu FOC_NORTH_OCT26.xlsx (68 cột, có LexiaCode). Mỗi vùng × mỗi CTKM = 1 PromotionCode = SKU Q + SKU A ===== */
 const FOCM_COLS = [FOC_COLS[0], "LexiaCode", ...FOC_COLS.slice(1)];
 const FOCM_I = Object.fromEntries(FOCM_COLS.map((c, i) => [c, i]));
-const FOCM_REGS = [["HC", "VN10VN11"], ["HN", "VN10VN12"], ["CP", "VN10VN13"], ["MK", "VN10VN15"], ["NE", "VN10VN16"], ["SP", "VN10VN17"], ["NW", "VN10VN19"]];
+const FOCM_REGS_DEFAULT = [["HC", "VN10VN11"], ["HN", "VN10VN12"], ["CP", "VN10VN13"], ["MK", "VN10VN15"], ["NE", "VN10VN16"], ["SP", "VN10VN17"], ["NW", "VN10VN19"]];
+let FOCM_REGS = FOCM_REGS_DEFAULT.map(r => [...r]);   // danh sách đang dùng: mặc định trong code, được thay bằng bảng Supabase foc_regions khi có dữ liệu
+const FOCR_TABLE = "foc_regions", FOCR = { loaded: false, error: "", source: "default" };
+const focrCan = () => canEdit() && !FOCR.error && !!state.supabase;
+async function focrLoad() {   // không bao giờ throw: lỗi/bảng trống → giữ danh sách mặc định trong code
+  if (!state.supabase) return;
+  try {
+    const { data, error } = await state.supabase.from(FOCR_TABLE).select("*").order("sort_order").order("region_key");
+    if (error) throw error;
+    const rows = (data || []).map(r => [String(r.region_key ?? "").trim(), String(r.territory ?? "").trim()]).filter(r => r[0] && r[1]);
+    if (rows.length) { FOCM_REGS = rows; FOCR.source = "db"; } else { FOCM_REGS = FOCM_REGS_DEFAULT.map(r => [...r]); FOCR.source = "default"; }
+    FOCR.error = ""; FOCR.loaded = true;
+  } catch (err) { FOCR.error = (err && err.message) || String(err); FOCR.loaded = true; }
+}
+async function focrSave(k, t) {   // lưu 1 vùng; lần đầu (bảng trống) nạp luôn danh sách mặc định để không làm mất các vùng có sẵn
+  try {
+    const list = FOCM_REGS.map(r => (r[0] === k ? [k, t] : r)); if (!list.some(r => r[0] === k)) list.push([k, t]);
+    const all = list.map((r, i) => ({ region_key: r[0], territory: r[1], sort_order: (i + 1) * 10, updated_at: new Date().toISOString() }));
+    const rows = FOCR.source === "db" ? all.filter(r => r.region_key === k) : all;
+    const { error } = await state.supabase.from(FOCR_TABLE).upsert(rows, { onConflict: "region_key" }).select("region_key");
+    if (error) throw error;
+    await focrLoad(); return true;
+  } catch (err) { toast("Không lưu được vùng lên Supabase: " + ((err && err.message) || err), "error"); return false; }
+}
+async function focmRegDel(k) {
+  if (!focrCan() || FOCR.source !== "db") return;
+  if (!(await confirmDialog({ title: `Xóa vùng ${k}?`, message: "Vùng sẽ bị xóa khỏi danh sách dùng chung trên Supabase (không ảnh hưởng file Excel đã xuất).", confirmText: "Xóa", danger: true }))) return;
+  try {
+    const { error } = await state.supabase.from(FOCR_TABLE).delete().eq("region_key", k).select("region_key");
+    if (error) throw error;
+    mdmFocM.regs = mdmFocM.regs.filter(r => r.k !== k); await focrLoad(); $("#fm-regs").innerHTML = focmRegHtml(); focmMeta(); toast(`Đã xóa vùng ${k}.`, "success");
+  } catch (err) { toast("Không xóa được: " + ((err && err.message) || err), "error"); }
+}
+async function focmRegAdd() {
+  const P = mdmFocM, k = ($("#fm-ck").value || "").trim().toUpperCase(), t = ($("#fm-ct").value || "").trim().toUpperCase();
+  if (!k || !t) return toast("Nhập đủ ký hiệu vùng và Territory.", "error");
+  if (!/^[A-Z0-9]{1,10}$/.test(k)) return toast("Ký hiệu vùng chỉ gồm chữ/số, tối đa 10 ký tự.", "error");
+  if (!/^[A-Z0-9]{3,20}$/.test(t)) return toast("Territory chỉ gồm chữ/số, vd VN10VN20.", "error");
+  const dup = FOCM_REGS.find(r => r[1] === t && r[0] !== k); if (dup) return toast(`Territory ${t} đã thuộc vùng ${dup[0]}.`, "error");
+  let saved = false;
+  if (focrCan()) { saved = await focrSave(k, t); if (saved) toast(`Đã lưu vùng ${k} (${t}) lên Supabase.`, "success"); }
+  else toast(canEdit() ? "Chưa đọc được bảng foc_regions nên vùng chỉ dùng tạm trong lần nhập này." : "Chỉ Super-admin / Senior-member mới lưu được vùng — vùng chỉ dùng tạm trong lần nhập này.", "error");
+  if (!saved) { const i = FOCM_REGS.findIndex(r => r[0] === k); if (i >= 0) FOCM_REGS[i] = [k, t]; else FOCM_REGS.push([k, t]); }
+  P.regs = P.regs.filter(r => r.k !== k); P.regs.push({ k, t });
+  $("#fm-regs").innerHTML = focmRegHtml(); focmMeta();
+}
 const FOCM_NORTH = ["HN", "NW", "NE"];
 const focmPromo = () => ({ desc: "", from: "", to: "", disc: "", q: "", a: "" });
 const focmInit = () => ({ start: adjToday(), end: "", mid: "", uom: "EA", seq: "556", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, regs: [], promos: [focmPromo()], cols: { ...FOC_COL_DEFAULTS } });
@@ -6218,10 +6263,13 @@ function focmParse() {
 }
 const focmRegHtml = () => {
   const P = mdmFocM, on = k => P.regs.some(r => r.k === k), known = new Set(FOCM_REGS.map(r => r[0]));
-  const chip = (k, t, o) => `<button type="button" class="fm-chip${o ? " on" : ""}" data-fm-reg="${escapeHtml(k)}"><b>${escapeHtml(k)}</b><small>${escapeHtml(t)}</small></button>`;
+  const delx = focrCan() && FOCR.source === "db", chip = (k, t, o) => `<button type="button" class="fm-chip${o ? " on" : ""}" data-fm-reg="${escapeHtml(k)}"><b>${escapeHtml(k)}</b><small>${escapeHtml(t)}</small>${delx ? `<span class="fm-x" data-fm-rdel="${escapeHtml(k)}" title="Xóa vùng khỏi Supabase">×</span>` : ""}</button>`;
+  const note = FOCR.error ? `<p class="fm-note err">⚠ Chưa đọc được bảng <code>${FOCR_TABLE}</code> (${escapeHtml(FOCR.error)}) — đang dùng danh sách mặc định trong code. Chạy file <code>foc_regions.sql</code> trong Supabase → SQL Editor rồi tải lại trang.</p>`
+    : FOCR.source === "db" ? `<p class="fm-note">✔ Danh sách vùng lưu trên Supabase, dùng chung cho mọi người${canEdit() ? " — thêm vùng mới ở ô bên dưới sẽ được lưu luôn." : " (chỉ Super-admin / Senior-member thêm được)."}</p>`
+    : `<p class="fm-note">Đang dùng danh sách mặc định trong code${canEdit() ? " — thêm vùng đầu tiên sẽ lưu cả danh sách lên Supabase." : "."}</p>`;
   return `<div class="fm-row">${FOCM_REGS.map(([k, t]) => chip(k, P.regs.find(r => r.k === k)?.t || t, on(k))).join("")}${P.regs.filter(r => !known.has(r.k)).map(r => chip(r.k, r.t, true)).join("")}</div>
-  <div class="fm-row"><button type="button" class="btn btn-secondary" data-fm-q="north">Miền Bắc · HN NW NE</button><button type="button" class="btn btn-plain" data-fm-q="all">Chọn tất cả</button><button type="button" class="btn btn-plain" data-fm-q="none">Bỏ chọn</button>
-  <span class="fm-cust">Vùng khác: <input id="fm-ck" placeholder="Ký hiệu (vd DN)" autocomplete="off"><input id="fm-ct" placeholder="Territory (vd VN10VN20)" autocomplete="off"><button type="button" class="btn btn-secondary" data-fm-q="add">+ Thêm</button></span></div>`;
+  <div class="fm-row"><button type="button" class="btn btn-plain" data-fm-q="all">Chọn tất cả</button><button type="button" class="btn btn-plain" data-fm-q="none">Bỏ chọn</button>
+  <span class="fm-cust">Vùng khác: <input id="fm-ck" placeholder="Ký hiệu (vd DN)" autocomplete="off"><input id="fm-ct" placeholder="Territory (vd VN10VN20)" autocomplete="off"><button type="button" class="btn btn-secondary" data-fm-q="add">+ Thêm &amp; lưu</button></span></div>${note}`;
 };
 function focmSum(s) {
   const f = s.from.trim(), t = s.to.trim(), d = s.disc.trim(), u = mdmFocM.rb === "2" ? "VND" : mdmFocM.uom.trim();
@@ -6269,11 +6317,12 @@ async function focmAct(a, el) {
 }
 function focmRegClick(e) {
   const P = mdmFocM, rb = e.target.closest("[data-fm-reg]"), q = e.target.closest("[data-fm-q]"), reg = k => { const x = FOCM_REGS.find(r => r[0] === k); return { k, t: x[1] }; };
+  const rd = e.target.closest("[data-fm-rdel]"); if (rd) { focmRegDel(rd.dataset.fmRdel); return true; }
   if (rb) { const k = rb.dataset.fmReg, i = P.regs.findIndex(r => r.k === k); if (i >= 0) P.regs.splice(i, 1); else P.regs.push(reg(k)); $("#fm-regs").innerHTML = focmRegHtml(); focmMeta(); return true; }
   if (!q) return false;
   const m = q.dataset.fmQ;
-  if (m === "north") P.regs = FOCM_NORTH.map(reg); else if (m === "all") P.regs = FOCM_REGS.map(r => reg(r[0])); else if (m === "none") P.regs = [];
-  else if (m === "add") { const k = ($("#fm-ck").value || "").trim().toUpperCase(), t = ($("#fm-ct").value || "").trim().toUpperCase(); if (!k || !t) { toast("Nhập đủ ký hiệu vùng và Territory.", "error"); return true; } P.regs = P.regs.filter(r => r.k !== k); P.regs.push({ k, t }); }
+  if (m === "all") P.regs = FOCM_REGS.map(r => reg(r[0])); else if (m === "none") P.regs = [];
+  else if (m === "add") { focmRegAdd(); return true; }
   $("#fm-regs").innerHTML = focmRegHtml(); focmMeta(); return true;
 }
 async function focmExport() {
@@ -6292,7 +6341,7 @@ function renderProFocM() {
   const P = mdmFocM;
   const F = (k, l, key, ph, rq) => `<div class="field${rqCls(rq)}" data-k="${k}"><label>${l}${key ? H(key) : ""}${rqTag(rq)}</label><input data-fm="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
   const S = (k, l, key, opts) => `<div class="field${rqCls("set")}" data-k="${k}"><label>${l}${key ? H(key) : ""}${rqTag("set")}</label><select data-fm="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
-  return `<section class="panel tl-panel"><style>.fm-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}.fm-chip{border:1px solid #dcc9c9;background:#fff;border-radius:12px;padding:8px 14px;cursor:pointer;color:#555;display:flex;flex-direction:column;align-items:flex-start;gap:2px;transition:.15s}.fm-chip b{font-size:14px}.fm-chip small{font-size:10.5px;opacity:.75}.fm-chip:hover{border-color:#b91c1c;color:#b91c1c}.fm-chip.on{background:#b91c1c;border-color:#b91c1c;color:#fff;box-shadow:0 2px 6px rgba(185,28,28,.25)}.fm-chip.on b::before{content:"✓ "}.fm-cust{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto;font-size:12px;color:#6b5555}.fm-cust input{height:34px;border:1px solid #dcc9c9;border-radius:8px;padding:0 10px;font-size:12px;width:150px}#focm-map table{width:100%;border-collapse:collapse;font-size:12px}#focm-map th,#focm-map td{padding:4px 8px;text-align:left;border-bottom:1px solid #f1e6e6;white-space:nowrap}#focm-map{max-height:260px;overflow:auto}</style>
+  return `<section class="panel tl-panel"><style>.fm-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px}#fm-promos .pro-slab{display:flex;flex-direction:column;gap:18px;padding:20px 22px;margin-bottom:20px}#fm-promos .pro-slab-h,#fm-promos .pro-slab-f{margin-bottom:0}#fm-promos .pro-slab-f,#fm-promos .pro-slab-t{gap:18px}#fm-promos .pro-sum{margin:0}#fm-promos .field{display:flex;flex-direction:column;gap:8px}#fm-promos .field>label{margin:0}#fm-promos .field textarea{min-height:130px}.fm-chip{position:relative}.fm-x{position:absolute;top:2px;right:6px;font-size:14px;line-height:1;opacity:.45;padding:2px}.fm-x:hover{opacity:1;color:#dc2626}.fm-chip.on .fm-x:hover{color:#fff}.fm-note{font-size:12px;color:#6b5555;margin:2px 0 0}.fm-note.err{color:#b42318}.fm-chip{border:1px solid #dcc9c9;background:#fff;border-radius:12px;padding:8px 14px;cursor:pointer;color:#555;display:flex;flex-direction:column;align-items:flex-start;gap:2px;transition:.15s}.fm-chip b{font-size:14px}.fm-chip small{font-size:10.5px;opacity:.75}.fm-chip:hover{border-color:#b91c1c;color:#b91c1c}.fm-chip.on{background:#b91c1c;border-color:#b91c1c;color:#fff;box-shadow:0 2px 6px rgba(185,28,28,.25)}.fm-chip.on b::before{content:"✓ "}.fm-cust{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto;font-size:12px;color:#6b5555}.fm-cust input{height:34px;border:1px solid #dcc9c9;border-radius:8px;padding:0 10px;font-size:12px;width:150px}#focm-map table{width:100%;border-collapse:collapse;font-size:12px}#focm-map th,#focm-map td{padding:4px 8px;text-align:left;border-bottom:1px solid #f1e6e6;white-space:nowrap}#focm-map{max-height:260px;overflow:auto}</style>
   <div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>FOC nhiều vùng: chọn vùng một lần, nhập CTKM một lần — tool nhân ra từng vùng (mỗi vùng 1 PromotionCode riêng cho mỗi CTKM), xuất đúng mẫu FOC_NORTH (68 cột).</p></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
   <div class="panel-body">${proModeSeg()}${rqLegendHtml()}<div class="pro-lay"><div class="pro-main">
@@ -7089,6 +7138,7 @@ function renderProFocM() {
           const n = Number(licenseSetting.data.value);
           if (Number.isFinite(n) && n >= 0) state.settings.maxLicenses = n;
         }
+        await focrLoad();   // danh sách vùng FOC nhiều vùng (lỗi/trống → mặc định trong code)
         await tslLoad();   // logic SKU Tactical từ Supabase (lỗi/trống → giữ logic mặc định trong code)
       } finally {
         setLoading(false);
