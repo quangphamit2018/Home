@@ -1441,6 +1441,20 @@ body:has(.drawer.open) .toolbar{z-index:auto}
   </div>
 </dialog>
 
+<dialog class="dialog" id="confirmDialog" style="max-width:min(460px,94vw)">
+  <div class="dialog-inner">
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:14px">
+      <span id="confirmIcon" style="flex:none;width:42px;height:42px;border-radius:13px;background:var(--blue-soft);color:var(--blue-dark);display:grid;place-items:center"></span>
+      <div style="min-width:0"><div class="dialog-title" id="confirmTitle"></div><div class="dialog-desc" id="confirmDesc"></div></div>
+    </div>
+    <div id="confirmBody"></div>
+    <div class="dialog-foot">
+      <button type="button" class="btn" id="confirmCancel">Huỷ</button>
+      <button type="button" class="btn primary" id="confirmOk">Xác nhận</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog class="dialog" id="jiraResultDialog" style="max-width:min(640px,94vw)">
   <div class="dialog-inner">
     <div class="dialog-head">
@@ -6596,6 +6610,27 @@ document.addEventListener("keydown", function(e){
    TẠO JIRA TỪ BACKLOG NỘI BỘ (chỉ dành cho backlog chưa có Jira key)
    Gọi Edge Function jira-create-from-backlog, sau đó backlog tự được gắn jira_key.
    ============================================================================ */
+/* Hộp xác nhận dùng chung (thay window.confirm) — trả về Promise<boolean> */
+function confirmDialog(o){
+  return new Promise(function(resolve){
+    const d = $("#confirmDialog"), ok = $("#confirmOk"), cancel = $("#confirmCancel");
+    $("#confirmTitle").textContent = o.title || "Xác nhận";
+    $("#confirmDesc").textContent = o.desc || "";
+    $("#confirmIcon").innerHTML = '<span class="icon">' + (ICONS[o.icon || "check"] || "") + "</span>";
+    $("#confirmBody").innerHTML = o.bodyHtml || "";
+    ok.textContent = o.okLabel || "Xác nhận";
+    cancel.textContent = o.cancelLabel || "Huỷ";
+    let result = false;
+    const finish = function(v){ result = v; if (d.open) d.close(); };
+    ok.onclick = function(){ finish(true); };
+    cancel.onclick = function(){ finish(false); };
+    d.onclick = function(e){ if (e.target === d) finish(false); };
+    d.onclose = function(){ d.onclick = null; resolve(result); };
+    d.showModal();
+    ok.focus();
+    if (o.onOpen) o.onOpen();
+  });
+}
 let createJiraRunning = false;
 function jiraResultDialog(title, desc, bodyHtml, footHtml){
   $("#jiraResultTitle").textContent = title;
@@ -6622,6 +6657,10 @@ function jiraFailHtml(status, data, rawText){
   } else if (!data && rawText) {
     html += '<pre class="mono" style="white-space:pre-wrap;font-size:12px">' + esc(String(rawText).slice(0, 400)) + "</pre>";
   }
+  if (data && Array.isArray(data.warnings) && data.warnings.length) {
+    html += '<div class="notice warn" style="margin-top:12px"><b>Lưu ý:</b><ul style="margin:6px 0 0 18px;padding:0">' +
+      data.warnings.map(function(w){ return "<li>" + esc(w) + "</li>"; }).join("") + "</ul></div>";
+  }
   return html;
 }
 async function createJiraFromBacklog(id){
@@ -6629,7 +6668,25 @@ async function createJiraFromBacklog(id){
   const raw = state.backlogs.find(function(b){ return b.id === id; });
   if (!raw) { toast("Không tìm thấy backlog", "error"); return; }
   if (cleanText(raw.jira_key)) { toast("Backlog này đã có Jira key: " + raw.jira_key, "error"); return; }
-  if (!window.confirm("Tạo Jira ticket từ backlog \"" + (raw.title || "") + "\"?\nToàn bộ nội dung và tệp đính kèm sẽ được đưa lên Jira.")) return;
+  const prioLabel = { low: "Low", medium: "Medium", high: "High", urgent: "Highest" }[String(raw.priority || "medium").toLowerCase()] || "Medium";
+  const okToCreate = await confirmDialog({
+    title: "Tạo Jira ticket từ backlog?",
+    desc: "Một ticket mới sẽ được tạo trên Jira với nội dung của backlog này.",
+    icon: "ticket",
+    okLabel: "Tạo Jira",
+    cancelLabel: "Huỷ",
+    bodyHtml: '<dl class="kv">' +
+      kv("Backlog", "<b>" + esc(raw.title || "(không tên)") + "</b>", true) +
+      kv("Ưu tiên → Jira", esc(prioLabel)) +
+      kv("Deadline", esc(fmtDay(raw.target_date || raw.due_date))) +
+      kv("Người phụ trách", esc(raw.owner_id ? memberName(raw.owner_id) : "Chưa giao")) +
+      kv("Tệp đính kèm", '<span id="cfAtt" class="muted">Đang đếm…</span>') + "</dl>",
+    onOpen: function(){
+      attList(id).then(function(list){ const el = $("#cfAtt"); if (el) { el.className = ""; el.textContent = list.length ? list.length + " tệp sẽ được tải lên Jira" : "Không có tệp"; } })
+        .catch(function(){ const el = $("#cfAtt"); if (el) el.textContent = "Không đọc được"; });
+    }
+  });
+  if (!okToCreate) return;
   const cfg = config();
   const btn = document.querySelector('[data-action="create-jira"]');
   const oldHtml = btn ? btn.innerHTML : "";
