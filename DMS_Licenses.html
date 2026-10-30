@@ -1831,6 +1831,61 @@
     .xl-legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -3px; margin-right: 7px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14); }
     .xl-legend small { color: var(--muted); line-height: 1.45; }
     .pro-mode-seg button.on { color: #fff; background: var(--g-brand); box-shadow: 0 6px 16px rgba(183, 28, 28, .28); }
+    /* ---- Quản lý dữ liệu · Logic SKU Tactical ---- */
+    .tsl-panel { margin-bottom: 16px; }
+    .tsl-banner { display: flex; gap: 14px; align-items: center; justify-content: space-between; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 12.5px; line-height: 1.55; border: 1px solid; }
+    .tsl-banner.ok { background: #effaf4; border-color: #b7e4cc; color: #0b5d3c; }
+    .tsl-banner.warn { background: #fff6e6; border-color: #f2d49a; color: #7a4308; }
+    .tsl-banner.err { background: #fff1f0; border-color: #f0b3b0; color: var(--danger); }
+    .tsl-banner code, .tsl-sum code { background: rgba(0,0,0,.06); padding: 1px 6px; border-radius: 6px; font-size: 11.5px; }
+    .tsl-banner .btn { flex: none; }
+    .tsl-flow { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+    .tsl-step { flex: 1 1 210px; display: flex; gap: 10px; padding: 12px 14px; background: #fff; border: 1px solid var(--line-strong); border-radius: 12px; }
+    .tsl-step i { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-weight: 700; font-size: 12px; color: #fff; background: var(--brand); }
+    .tsl-step b { display: block; font-size: 12.5px; color: var(--ink); margin-bottom: 2px; }
+    .tsl-step small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+    .tsl-step small b { display: inline; font-size: inherit; color: var(--ink-2); }
+    .tsl-step-n { background: #fffaf3; border-style: dashed; }
+    .tsl-step-n i { background: var(--warning); }
+    .tsl-arrow { align-self: center; color: var(--muted); font-weight: 700; }
+    .tsl-rules { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+    .tsl-rule { position: relative; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-strong); background: #fff; cursor: pointer; transition: .18s; display: flex; flex-direction: column; gap: 4px; }
+    .tsl-rule:hover { border-color: var(--brand); transform: translateY(-1px); box-shadow: var(--shadow-card); }
+    .tsl-rule.on { border-color: var(--brand); background: var(--brand-soft); box-shadow: 0 0 0 2px rgba(183, 28, 28, .14); }
+    .tsl-rule b { font-size: 14px; color: var(--ink); }
+    .tsl-rule small { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+    .tsl-rule small b { font-size: inherit; color: var(--brand-dark); }
+    .tsl-rule-n { align-self: flex-start; font-size: 10.5px; font-weight: 700; color: var(--brand-dark); background: #fff; border: 1px solid #f2b7b2; border-radius: 99px; padding: 2px 9px; }
+    .tsl-test { display: grid; grid-template-columns: 160px 180px 1fr; gap: 12px; align-items: end; }
+    .tsl-test-out { padding: 10px 14px; border-radius: 10px; background: #f8f4f3; font-size: 12.5px; min-height: 38px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .tsl-test-out b, .tsl-sum b { color: var(--brand-dark); }
+    .tsl-add { display: grid; grid-template-columns: minmax(200px, 1fr) 1.4fr; gap: 16px; }
+    .tsl-add textarea { min-height: 190px; font-family: ui-monospace, Menlo, Consolas, monospace; resize: vertical; }
+    .tsl-add-r { display: flex; flex-direction: column; gap: 10px; }
+    .tsl-add-g { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .tsl-presets { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11.5px; color: var(--muted); }
+    .tsl-chip { border: 1px solid var(--line-strong); background: #fff; border-radius: 99px; padding: 4px 11px; font-size: 11.5px; font-weight: 650; color: var(--ink-2); cursor: pointer; transition: .15s; }
+    .tsl-chip:hover { border-color: var(--brand); color: var(--brand-dark); background: var(--brand-soft); }
+    .tsl-sum { font-size: 12px; line-height: 1.6; padding: 9px 12px; background: #f8f4f3; border-radius: 10px; }
+    .tsl-ok { color: var(--success); font-weight: 650; }
+    .tsl-warn { color: var(--warning); font-weight: 650; }
+    .tsl-bad { color: var(--danger); font-weight: 600; }
+    .tsl-mut { color: var(--muted); }
+    .tsl-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .tsl-bar > input { flex: 1 1 280px; border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px 12px; font-size: 12px; outline: none; background: #fff; }
+    .tsl-bar > input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(183, 28, 28, .1); }
+    .tsl-bulk { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+    .tsl-table small { font-weight: 500; color: var(--muted); font-size: 10.5px; }
+    .tsl-table td, .tsl-table th { white-space: nowrap; }
+    .tsl-table td:nth-child(6) { white-space: normal; min-width: 140px; }
+    .tsl-table tr.tsl-edit { background: #fffaf3; }
+    .tsl-table tr.tsl-edit input { width: 96px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 8px; font-size: 12px; outline: none; }
+    .tsl-table tr.tsl-edit input[data-tsl-edit="note"] { width: 100%; min-width: 150px; }
+    .tsl-act { display: flex; gap: 4px; justify-content: flex-end; }
+    .tsl-del { color: var(--danger); }
+    .tsl-pager { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .tsl-pager span:last-child { display: flex; gap: 6px; }
+    @media (max-width: 860px) { .tsl-test, .tsl-add { grid-template-columns: 1fr; } .tsl-arrow { display: none; } .tsl-banner { flex-direction: column; align-items: stretch; } }
     /* ---- Section 4: Tất cả các cột template ---- */
     .pro-cols > summary { cursor: pointer; margin: 0; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style: none; }
     .pro-cols > summary::-webkit-details-marker { display: none; }
@@ -2397,7 +2452,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         ["product", "Product", ICONS.box, "box"],
         ["tools", "Công Cụ Hỗ Trợ", ICONS.tools, "tools"],
         ["tools_mdm", "Công Cụ Hỗ Trợ", ICONS.tools, "tools"],
-        ...(isAdmin() ? [["admin", "Quản lý dữ liệu", ICONS.database, "database"]] : [])
+        ...(canEdit() ? [["admin", "Quản lý dữ liệu", ICONS.database, "database"]] : [])
       ];
     }
     const shellSig = () => JSON.stringify([appTabs().map(t => t[0]), state.profile?.display_name, state.profile?.email, state.profile?.role]);
@@ -3209,7 +3264,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       if (state.tab === "dms" || state.tab === "central") return renderDataset();
       if (state.tab === "tools") return renderTools();
       if (state.tab === "tools_mdm") return renderMdm();
-      if (state.tab === "admin" && isAdmin()) return renderAdmin();
+      if (state.tab === "admin" && canEdit()) return renderAdmin();
       return renderDashboard();
     }
 
@@ -4158,9 +4213,255 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       </section>`;
     }
 
+    /* =====================================================================
+       Cấu hình Logic SKU cho CTKM Tactical — bảng Supabase "tactical_sku_logic"
+       Mỗi dòng: sku_code → [slab_qty = số lượng mua (SLABFROM = SLABTO), divisor = số chia giá giảm].
+       Công cụ Tactical (tmxLogic / tmxSync / tmxAutoDc) KHÔNG bị sửa: chúng vẫn đọc biến TAC_LOGIC.
+       Ở đây chỉ nạp TAC_LOGIC từ Supabase; bảng trống / lỗi → giữ nguyên logic mặc định trong code.
+       Quyền: Super-admin + Senior-member (canEdit) xem & sửa; RLS Supabase chặn lại ở server.
+       ===================================================================== */
+    const TSL_TABLE = "tactical_sku_logic", TSL_SUB_KEY = "masterdata_admin_sub", TSL_PAGE = 50, TSL_EX = 4000;
+    let adminSub = loadKey(TSL_SUB_KEY, ["sys", "tac"], "sys");
+    const TSL = { rows: [], loaded: false, error: "", source: "default", q: "", rule: "all", page: 1, edit: null, sel: new Set(), busy: false, ch: null, tm: null,
+      add: { skus: "", qty: "6", div: "4", note: "" }, test: { sku: "", base: String(TSL_EX) } };
+    const tslSub = () => (isAdmin() ? adminSub : "tac");
+    const tslCan = () => canEdit() && TSL.source === "db" && !TSL.error;
+    const tslNum = v => { const n = Number(String(v ?? "").trim().replace(",", ".")); return Number.isFinite(n) ? n : NaN; };
+    const tslCmp = (a, b) => { const x = Number(a), y = Number(b); return Number.isFinite(x) && Number.isFinite(y) && x !== y ? x - y : String(a).localeCompare(String(b)); };
+    const tslKey = (q, d) => `${Number(q)}/${Number(d)}`;
+    const tslFmt = n => nf(Math.round(Number(n) * 100) / 100);
+    const tslEx = (q, d) => { const v = tmxAutoDc(String(TSL_EX), [Number(q), Number(d)]); return v === "" ? "—" : tslFmt(v); };
+
+    function tslApply() {   // nạp bảng vào TAC_LOGIC (biến mà tmxLogic đọc). Bảng trống → logic mặc định trong code
+      const m = {};
+      TSL.rows.forEach(r => { const q = Number(r.slab_qty), d = Number(r.divisor), k = String(r.sku_code ?? "").trim(); if (k && q > 0 && d > 0) m[k] = [q, d]; });
+      if (Object.keys(m).length) { TAC_LOGIC = m; TSL.source = "db"; }
+      else { TAC_LOGIC = Object.assign({}, TAC_LOGIC_DEFAULT); TSL.source = "default"; }
+    }
+    async function tslLoad() {   // không bao giờ throw: lỗi thì giữ nguyên logic đang chạy
+      if (!state.supabase) return;
+      try {
+        const all = [];
+        for (let from = 0; ; from += 1000) {
+          const { data, error } = await state.supabase.from(TSL_TABLE).select("*").order("sku_code").range(from, from + 999);
+          if (error) throw error;
+          all.push(...(data || []));
+          if (!data || data.length < 1000) break;
+        }
+        all.sort((a, b) => tslCmp(a.sku_code, b.sku_code));
+        TSL.rows = all; TSL.error = ""; TSL.loaded = true; tslApply();
+      } catch (err) { TSL.error = (err && err.message) || String(err); TSL.loaded = true; }
+    }
+    function tslSubscribe() {   // kênh riêng: nếu bảng chưa tạo thì không ảnh hưởng các kênh app_settings khác
+      if (!state.supabase) return;
+      try {
+        if (TSL.ch) { state.supabase.removeChannel(TSL.ch); TSL.ch = null; }
+        TSL.ch = state.supabase.channel(`${APP_CHANNEL_PREFIX}:tactical-logic`)
+          .on("postgres_changes", { event: "*", schema: "public", table: TSL_TABLE }, () => {
+            clearTimeout(TSL.tm);
+            TSL.tm = setTimeout(async () => { await tslLoad(); if (state.tab === "admin" && $("#tsl-root") && TSL.edit === null) tslDraw(); }, 600);
+          }).subscribe();
+      } catch (_) {}
+    }
+
+    const tslView = () => TSL.source === "db" ? TSL.rows
+      : Object.entries(TAC_LOGIC_DEFAULT).map(([sku_code, v]) => ({ sku_code, slab_qty: v[0], divisor: v[1], note: null, updated_at: null }))
+          .sort((a, b) => tslCmp(a.sku_code, b.sku_code));
+    function tslRules(rows) {
+      const m = new Map();
+      rows.forEach(r => { const k = tslKey(r.slab_qty, r.divisor); if (!m.has(k)) m.set(k, { k, q: Number(r.slab_qty), d: Number(r.divisor), n: 0 }); m.get(k).n++; });
+      return [...m.values()].sort((a, b) => b.n - a.n);
+    }
+    function tslFiltered() {
+      let rows = tslView();
+      if (TSL.rule !== "all") rows = rows.filter(r => tslKey(r.slab_qty, r.divisor) === TSL.rule);
+      const terms = TSL.q.toLowerCase().split(/[\s,;]+/).filter(Boolean);
+      if (terms.length) rows = rows.filter(r => { const s = String(r.sku_code).toLowerCase(), n = String(r.note || "").toLowerCase(); return terms.some(t => s.includes(t) || n.includes(t)); });
+      return rows;
+    }
+
+    /* ---- Giao diện ---- */
+    function tslBanner() {
+      if (TSL.error) return `<div class="tsl-banner err"><div><b>Chưa đọc được bảng Supabase <code>${TSL_TABLE}</code>.</b> ${escapeHtml(TSL.error)}<br>Công cụ Tactical vẫn chạy bình thường bằng logic mặc định trong code. Hãy chạy file <code>tactical_sku_logic.sql</code> trong Supabase → SQL Editor rồi bấm Tải lại.</div><button type="button" class="btn btn-secondary" data-tsl="reload">Tải lại</button></div>`;
+      if (TSL.source !== "db") return `<div class="tsl-banner warn"><div><b>Bảng đang trống</b> — công cụ đang chạy bằng logic mặc định trong code (${nf(Object.keys(TAC_LOGIC_DEFAULT).length)} SKU, hiển thị bên dưới ở chế độ chỉ xem). Nạp vào Supabase một lần để chuyển sang cấu hình bằng bảng; sau đó mới thêm / sửa được.</div><button type="button" class="btn btn-primary" data-tsl="seed"${TSL.busy ? " disabled" : ""}>Nạp logic mặc định vào Supabase</button></div>`;
+      const last = TSL.rows.reduce((m, r) => (r.updated_at && r.updated_at > m ? r.updated_at : m), "");
+      return `<div class="tsl-banner ok"><div>✔ Đang dùng logic từ Supabase · <b>${nf(TSL.rows.length)}</b> SKU${last ? ` · cập nhật gần nhất ${escapeHtml(formatDate(last))}` : ""}. Mọi thay đổi áp dụng ngay cho công cụ Tactical của tất cả người dùng đang mở.</div></div>`;
+    }
+    const tslFlow = () => `<div class="tsl-flow">
+      <div class="tsl-step"><i>1</i><div><b>Nhập SKU</b><small>Ở tab Công Cụ Hỗ Trợ → Tactical → chế độ Ma trận, gõ hoặc dán SKUCode.</small></div></div><span class="tsl-arrow">→</span>
+      <div class="tsl-step"><i>2</i><div><b>Tool tra bảng này</b><small>Ô <b>SLABFROM = SLABTO</b> tự điền = <b>Số lượng mua</b> của SKU.</small></div></div><span class="tsl-arrow">→</span>
+      <div class="tsl-step"><i>3</i><div><b>Có “Giá giảm gốc”?</b><small><b>DISCOUNT</b> mỗi vùng = Giá giảm gốc ÷ <b>Số chia</b>. Ô đã nhập tay luôn được giữ nguyên.</small></div></div>
+      <div class="tsl-step tsl-step-n"><i>!</i><div><b>SKU không có trong bảng</b><small>Tool không tự điền — người dùng nhập tay như cũ.</small></div></div></div>`;
+    function tslRulesHtml() {
+      const rows = tslView(), rules = tslRules(rows);
+      return `<div class="tsl-rules"><button type="button" class="tsl-rule${TSL.rule === "all" ? " on" : ""}" data-tsl="rule" data-k="all"><span class="tsl-rule-n">${nf(rows.length)} SKU</span><b>Tất cả quy tắc</b><small>${rules.length} nhóm quy tắc khác nhau</small></button>`
+        + rules.map(r => `<button type="button" class="tsl-rule${TSL.rule === r.k ? " on" : ""}" data-tsl="rule" data-k="${r.k}"><span class="tsl-rule-n">${nf(r.n)} SKU</span><b>Mua ${tslFmt(r.q)} · chia ${tslFmt(r.d)}</b><small>SLABFROM = SLABTO = ${tslFmt(r.q)}<br>Giá giảm gốc ${nf(TSL_EX)} → DISCOUNT <b>${tslEx(r.q, r.d)}</b></small></button>`).join("") + `</div>`;
+    }
+    function tslTestOut() {
+      const sku = TSL.test.sku.trim(); if (!sku) return `<span class="tsl-mut">Nhập 1 SKU để xem công cụ Tactical sẽ tự điền gì.</span>`;
+      const lg = tmxLogic(sku); if (!lg) return `SKU <b>${escapeHtml(sku)}</b> <span class="tsl-bad">chưa có trong logic</span> → tool không tự điền, người dùng nhập tay.`;
+      const dc = tmxAutoDc(TSL.test.base, lg);
+      return `SLABFROM = SLABTO = <b>${tslFmt(lg[0])}</b> · ${dc ? `DISCOUNT = ${escapeHtml(TSL.test.base)} ÷ ${tslFmt(lg[1])} = <b>${tslFmt(dc)}</b>` : `<span class="tsl-mut">nhập Giá giảm gốc để xem DISCOUNT</span>`}`;
+    }
+    const tslTestHtml = () => `<section class="panel tsl-panel"><div class="panel-head"><div><h2>Thử nhanh</h2><p>Kết quả dưới đây gọi đúng hàm đang chạy trong công cụ Tactical, dựa trên logic đang áp dụng.</p></div></div><div class="panel-body"><div class="tsl-test">
+      <div class="field"><label>SKUCode</label><input data-tsl-in="t-sku" value="${escapeHtml(TSL.test.sku)}" placeholder="vd 1533" autocomplete="off"></div>
+      <div class="field"><label>Giá giảm gốc (VND)</label><input data-tsl-in="t-base" value="${escapeHtml(TSL.test.base)}" placeholder="vd 4000" autocomplete="off"></div>
+      <div class="tsl-test-out" id="tsl-t-out">${tslTestOut()}</div></div></div></section>`;
+
+    /* ---- Phân tích ô dán hàng loạt ---- */
+    function tslParseBulk() {
+      const A = TSL.add, dq = tslNum(A.qty), dd = tslNum(A.div), items = new Map(), bad = [];
+      const okSku = s => /^[A-Za-z0-9_-]{1,30}$/.test(s), put = (sku, q, d, ln) => {
+        if (!okSku(sku)) return bad.push(`dòng ${ln}: SKU “${sku}” không hợp lệ`);
+        if (!(q > 0) || !(d > 0)) return bad.push(`dòng ${ln}: SKU ${sku} thiếu số lượng mua / số chia hợp lệ (> 0)`);
+        items.set(sku, { sku, q, d });
+      };
+      String(A.skus || "").replace(/\r/g, "").split("\n").forEach((line, i) => {
+        if (!line.trim()) return;
+        if (line.includes("\t")) {   // dán từ Excel: SKU [tab] Số lượng mua [tab] Số chia
+          const c = line.split("\t").map(x => x.trim());
+          if (c.length >= 3 && c[1] !== "" && c[2] !== "") put(c[0], tslNum(c[1]), tslNum(c[2]), i + 1); else put(c[0], dq, dd, i + 1);
+        } else line.split(/[\s,;]+/).filter(Boolean).forEach(s => put(s, dq, dd, i + 1));
+      });
+      return { items: [...items.values()], bad };
+    }
+    function tslAddPlan() {
+      const p = tslParseBulk(), cur = new Map(TSL.rows.map(r => [String(r.sku_code), r]));
+      let nw = 0, chg = 0, same = 0;
+      p.items.forEach(x => { const o = cur.get(x.sku); if (!o) nw++; else if (Number(o.slab_qty) === x.q && Number(o.divisor) === x.d && !tmxVal(TSL.add.note)) same++; else chg++; });
+      return Object.assign(p, { nw, chg, same });
+    }
+    function tslAddSum() {
+      const p = tslAddPlan(); if (!p.items.length && !p.bad.length) return `<span class="tsl-mut">Dán SKU để xem trước số SKU sẽ thêm / cập nhật.</span>`;
+      return `<b>${nf(p.items.length)}</b> SKU: <span class="tsl-ok">${nf(p.nw)} mới</span> · <span class="tsl-warn">${nf(p.chg)} cập nhật</span> · ${nf(p.same)} giữ nguyên${p.bad.length ? ` · <span class="tsl-bad">${p.bad.length} lỗi</span>` : ""}${p.bad.slice(0, 4).map(b => `<div class="tsl-bad">✖ ${escapeHtml(b)}</div>`).join("")}`;
+    }
+    function tslAddHtml() {
+      if (!tslCan()) return "";
+      const A = TSL.add, rules = tslRules(TSL.rows);
+      return `<section class="panel tsl-panel"><div class="panel-head"><div><h2>Thêm / cập nhật SKU</h2><p>Dán SKU (mỗi dòng 1 SKU, hoặc nhiều SKU cách nhau bằng dấu cách / phẩy) rồi chọn quy tắc. SKU đã có sẽ được ghi đè. Muốn mỗi SKU 1 quy tắc riêng: dán 3 cột từ Excel — SKU, Số lượng mua, Số chia.</p></div></div>
+        <div class="panel-body"><div class="tsl-add">
+          <div class="field"><label>Danh sách SKU</label><textarea data-tsl-in="a-skus" placeholder="1533&#10;1537&#10;4039" spellcheck="false">${escapeHtml(A.skus)}</textarea></div>
+          <div class="tsl-add-r">
+            <div class="tsl-presets"><span>Quy tắc có sẵn:</span>${rules.map(r => `<button type="button" class="tsl-chip" data-tsl="preset" data-q="${r.q}" data-d="${r.d}">${tslFmt(r.q)} · ${tslFmt(r.d)}</button>`).join("")}</div>
+            <div class="tsl-add-g"><div class="field"><label>Số lượng mua (SLABFROM = SLABTO)</label><input data-tsl-in="a-qty" value="${escapeHtml(A.qty)}" autocomplete="off"></div><div class="field"><label>Số chia giá giảm</label><input data-tsl-in="a-div" value="${escapeHtml(A.div)}" autocomplete="off"></div></div>
+            <div class="field"><label>Ghi chú (tùy chọn)</label><input data-tsl-in="a-note" value="${escapeHtml(A.note)}" placeholder="vd: thêm đợt 261101" autocomplete="off"></div>
+            <div class="tsl-sum" id="tsl-add-sum">${tslAddSum()}</div>
+            <div><button type="button" class="btn btn-primary" data-tsl="save-add"${TSL.busy ? " disabled" : ""}>${TSL.busy ? "Đang lưu…" : "Lưu vào Supabase"}</button></div>
+          </div></div></div></section>`;
+    }
+    function tslRowHtml(r) {
+      const sku = String(r.sku_code), can = tslCan(), ed = TSL.edit === sku;
+      if (ed) return `<tr class="tsl-edit" data-sku="${escapeHtml(sku)}"><td class="col-sel"></td><td><b>${escapeHtml(sku)}</b></td><td><input data-tsl-edit="qty" value="${escapeHtml(tslFmt(r.slab_qty).replace(/\./g, ""))}" autocomplete="off"></td><td><input data-tsl-edit="div" value="${escapeHtml(tslFmt(r.divisor).replace(/\./g, ""))}" autocomplete="off"></td><td>—</td><td><input data-tsl-edit="note" value="${escapeHtml(r.note || "")}" autocomplete="off"></td><td>—</td><td class="tsl-act"><button type="button" class="btn btn-primary" data-tsl="save-row">Lưu</button><button type="button" class="btn btn-secondary" data-tsl="cancel">Hủy</button></td></tr>`;
+      return `<tr data-sku="${escapeHtml(sku)}"><td class="col-sel">${can ? `<input type="checkbox" data-tsl="sel" data-sku="${escapeHtml(sku)}"${TSL.sel.has(sku) ? " checked" : ""} aria-label="Chọn ${escapeHtml(sku)}">` : ""}</td><td><b>${escapeHtml(sku)}</b></td><td>${tslFmt(r.slab_qty)}</td><td>${tslFmt(r.divisor)}</td><td class="tsl-mut">${tslEx(r.slab_qty, r.divisor)}</td><td>${escapeHtml(r.note || "")}</td><td class="tsl-mut">${r.updated_at ? escapeHtml(formatDate(r.updated_at)) : "—"}</td><td class="tsl-act">${can ? `<button type="button" class="btn btn-plain" data-tsl="edit" title="Sửa">✎</button><button type="button" class="btn btn-plain tsl-del" data-tsl="del" title="Xóa">${ICONS.trash}</button>` : ""}</td></tr>`;
+    }
+    function tslListHtml() {
+      const rows = tslFiltered(), pages = Math.max(1, Math.ceil(rows.length / TSL_PAGE)); if (TSL.page > pages) TSL.page = pages; if (TSL.page < 1) TSL.page = 1;
+      const part = rows.slice((TSL.page - 1) * TSL_PAGE, TSL.page * TSL_PAGE);
+      if (!rows.length) return `<div class="empty"><strong>Không có SKU phù hợp</strong>Thử đổi từ khóa hoặc bỏ bộ lọc quy tắc.</div>`;
+      return `<div class="table-wrap"><table class="tsl-table"><thead><tr><th class="col-sel">${tslCan() ? `<input type="checkbox" data-tsl="sel-all" aria-label="Chọn cả trang"${part.length && part.every(r => TSL.sel.has(String(r.sku_code))) ? " checked" : ""}>` : ""}</th><th>SKUCode</th><th>Số lượng mua<br><small>SLABFROM = SLABTO</small></th><th>Số chia<br><small>DISCOUNT = giá gốc ÷ số chia</small></th><th>Ví dụ<br><small>giá gốc ${nf(TSL_EX)} →</small></th><th>Ghi chú</th><th>Cập nhật</th><th></th></tr></thead><tbody>${part.map(tslRowHtml).join("")}</tbody></table></div>
+        <div class="tsl-pager"><span>${nf(rows.length)} SKU · trang ${TSL.page}/${pages}</span><span><button type="button" class="btn btn-secondary" data-tsl="page" data-d="-1"${TSL.page <= 1 ? " disabled" : ""}>‹ Trước</button><button type="button" class="btn btn-secondary" data-tsl="page" data-d="1"${TSL.page >= pages ? " disabled" : ""}>Sau ›</button></span></div>`;
+    }
+    const tslBulkHtml = () => { const n = TSL.sel.size; return n ? `<span><b>${nf(n)}</b> SKU đang chọn</span><button type="button" class="btn btn-danger" data-tsl="bulk-del">${ICONS.trash} Xóa đã chọn</button><button type="button" class="btn btn-plain" data-tsl="sel-clear">Bỏ chọn</button>` : ""; };
+    function tslInner() {
+      return `${tslBanner()}
+        <section class="panel tsl-panel"><div class="panel-head"><div><h2>Logic SKU hoạt động thế nào</h2><p>Bảng này thay cho danh sách SKU cố định trong code. Công cụ Tactical đọc bảng để tự điền số lượng mua và mức giảm.</p></div></div><div class="panel-body">${tslFlow()}</div></section>
+        <section class="panel tsl-panel"><div class="panel-head"><div><h2>Nhóm quy tắc</h2><p>Bấm vào một nhóm để lọc danh sách SKU bên dưới.</p></div></div><div class="panel-body">${tslRulesHtml()}</div></section>
+        ${tslTestHtml()}${tslAddHtml()}
+        <section class="panel tsl-panel"><div class="panel-head"><div><h2>Danh sách SKU</h2><p>${tslCan() ? "Sửa từng dòng bằng nút ✎, hoặc tick chọn nhiều dòng để xóa." : "Chỉ xem."}</p></div></div>
+          <div class="panel-body"><div class="tsl-bar"><input id="tsl-q" data-tsl-in="q" value="${escapeHtml(TSL.q)}" placeholder="Tìm SKU hoặc ghi chú (dán nhiều SKU cách nhau bằng dấu cách)…" autocomplete="off"><div class="tsl-bulk" id="tsl-bulk">${tslBulkHtml()}</div></div>
+          <div id="tsl-list">${tslListHtml()}</div></div></section>`;
+    }
+    const tslDraw = () => { const el = $("#tsl-root"); if (el) el.innerHTML = tslInner(); };
+    const tslDrawList = () => { const el = $("#tsl-list"); if (el) el.innerHTML = tslListHtml(); const b = $("#tsl-bulk"); if (b) b.innerHTML = tslBulkHtml(); };
+
+    function renderTacticalLogic() {
+      return `<div id="tsl-root">${tslInner()}</div>`;
+    }
+
+    /* ---- Ghi Supabase (RLS vẫn là lớp chặn cuối ở server) ---- */
+    async function tslUpsert(items, withNote) {
+      if (!canEdit()) { toast("Chỉ Super-admin và Senior-member được chỉnh Logic SKU.", "error"); return false; }
+      TSL.busy = true; tslDraw();
+      try {
+        for (let i = 0; i < items.length; i += 200) {
+          const chunk = items.slice(i, i + 200).map(x => { const o = { sku_code: x.sku, slab_qty: x.q, divisor: x.d }; if (withNote) o.note = x.note || null; return o; });
+          const { error } = await state.supabase.from(TSL_TABLE).upsert(chunk, { onConflict: "sku_code" }).select("sku_code");
+          if (error) throw error;
+        }
+      } catch (err) { TSL.busy = false; tslDraw(); toast(`Không lưu được: ${err.message || err}. Kiểm tra đã chạy file SQL và quyền của bạn (RLS).`, "error"); return false; }
+      TSL.busy = false; await tslLoad(); tslDraw(); return true;
+    }
+    async function tslDelete(skus) {
+      if (!canEdit() || !skus.length) return;
+      const all = skus.length >= TSL.rows.length;
+      const ok = await confirmDialog({ title: `Xóa ${nf(skus.length)} SKU khỏi logic?`, message: `Công cụ Tactical sẽ không còn tự điền cho ${skus.length === 1 ? "SKU " + skus[0] : "các SKU này"}.${all ? " Đây là toàn bộ bảng — bảng trống thì công cụ quay về logic mặc định trong code." : ""}`, confirmText: "Xóa" });
+      if (!ok) return;
+      let done = 0;
+      try {
+        for (let i = 0; i < skus.length; i += 200) {
+          const { data, error } = await state.supabase.from(TSL_TABLE).delete().in("sku_code", skus.slice(i, i + 200)).select("sku_code");
+          if (error) throw error; done += (data || []).length;
+        }
+      } catch (err) { toast(`Không xóa được: ${err.message || err}`, "error"); }
+      if (done < skus.length) toast(`Chỉ xóa được ${done}/${skus.length} SKU — kiểm tra quyền RLS.`, "error"); else toast(`Đã xóa ${nf(done)} SKU.`, "success");
+      skus.forEach(s => TSL.sel.delete(s)); TSL.edit = null; await tslLoad(); tslDraw();
+    }
+    async function tslSaveAdd() {
+      const p = tslAddPlan();
+      if (p.bad.length) return toast(`Còn ${p.bad.length} lỗi trong danh sách SKU — xem phần xem trước.`, "error");
+      if (!p.items.length) return toast("Chưa có SKU nào để lưu.", "error");
+      if (p.chg) { const ok = await confirmDialog({ title: `Cập nhật ${nf(p.chg)} SKU đã có?`, message: `${nf(p.nw)} SKU mới sẽ được thêm và ${nf(p.chg)} SKU đã có sẽ bị ghi đè quy tắc. Thay đổi áp dụng ngay cho mọi người dùng công cụ Tactical.`, confirmText: "Lưu", danger: false }); if (!ok) return; }
+      const note = tmxVal(TSL.add.note);
+      if (await tslUpsert(p.items.map(x => Object.assign(x, { note })), !!note)) { TSL.add.skus = ""; TSL.add.note = ""; tslDraw(); toast(`Đã lưu ${nf(p.items.length)} SKU.`, "success"); }
+    }
+    async function tslSaveRow(tr) {
+      const g = k => tr.querySelector(`[data-tsl-edit="${k}"]`).value, sku = tr.dataset.sku, q = tslNum(g("qty")), d = tslNum(g("div"));
+      if (!(q > 0) || !(d > 0)) return toast("Số lượng mua và Số chia phải là số > 0.", "error");
+      TSL.edit = null;
+      if (await tslUpsert([{ sku, q, d, note: g("note").trim() }], true)) toast(`Đã lưu SKU ${sku}.`, "success");
+    }
+    async function tslSeed() {
+      const ok = await confirmDialog({ title: "Nạp logic mặc định vào Supabase?", message: `Ghi ${nf(Object.keys(TAC_LOGIC_DEFAULT).length)} SKU đang chạy trong code vào bảng ${TSL_TABLE}. Logic giữ nguyên như hiện tại; sau đó có thể chỉnh trên giao diện này.`, confirmText: "Nạp", danger: false });
+      if (!ok) return;
+      if (await tslUpsert(Object.entries(TAC_LOGIC_DEFAULT).map(([sku, v]) => ({ sku, q: v[0], d: v[1] })), false)) toast("Đã nạp logic mặc định vào Supabase.", "success");
+    }
+
+    /* ---- Sự kiện (ủy quyền ở document, không phụ thuộc bindAppEvents) ---- */
+    document.addEventListener("click", e => {
+      const sw = e.target.closest ? e.target.closest("[data-admin-sub]") : null;
+      if (sw) { adminSub = sw.dataset.adminSub === "tac" ? "tac" : "sys"; saveKey(TSL_SUB_KEY, adminSub); return render(); }
+      const b = e.target.closest ? e.target.closest("[data-tsl]") : null; if (!b || b.disabled || !$("#tsl-root")) return;
+      const a = b.dataset.tsl;
+      if (a === "reload") { tslLoad().then(tslDraw); }
+      else if (a === "seed") tslSeed();
+      else if (a === "rule") { TSL.rule = TSL.rule === b.dataset.k ? "all" : b.dataset.k; TSL.page = 1; tslDraw(); }
+      else if (a === "preset") { TSL.add.qty = b.dataset.q; TSL.add.div = b.dataset.d; tslDraw(); }
+      else if (a === "page") { TSL.page += Number(b.dataset.d); tslDrawList(); }
+      else if (a === "edit") { TSL.edit = b.closest("tr").dataset.sku; tslDrawList(); }
+      else if (a === "cancel") { TSL.edit = null; tslDrawList(); }
+      else if (a === "save-row") tslSaveRow(b.closest("tr"));
+      else if (a === "del") tslDelete([b.closest("tr").dataset.sku]);
+      else if (a === "save-add") tslSaveAdd();
+      else if (a === "sel") { b.checked ? TSL.sel.add(b.dataset.sku) : TSL.sel.delete(b.dataset.sku); const x = $("#tsl-bulk"); if (x) x.innerHTML = tslBulkHtml(); }
+      else if (a === "sel-all") { document.querySelectorAll('#tsl-list input[data-tsl="sel"]').forEach(c => { c.checked = b.checked; b.checked ? TSL.sel.add(c.dataset.sku) : TSL.sel.delete(c.dataset.sku); }); const x = $("#tsl-bulk"); if (x) x.innerHTML = tslBulkHtml(); }
+      else if (a === "sel-clear") { TSL.sel.clear(); tslDrawList(); }
+      else if (a === "bulk-del") tslDelete([...TSL.sel]);
+    });
+    document.addEventListener("input", e => {
+      const t = e.target, k = t && t.dataset ? t.dataset.tslIn : undefined; if (k === undefined) return;
+      if (k === "q") { TSL.q = t.value; TSL.page = 1; tslDrawList(); }
+      else if (k === "t-sku" || k === "t-base") { TSL.test[k === "t-sku" ? "sku" : "base"] = t.value; const o = $("#tsl-t-out"); if (o) o.innerHTML = tslTestOut(); }
+      else { TSL.add[{ "a-skus": "skus", "a-qty": "qty", "a-div": "div", "a-note": "note" }[k]] = t.value; const o = $("#tsl-add-sum"); if (o) o.innerHTML = tslAddSum(); }
+    });
+
     function renderAdmin() {
-      return `<div class="header-row"><div><div class="eyebrow">Super-admin console</div><h2 class="page-title">Quản lý dữ liệu</h2><p class="page-subtitle">Chỉ Super-admin nhìn thấy khu vực này.</p></div></div>
-        ${renderLicenseAdminPanel()}
+      const sub = tslSub(), adm = isAdmin();
+      const head = `<div class="header-row"><div><div class="eyebrow">${adm ? "Super-admin console" : "Data management"}</div><h2 class="page-title">Quản lý dữ liệu</h2><p class="page-subtitle">${adm ? "Super-admin quản trị hệ thống; Senior-member được cấu hình Logic SKU Tactical." : "Senior-member được cấu hình Logic SKU cho CTKM Tactical."}</p></div></div>`;
+      const seg = adm ? `<div class="pro-mode-seg"><button type="button" data-admin-sub="sys" class="${sub === "sys" ? "on" : ""}">⚙️ Hệ thống</button><button type="button" data-admin-sub="tac" class="${sub === "tac" ? "on" : ""}">🎯 Logic SKU Tactical</button></div>` : "";
+      return head + seg + (sub === "tac" ? renderTacticalLogic() : renderAdminSystem());
+    }
+    function renderAdminSystem() {
+      return `${renderLicenseAdminPanel()}
         ${renderJiraAdminPanel()}
         <div class="two-col">
           <section class="panel"><div class="panel-head"><div><h2>Import masterdata</h2><p>Upsert theo UserName — bản ghi cũ được cập nhật, bản ghi mới được thêm.</p></div></div><div class="panel-body">
@@ -5200,7 +5501,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const tmxVal = s => String(s ?? "").trim();
     const tmxNum = s => { s = tmxVal(s).replace(/\s/g, ""); return /^\d{1,3}([.,]\d{3})+$/.test(s) ? s.replace(/[.,]/g, "") : s.replace(",", "."); };
     /* ---- Logic theo SKU (file logic_prmotion.xlsx): mã SKU → [SLABFROM = SLABTO, số chia giá giảm]. Chỉ tự điền khi cột Territory có nhập "Giá giảm gốc"; ô nhập tay luôn được giữ nguyên ---- */
-    const TAC_LOGIC = {"2736":[6,4],"2778":[6,4],"4862":[6,4],"6442":[6,4],"3462":[6,4],"6464":[6,4],"1742":[6,4],"4279":[6,4],"1702":[6,4],"1840":[6,4],"7862":[6,4],"4492":[6,4],"4822":[6,4],"7618":[6,4],"7408":[6,4],"7500":[6,4],"7501":[6,4],"4295":[6,4],"6999":[6,4],"4946":[6,4],"4959":[6,4],"6633":[6,4],"7784":[6,4],"7791":[6,4],"7783":[6,4],"7785":[6,4],"5108":[6,4],"1762":[6,4],"3709":[6,4],"2481":[6,4],"2489":[6,4],"2201":[6,4],"1900":[6,4],"1903":[6,4],"7410":[6,4],"5959":[6,4],"4290":[6,4],"1744":[6,4],"4251":[6,4],"7701":[6,4],"3699":[6,4],"7779":[6,4],"3422":[6,4],"7866":[6,4],"3435":[6,4],"3436":[6,4],"2710":[6,4],"2711":[6,4],"7427":[6,4],"7428":[6,4],"7429":[6,4],"2713":[6,4],"1769":[6,4],"4939":[6,4],"3894":[6,4],"4650":[6,4],"7702":[6,4],"7704":[6,4],"3430":[6,4],"4283":[6,4],"1533":[6,4],"1761":[6,4],"3890":[6,4],"4202":[6,4],"4240":[6,4],"1741":[6,4],"2407":[6,4],"3601":[6,4],"4651":[6,4],"4253":[6,4],"2586":[6,4],"3427":[6,4],"4204":[6,4],"6462":[6,4],"2589":[6,4],"4484":[6,4],"2482":[6,4],"1535":[6,4],"4941":[6,4],"2406":[6,4],"4246":[6,4],"2436":[6,4],"2402":[6,4],"4470":[6,4],"7420":[6,4],"5858":[6,4],"7421":[6,4],"7413":[6,4],"7424":[6,4],"7422":[6,4],"2789":[6,4],"2403":[6,4],"4948":[6,4],"2375":[6,4],"4085":[6,4],"7787":[6,4],"7789":[6,4],"5100":[6,4],"3700":[6,4],"5101":[6,4],"2491":[6,4],"2490":[6,4],"3701":[6,4],"3442":[6,4],"3441":[6,4],"1841":[6,4],"7708":[6,4],"7709":[6,4],"2714":[6,4],"3710":[6,4],"6845":[6,4],"3055":[6,4],"2780":[6,4],"1537":[6,4],"7456":[6,4],"7457":[6,4],"1539":[6,4],"6400":[6,4],"5102":[6,4],"7804":[6,4],"5103":[6,4],"7775":[6,4],"7711":[6,4],"4205":[6,4],"6060":[6,4],"4291":[6,4],"1540":[6,4],"1541":[6,4],"1542":[6,4],"1545":[6,4],"2409":[6,4],"2492":[6,4],"4287":[6,4],"1748":[6,4],"7452":[6,4],"7453":[6,4],"2717":[6,4],"3607":[6,4],"3608":[6,4],"3443":[6,4],"6471":[6,4],"3604":[6,4],"2411":[6,4],"3500":[6,4],"3501":[6,4],"3502":[6,4],"3504":[6,4],"3505":[6,4],"6808":[6,4],"3508":[6,4],"3503":[6,4],"1546":[6,4],"4207":[6,4],"4206":[6,4],"2772":[6,4],"2412":[6,4],"6472":[6,4],"1547":[6,4],"2704":[6,4],"2705":[6,4],"2095":[6,4],"2096":[6,4],"2097":[6,4],"2098":[6,4],"2099":[6,4],"4280":[6,4],"7760":[6,4],"7807":[6,4],"4209":[6,4],"3510":[6,4],"4208":[6,4],"4261":[6,4],"7712":[6,4],"3525":[6,4],"3526":[6,4],"3527":[6,4],"3528":[6,4],"7713":[6,4],"7891":[6,4],"4217":[6,4],"1554":[6,4],"2102":[6,4],"2113":[6,4],"3445":[6,4],"3447":[6,4],"3511":[6,4],"3512":[6,4],"3610":[6,4],"3611":[6,4],"3702":[6,4],"3703":[6,4],"5104":[6,4],"5105":[6,4],"4501":[6,4],"1555":[6,4],"7714":[6,4],"3520":[6,4],"3521":[6,4],"3522":[6,4],"3523":[6,4],"3424":[6,4],"2715":[6,4],"2771":[6,4],"3612":[6,4],"7863":[6,4],"3530":[6,4],"3531":[6,4],"4607":[6,4],"4608":[6,4],"6484":[6,4],"6485":[6,4],"6475":[6,4],"6486":[6,4],"3532":[6,4],"3533":[6,4],"3534":[6,4],"3535":[6,4],"4241":[6,4],"1749":[6,4],"2376":[6,4],"6443":[6,4],"7790":[6,4],"1557":[6,4],"1046":[6,4],"3529":[6,4],"3524":[6,4],"1045":[6,4],"1054":[6,4],"1050":[6,4],"1051":[6,4],"1000":[6,4],"1058":[6,4],"1057":[6,4],"1059":[6,4],"1047":[6,4],"1055":[6,4],"1080":[6,4],"1079":[6,4],"1071":[6,4],"1064":[6,4],"1089":[6,4],"7700":[6,4],"7780":[6,4],"7796":[6,4],"1048":[6,4],"1074":[6,4],"1084":[6,4],"1088":[6,4],"1090":[6,4],"1065":[6,4],"1092":[6,4],"4039":[24,1],"2030":[24,1],"2469":[24,1],"4884":[24,1],"3896":[24,1],"4656":[24,1],"3156":[24,1],"3459":[24,1],"6476":[24,1],"2737":[24,1],"3656":[24,1],"3606":[24,1],"6469":[24,1],"6479":[24,1],"1363":[24,1],"4277":[24,1],"4223":[24,1],"1746":[24,1],"1538":[24,1],"4489":[24,1],"4299":[24,1],"6873":[24,1],"6880":[24,1],"4935":[24,1],"5597":[24,1],"2593":[24,1],"1902":[24,1],"4480":[24,1],"4252":[24,1],"7890":[24,1],"2019":[24,1],"3420":[24,1],"6877":[24,1],"4250":[24,1],"4254":[24,1],"7771":[24,1],"4211":[24,1],"4481":[24,1],"1534":[24,1],"1763":[24,1],"3891":[24,1],"4652":[24,1],"3602":[24,1],"4483":[24,1],"2587":[24,1],"3426":[24,1],"4203":[24,1],"6062":[24,1],"7705":[24,1],"6871":[24,1],"4485":[24,1],"7802":[24,1],"7800":[24,1],"2264":[24,1],"4200":[24,1],"4210":[24,1],"4879":[24,1],"2408":[24,1],"7801":[24,1],"1536":[24,1],"4260":[24,1],"6467":[24,1],"3428":[24,1],"3603":[24,1],"7803":[24,1],"7773":[24,1],"7710":[24,1],"2918":[24,1],"6404":[24,1],"2404":[24,1],"4486":[24,1],"2718":[24,1],"2702":[24,1],"2809":[24,1],"2808":[24,1],"2094":[24,1],"2110":[24,1],"6063":[24,1],"6874":[24,1],"6875":[24,1],"4218":[24,1],"4216":[24,1],"1553":[24,1],"2112":[24,1],"6481":[24,1],"2114":[24,1],"6405":[24,1],"4500":[24,1],"4653":[24,1],"3613":[24,1],"6406":[24,1],"4504":[24,1],"4219":[24,1],"6878":[24,1],"1020":[24,1],"2022":[24,1],"3020":[24,1],"1558":[24,1],"1052":[24,1],"1044":[24,1],"2821":[12,1],"2016":[12,1],"1757":[12,1],"1016":[12,1],"1582":[12,1],"7837":[12,1],"4226":[12,1],"6403":[12,1],"3438":[12,1],"3593":[12,1],"4286":[12,1],"2401":[12,1],"3016":[12,1],"2410":[12,1],"6468":[12,1],"3423":[12,1],"3466":[12,1],"1473":[12,1],"2812":[12,1],"4302":[12,1],"2413":[12,1],"6482":[12,1],"1093":[12,1],"1094":[12,1],"1095":[12,1],"1096":[12,1],"1097":[12,1],"2393":[6,2],"2090":[6,2],"4093":[6,2],"3089":[6,2],"3433":[6,2],"1263":[6,2],"1108":[6,2],"4488":[6,2],"1468":[6,2],"7075":[6,2],"4433":[6,2],"4613":[6,2],"7675":[6,2],"7475":[6,2],"2439":[6,2],"4924":[6,2],"4927":[6,2],"4649":[6,2],"3437":[6,2],"2712":[6,2],"4281":[6,2],"4282":[6,2],"3439":[6,2],"3090":[6,2],"3421":[6,2],"2091":[6,2],"4285":[6,2],"7706":[6,2],"2824":[6,2],"1281":[6,2],"4292":[6,2],"3385":[6,2],"3432":[6,2],"2365":[6,2],"1543":[6,2],"4498":[6,2],"7476":[6,2],"7477":[6,2],"4495":[6,2],"3506":[6,2],"2092":[6,2],"3507":[6,2],"1548":[6,2],"7777":[6,2],"2093":[6,2],"2107":[6,2],"2111":[6,2],"3444":[6,2],"2716":[6,2],"3449":[6,2],"3448":[6,2],"3450":[6,2],"4288":[6,2],"2440":[6,2],"3091":[6,2],"7778":[6,2],"4297":[6,2],"4303":[6,2],"2441":[6,2],"3092":[6,2],"4284":[6,2],"1559":[6,2],"1049":[6,2],"1056":[6,2],"1053":[6,2],"1075":[6,2],"1082":[6,2],"1081":[6,2],"1083":[6,2],"1076":[6,2],"1078":[6,2],"1085":[6,2],"1091":[6,2]};
+    const TAC_LOGIC_DEFAULT = {"2736":[6,4],"2778":[6,4],"4862":[6,4],"6442":[6,4],"3462":[6,4],"6464":[6,4],"1742":[6,4],"4279":[6,4],"1702":[6,4],"1840":[6,4],"7862":[6,4],"4492":[6,4],"4822":[6,4],"7618":[6,4],"7408":[6,4],"7500":[6,4],"7501":[6,4],"4295":[6,4],"6999":[6,4],"4946":[6,4],"4959":[6,4],"6633":[6,4],"7784":[6,4],"7791":[6,4],"7783":[6,4],"7785":[6,4],"5108":[6,4],"1762":[6,4],"3709":[6,4],"2481":[6,4],"2489":[6,4],"2201":[6,4],"1900":[6,4],"1903":[6,4],"7410":[6,4],"5959":[6,4],"4290":[6,4],"1744":[6,4],"4251":[6,4],"7701":[6,4],"3699":[6,4],"7779":[6,4],"3422":[6,4],"7866":[6,4],"3435":[6,4],"3436":[6,4],"2710":[6,4],"2711":[6,4],"7427":[6,4],"7428":[6,4],"7429":[6,4],"2713":[6,4],"1769":[6,4],"4939":[6,4],"3894":[6,4],"4650":[6,4],"7702":[6,4],"7704":[6,4],"3430":[6,4],"4283":[6,4],"1533":[6,4],"1761":[6,4],"3890":[6,4],"4202":[6,4],"4240":[6,4],"1741":[6,4],"2407":[6,4],"3601":[6,4],"4651":[6,4],"4253":[6,4],"2586":[6,4],"3427":[6,4],"4204":[6,4],"6462":[6,4],"2589":[6,4],"4484":[6,4],"2482":[6,4],"1535":[6,4],"4941":[6,4],"2406":[6,4],"4246":[6,4],"2436":[6,4],"2402":[6,4],"4470":[6,4],"7420":[6,4],"5858":[6,4],"7421":[6,4],"7413":[6,4],"7424":[6,4],"7422":[6,4],"2789":[6,4],"2403":[6,4],"4948":[6,4],"2375":[6,4],"4085":[6,4],"7787":[6,4],"7789":[6,4],"5100":[6,4],"3700":[6,4],"5101":[6,4],"2491":[6,4],"2490":[6,4],"3701":[6,4],"3442":[6,4],"3441":[6,4],"1841":[6,4],"7708":[6,4],"7709":[6,4],"2714":[6,4],"3710":[6,4],"6845":[6,4],"3055":[6,4],"2780":[6,4],"1537":[6,4],"7456":[6,4],"7457":[6,4],"1539":[6,4],"6400":[6,4],"5102":[6,4],"7804":[6,4],"5103":[6,4],"7775":[6,4],"7711":[6,4],"4205":[6,4],"6060":[6,4],"4291":[6,4],"1540":[6,4],"1541":[6,4],"1542":[6,4],"1545":[6,4],"2409":[6,4],"2492":[6,4],"4287":[6,4],"1748":[6,4],"7452":[6,4],"7453":[6,4],"2717":[6,4],"3607":[6,4],"3608":[6,4],"3443":[6,4],"6471":[6,4],"3604":[6,4],"2411":[6,4],"3500":[6,4],"3501":[6,4],"3502":[6,4],"3504":[6,4],"3505":[6,4],"6808":[6,4],"3508":[6,4],"3503":[6,4],"1546":[6,4],"4207":[6,4],"4206":[6,4],"2772":[6,4],"2412":[6,4],"6472":[6,4],"1547":[6,4],"2704":[6,4],"2705":[6,4],"2095":[6,4],"2096":[6,4],"2097":[6,4],"2098":[6,4],"2099":[6,4],"4280":[6,4],"7760":[6,4],"7807":[6,4],"4209":[6,4],"3510":[6,4],"4208":[6,4],"4261":[6,4],"7712":[6,4],"3525":[6,4],"3526":[6,4],"3527":[6,4],"3528":[6,4],"7713":[6,4],"7891":[6,4],"4217":[6,4],"1554":[6,4],"2102":[6,4],"2113":[6,4],"3445":[6,4],"3447":[6,4],"3511":[6,4],"3512":[6,4],"3610":[6,4],"3611":[6,4],"3702":[6,4],"3703":[6,4],"5104":[6,4],"5105":[6,4],"4501":[6,4],"1555":[6,4],"7714":[6,4],"3520":[6,4],"3521":[6,4],"3522":[6,4],"3523":[6,4],"3424":[6,4],"2715":[6,4],"2771":[6,4],"3612":[6,4],"7863":[6,4],"3530":[6,4],"3531":[6,4],"4607":[6,4],"4608":[6,4],"6484":[6,4],"6485":[6,4],"6475":[6,4],"6486":[6,4],"3532":[6,4],"3533":[6,4],"3534":[6,4],"3535":[6,4],"4241":[6,4],"1749":[6,4],"2376":[6,4],"6443":[6,4],"7790":[6,4],"1557":[6,4],"1046":[6,4],"3529":[6,4],"3524":[6,4],"1045":[6,4],"1054":[6,4],"1050":[6,4],"1051":[6,4],"1000":[6,4],"1058":[6,4],"1057":[6,4],"1059":[6,4],"1047":[6,4],"1055":[6,4],"1080":[6,4],"1079":[6,4],"1071":[6,4],"1064":[6,4],"1089":[6,4],"7700":[6,4],"7780":[6,4],"7796":[6,4],"1048":[6,4],"1074":[6,4],"1084":[6,4],"1088":[6,4],"1090":[6,4],"1065":[6,4],"1092":[6,4],"4039":[24,1],"2030":[24,1],"2469":[24,1],"4884":[24,1],"3896":[24,1],"4656":[24,1],"3156":[24,1],"3459":[24,1],"6476":[24,1],"2737":[24,1],"3656":[24,1],"3606":[24,1],"6469":[24,1],"6479":[24,1],"1363":[24,1],"4277":[24,1],"4223":[24,1],"1746":[24,1],"1538":[24,1],"4489":[24,1],"4299":[24,1],"6873":[24,1],"6880":[24,1],"4935":[24,1],"5597":[24,1],"2593":[24,1],"1902":[24,1],"4480":[24,1],"4252":[24,1],"7890":[24,1],"2019":[24,1],"3420":[24,1],"6877":[24,1],"4250":[24,1],"4254":[24,1],"7771":[24,1],"4211":[24,1],"4481":[24,1],"1534":[24,1],"1763":[24,1],"3891":[24,1],"4652":[24,1],"3602":[24,1],"4483":[24,1],"2587":[24,1],"3426":[24,1],"4203":[24,1],"6062":[24,1],"7705":[24,1],"6871":[24,1],"4485":[24,1],"7802":[24,1],"7800":[24,1],"2264":[24,1],"4200":[24,1],"4210":[24,1],"4879":[24,1],"2408":[24,1],"7801":[24,1],"1536":[24,1],"4260":[24,1],"6467":[24,1],"3428":[24,1],"3603":[24,1],"7803":[24,1],"7773":[24,1],"7710":[24,1],"2918":[24,1],"6404":[24,1],"2404":[24,1],"4486":[24,1],"2718":[24,1],"2702":[24,1],"2809":[24,1],"2808":[24,1],"2094":[24,1],"2110":[24,1],"6063":[24,1],"6874":[24,1],"6875":[24,1],"4218":[24,1],"4216":[24,1],"1553":[24,1],"2112":[24,1],"6481":[24,1],"2114":[24,1],"6405":[24,1],"4500":[24,1],"4653":[24,1],"3613":[24,1],"6406":[24,1],"4504":[24,1],"4219":[24,1],"6878":[24,1],"1020":[24,1],"2022":[24,1],"3020":[24,1],"1558":[24,1],"1052":[24,1],"1044":[24,1],"2821":[12,1],"2016":[12,1],"1757":[12,1],"1016":[12,1],"1582":[12,1],"7837":[12,1],"4226":[12,1],"6403":[12,1],"3438":[12,1],"3593":[12,1],"4286":[12,1],"2401":[12,1],"3016":[12,1],"2410":[12,1],"6468":[12,1],"3423":[12,1],"3466":[12,1],"1473":[12,1],"2812":[12,1],"4302":[12,1],"2413":[12,1],"6482":[12,1],"1093":[12,1],"1094":[12,1],"1095":[12,1],"1096":[12,1],"1097":[12,1],"2393":[6,2],"2090":[6,2],"4093":[6,2],"3089":[6,2],"3433":[6,2],"1263":[6,2],"1108":[6,2],"4488":[6,2],"1468":[6,2],"7075":[6,2],"4433":[6,2],"4613":[6,2],"7675":[6,2],"7475":[6,2],"2439":[6,2],"4924":[6,2],"4927":[6,2],"4649":[6,2],"3437":[6,2],"2712":[6,2],"4281":[6,2],"4282":[6,2],"3439":[6,2],"3090":[6,2],"3421":[6,2],"2091":[6,2],"4285":[6,2],"7706":[6,2],"2824":[6,2],"1281":[6,2],"4292":[6,2],"3385":[6,2],"3432":[6,2],"2365":[6,2],"1543":[6,2],"4498":[6,2],"7476":[6,2],"7477":[6,2],"4495":[6,2],"3506":[6,2],"2092":[6,2],"3507":[6,2],"1548":[6,2],"7777":[6,2],"2093":[6,2],"2107":[6,2],"2111":[6,2],"3444":[6,2],"2716":[6,2],"3449":[6,2],"3448":[6,2],"3450":[6,2],"4288":[6,2],"2440":[6,2],"3091":[6,2],"7778":[6,2],"4297":[6,2],"4303":[6,2],"2441":[6,2],"3092":[6,2],"4284":[6,2],"1559":[6,2],"1049":[6,2],"1056":[6,2],"1053":[6,2],"1075":[6,2],"1082":[6,2],"1081":[6,2],"1083":[6,2],"1076":[6,2],"1078":[6,2],"1085":[6,2],"1091":[6,2]};
+    let TAC_LOGIC = Object.assign({}, TAC_LOGIC_DEFAULT);   // logic đang chạy: mặc định trong code, được thay bằng bảng Supabase tactical_sku_logic khi có dữ liệu (xem tslApply)
     const tmxLogic = sku => TAC_LOGIC[tmxVal(sku)] || null;
     const tmxAutoDc = (base, lg) => { const b = proNum(tmxNum(base)); if (b == null || b <= 0 || !lg) return ""; return String(Math.round(b / lg[1] * 100) / 100); };
     function tmxSync(row) {
@@ -6328,7 +6630,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           state.profile = created;
         }
       }
-      if (state.profile?.approval_status === "approved") { await loadData(); subscribeSettingsChanges(); }
+      if (state.profile?.approval_status === "approved") { await loadData(); subscribeSettingsChanges(); tslSubscribe(); }
       subscribeProfileChanges(state.session.user.id);
     }
 
@@ -6458,6 +6760,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           const n = Number(licenseSetting.data.value);
           if (Number.isFinite(n) && n >= 0) state.settings.maxLicenses = n;
         }
+        await tslLoad();   // logic SKU Tactical từ Supabase (lỗi/trống → giữ logic mặc định trong code)
       } finally {
         setLoading(false);
       }
@@ -6501,6 +6804,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       if (profileChannel) { state.supabase?.removeChannel(profileChannel); profileChannel = null; }
       if (adminChannel) { state.supabase?.removeChannel(adminChannel); adminChannel = null; }
       if (settingsChannel) { state.supabase?.removeChannel(settingsChannel); settingsChannel = null; }
+      if (TSL.ch) { state.supabase?.removeChannel(TSL.ch); TSL.ch = null; }
       state.requestSent = false;
       state.tab = "dashboard"; saveKey(TAB_KEY, "dashboard");
       await state.supabase?.auth.signOut(); state.session = null; state.profile = null; render();
