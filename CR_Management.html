@@ -18410,7 +18410,7 @@ function brdAiHandleProgress(event){
   }
 }
 
-async function brdAiRequestWithProgress(payload, onProgress){
+async function brdAiRequestWithProgress(payload, onProgress, noStream){
   const sessionResult = await STATE.sb.auth.getSession();
   const accessToken = sessionResult?.data?.session?.access_token || SUPABASE_ANON_KEY;
   const response = await fetch(`${SUPABASE_URL}/functions/v1/brd-ai-fill`, {
@@ -18419,7 +18419,7 @@ async function brdAiRequestWithProgress(payload, onProgress){
       "Content-Type":"application/json",
       "apikey":SUPABASE_ANON_KEY,
       "Authorization":`Bearer ${accessToken}`,
-      "Accept":"text/event-stream",
+      "Accept": noStream ? "application/json" : "text/event-stream",
     },
     body:JSON.stringify(payload),
   });
@@ -18469,10 +18469,17 @@ async function brdAiRequestWithProgress(payload, onProgress){
       if(done) break;
     }
     if(buffer.trim()) readFrame(buffer);
+  }catch(readErr){
+    // Mạng/gateway ngắt giữa chừng: không ném ngay, để bước dưới thử lại bằng chế độ không-stream.
+    console.warn("BRD AI stream interrupted:", readErr);
   }finally{
-    reader.releaseLock();
+    try{ reader.releaseLock(); }catch(_){}
   }
   if(streamError) throw streamError;
+  if(!finalData && !noStream){
+    onProgress({type:"stage", status:"running", message:"Luồng nhật ký bị ngắt giữa chừng; đang tự động thử lại ở chế độ không-stream..."});
+    return brdAiRequestWithProgress(payload, onProgress, true);
+  }
   if(!finalData) throw new Error("Kết nối kết thúc trước khi AI gửi kết quả cuối.");
   if(finalData.error) throw new Error(finalData.error);
   return finalData;
