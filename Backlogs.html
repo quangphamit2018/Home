@@ -6631,6 +6631,61 @@ function confirmDialog(o){
     if (o.onOpen) o.onOpen();
   });
 }
+/* Đồng bộ Jira "im lặng" (không toast) — dùng ngay sau khi tạo ticket mới */
+async function syncJiraQuiet(){
+  if (syncRunning) return false;
+  const cfg = config();
+  const btn = $("#syncJiraBtn"), label = $("#syncJiraLabel");
+  syncRunning = true;
+  if (btn) btn.disabled = true;
+  if (label) label.textContent = "Đang đồng bộ…";
+  try {
+    let pageToken = null, done = false, round = 0;
+    const startedAt = new Date().toISOString();
+    while (!done && round < 200) {
+      const qs = new URLSearchParams({ maxPages: "3", syncStartedAt: startedAt });
+      if (pageToken) qs.set("pageToken", pageToken);
+      const resp = await fetch(cfg.url + "/functions/v1/jira-sync?" + qs.toString(), { headers: { apikey: cfg.key, Authorization: "Bearer " + cfg.key } });
+      const json = await resp.json().catch(function(){ return null; });
+      if (!(resp.ok && json && typeof json.upserted === "number")) return false;
+      pageToken = json.nextPageToken || null;
+      done = !!json.done || !pageToken;
+      round++;
+    }
+    await loadAll({ only: ["tickets"] });
+    return true;
+  } catch (e) {
+    return false;
+  } finally {
+    syncRunning = false;
+    if (btn) btn.disabled = false;
+    if (label) label.textContent = "Đồng bộ dữ liệu";
+    updateSyncFreshness();
+  }
+}
+/* Giống chọn Jira key trong form backlog: ngày bắt đầu, ngày hoàn thành, trạng thái, ưu tiên lấy theo ticket Jira */
+async function applyJiraToBacklog(id, key){
+  const t = ticketByKey(key);
+  if (!t) return null;
+  const raw = state.backlogs.find(function(b){ return b.id === id; });
+  if (!raw) return null;
+  const map = { done: "done", blocked: "blocked", progress: "in_progress", todo: "planned" };
+  const prioMap = { 4: "urgent", 3: "high", 2: "medium", 1: "low" };
+  const created = dayKey(t.created) || "";
+  const doneDay = t.statusGroup === "done" ? (dayKey(t.actualEnd) || dayKey(t.updated) || "") : "";
+  const patch = {};
+  if (created) patch.start_date = created;
+  if (doneDay) patch.completed_date = doneDay;
+  if (t.status) patch.status = map[t.statusGroup] || "in_progress";
+  if (t.priority && t.priority !== "—") patch.priority = prioMap[t.prio] || "medium";
+  if (patch.status === "done" && !raw.progress) patch.progress = 100;
+  const mine = changedFields(patch, raw);
+  if (Object.keys(mine).length) {
+    const res = await updateWithMerge(BACKLOG_TABLE, id, raw, mine);
+    if (res && res.row) upsertLocal("backlog", res.row);
+  }
+  return { status: t.status, priority: t.priority, start: created };
+}
 let createJiraRunning = false;
 function jiraResultDialog(title, desc, bodyHtml, footHtml){
   $("#jiraResultTitle").textContent = title;
@@ -6708,7 +6763,7 @@ async function createJiraFromBacklog(id){
       if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
       return;
     }
-    /* Thành công: tải lại backlog để Jira key hiển thị ngay, rồi báo kết quả bằng popup */
+    /* Thành công: hiện Jira key ngay, rồi đồng bộ ticket về để các trường tự thay đổi giống khi chọn Jira key */
     await loadAll({ only: ["backlogs"] });
     openItemDrawer("backlog", id);
     const url = data.url || (cfg.jira ? cfg.jira + "/browse/" + data.new_key : "");
@@ -6720,8 +6775,27 @@ async function createJiraFromBacklog(id){
       body += '<div class="notice warn" style="margin-top:12px"><b>Lưu ý:</b><ul style="margin:6px 0 0 18px;padding:0">' +
         data.warnings.map(function(w){ return "<li>" + esc(w) + "</li>"; }).join("") + "</ul></div>";
     }
+    body += '<div class="notice" id="jiraSyncLine" style="margin-top:12px">Đang đồng bộ thông tin từ Jira về backlog…</div>';
     jiraResultDialog("Đã tạo Jira ticket", raw.title || "", body,
       url ? '<a class="btn primary" href="' + escAttr(url) + '" target="_blank" rel="noopener noreferrer">' + icon("external") + "Mở trên Jira</a>" : "");
+    if (data.linked) {
+      let info = null;
+      try {
+        for (let attempt = 0; attempt < 3 && !info; attempt++) {
+          await new Promise(function(r){ setTimeout(r, attempt === 0 ? 2500 : 4000); });   /* chờ Jira lập chỉ mục ticket mới */
+          await syncJiraQuiet();
+          info = await applyJiraToBacklog(id, data.new_key);
+        }
+      } catch (e) { info = null; }
+      const line = $("#jiraSyncLine");
+      if (info) {
+        openItemDrawer("backlog", id);
+        if (line) { line.className = "notice success"; line.innerHTML = "✓ Đã cập nhật backlog theo Jira: Trạng thái <b>" + esc(info.status || "—") + "</b> · Ưu tiên <b>" + esc(info.priority || "—") + "</b>" + (info.start ? " · Bắt đầu <b>" + esc(fmtDay(info.start)) + "</b>" : ""); }
+      } else if (line) {
+        line.className = "notice warn";
+        line.textContent = "Chưa đồng bộ được ticket về Jira Desk. Hãy bấm nút Đồng bộ ở thanh trên cùng, các trường sẽ tự cập nhật theo Jira.";
+      }
+    }
   } catch (e) {
     jiraResultDialog("Không tạo được Jira ticket", raw.title || "", '<div class="notice error"><b>' + esc((e && e.message) || String(e)) + "</b></div>");
     if (btn) { btn.disabled = false; btn.innerHTML = oldHtml; }
