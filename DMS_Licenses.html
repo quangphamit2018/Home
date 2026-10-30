@@ -1890,6 +1890,63 @@
     .tsl-file.disabled { opacity: .5; pointer-events: none; }
     .tsl-imp { margin-top: 14px; padding: 14px; border: 1px dashed var(--line-strong); border-radius: 12px; background: #fffaf9; display: flex; flex-direction: column; gap: 10px; font-size: 12px; }
     .tsl-imp label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+    /* ---- Bảng Danh sách SKU (thiết kế mới) ---- */
+    .tsl-search { position: relative; flex: 1 1 300px; display: block; }
+    .tsl-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
+    .tsl-search input { width: 100%; border: 1px solid var(--line-strong); border-radius: 12px; padding: 10px 12px 10px 36px; font-size: 12px; outline: none; background: #fff; transition: .18s; }
+    .tsl-search input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(183, 28, 28, .1); }
+    .tsl-selpill { font-size: 12px; color: var(--brand-dark); background: var(--brand-soft); border: 1px solid #f2b7b2; border-radius: 99px; padding: 5px 12px; }
+    .tsl-sumbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+    .tsl-sumbar b { color: var(--ink); }
+    .tsl-fchip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid #f2b7b2; background: var(--brand-soft); color: var(--brand-dark); border-radius: 99px; padding: 3px 11px; font-size: 11.5px; font-weight: 650; cursor: pointer; transition: .15s; }
+    .tsl-fchip:hover { background: #fbd3cf; }
+    .tsl-scroll { max-height: clamp(360px, 62vh, 640px); overflow: auto; border: 1px solid var(--line-strong); border-radius: 14px; background: #fff; overscroll-behavior: contain; }
+    .tsl-grid { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 980px; }
+    .tsl-grid thead th { position: sticky; top: 0; z-index: 2; padding: 10px 14px; background: linear-gradient(180deg, #fff6f5, #fdeae8); border-bottom: 1px solid var(--line-strong); line-height: 1.25; }
+    .tsl-grid th small { display: block; font-weight: 500; color: var(--muted); font-size: 10px; margin-top: 2px; }
+    .tsl-grid tbody tr { --rb: #fff; }
+    .tsl-grid tbody tr:nth-child(even) { --rb: #fffafa; }
+    .tsl-grid tbody tr:hover { --rb: #fff0ef; }
+    .tsl-grid tbody tr.is-sel { --rb: #fde6e4; }
+    .tsl-grid tbody tr td, .tsl-grid tbody tr:hover td { background: var(--rb); padding: 9px 14px; border-bottom: 1px solid #f7e9e8; }
+    .tsl-grid tbody tr:last-child td { border-bottom: 0; }
+    .tsl-grid .r, .tsl-num { text-align: right; }
+    .tsl-c-sel { width: 40px; text-align: center !important; padding-inline: 8px !important; }
+    .tsl-c-idx { width: 54px; text-align: right; color: #b39d9f; font-size: 11px; }
+    .tsl-sku { display: inline-block; font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; font-size: 12px; color: var(--ink); background: #f6eeee; border: 1px solid #ecdcdc; border-radius: 8px; padding: 3px 10px; letter-spacing: .02em; }
+    .tsl-rl { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 650; color: hsl(var(--h) 55% 28%); background: hsl(var(--h) 80% 95%); border: 1px solid hsl(var(--h) 55% 82%); border-radius: 99px; padding: 3px 11px; }
+    .tsl-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: hsl(var(--h) 62% 48%); box-shadow: 0 0 0 3px hsl(var(--h) 62% 48% / .16); }
+    .tsl-rule b .tsl-dot { margin-right: 7px; vertical-align: 1px; }
+    .tsl-num b { font-size: 14px; color: var(--ink); }
+    .tsl-ex { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--muted); }
+    .tsl-ex i { font-style: normal; color: #c9a9aa; }
+    .tsl-ex b { color: var(--brand-dark); background: var(--brand-soft); border-radius: 7px; padding: 2px 8px; }
+    .tsl-note { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    .tsl-nil { color: #d2bcbd; }
+    .tsl-upd .tsl-dt { display: block; color: var(--ink-2); }
+    .tsl-upd small { display: block; font-size: 10.5px; color: var(--muted); }
+    .tsl-acts { text-align: right; width: 1%; }
+    .tsl-acts .btn-plain { padding: 6px; opacity: .5; transition: .15s; }
+    .tsl-grid tbody tr:hover .tsl-acts .btn-plain, .tsl-acts .btn-plain:focus-visible { opacity: 1; }
+    .tsl-acts svg { width: 15px; height: 15px; }
+    .tsl-del:hover { color: var(--danger); background: #ffe4e2; }
+    @media (hover: none) { .tsl-acts .btn-plain { opacity: 1; } }
+    .tsl-grid tbody tr.tsl-edit td { background: #fff8ec; }
+    .tsl-grid tbody tr.tsl-edit td:first-child { box-shadow: inset 3px 0 0 var(--warning); }
+    .tsl-grid tr.tsl-edit input:not([type]), .tsl-grid tr.tsl-edit input[data-tsl-edit] { width: 92px; border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 8px; font-size: 12px; outline: none; text-align: right; background: #fff; }
+    .tsl-grid tr.tsl-edit input[data-tsl-edit="note"] { width: 100%; min-width: 150px; text-align: left; }
+    .tsl-grid tr.tsl-edit input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(183, 28, 28, .1); }
+    .tsl-grid tr.tsl-edit .btn { padding: 6px 12px; }
+    .tsl-pg { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; margin-top: 12px; font-size: 12px; color: var(--muted); }
+    .tsl-pg b { color: var(--ink); }
+    .tsl-pg-nav { display: flex; gap: 4px; align-items: center; }
+    .tsl-pg-nav button { min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid var(--line-strong); background: #fff; border-radius: 9px; font-size: 12px; font-weight: 650; color: var(--ink-2); cursor: pointer; transition: .15s; }
+    .tsl-pg-nav button:hover:not(:disabled):not(.on) { border-color: var(--brand); color: var(--brand-dark); background: var(--brand-soft); }
+    .tsl-pg-nav button.on { background: var(--g-brand, var(--brand)); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(183, 28, 28, .28); }
+    .tsl-pg-nav button:disabled { opacity: .4; cursor: not-allowed; }
+    .tsl-pg-gap { padding: 0 4px; color: var(--muted); }
+    .tsl-pg-size { display: inline-flex; gap: 8px; align-items: center; }
+    .tsl-pg-size select { border: 1px solid var(--line-strong); border-radius: 9px; padding: 6px 8px; font-size: 12px; background: #fff; outline: none; }
     @media (max-width: 860px) { .tsl-test, .tsl-add { grid-template-columns: 1fr; } .tsl-arrow { display: none; } .tsl-banner { flex-direction: column; align-items: stretch; } }
     /* ---- Section 4: Tất cả các cột template ---- */
     .pro-cols > summary { cursor: pointer; margin: 0; font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; list-style: none; }
@@ -4228,7 +4285,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const TSL_TABLE = "tactical_sku_logic", TSL_SUB_KEY = "masterdata_admin_sub", TSL_PAGE = 50, TSL_EX = 4000;
     let adminSub = loadKey(TSL_SUB_KEY, ["sys", "tac"], "sys");
     const TSL = { rows: [], loaded: false, error: "", source: "default", q: "", rule: "all", page: 1, edit: null, sel: new Set(), busy: false, ch: null, tm: null,
-      imp: null, add: { skus: "", qty: "6", div: "4", note: "" }, test: { sku: "", base: String(TSL_EX) } };
+      imp: null, size: 50, add: { skus: "", qty: "6", div: "4", note: "" }, test: { sku: "", base: String(TSL_EX) } };
     const tslSub = () => (isAdmin() ? adminSub : "tac");
     const tslCan = () => canEdit() && TSL.source === "db" && !TSL.error;
     const tslNum = v => { const n = Number(String(v ?? "").trim().replace(",", ".")); return Number.isFinite(n) ? n : NaN; };
@@ -4298,9 +4355,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       <div class="tsl-step"><i>3</i><div><b>Có “Giá giảm gốc”?</b><small><b>DISCOUNT</b> mỗi vùng = Giá giảm gốc ÷ <b>Số chia</b>. Ô đã nhập tay luôn được giữ nguyên.</small></div></div>
       <div class="tsl-step tsl-step-n"><i>!</i><div><b>SKU không có trong bảng</b><small>Tool không tự điền — người dùng nhập tay như cũ.</small></div></div></div>`;
     function tslRulesHtml() {
-      const rows = tslView(), rules = tslRules(rows);
+      const rows = tslView(), rules = tslRules(rows), hm = tslHueMap();
       return `<div class="tsl-rules"><button type="button" class="tsl-rule${TSL.rule === "all" ? " on" : ""}" data-tsl="rule" data-k="all"><span class="tsl-rule-n">${nf(rows.length)} SKU</span><b>Tất cả quy tắc</b><small>${rules.length} nhóm quy tắc khác nhau</small></button>`
-        + rules.map(r => `<button type="button" class="tsl-rule${TSL.rule === r.k ? " on" : ""}" data-tsl="rule" data-k="${r.k}"><span class="tsl-rule-n">${nf(r.n)} SKU</span><b>Mua ${tslFmt(r.q)} · chia ${tslFmt(r.d)}</b><small>SLABFROM = SLABTO = ${tslFmt(r.q)}<br>Giá giảm gốc ${nf(TSL_EX)} → DISCOUNT <b>${tslEx(r.q, r.d)}</b></small></button>`).join("") + `</div>`;
+        + rules.map(r => `<button type="button" class="tsl-rule${TSL.rule === r.k ? " on" : ""}" data-tsl="rule" data-k="${r.k}"><span class="tsl-rule-n">${nf(r.n)} SKU</span><b><i class="tsl-dot" style="--h:${hm.get(r.k)}"></i>Mua ${tslFmt(r.q)} · chia ${tslFmt(r.d)}</b><small>SLABFROM = SLABTO = ${tslFmt(r.q)}<br>Giá giảm gốc ${nf(TSL_EX)} → DISCOUNT <b>${tslEx(r.q, r.d)}</b></small></button>`).join("") + `</div>`;
     }
     function tslTestOut() {
       const sku = TSL.test.sku.trim(); if (!sku) return `<span class="tsl-mut">Nhập 1 SKU để xem công cụ Tactical sẽ tự điền gì.</span>`;
@@ -4354,26 +4411,47 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
             <div><button type="button" class="btn btn-primary" data-tsl="save-add"${TSL.busy ? " disabled" : ""}>${TSL.busy ? "Đang lưu…" : "Lưu vào Supabase"}</button></div>
           </div></div></div></section>`;
     }
-    function tslRowHtml(r) {
-      const sku = String(r.sku_code), can = tslCan(), ed = TSL.edit === sku;
-      if (ed) return `<tr class="tsl-edit" data-sku="${escapeHtml(sku)}"><td class="col-sel"></td><td><b>${escapeHtml(sku)}</b></td><td><input data-tsl-edit="qty" value="${escapeHtml(tslFmt(r.slab_qty).replace(/\./g, ""))}" autocomplete="off"></td><td><input data-tsl-edit="div" value="${escapeHtml(tslFmt(r.divisor).replace(/\./g, ""))}" autocomplete="off"></td><td>—</td><td><input data-tsl-edit="note" value="${escapeHtml(r.note || "")}" autocomplete="off"></td><td>—</td><td class="tsl-act"><button type="button" class="btn btn-primary" data-tsl="save-row">Lưu</button><button type="button" class="btn btn-secondary" data-tsl="cancel">Hủy</button></td></tr>`;
-      return `<tr data-sku="${escapeHtml(sku)}"><td class="col-sel">${can ? `<input type="checkbox" data-tsl="sel" data-sku="${escapeHtml(sku)}"${TSL.sel.has(sku) ? " checked" : ""} aria-label="Chọn ${escapeHtml(sku)}">` : ""}</td><td><b>${escapeHtml(sku)}</b></td><td>${tslFmt(r.slab_qty)}</td><td>${tslFmt(r.divisor)}</td><td class="tsl-mut">${tslEx(r.slab_qty, r.divisor)}</td><td>${escapeHtml(r.note || "")}</td><td class="tsl-mut">${r.updated_at ? escapeHtml(formatDate(r.updated_at)) : "—"}</td><td class="tsl-act">${can ? `<button type="button" class="btn btn-plain" data-tsl="edit" title="Sửa">✎</button><button type="button" class="btn btn-plain tsl-del" data-tsl="del" title="Xóa">${ICONS.trash}</button>` : ""}</td></tr>`;
+    const TSL_HUES = [210, 8, 150, 38, 270, 180, 320, 90];
+    function tslHueMap() {   // mỗi quy tắc 1 màu cố định (xếp theo số lượng mua rồi số chia) — dùng chung cho thẻ nhóm và bảng
+      const ks = [...new Set(tslView().map(r => tslKey(r.slab_qty, r.divisor)))].sort((a, b) => { const [q1, d1] = a.split("/").map(Number), [q2, d2] = b.split("/").map(Number); return q1 - q2 || d1 - d2; });
+      return new Map(ks.map((k, i) => [k, TSL_HUES[i % TSL_HUES.length]]));
+    }
+    const TSL_ICO_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    const TSL_ICO_SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+    function tslDateHtml(v) {
+      const d = v ? new Date(v) : null; if (!d || isNaN(d)) return `<span class="tsl-nil">—</span>`;
+      return `<span class="tsl-dt">${d.toLocaleDateString("vi-VN")}</span><small>${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}</small>`;
+    }
+    function tslRowHtml(r, n, hm) {
+      const sku = String(r.sku_code), can = tslCan(), q = tslFmt(r.slab_qty), d = tslFmt(r.divisor), h = hm.get(tslKey(r.slab_qty, r.divisor)) ?? 0, note = String(r.note || "");
+      if (TSL.edit === sku) return `<tr class="tsl-edit" data-sku="${escapeHtml(sku)}"><td class="tsl-c-sel"></td><td class="tsl-c-idx">${n}</td><td><span class="tsl-sku">${escapeHtml(sku)}</span></td><td><span class="tsl-mut">Đang sửa…</span></td><td class="tsl-num"><input data-tsl-edit="qty" value="${escapeHtml(q.replace(/\./g, ""))}" autocomplete="off" aria-label="Số lượng mua"></td><td class="tsl-num"><input data-tsl-edit="div" value="${escapeHtml(d.replace(/\./g, ""))}" autocomplete="off" aria-label="Số chia"></td><td><span class="tsl-nil">—</span></td><td><input data-tsl-edit="note" value="${escapeHtml(note)}" placeholder="Ghi chú" autocomplete="off"></td><td><span class="tsl-nil">—</span></td><td class="tsl-acts"><button type="button" class="btn btn-primary" data-tsl="save-row">Lưu</button> <button type="button" class="btn btn-secondary" data-tsl="cancel">Hủy</button></td></tr>`;
+      return `<tr data-sku="${escapeHtml(sku)}"${TSL.sel.has(sku) ? ' class="is-sel"' : ""}><td class="tsl-c-sel">${can ? `<input type="checkbox" data-tsl="sel" data-sku="${escapeHtml(sku)}"${TSL.sel.has(sku) ? " checked" : ""} aria-label="Chọn ${escapeHtml(sku)}">` : ""}</td><td class="tsl-c-idx">${n}</td><td><span class="tsl-sku">${escapeHtml(sku)}</span></td><td><span class="tsl-rl" style="--h:${h}"><i class="tsl-dot"></i>Mua ${q} · chia ${d}</span></td><td class="tsl-num"><b>${q}</b></td><td class="tsl-num">${d}</td><td><span class="tsl-ex">${nf(TSL_EX)}<i>→</i><b>${tslEx(r.slab_qty, r.divisor)}</b></span></td><td class="tsl-note"${note ? ` title="${escapeHtml(note)}"` : ""}>${note ? escapeHtml(note) : '<span class="tsl-nil">—</span>'}</td><td class="tsl-upd">${r.updated_at ? tslDateHtml(r.updated_at) : '<span class="tsl-mut">Mặc định</span>'}</td><td class="tsl-acts">${can ? `<button type="button" class="btn btn-plain" data-tsl="edit" title="Sửa" aria-label="Sửa">${TSL_ICO_EDIT}</button><button type="button" class="btn btn-plain tsl-del" data-tsl="del" title="Xóa" aria-label="Xóa">${ICONS.trash}</button>` : ""}</td></tr>`;
+    }
+    function tslPages(cur, n) {
+      const s = new Set([1, n, cur - 1, cur, cur + 1]); if (cur <= 3) { s.add(2); s.add(3); } if (cur >= n - 2) { s.add(n - 1); s.add(n - 2); }
+      const a = [...s].filter(x => x >= 1 && x <= n).sort((x, y) => x - y), out = [];
+      a.forEach((x, i) => { if (i && x - a[i - 1] > 1) out.push("…"); out.push(x); }); return out;
     }
     function tslListHtml() {
-      const rows = tslFiltered(), pages = Math.max(1, Math.ceil(rows.length / TSL_PAGE)); if (TSL.page > pages) TSL.page = pages; if (TSL.page < 1) TSL.page = 1;
-      const part = rows.slice((TSL.page - 1) * TSL_PAGE, TSL.page * TSL_PAGE);
-      if (!rows.length) return `<div class="empty"><strong>Không có SKU phù hợp</strong>Thử đổi từ khóa hoặc bỏ bộ lọc quy tắc.</div>`;
-      return `<div class="table-wrap"><table class="tsl-table"><thead><tr><th class="col-sel">${tslCan() ? `<input type="checkbox" data-tsl="sel-all" aria-label="Chọn cả trang"${part.length && part.every(r => TSL.sel.has(String(r.sku_code))) ? " checked" : ""}>` : ""}</th><th>SKUCode</th><th>Số lượng mua<br><small>SLABFROM = SLABTO</small></th><th>Số chia<br><small>DISCOUNT = giá gốc ÷ số chia</small></th><th>Ví dụ<br><small>giá gốc ${nf(TSL_EX)} →</small></th><th>Ghi chú</th><th>Cập nhật</th><th></th></tr></thead><tbody>${part.map(tslRowHtml).join("")}</tbody></table></div>
-        <div class="tsl-pager"><span>${nf(rows.length)} SKU · trang ${TSL.page}/${pages}</span><span><button type="button" class="btn btn-secondary" data-tsl="page" data-d="-1"${TSL.page <= 1 ? " disabled" : ""}>‹ Trước</button><button type="button" class="btn btn-secondary" data-tsl="page" data-d="1"${TSL.page >= pages ? " disabled" : ""}>Sau ›</button></span></div>`;
+      const rows = tslFiltered(), size = TSL.size, pages = Math.max(1, Math.ceil(rows.length / size)); if (TSL.page > pages) TSL.page = pages; if (TSL.page < 1) TSL.page = 1;
+      const from = (TSL.page - 1) * size, part = rows.slice(from, from + size), hm = tslHueMap(), qt = TSL.q.trim();
+      const chips = (TSL.rule !== "all" ? `<button type="button" class="tsl-fchip" data-tsl="rule" data-k="${TSL.rule}" title="Bỏ lọc">Quy tắc: Mua ${TSL.rule.replace("/", " · chia ")} ✕</button>` : "") + (qt ? `<button type="button" class="tsl-fchip" data-tsl="clear-q" title="Xóa từ khóa">Tìm: “${escapeHtml(qt.length > 24 ? qt.slice(0, 24) + "…" : qt)}” ✕</button>` : "");
+      const bar = `<div class="tsl-sumbar"><span><b>${nf(rows.length)}</b> SKU${chips ? " phù hợp" : ""}</span>${chips}</div>`;
+      if (!rows.length) return bar + `<div class="empty"><strong>Không có SKU phù hợp</strong>Thử đổi từ khóa hoặc bỏ bộ lọc quy tắc.</div>`;
+      const allOn = part.length && part.every(r => TSL.sel.has(String(r.sku_code)));
+      return `${bar}<div class="tsl-scroll"><table class="tsl-grid"><thead><tr><th class="tsl-c-sel">${tslCan() ? `<input type="checkbox" data-tsl="sel-all" aria-label="Chọn cả trang"${allOn ? " checked" : ""}>` : ""}</th><th class="tsl-c-idx">#</th><th>SKUCode</th><th>Quy tắc</th><th class="r">Số lượng mua<small>SLABFROM = SLABTO</small></th><th class="r">Số chia<small>giá gốc ÷ số chia</small></th><th>Ví dụ<small>giá gốc → DISCOUNT</small></th><th>Ghi chú</th><th>Cập nhật</th><th></th></tr></thead><tbody>${part.map((r, i) => tslRowHtml(r, from + i + 1, hm)).join("")}</tbody></table></div>
+        <div class="tsl-pg"><span class="tsl-pg-info">Hiển thị <b>${nf(from + 1)}–${nf(from + part.length)}</b> / <b>${nf(rows.length)}</b> SKU</span>
+          <div class="tsl-pg-nav"><button type="button" data-tsl="page" data-d="-1" aria-label="Trang trước"${TSL.page <= 1 ? " disabled" : ""}>‹</button>${tslPages(TSL.page, pages).map(p => p === "…" ? '<span class="tsl-pg-gap">…</span>' : `<button type="button" data-tsl="goto" data-p="${p}"${p === TSL.page ? ' class="on" aria-current="page"' : ""}>${p}</button>`).join("")}<button type="button" data-tsl="page" data-d="1" aria-label="Trang sau"${TSL.page >= pages ? " disabled" : ""}>›</button></div>
+          <label class="tsl-pg-size">Dòng / trang <select data-tsl-in="size">${[25, 50, 100, 200].map(v => `<option value="${v}"${v === size ? " selected" : ""}>${v}</option>`).join("")}</select></label></div>`;
     }
-    const tslBulkHtml = () => { const n = TSL.sel.size; return n ? `<span><b>${nf(n)}</b> SKU đang chọn</span><button type="button" class="btn btn-danger" data-tsl="bulk-del">${ICONS.trash} Xóa đã chọn</button><button type="button" class="btn btn-plain" data-tsl="sel-clear">Bỏ chọn</button>` : ""; };
+    const tslBulkHtml = () => { const n = TSL.sel.size; return n ? `<span class="tsl-selpill"><b>${nf(n)}</b> đã chọn</span><button type="button" class="btn btn-danger" data-tsl="bulk-del">${ICONS.trash} Xóa</button><button type="button" class="btn btn-plain" data-tsl="sel-clear">Bỏ chọn</button>` : ""; };
     function tslInner() {
       return `${tslBanner()}
         <section class="panel tsl-panel"><div class="panel-head"><div><h2>Logic SKU hoạt động thế nào</h2><p>Bảng này thay cho danh sách SKU cố định trong code. Công cụ Tactical đọc bảng để tự điền số lượng mua và mức giảm.</p></div></div><div class="panel-body">${tslFlow()}</div></section>
         <section class="panel tsl-panel"><div class="panel-head"><div><h2>Nhóm quy tắc</h2><p>Bấm vào một nhóm để lọc danh sách SKU bên dưới.</p></div></div><div class="panel-body">${tslRulesHtml()}</div></section>
         ${tslTestHtml()}${tslIoHtml()}${tslAddHtml()}
         <section class="panel tsl-panel"><div class="panel-head"><div><h2>Danh sách SKU</h2><p>${tslCan() ? "Sửa từng dòng bằng nút ✎, hoặc tick chọn nhiều dòng để xóa." : "Chỉ xem."}</p></div></div>
-          <div class="panel-body"><div class="tsl-bar"><input id="tsl-q" data-tsl-in="q" value="${escapeHtml(TSL.q)}" placeholder="Tìm SKU hoặc ghi chú (dán nhiều SKU cách nhau bằng dấu cách)…" autocomplete="off"><div class="tsl-bulk" id="tsl-bulk">${tslBulkHtml()}</div></div>
+          <div class="panel-body"><div class="tsl-bar"><label class="tsl-search">${TSL_ICO_SEARCH}<input id="tsl-q" data-tsl-in="q" value="${escapeHtml(TSL.q)}" placeholder="Tìm SKU hoặc ghi chú (dán nhiều SKU cách nhau bằng dấu cách)…" autocomplete="off"></label><div class="tsl-bulk" id="tsl-bulk">${tslBulkHtml()}</div></div>
           <div id="tsl-list">${tslListHtml()}</div></div></section>`;
     }
     const tslDraw = () => { const el = $("#tsl-root"); if (el) el.innerHTML = tslInner(); };
@@ -4522,14 +4600,16 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       else if (a === "seed") tslSeed();
       else if (a === "rule") { TSL.rule = TSL.rule === b.dataset.k ? "all" : b.dataset.k; TSL.page = 1; tslDraw(); }
       else if (a === "preset") { TSL.add.qty = b.dataset.q; TSL.add.div = b.dataset.d; tslDraw(); }
+      else if (a === "goto") { TSL.page = Number(b.dataset.p) || 1; tslDrawList(); }
+      else if (a === "clear-q") { TSL.q = ""; TSL.page = 1; tslDraw(); }
       else if (a === "page") { TSL.page += Number(b.dataset.d); tslDrawList(); }
       else if (a === "edit") { TSL.edit = b.closest("tr").dataset.sku; tslDrawList(); }
       else if (a === "cancel") { TSL.edit = null; tslDrawList(); }
       else if (a === "save-row") tslSaveRow(b.closest("tr"));
       else if (a === "del") tslDelete([b.closest("tr").dataset.sku]);
       else if (a === "save-add") tslSaveAdd();
-      else if (a === "sel") { b.checked ? TSL.sel.add(b.dataset.sku) : TSL.sel.delete(b.dataset.sku); const x = $("#tsl-bulk"); if (x) x.innerHTML = tslBulkHtml(); }
-      else if (a === "sel-all") { document.querySelectorAll('#tsl-list input[data-tsl="sel"]').forEach(c => { c.checked = b.checked; b.checked ? TSL.sel.add(c.dataset.sku) : TSL.sel.delete(c.dataset.sku); }); const x = $("#tsl-bulk"); if (x) x.innerHTML = tslBulkHtml(); }
+      else if (a === "sel") { b.checked ? TSL.sel.add(b.dataset.sku) : TSL.sel.delete(b.dataset.sku); const tr0 = b.closest("tr"); if (tr0) tr0.classList.toggle("is-sel", b.checked); const x = $("#tsl-bulk"); if (x) x.innerHTML = tslBulkHtml(); }
+      else if (a === "sel-all") { document.querySelectorAll('#tsl-list input[data-tsl="sel"]').forEach(c => { c.checked = b.checked; c.closest("tr").classList.toggle("is-sel", b.checked); b.checked ? TSL.sel.add(c.dataset.sku) : TSL.sel.delete(c.dataset.sku); }); const x = $("#tsl-bulk"); if (x) x.innerHTML = tslBulkHtml(); }
       else if (a === "sel-clear") { TSL.sel.clear(); tslDrawList(); }
       else if (a === "bulk-del") tslDelete([...TSL.sel]);
       else if (a === "export") tslExport();
@@ -4538,7 +4618,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     });
     document.addEventListener("input", e => {
       const t = e.target, k = t && t.dataset ? t.dataset.tslIn : undefined; if (k === undefined) return;
-      if (k === "q") { TSL.q = t.value; TSL.page = 1; tslDrawList(); }
+      if (k === "size") { TSL.size = Number(t.value) || 50; TSL.page = 1; tslDrawList(); }
+      else if (k === "q") { TSL.q = t.value; TSL.page = 1; tslDrawList(); }
       else if (k === "t-sku" || k === "t-base") { TSL.test[k === "t-sku" ? "sku" : "base"] = t.value; const o = $("#tsl-t-out"); if (o) o.innerHTML = tslTestOut(); }
       else { TSL.add[{ "a-skus": "skus", "a-qty": "qty", "a-div": "div", "a-note": "note" }[k]] = t.value; const o = $("#tsl-add-sum"); if (o) o.innerHTML = tslAddSum(); }
     });
