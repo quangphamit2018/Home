@@ -18410,6 +18410,15 @@ function brdAiHandleProgress(event){
     });
     return;
   }
+  if(event.type === "editor"){
+    brdAiAppendConversation({
+      kind:"arbiter",
+      speaker:`${event.provider || "AI"} · Biên tập & kiểm chứng`,
+      status:event.status || "",
+      message:[event.message, event.auditNote ? `Ghi chú biên tập: ${event.auditNote}` : ""].filter(Boolean).join("\n\n"),
+    });
+    return;
+  }
   if(event.type === "legacy"){
     brdAiAppendConversation({
       speaker:"Nhật ký",
@@ -18569,7 +18578,11 @@ async function runBrdAiAssist(){
       : meta.reviewCompleted
         ? `Đã tự rà soát bằng ${meta.reviewer || "AI"}, nhưng chưa có nguồn độc lập để đối chiếu. Vui lòng kiểm tra kỹ.`
         : `Chưa hoàn tất đối chiếu AI. Đã điền bản nháp từ ${providersTxt}; cần kiểm tra kỹ trước khi lưu.`;
-    brdAiSetStatus(statusMsg);
+    const edMeta = meta.editor || {};
+    const edTxt = edMeta.applied
+      ? ` Đã kiểm chứng & hiệu chỉnh thêm bởi ${edMeta.provider}.`
+      : (edMeta.skippedReason ? ` Bước biên tập không áp dụng: ${edMeta.skippedReason}` : "");
+    brdAiSetStatus(statusMsg + edTxt);
     brdAiSetLiveBadge(meta.arbitrated ? "Đã đối chiếu" : "Cần rà soát", meta.arbitrated ? "done" : "warning");
     brdAiAppendConversation({
       kind:"final",
