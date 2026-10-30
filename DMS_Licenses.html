@@ -5274,7 +5274,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const proSlab = () => ({ from: "", to: "", each: "", disc: "1", q: "", a: "" });
     const PRO_TYPE_OPTS = [["4","4 – Tặng hàng FOC"],["1","1 – Giảm amount (trên line)"],["2","2 – Giảm % (trên line)"],["3","3 – Giảm net price"],["5","5 – Giảm amount (ngoài HĐ)"],["6","6 – Giảm % (ngoài HĐ)"],["8","8 – KM tích điểm"],["10","10 – Giá cố định"],["11","11 – Giảm MRP %"]];
     const PRO_MODE_KEY = "masterdata_pro_mode";
-    let mdmProMode = loadKey(PRO_MODE_KEY, ["slab", "tactical", "foc"], "slab");
+    let mdmProMode = loadKey(PRO_MODE_KEY, ["slab", "tactical", "foc", "focm"], "slab");
     /* ---- Tất cả các cột template (75 cột) — hiển thị đầy đủ để user điền/điều chỉnh ---- */
     const PRO_EXTRA_GROUPS = [
       { name: "Khuyến mãi", cols: [
@@ -5502,10 +5502,10 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     function proDraw() {
       if (mdmProMode === "tactical") return tacDraw();
-      if (mdmProMode === "foc") return focDraw(); $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
+      if (mdmProMode === "focm") return focmDraw(); if (mdmProMode === "foc") return focDraw(); $("#pro-slabs").innerHTML = mdmPro.slabs.map(proSlabHtml).join(""); proMeta(); }
     function proMeta() {
       if (mdmProMode === "tactical") return tacMeta();
-      if (mdmProMode === "foc") return focMeta();
+      if (mdmProMode === "focm") return focmMeta(); if (mdmProMode === "foc") return focMeta();
       proSyncAuto();
       const proRataInput = document.querySelector('[data-pro-col="ProRata"]');
       if (proRataInput && !mdmPro.touched.has("ProRata")) proRataInput.value = mdmPro.cols.ProRata;
@@ -5528,7 +5528,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     async function proAct(a, el) {
       if (!$("#mdm-root")) return;
       if (mdmProMode === "tactical") return tacAct(a, el);
-      if (mdmProMode === "foc") return focAct(a, el);
+      if (mdmProMode === "focm") return focmAct(a, el); if (mdmProMode === "foc") return focAct(a, el);
       if (a === "help") return proHelp();
       if (a === "add") mdmPro.slabs.push(proSlab());
       else if (a === "dup") { const i = Number(el.closest(".pro-slab").dataset.si), s = mdmPro.slabs[i], n = proNum(s.to); mdmPro.slabs.splice(i + 1, 0, { ...s, from: n == null ? "" : String(n + 1), to: "" }); }
@@ -5557,7 +5557,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       XLSX.writeFile(wb, fileName);
       toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — lần này không tô màu được vì chưa tải được thư viện ExcelJS.`, "success");
     }
-    const proModeSeg = () => `<div class="pro-mode-seg"><button type="button" data-pro-mode="slab" class="${mdmProMode === "slab" ? "on" : ""}">📊 Slab in Slab</button><button type="button" data-pro-mode="tactical" class="${mdmProMode === "tactical" ? "on" : ""}">🎯 Tactical</button><button type="button" data-pro-mode="foc" class="${mdmProMode === "foc" ? "on" : ""}">🎁 FOC</button></div>`;
+    const proModeSeg = () => `<div class="pro-mode-seg"><button type="button" data-pro-mode="slab" class="${mdmProMode === "slab" ? "on" : ""}">📊 Slab in Slab</button><button type="button" data-pro-mode="tactical" class="${mdmProMode === "tactical" ? "on" : ""}">🎯 Tactical</button><button type="button" data-pro-mode="foc" class="${mdmProMode === "foc" ? "on" : ""}">🎁 FOC</button><button type="button" data-pro-mode="focm" class="${mdmProMode === "focm" ? "on" : ""}">🗺️ FOC nhiều vùng</button></div>`;
     function proColFieldHtml(key, kind, def, type, opts) {
       const v = mdmPro.cols[key] != null ? mdmPro.cols[key] : "";
       const autoTag = kind === "auto" ? ' pro-col-auto' : '';
@@ -6018,47 +6018,27 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const FOC_COL_DEFAULTS = Object.fromEntries(FOC_EXTRA_GROUPS.flatMap(g => g.cols.map(([k, , d]) => [k, d])));
     /* ---- CTKM FOC: mẫu cp_foc_09oct26.xlsx (67 cột, không có ForEach). 1 PromotionCode, nhiều dòng: SKU mua (Q) + SKU tặng (A), PromotionTypeCode = 4 ---- */
     const focSlab = () => ({ from: "", to: "", disc: "", q: "", a: "" });
-    const focInit = () => ({ code: "", desc: "", start: adjToday(), end: "", uom: "EA", scope: "terr", sv: "", multi: "0", regs: "", seq: "556", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, slabs: [focSlab()], cols: { ...FOC_COL_DEFAULTS }, touched: new Set() });
+    const focInit = () => ({ code: "", desc: "", start: adjToday(), end: "", uom: "EA", scope: "terr", sv: "", seq: "556", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, slabs: [focSlab()], cols: { ...FOC_COL_DEFAULTS }, touched: new Set() });
     let mdmFoc = focInit();
     /* ---- FOC: mức độ cần điền + nhóm cột tô màu khi xuất Excel ---- */
-    const FOC_RQ = { code: "must", desc: "nen", uom: "set", start: "must", end: "must", scope: "set", sv: "must", multi: "set", regs: "must", seq: "set", apply: "opt", rep: "set", excl: "set", rb: "set", dm: "set" };
+    const FOC_RQ = { code: "must", desc: "nen", uom: "set", start: "must", end: "must", scope: "set", sv: "must", seq: "set", apply: "opt", rep: "set", excl: "set", rb: "set", dm: "set" };
     const FOC_CHK_GROUPS = [
       { id: "in", name: "Bạn nhập", desc: "PromotionCode · PromotionDescription · SLABFROM/SLABTO · DISCOUNT (số lượng tặng) · ProductGroup (Q/A) · SKUCode · Territory/DistributorCode", cell: "FFFFF4CC", head: "FFFFE699", cols: ["PromotionCode", "PromotionDescription", "SLABFROM", "SLABTO", "DISCOUNT", "ProductGroup", "SKUCode", "Territory", "DistributorCode"] },
       { id: "cfg", name: "Thông tin chung", desc: "StartDate · EndDate · UnitOfMeasure · SequenceNumber · Repeating_Range · ExclusionOption · RangeBasis · DisbursementMethod", cell: "FFE3EEF9", head: "FFBDD7EE", cols: ["StartDate", "EndDate", "UnitOfMeasure", "SequenceNumber", "Repeating_Range", "ExclusionOption", "RangeBasis", "DisbursementMethod"] },
       { id: "auto", name: "Tool tự sinh / cố định", desc: "PromotionTypeCode (= 4) · SLABNUM · ProRata · Bundle_Promotion · PromotionQuantity · PromotionQuotaCode · SpecialPromotion", cell: "FFE6F2DF", head: "FFC6E0B4", cols: ["PromotionTypeCode", "SLABNUM", "ProRata", "Bundle_Promotion", "PromotionQuantity", "PromotionQuotaCode", "SpecialPromotion"] }
     ];
     const focChkGroup = c => (FOC_CHK_GROUPS.find(g => g.cols.includes(c)) || {}).id || "x";
-    /* Nhiều vùng: mỗi dòng "Tiền tố<Tab>Territory" -> PromotionCode = Tiền tố + "_" + mã gốc (đúng quy ước file mẫu HC_/MK_/SP_FOC_261007_1) */
-    function focRegs(P, targets, bad, warns) {
-      const lines = P.regs.split(/\r?\n/).map(x => x.trim()).filter(Boolean), base = P.code.trim(), dist = P.scope === "dist", lb = dist ? "DistributorCode" : "Territory", seenP = {}, seenV = {};
-      if (!lines.length) return bad("regs", `Chưa nhập vùng nào (mỗi dòng: Tiền tố  ${lb})`);
-      lines.forEach((ln, k) => {
-        const m = ln.match(/^(\S+)\s+(.+)$/), n = k + 1;
-        if (!m) return bad("regs", `Vùng dòng ${n}: cần "Tiền tố  ${lb}" (cách nhau bằng Tab hoặc dấu cách)`);
-        const pre = m[1], v = m[2].trim(), PU = pre.toUpperCase();
-        if (!/^[A-Za-z0-9]+$/.test(pre)) return bad("regs", `Vùng dòng ${n}: tiền tố "${pre}" chỉ được gồm chữ và số`);
-        if (!dist && !/^\S+$/.test(v)) return bad("regs", `Vùng dòng ${n}: Territory phải là 1 mã duy nhất (đang là "${v}")`);
-        if (seenP[PU]) return bad("regs", `Vùng dòng ${n}: tiền tố "${pre}" bị trùng → sẽ trùng PromotionCode`);
-        seenP[PU] = 1;
-        if (seenV[v.toUpperCase()] && warns.length < 6) warns.push(`${lb} "${v}" xuất hiện ở nhiều dòng vùng`);
-        seenV[v.toUpperCase()] = 1;
-        if (base && base.toUpperCase().startsWith(PU + "_")) bad("code", `PromotionCode gốc đang chứa tiền tố "${pre}_" — tool tự thêm tiền tố, hãy bỏ phần này`);
-        targets.push({ code: pre + "_" + base, sv: v });
-      });
-    }
     function focParse() {
       const P = mdmFoc, out = [], cfgBad = {}, slabBad = {}, issues = [], warns = [], rng = [];
       const d1 = prcDateSerial(P.start), d2 = prcDateSerial(P.end);
       const bad = (k, msg) => { cfgBad[k] = 1; issues.push({ msg, sel: `[data-foc="${k}"]` }); };
-      const multi = P.multi === "1", targets = [];
-      if (!P.code.trim()) bad("code", multi ? "Thiếu PromotionCode gốc" : "Thiếu PromotionCode");
-      if (!multi) { if (!P.sv.trim()) bad("sv", P.scope === "dist" ? "Thiếu DistributorCode" : "Thiếu Territory"); targets.push({ code: P.code.trim(), sv: P.sv.trim() }); }
-      else focRegs(P, targets, bad, warns);
+      if (!P.code.trim()) bad("code", "Thiếu PromotionCode");
+      if (!P.sv.trim()) bad("sv", P.scope === "dist" ? "Thiếu DistributorCode" : "Thiếu Territory");
       if (d1 == null) bad("start", "StartDate sai định dạng (dd/mm/yyyy)"); else { const _nd = new Date(); if (d1 < Date.UTC(_nd.getFullYear(), _nd.getMonth(), _nd.getDate()) / 86400000 + 25569) bad("start", "StartDate không được là ngày trong quá khứ"); }
       if (d2 == null) bad("end", "EndDate sai định dạng (dd/mm/yyyy)"); else if (d1 != null && d2 < d1) bad("end", "EndDate phải ≥ StartDate");
       if (!/^\d+$/.test(P.seq.trim())) bad("seq", "SequenceNumber phải là số nguyên ≥ 0");
       if (P.apply.trim() && !/^[1-9]\d*$/.test(P.apply.trim())) bad("apply", "ApplyCount phải là số nguyên ≥ 1 (hoặc để trống)");
-      const okSlabs = [];
+      const code = P.code.trim(), desc = P.desc.trim() || code, sv = P.sv.trim();
       P.slabs.forEach((s, i) => {
         const f = proNum(s.from), t = proNum(s.to), dc = proNum(s.disc), q = tacList(s.q), a = tacList(s.a), b = {};
         [["from", f == null, "SLABFROM phải là số"], ["to", t == null || (f != null && t < f), "SLABTO phải là số và ≥ SLABFROM"], ["disc", dc == null || dc <= 0, "DISCOUNT (số lượng tặng) phải là số > 0"], ["q", !q.length, "chưa có SKU điều kiện (Q)"], ["a", !a.length, "chưa có SKU tặng (A)"]]
@@ -6066,26 +6046,23 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (Object.keys(b).length) { slabBad[i] = b; return; }
         rng.push([i + 1, f, t]);
         const both = q.filter(x => a.includes(x)); if (both.length && warns.length < 6) warns.push(`Slab ${i + 1}: SKU ${both.slice(0, 3).join(", ")}${both.length > 3 ? "…" : ""} nằm ở cả SKU mua (Q) và SKU tặng (A)`);
-        okSlabs.push({ i, f, t, dc, q, a });
-      });
-      targets.forEach(T => okSlabs.forEach(({ i, f, t, dc, q, a }) => {
         [["Q", q], ["A", a]].forEach(([g, list]) => list.forEach(x => {
           const r = Array(FOC_COLS.length).fill(null), set = (c, v) => { r[FOC_I[c]] = v; };
-          set("PromotionCode", T.code); set("PromotionDescription", P.desc.trim() || T.code); if (P.quota) set("PromotionQuotaCode", T.code);
+          set("PromotionCode", code); set("PromotionDescription", desc); if (P.quota) set("PromotionQuotaCode", code);
           set("DisbursementMethod", Number(P.dm)); set("RangeBasis", Number(P.rb)); set("PromotionTypeCode", 4); set("ProRata", "N"); set("Bundle_Promotion", 0);
           set("ExclusionOption", Number(P.excl)); set("SequenceNumber", Number(P.seq || 0)); set("StartDate", d1); set("EndDate", d2);
           set("SLABNUM", i + 1); set("SLABFROM", f); set("SLABTO", t); set("DISCOUNT", dc); set("Repeating_Range", Number(P.rep));
           set("ProductGroup", g); set("PromotionQuantity", 0); set("UnitOfMeasure", P.uom.trim()); set("SKUCode", /^\d+$/.test(x) ? Number(x) : x);
-          if (T.sv) set(P.scope === "dist" ? "DistributorCode" : "Territory", T.sv);
+          if (sv) set(P.scope === "dist" ? "DistributorCode" : "Territory", sv);
           if (P.apply.trim()) set("ApplyCount", Number(P.apply));
           const C = P.cols || {};
           if (String(C.ProRata ?? "").trim() !== "") r[FOC_I.ProRata] = C.ProRata;
           FOC_EXTRA_KEYS.forEach(c => { if (c === "ProRata") return; const v = C[c]; if (v != null && String(v).trim() !== "" && FOC_I[c] != null) r[FOC_I[c]] = FOC_NUM.has(c) && /^\d+$/.test(String(v).trim()) ? Number(String(v).trim()) : String(v).trim(); });
           out.push(r);
         }));
-      }));
+      });
       rng.forEach(([n1, f1, t1], i) => rng.slice(i + 1).forEach(([n2, f2, t2]) => { if (f1 <= t2 && f2 <= t1) warns.push(`Slab ${n1} và Slab ${n2} có khoảng SLABFROM–SLABTO chồng nhau`); }));
-      return { out, cfgBad, slabBad, issues, warns, targets };
+      return { out, cfgBad, slabBad, issues, warns };
     }
     function focSum(s) {
       const f = s.from.trim(), t = s.to.trim(), d = s.disc.trim(), u = mdmFoc.rb === "2" ? "VND" : mdmFoc.uom, nq = tacList(s.q).length, na = tacList(s.a).length;
@@ -6108,7 +6085,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const focColGroupHtml = g => `<div class="pro-col-grp"><h4>${g.name}</h4><div class="pro-grid">${g.cols.map(([k, kind, d, t, o]) => focColFieldHtml(k, kind, d, t, o)).join("")}</div></div>`;
     function focDraw() { $("#foc-slabs").innerHTML = mdmFoc.slabs.map(focSlabHtml).join(""); focMeta(); }
     function focMeta() {
-      const v = focParse(), P = mdmFoc, PV = [...(P.multi === "1" ? ["PromotionCode"] : []), "SLABNUM", "SLABFROM", "SLABTO", "DISCOUNT", "ProductGroup", "SKUCode", "Territory", "DistributorCode"];
+      const v = focParse(), P = mdmFoc, PV = ["SLABNUM", "SLABFROM", "SLABTO", "DISCOUNT", "ProductGroup", "SKUCode", "Territory", "DistributorCode"];
       const cc = document.querySelector("#foc-cols-cnt"); if (cc) cc.textContent = FOC_EXTRA_KEYS.filter(k => String(P.cols[k] ?? "").trim() !== "").length + " / " + FOC_EXTRA_KEYS.length + " cột đã điền";
       document.querySelectorAll("#foc-cfg .field, #foc-adv .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
       document.querySelectorAll("#foc-slabs .pro-slab").forEach(el => {
@@ -6116,10 +6093,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         el.querySelectorAll(".field").forEach(f => f.classList.toggle("bad", !!b[f.dataset.k]));
         el.querySelector(".pro-sum").innerHTML = focSum(s); el.querySelector('[data-cnt="q"]').innerHTML = tacCnt(s.q, "SKU"); el.querySelector('[data-cnt="a"]').innerHTML = tacCnt(s.a, "SKU");
       });
-      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng xuất ra</span>`, `<span class="adj-chip">${P.slabs.length} slab</span>`, ...(P.multi === "1" ? [`<span class="adj-chip ${v.targets.length ? "ok" : ""}">${v.targets.length} vùng</span>`] : [])];
+      const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng xuất ra</span>`, `<span class="adj-chip">${P.slabs.length} slab</span>`];
       if (v.issues.length) chips.push(`<span class="adj-chip err">${v.issues.length} lỗi</span>`);
       $("#foc-chips").innerHTML = chips.join("");
-      const rp = document.querySelector("#foc-regs-pv"); if (rp) rp.innerHTML = v.targets.length ? v.targets.map(t => `<b>${escapeHtml(t.code)}</b> → ${escapeHtml(t.sv)}`).join("<br>") : "Mỗi dòng vùng sẽ sinh 1 PromotionCode riêng — danh sách hiện ở đây.";
       $("#foc-issues").innerHTML = v.issues.map(x => `<li data-goto='${x.sel}'>✖ ${escapeHtml(x.msg)}</li>`).join("") + v.warns.map(w => `<li class="w">⚠ ${escapeHtml(w)}</li>`).join("") + (!v.issues.length ? `<li class="ok">✔ Dữ liệu hợp lệ, sẵn sàng xuất file</li>` : "");
       $("#foc-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th class="g-${focChkGroup(c)}">${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 8).map(r => `<tr>${PV.map(c => `<td class="g-${focChkGroup(c)}">${r[FOC_I[c]] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 8 ? `<div class="pro-more">… và ${nf(v.out.length - 8)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — điền slab và SKU để xem trước.</div>`;
       $("#foc-export").disabled = !v.out.length || !!v.issues.length;
@@ -6157,7 +6133,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return `<ol class="pd-steps"><li><b>Thông tin chương trình</b> — nhập PromotionCode, mô tả, ngày bắt đầu/kết thúc, đơn vị và phạm vi (Territory hoặc DistributorCode). Nhiều NPP thì cách nhau bằng dấu phẩy ( , ).</li><li><b>Slab</b> — “Mua từ … đến …, tặng … EA”. Nhiều mức mua thì thêm slab (nút <b>Nhân đôi</b> giữ nguyên SKU).</li><li><b>Dán SKU</b> — SKU điều kiện (Q) và SKU tặng (A), mỗi dòng 1 SKU. Toàn bộ SKU nằm chung 1 PromotionCode.</li><li><b>Kiểm tra</b> — đọc câu diễn giải dưới mỗi slab, xem checklist và bảng xem trước; bấm vào mục đỏ để nhảy tới ô lỗi.</li><li><b>Xuất Excel</b> — file đủ 67 cột theo mẫu FOC, sheet <code>Sheet1</code>, sẵn sàng upload.</li></ol>
         <h4>Ví dụ theo file mẫu</h4>
         <div class="pd-card"><b>15 chai Coke 1.5/1.95L tặng 2 lon COKE ZERO/FANTA/SPRITE 250ML</b><br>PromotionCode <code>CP_FOC_261009_1</code> · Territory VN10VN13 · SLABFROM 15 · SLABTO 15 · DISCOUNT 2 · SKU mua (Q) và SKU tặng (A) cùng 1 mã.<br><small>Ví dụ trong form dùng một phần SKU của file mẫu và đặt ngày bắt đầu là hôm nay.</small><br><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ này vào form</button></div>
-        <h4>Lưu ý</h4><ul class="pd-notes"><li><b>Nhiều vùng:</b> chọn “Số vùng áp dụng = Nhiều vùng”, nhập PromotionCode gốc (vd <code>FOC_261007_1</code>) và dán danh sách “Tiền tố ⇥ Territory” (vd <code>HC ⇥ VN10VN11</code>). Tool sinh mỗi vùng 1 PromotionCode = Tiền tố_Mã gốc (<code>HC_FOC_261007_1</code>), cùng slab/SKU/ngày, trong 1 file.</li><li>Mẫu FOC không có cột ForEach; PromotionTypeCode luôn là 4 (Tặng hàng FOC).</li><li>Giá trị mặc định theo file mẫu: SequenceNumber 556, Repeating_Range 1, SpecialPromotion 1, ProRata N, PromotionQuotaCode để trống. Có thể chỉnh ở mục 3 và 4.</li></ul>`;
+        <h4>Lưu ý</h4><ul class="pd-notes"><li>Mẫu FOC không có cột ForEach; PromotionTypeCode luôn là 4 (Tặng hàng FOC).</li><li>Giá trị mặc định theo file mẫu: SequenceNumber 556, Repeating_Range 1, SpecialPromotion 1, ProRata N, PromotionQuotaCode để trống. Có thể chỉnh ở mục 3 và 4.</li></ul>`;
     }
     function renderProFoc() {
       const P = mdmFoc;
@@ -6167,7 +6143,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" data-pro-act="help">📖 Hướng dẫn &amp; từ điển cột</button><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
         <div class="panel-body">${proModeSeg()}${rqLegendHtml()}<div class="pro-lay"><div class="pro-main">
           <div class="pro-card"><h3><em>1</em>Thông tin chương trình</h3>
-            <div class="pro-grid" id="foc-cfg">${P.multi === "1" ? F("code", "PromotionCode gốc (tự thêm tiền tố vùng)", "PromotionCode", "vd: FOC_261009_1") : F("code", "PromotionCode", "PromotionCode", "vd: CP_FOC_261009_1")}${F("desc", "PromotionDescription", "PromotionDescription", "để trống = lấy theo PromotionCode")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("scope", "Territory / DistributorCode", "", [["terr", "Territory (mã vùng)"], ["dist", "DistributorCode (NPP)"]])}${S("multi", "Số vùng áp dụng", "", [["0", "1 vùng"], ["1", "Nhiều vùng (mỗi vùng 1 PromotionCode)"]])}${P.multi === "1" ? `<div class="field rq-must" data-k="regs" style="grid-column:1/-1"><label>${P.scope === "dist" ? "Tiền tố ⇥ DistributorCode" : "Tiền tố ⇥ Territory"} — mỗi dòng 1 vùng, dán thẳng từ Excel (2 cột)${rqTag("must")}</label><textarea data-foc="regs" spellcheck="false" style="min-height:96px;font:600 13px ui-monospace,Menlo,Consolas,monospace" placeholder="HC\tVN10VN11&#10;MK\tVN10VN15&#10;SP\tVN10VN17">${escapeHtml(P.regs)}</textarea><div class="pro-sum" id="foc-regs-pv" style="margin-top:8px"></div></div>` : F("sv", P.scope === "dist" ? "DistributorCode" : "Territory", P.scope === "dist" ? "DistributorCode" : "Territory", P.scope === "dist" ? "nhiều NPP cách nhau bằng dấu phẩy" : "vd: VN10VN13")}</div></div>
+            <div class="pro-grid" id="foc-cfg">${F("code", "PromotionCode", "PromotionCode", "vd: CP_FOC_261009_1")}${F("desc", "PromotionDescription", "PromotionDescription", "để trống = lấy theo PromotionCode")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("start", "StartDate", "StartDate", "dd/mm/yyyy")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy")}${S("scope", "Territory / DistributorCode", "", [["terr", "Territory (mã vùng)"], ["dist", "DistributorCode (NPP)"]])}${F("sv", P.scope === "dist" ? "DistributorCode" : "Territory", P.scope === "dist" ? "DistributorCode" : "Territory", P.scope === "dist" ? "nhiều NPP cách nhau bằng dấu phẩy" : "vd: VN10VN13")}</div></div>
           <div class="pro-card"><h3><em>2</em>Cấu hình Slab (mức mua → quà tặng)<span class="adj-chips" id="foc-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm slab</button></h3><div id="foc-slabs">${P.slabs.map(focSlabHtml).join("")}</div>
             <p class="adj-tip">💡 Sao chép cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. Tất cả SKU điều kiện (Q) và SKU tặng (A) nằm chung 1 PromotionCode. Với nhiều mức mua → bấm <b>Nhân đôi</b> rồi đổi SLABFROM/TO.</p></div>
           <details class="pro-card pro-det" id="foc-adv" open><summary><em>3</em>Tùy chọn nâng cao ${rqTag("set")} <small>đã điền sẵn theo file mẫu — chỉ cần soát lại, thường không phải đổi (ApplyCount: bỏ trống nếu không dùng)</small></summary><div class="pro-grid" style="margin-top:12px">
@@ -6182,9 +6158,163 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           ${xlLegendHtml(FOC_CHK_GROUPS, "Cột ngoài danh sách trên nhưng có điền dữ liệu (vd ApplyCount, các cột trong mục 4) — soát kỹ vì không nằm trong mẫu FOC thường dùng.")}
           <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode = 4 · SKU mua → Q, SKU tặng → A · ProRata N · Bundle_Promotion = 0 · các cột còn lại để trống</div></div></aside></div></div></section>`;
     }
+/* ===== FOC NHIỀU VÙNG (mode "focm") — mẫu FOC_NORTH_OCT26.xlsx (68 cột, có LexiaCode). Mỗi vùng × mỗi CTKM = 1 PromotionCode = SKU Q + SKU A ===== */
+const FOCM_COLS = [FOC_COLS[0], "LexiaCode", ...FOC_COLS.slice(1)];
+const FOCM_I = Object.fromEntries(FOCM_COLS.map((c, i) => [c, i]));
+const FOCM_REGS = [["HC", "VN10VN11"], ["HN", "VN10VN12"], ["CP", "VN10VN13"], ["MK", "VN10VN15"], ["NE", "VN10VN16"], ["SP", "VN10VN17"], ["NW", "VN10VN19"]];
+const FOCM_NORTH = ["HN", "NW", "NE"];
+const focmPromo = () => ({ desc: "", from: "", to: "", disc: "", q: "", a: "" });
+const focmInit = () => ({ start: adjToday(), end: "", mid: "", uom: "EA", seq: "556", apply: "", rep: "1", excl: "0", rb: "1", dm: "1", quota: false, regs: [], promos: [focmPromo()], cols: { ...FOC_COL_DEFAULTS } });
+let mdmFocM = focmInit();
+const focmYmd = s => { const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(s).trim()); return m ? m[3].slice(2) + m[2].padStart(2, "0") + m[1].padStart(2, "0") : ""; };
+const focmMid = () => mdmFocM.mid.trim() || (focmYmd(mdmFocM.start) ? "FOC_" + focmYmd(mdmFocM.start) : "");
+function focmParse() {
+  const P = mdmFocM, out = [], cfgBad = {}, pBad = {}, issues = [], warns = [], info = [];
+  const bad = (k, msg) => { cfgBad[k] = 1; issues.push({ msg, sel: `[data-fm="${k}"]` }); };
+  const d1 = prcDateSerial(P.start), d2 = prcDateSerial(P.end), mid = focmMid();
+  if (d1 == null) bad("start", "StartDate sai định dạng (dd/mm/yyyy)"); else { const n = new Date(); if (d1 < Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()) / 86400000 + 25569) bad("start", "StartDate không được là ngày trong quá khứ"); }
+  if (d2 == null) bad("end", "EndDate sai định dạng (dd/mm/yyyy)"); else if (d1 != null && d2 < d1) bad("end", "EndDate phải ≥ StartDate");
+  if (!mid) bad("mid", "Thiếu mã đợt (nhập StartDate đúng dd/mm/yyyy hoặc gõ mã đợt)"); else if (!/^[A-Za-z0-9_]+$/.test(mid)) bad("mid", "Mã đợt chỉ gồm chữ, số và dấu _");
+  if (!/^\d+$/.test(P.seq.trim())) bad("seq", "SequenceNumber phải là số nguyên ≥ 0");
+  if (P.apply.trim() && !/^[1-9]\d*$/.test(P.apply.trim())) bad("apply", "ApplyCount phải là số nguyên ≥ 1 (hoặc để trống)");
+  if (!P.regs.length) issues.push({ msg: "Chưa chọn vùng nào", sel: "#fm-regs" });
+  const sk = new Set(), st = new Set();
+  P.regs.forEach(r => {
+    if (!/^[A-Za-z0-9]{1,10}$/.test(r.k)) issues.push({ msg: `Ký hiệu vùng "${r.k}" không hợp lệ (chỉ chữ/số, ≤10 ký tự)`, sel: "#fm-regs" });
+    if (!r.t.trim()) issues.push({ msg: `Vùng ${r.k}: thiếu Territory`, sel: "#fm-regs" });
+    if (sk.has(r.k)) issues.push({ msg: `Trùng ký hiệu vùng ${r.k}`, sel: "#fm-regs" }); sk.add(r.k);
+    if (st.has(r.t)) issues.push({ msg: `Trùng Territory ${r.t}`, sel: "#fm-regs" }); st.add(r.t);
+  });
+  const pp = [];
+  P.promos.forEach((s, i) => {
+    const f = proNum(s.from), t = proNum(s.to), dc = proNum(s.disc), q = tacList(s.q), a = tacList(s.a), b = {};
+    [["from", f == null, "SLABFROM phải là số"], ["to", t == null || (f != null && t < f), "SLABTO phải là số và ≥ SLABFROM"], ["disc", dc == null || dc <= 0, "DISCOUNT (số lượng tặng) phải là số > 0"], ["q", !q.length, "chưa có SKU điều kiện (Q)"], ["a", !a.length, "chưa có SKU tặng (A)"]]
+      .forEach(([k, c, m]) => { if (c) { b[k] = 1; issues.push({ msg: `CTKM ${i + 1}: ${m}`, sel: `#fm-promos [data-pi="${i}"] [data-fp="${k}"]` }); } });
+    if (Object.keys(b).length) { pBad[i] = b; return; }
+    const ds = s.desc.trim(), m1 = /tặng\s+(\d+)/i.exec(ds), m2 = /^(\d+)\s/.exec(ds);
+    if (m1 && Number(m1[1]) !== dc) warns.push(`CTKM ${i + 1}: mô tả ghi "tặng ${m1[1]}" nhưng DISCOUNT = ${dc} — kiểm tra lại`);
+    if (m2 && Number(m2[1]) !== f) warns.push(`CTKM ${i + 1}: mô tả ghi mua ${m2[1]} nhưng SLABFROM = ${f} — kiểm tra lại`);
+    if (!ds) warns.push(`CTKM ${i + 1}: chưa có PromotionDescription, file sẽ dùng PromotionCode làm mô tả`);
+    const both = q.filter(x => a.includes(x)); if (both.length) warns.push(`CTKM ${i + 1}: SKU ${both.slice(0, 3).join(", ")}${both.length > 3 ? "…" : ""} nằm ở cả Q và A`);
+    pp.push({ i, ds, f, t, dc, q, a });
+  });
+  if (!issues.length) P.regs.forEach(rg => pp.forEach(p => {
+    const code = `${rg.k}_${mid}_${p.i + 1}`; let n = 0;
+    [["Q", p.q], ["A", p.a]].forEach(([g, list]) => list.forEach(x => {
+      const r = Array(FOCM_COLS.length).fill(null), set = (c, v) => { r[FOCM_I[c]] = v; };
+      set("PromotionCode", code); set("PromotionDescription", p.ds || code); if (P.quota) set("PromotionQuotaCode", code);
+      set("DisbursementMethod", Number(P.dm)); set("RangeBasis", Number(P.rb)); set("PromotionTypeCode", 4); set("ProRata", "N"); set("Bundle_Promotion", 0);
+      set("ExclusionOption", Number(P.excl)); set("SequenceNumber", Number(P.seq || 0)); set("StartDate", d1); set("EndDate", d2);
+      set("SLABNUM", 1); set("SLABFROM", p.f); set("SLABTO", p.t); set("DISCOUNT", p.dc); set("Repeating_Range", Number(P.rep));
+      set("ProductGroup", g); set("PromotionQuantity", 0); set("UnitOfMeasure", P.uom.trim()); set("SKUCode", /^\d+$/.test(x) ? Number(x) : x); set("Territory", rg.t.trim());
+      if (P.apply.trim()) set("ApplyCount", Number(P.apply));
+      const C = P.cols || {};
+      FOC_EXTRA_KEYS.forEach(c => { const v = C[c]; if (v != null && String(v).trim() !== "" && FOCM_I[c] != null) r[FOCM_I[c]] = FOC_NUM.has(c) && /^\d+$/.test(String(v).trim()) ? Number(String(v).trim()) : String(v).trim(); });
+      out.push(r); n++;
+    }));
+    info.push({ k: rg.k, t: rg.t, code, n, q: p.q.length, a: p.a.length });
+  }));
+  return { out, cfgBad, pBad, issues, warns, info };
+}
+const focmRegHtml = () => {
+  const P = mdmFocM, on = k => P.regs.some(r => r.k === k), known = new Set(FOCM_REGS.map(r => r[0]));
+  const chip = (k, t, o) => `<button type="button" class="fm-chip${o ? " on" : ""}" data-fm-reg="${escapeHtml(k)}"><b>${escapeHtml(k)}</b><small>${escapeHtml(t)}</small></button>`;
+  return `<div class="fm-row">${FOCM_REGS.map(([k, t]) => chip(k, P.regs.find(r => r.k === k)?.t || t, on(k))).join("")}${P.regs.filter(r => !known.has(r.k)).map(r => chip(r.k, r.t, true)).join("")}</div>
+  <div class="fm-row"><button type="button" class="btn btn-secondary" data-fm-q="north">Miền Bắc · HN NW NE</button><button type="button" class="btn btn-plain" data-fm-q="all">Chọn tất cả</button><button type="button" class="btn btn-plain" data-fm-q="none">Bỏ chọn</button>
+  <span class="fm-cust">Vùng khác: <input id="fm-ck" placeholder="Ký hiệu (vd DN)" autocomplete="off"><input id="fm-ct" placeholder="Territory (vd VN10VN20)" autocomplete="off"><button type="button" class="btn btn-secondary" data-fm-q="add">+ Thêm</button></span></div>`;
+};
+function focmSum(s) {
+  const f = s.from.trim(), t = s.to.trim(), d = s.disc.trim(), u = mdmFocM.rb === "2" ? "VND" : mdmFocM.uom.trim();
+  if (!f && !t && !d) return "Nhập SLABFROM / SLABTO / DISCOUNT để xem mô tả tóm tắt.";
+  return `Mua <b>${escapeHtml(f || "?")}–${escapeHtml(t || "?")} ${u}</b> của <b>${tacList(s.q).length}</b> SKU điều kiện → tặng <b>${escapeHtml(d || "?")} EA</b> của <b>${tacList(s.a).length}</b> SKU quà tặng · áp dụng cho <b>${mdmFocM.regs.length}</b> vùng`;
+}
+function focmPromoHtml(s, i) {
+  const F = (k, l, key, ph) => `<div class="field rq-must" data-k="${k}"><label>${l}${H(key)}${rqTag("must")}</label><input data-fp="${k}" value="${escapeHtml(s[k])}" placeholder="${ph}" autocomplete="off" inputmode="numeric"></div>`;
+  const T = (k, l) => `<div class="field rq-must" data-k="${k}"><label>${l}${H("ProductGroup")}${rqTag("must")}<span class="pro-cnt" data-cnt="${k}">${tacCnt(s[k], "SKU")}</span></label><textarea data-fp="${k}" placeholder="Dán SKU, mỗi dòng 1 SKU&#10;1016&#10;1582" spellcheck="false">${escapeHtml(s[k])}</textarea></div>`;
+  return `<div class="pro-slab" data-pi="${i}"><div class="pro-slab-h"><span>CTKM ${i + 1}</span><span><button type="button" class="btn btn-plain" data-pro-act="dup" title="Tạo CTKM mới, giữ nguyên SKU">⧉ Nhân đôi</button>${mdmFocM.promos.length > 1 ? '<button type="button" class="btn btn-plain" data-fm-pdel>× Xóa</button>' : ""}</span></div>
+  <div class="field rq-set" data-k="desc"><label>PromotionDescription${H("PromotionDescription")}${rqTag("nen")}</label><input data-fp="desc" value="${escapeHtml(s.desc)}" placeholder="vd: 4 chai Sprite 1.5L tặng 1 COKE ZERO/FANTA/SPRITE 250ML" autocomplete="off"></div>
+  <div class="pro-slab-f" style="grid-template-columns:repeat(3,minmax(0,1fr))">${F("from", "SLABFROM", "SLABFROM", "vd: 4")}${F("to", "SLABTO", "SLABTO", "vd: 4")}${F("disc", "DISCOUNT", "DISCOUNT", "vd: 1")}</div>
+  <div class="pro-sum">${focmSum(s)}</div>
+  <div class="pro-slab-t">${T("q", "SKUCode (Q) · SKU điều kiện (mua)")}${T("a", "SKUCode (A) · SKU quà tặng (tặng)")}</div></div>`;
+}
+const focmDraw = () => { const el = $("#fm-promos"); if (el) el.innerHTML = mdmFocM.promos.map(focmPromoHtml).join(""); const r = $("#fm-regs"); if (r) r.innerHTML = focmRegHtml(); focmMeta(); };
+function focmMeta() {
+  const v = focmParse(), P = mdmFocM, PV = ["PromotionCode", "SLABFROM", "SLABTO", "DISCOUNT", "ProductGroup", "SKUCode", "Territory"];
+  document.querySelectorAll("#focm-cfg .field, #focm-adv .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
+  const mi = document.querySelector('[data-fm="mid"]'); if (mi) mi.placeholder = focmMid() ? `tự động: ${focmMid()}` : "tự động theo StartDate";
+  document.querySelectorAll("#fm-promos .pro-slab").forEach(el => {
+    const i = Number(el.dataset.pi), b = v.pBad[i] || {}, s = P.promos[i]; if (!s) return;
+    el.querySelectorAll(".field").forEach(f => f.classList.toggle("bad", !!b[f.dataset.k]));
+    el.querySelector(".pro-sum").innerHTML = focmSum(s); el.querySelector('[data-cnt="q"]').innerHTML = tacCnt(s.q, "SKU"); el.querySelector('[data-cnt="a"]').innerHTML = tacCnt(s.a, "SKU");
+  });
+  const chips = [`<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng xuất ra</span>`, `<span class="adj-chip">${P.regs.length} vùng × ${P.promos.length} CTKM</span>`]; if (v.issues.length) chips.push(`<span class="adj-chip err">${v.issues.length} lỗi</span>`);
+  $("#focm-chips").innerHTML = chips.join("");
+  $("#focm-issues").innerHTML = v.issues.map(x => `<li data-goto='${x.sel}'>✖ ${escapeHtml(x.msg)}</li>`).join("") + v.warns.map(w => `<li class="w">⚠ ${escapeHtml(w)}</li>`).join("") + (!v.issues.length ? `<li class="ok">✔ Dữ liệu hợp lệ, sẵn sàng xuất file</li>` : "");
+  $("#focm-map").innerHTML = v.info.length ? `<table><thead><tr><th>PromotionCode</th><th>Territory</th><th>Q</th><th>A</th><th>Dòng</th></tr></thead><tbody>${v.info.map(x => `<tr><td>${escapeHtml(x.code)}</td><td>${escapeHtml(x.t)}</td><td>${x.q}</td><td>${x.a}</td><td>${x.n}</td></tr>`).join("")}</tbody></table>` : `<div class="pro-more">Chọn vùng và điền CTKM để xem danh sách mã sẽ sinh ra.</div>`;
+  $("#focm-pv").innerHTML = v.out.length ? `<table><thead><tr>${PV.map(c => `<th>${c}</th>`).join("")}</tr></thead><tbody>${v.out.slice(0, 8).map(r => `<tr>${PV.map(c => `<td>${r[FOCM_I[c]] ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>${v.out.length > 8 ? `<div class="pro-more">… và ${nf(v.out.length - 8)} dòng nữa</div>` : ""}` : `<div class="pro-more">Chưa có dòng nào — hoàn tất các mục bắt buộc để xem trước.</div>`;
+  $("#focm-export").disabled = !v.out.length || !!v.issues.length;
+}
+async function focmAct(a, el) {
+  const P = mdmFocM;
+  if (a === "add") P.promos.push(focmPromo());
+  else if (a === "dup") { const i = Number(el.closest(".pro-slab").dataset.pi), s = P.promos[i]; P.promos.splice(i + 1, 0, { ...s, desc: "", from: "", to: "", disc: "" }); }
+  else {
+    const dirty = P.regs.length || P.end || P.promos.some(s => s.q || s.a || s.from || s.desc);
+    if (dirty && !(await confirmDialog({ title: a === "example" ? "Thay bằng ví dụ?" : "Làm mới form?", message: "Dữ liệu đang nhập trong form sẽ bị thay thế.", confirmText: a === "example" ? "Điền ví dụ" : "Làm mới", danger: true }))) return;
+    mdmFocM = focmInit();
+    if (a === "example") { const e = new Date(); e.setDate(e.getDate() + 21); Object.assign(mdmFocM, { end: [String(e.getDate()).padStart(2, "0"), String(e.getMonth() + 1).padStart(2, "0"), e.getFullYear()].join("/"), regs: FOCM_NORTH.map(k => ({ k, t: FOCM_REGS.find(r => r[0] === k)[1] })), promos: [{ desc: "4 chai Sprite 1.5L tặng 1 COKE ZERO/FANTA/SPRITE 250ML", from: "4", to: "4", disc: "1", q: "2016\n2090\n2439\n2091\n1056", a: "2469\n4884\n6469\n6479\n1093\n1094\n1095\n1096\n1097" }] }); }
+    $("#mdm-root").innerHTML = renderPro(); return focmDraw();
+  }
+  focmDraw();
+}
+function focmRegClick(e) {
+  const P = mdmFocM, rb = e.target.closest("[data-fm-reg]"), q = e.target.closest("[data-fm-q]"), reg = k => { const x = FOCM_REGS.find(r => r[0] === k); return { k, t: x[1] }; };
+  if (rb) { const k = rb.dataset.fmReg, i = P.regs.findIndex(r => r.k === k); if (i >= 0) P.regs.splice(i, 1); else P.regs.push(reg(k)); $("#fm-regs").innerHTML = focmRegHtml(); focmMeta(); return true; }
+  if (!q) return false;
+  const m = q.dataset.fmQ;
+  if (m === "north") P.regs = FOCM_NORTH.map(reg); else if (m === "all") P.regs = FOCM_REGS.map(r => reg(r[0])); else if (m === "none") P.regs = [];
+  else if (m === "add") { const k = ($("#fm-ck").value || "").trim().toUpperCase(), t = ($("#fm-ct").value || "").trim().toUpperCase(); if (!k || !t) { toast("Nhập đủ ký hiệu vùng và Territory.", "error"); return true; } P.regs = P.regs.filter(r => r.k !== k); P.regs.push({ k, t }); }
+  $("#fm-regs").innerHTML = focmRegHtml(); focmMeta(); return true;
+}
+async function focmExport() {
+  const v = focmParse(); if (!v.out.length || v.issues.length) return;
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CTKM_FOC_NHIEUVUNG_${stamp}.xlsx`;
+  try { await loadLib("exceljs"); } catch (_) { }
+  if (window.ExcelJS) { try { await tacSaveStyled(FOCM_COLS, v.out, fileName, FOC_CHK_GROUPS, "Sheet1", "dd/mm/yyyy"); return toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng, ${mdmFocM.regs.length} vùng) — các cột dữ liệu đã được tô màu nhẹ để soát lại.`, "success"); } catch (err) { console.warn("Xuất có màu lỗi, chuyển sang file thường:", err); } }
+  try { await loadLib("xlsx"); } catch (err) { return toast("Không tải được thư viện Excel: " + err.message, "error"); }
+  const ws = XLSX.utils.aoa_to_sheet([FOCM_COLS, ...v.out]);
+  ["StartDate", "EndDate"].forEach(c => { const col = XLSX.utils.encode_col(FOCM_I[c]); v.out.forEach((_, i) => { const cell = ws[col + (i + 2)]; if (cell) cell.z = "dd/mm/yyyy"; }); });
+  ws["!cols"] = FOCM_COLS.map(h => ({ wch: Math.max(h.length + 2, 12) }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1"); XLSX.writeFile(wb, fileName);
+  toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng) — lần này không tô màu được vì chưa tải được thư viện ExcelJS.`, "success");
+}
+function renderProFocM() {
+  const P = mdmFocM;
+  const F = (k, l, key, ph, rq) => `<div class="field${rqCls(rq)}" data-k="${k}"><label>${l}${key ? H(key) : ""}${rqTag(rq)}</label><input data-fm="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+  const S = (k, l, key, opts) => `<div class="field${rqCls("set")}" data-k="${k}"><label>${l}${key ? H(key) : ""}${rqTag("set")}</label><select data-fm="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
+  return `<section class="panel tl-panel"><style>.fm-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}.fm-chip{border:1px solid #dcc9c9;background:#fff;border-radius:12px;padding:8px 14px;cursor:pointer;color:#555;display:flex;flex-direction:column;align-items:flex-start;gap:2px;transition:.15s}.fm-chip b{font-size:14px}.fm-chip small{font-size:10.5px;opacity:.75}.fm-chip:hover{border-color:#b91c1c;color:#b91c1c}.fm-chip.on{background:#b91c1c;border-color:#b91c1c;color:#fff;box-shadow:0 2px 6px rgba(185,28,28,.25)}.fm-chip.on b::before{content:"✓ "}.fm-cust{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-left:auto;font-size:12px;color:#6b5555}.fm-cust input{height:34px;border:1px solid #dcc9c9;border-radius:8px;padding:0 10px;font-size:12px;width:150px}#focm-map table{width:100%;border-collapse:collapse;font-size:12px}#focm-map th,#focm-map td{padding:4px 8px;text-align:left;border-bottom:1px solid #f1e6e6;white-space:nowrap}#focm-map{max-height:260px;overflow:auto}</style>
+  <div class="panel-head"><div><h2>Cài Đặt CTKM</h2><p>FOC nhiều vùng: chọn vùng một lần, nhập CTKM một lần — tool nhân ra từng vùng (mỗi vùng 1 PromotionCode riêng cho mỗi CTKM), xuất đúng mẫu FOC_NORTH (68 cột).</p></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
+  <div class="panel-body">${proModeSeg()}${rqLegendHtml()}<div class="pro-lay"><div class="pro-main">
+  <div class="pro-card"><h3><em>1</em>Thời gian &amp; đợt</h3><div class="pro-grid" id="focm-cfg">${F("start", "StartDate", "StartDate", "dd/mm/yyyy", "must")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy", "must")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("mid", "Mã đợt (giữa PromotionCode)", "", "tự động theo StartDate", "set")}</div>
+  <p class="adj-tip">PromotionCode = <b>Ký hiệu vùng</b>_<b>Mã đợt</b>_<b>số thứ tự CTKM</b>, vd <code>HN_FOC_261009_1</code>. Mã đợt tự lấy theo StartDate (yymmdd), có thể gõ đè.</p></div>
+  <div class="pro-card"><h3><em>2</em>Chọn vùng áp dụng${rqTag("must")}</h3><div id="fm-regs">${focmRegHtml()}</div></div>
+  <div class="pro-card"><h3><em>3</em>CTKM dùng chung cho các vùng đã chọn<span class="adj-chips" id="focm-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm CTKM</button></h3><div id="fm-promos">${P.promos.map(focmPromoHtml).join("")}</div>
+  <p class="adj-tip">💡 Copy cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. SKU và mức mua/tặng được áp dụng giống nhau cho mọi vùng đã chọn.</p></div>
+  <details class="pro-card pro-det" id="focm-adv"><summary><em>4</em>Tùy chọn nâng cao ${rqTag("set")} <small>đã điền sẵn theo file mẫu — thường không phải đổi</small></summary><div class="pro-grid" style="margin-top:12px">
+  ${F("seq", "SequenceNumber", "SequenceNumber", "", "set")}${F("apply", "ApplyCount", "ApplyCount", "để trống = không giới hạn", "opt")}${S("rep", "Repeating_Range", "Repeating_Range", [["0", "0 – Không lặp lại"], ["1", "1 – Có lặp lại"]])}
+  ${S("excl", "ExclusionOption", "ExclusionOption", [["0", "0 – Có (được hưởng thêm CTKM khác)"], ["1", "1 – Không (chỉ CTKM này)"]])}${S("rb", "RangeBasis", "RangeBasis", [["1", "1 – Dựa trên số lượng sản phẩm mua"], ["2", "2 – Dựa trên giá trị sản phẩm mua"]])}${S("dm", "DisbursementMethod", "DisbursementMethod", [["1", "1 – Áp dụng KM trên hóa đơn"], ["2", "2 – Áp dụng KM ngoài hóa đơn"]])}
+  <div class="field rq-opt"><label>PromotionQuotaCode${H("PromotionQuotaCode")}${rqTag("opt")}</label><label style="display:flex;gap:8px;align-items:center;font-weight:500;padding:9px 0"><input type="checkbox" data-fm="quota" style="width:auto"${P.quota ? " checked" : ""}> Điền = PromotionCode (mẫu FOC để trống)</label></div></div></details>
+  </div><aside class="pro-aside"><div class="pro-card"><h3>Kiểm tra</h3><ul class="pro-issues" id="focm-issues"></ul></div>
+  <div class="pro-card"><h3>Mã sẽ sinh ra (vùng × CTKM)</h3><div id="focm-map"></div></div>
+  <div class="pro-card"><h3>Xem trước file Excel</h3><div class="pro-pv" id="focm-pv"></div></div>
+  <button type="button" id="focm-export" class="btn btn-primary btn-lg" style="width:100%">⬇ Xuất Excel (.xlsx)</button>
+  ${xlLegendHtml(FOC_CHK_GROUPS, "Cột ngoài danh sách trên nhưng có điền dữ liệu — soát kỹ vì không nằm trong mẫu FOC thường dùng.")}
+  <div class="adj-foot" style="margin:0;padding:0;border:0"><div class="meta">PromotionTypeCode = 4 · SKU mua → Q, SKU tặng → A · ProRata N · SpecialPromotion 1 · Sales_Organisation &amp; LexiaCode để trống</div></div></aside></div></div></section>`;
+}
     function renderPro() {
       if (mdmProMode === "tactical") return renderProTactical();
-      if (mdmProMode === "foc") return renderProFoc();
+      if (mdmProMode === "focm") return renderProFocM(); if (mdmProMode === "foc") return renderProFoc();
       const P = mdmPro;
       const F = (k, l, key, ph) => `<div class="field${rqCls(PRO_RQ[k])}" data-k="${k}"><label>${l}${H(key)}${rqTag(PRO_RQ[k])}</label><input data-pro="${k}" value="${escapeHtml(P[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
       const S = (k, l, key, opts) => `<div class="field${rqCls(PRO_RQ[k])}" data-k="${k}"><label>${l}${H(key)}${rqTag(PRO_RQ[k])}</label><select data-pro="${k}">${opts.map(([v, t]) => `<option value="${v}"${P[k] === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>`;
@@ -6233,8 +6363,10 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (t.dataset.tac) { mdmTac[t.dataset.tac] = t.type === "checkbox" ? t.checked : t.value; return tacMeta(); }
         if (t.dataset.tacCol) { mdmTac.cols[t.dataset.tacCol] = t.value; mdmTac.touched.add(t.dataset.tacCol); return tacMeta(); }
         if (t.dataset.tg) { mdmTac.groups[Number(t.closest(".pro-slab").dataset.gi)][t.dataset.tg] = t.value; return t.dataset.tg === "scope" ? tacDraw() : tacMeta(); }
-        if (t.dataset.foc) { mdmFoc[t.dataset.foc] = t.type === "checkbox" ? t.checked : t.value; if (t.dataset.foc === "multi" && t.value === "1" && !mdmFoc.regs.trim()) { try { mdmFoc.regs = localStorage.getItem("masterdata_foc_regs") || ""; } catch (_) { } } if (t.dataset.foc === "regs") { try { localStorage.setItem("masterdata_foc_regs", t.value); } catch (_) { } } return t.dataset.foc === "scope" || t.dataset.foc === "multi" ? ($("#mdm-root").innerHTML = renderPro(), focDraw()) : focMeta(); }
+        if (t.dataset.foc) { mdmFoc[t.dataset.foc] = t.type === "checkbox" ? t.checked : t.value; return t.dataset.foc === "scope" ? ($("#mdm-root").innerHTML = renderPro(), focDraw()) : focMeta(); }
         if (t.dataset.focCol) { mdmFoc.cols[t.dataset.focCol] = t.value; mdmFoc.touched.add(t.dataset.focCol); return focMeta(); }
+        if (t.dataset.fm) { mdmFocM[t.dataset.fm] = t.type === "checkbox" ? t.checked : t.value; return focmMeta(); }
+        if (t.dataset.fp) { mdmFocM.promos[Number(t.closest(".pro-slab").dataset.pi)][t.dataset.fp] = t.value; return focmMeta(); }
         if (t.dataset.fs) { mdmFoc.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.fs] = t.value; return focMeta(); }
         if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
         if (t.dataset.ini) { mdmIni[t.dataset.ini] = t.value; return iniMeta(); }
@@ -6288,6 +6420,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (e.target.closest("#pro-export")) return proExport();
         if (e.target.closest("#tac-export")) return tacExport();
         if (e.target.closest("#foc-export")) return focExport();
+        if (e.target.closest("#focm-export")) return focmExport();
+        const fmDel = e.target.closest("[data-fm-pdel]"); if (fmDel) { mdmFocM.promos.splice(Number(fmDel.closest(".pro-slab").dataset.pi), 1); return focmDraw(); }
+        if (focmRegClick(e)) return;
         const focDel = e.target.closest("[data-foc-del]");
         if (focDel) { mdmFoc.slabs.splice(Number(focDel.closest(".pro-slab").dataset.si), 1); return focDraw(); }
         const tacDel = e.target.closest("[data-tac-del]");
