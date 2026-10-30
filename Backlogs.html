@@ -1422,6 +1422,7 @@ body:has(.drawer.open) .toolbar{z-index:auto}
       <div><div class="dialog-title" id="recordTitle">Tạo bản ghi</div><div class="dialog-desc" id="recordDesc"></div></div>
       <button type="button" class="icon-btn" data-action="close-record" aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
+    <div class="notice warn" id="recordStale" role="status" hidden></div>
     <div class="form-grid" id="recordFields"></div>
     <div class="dialog-foot">
       <button type="button" class="btn" data-action="close-record">Huỷ</button>
@@ -3814,6 +3815,7 @@ function openDrawer(kicker, title, body){
   $("#drawer").setAttribute("aria-hidden", "false");
 }
 function closeDrawer(){
+  state.drawerItem = null;
   $("#drawer").classList.remove("open");
   $("#drawerScrim").classList.remove("open");
   $("#drawer").setAttribute("aria-hidden", "true");
@@ -3859,6 +3861,7 @@ function logSentence(log){
     (log.old_value || log.new_value ? ': <span class="delta old">' + esc(log.old_value || "trống") + '</span> → <span class="delta new">' + esc(log.new_value || "trống") + "</span>" : "");
 }
 function openItemDrawer(kind, id){
+  state.drawerItem = { kind: kind, id: id };
   if (kind === "ticket") {
     const idx = state.tickets.findIndex(function(row){ return (tf(row, "key") || "ticket-" + state.tickets.indexOf(row)) === id; });
     if (idx < 0) { toast("Không tìm thấy ticket", "error"); return; }
@@ -4014,8 +4017,11 @@ function backlogOptions(includeEmpty){
 }
 function openRecord(kind, id, preset){
   const isEdit = !!id;
-  state.editing = { kind: kind, id: id || null };
   const existing = id ? (kind === "backlog" ? state.backlogs.find(function(x){ return x.id === id; }) : state.tasks.find(function(x){ return x.id === id; })) : (preset || {});
+  if (isEdit && !existing) { toast("Mục này không còn tồn tại (có thể đã bị người khác xoá)", "error"); renderShell(); return; }
+  /* base = bản sao lúc mở form, dùng để biết người dùng đã sửa trường nào và phát hiện xung đột khi lưu */
+  state.editing = { kind: kind, id: id || null, base: isEdit ? Object.assign({}, existing) : null };
+  { const stale = $("#recordStale"); if (stale) stale.hidden = true; }
   $("#recordTitle").textContent = (isEdit ? "Sửa " : "Tạo ") + (kind === "backlog" ? "backlog" : "task");
   $("#recordDesc").textContent = kind === "backlog"
     ? "Dữ liệu kế hoạch nội bộ trong jtm_backlogs; không sửa ticket Jira gốc."
@@ -4092,7 +4098,11 @@ function buildPayload(kind, data){
       jira_key: cleanText(data.jira_key)
     };
     payload.due_date = payload.target_date;
-    payload.region = cleanText(data.region);
+    payload.region = (function(){
+      const sel = regionList(data.region);
+      const ok = REGIONS.filter(function(r){ return sel.indexOf(r) >= 0; });
+      return ok.length ? ok.join(",") : null;
+    })();
     payload.progress_note = cleanText(data.progress_note);
     if (status === "done" && !payload.completed_date) payload.completed_date = todayKey();
     if (!payload.progress && status === "done") payload.progress = 100;
@@ -4239,7 +4249,7 @@ const ATTACH_BUCKET = "jtm-attachments";
 const ATTACH_MAX = 20 * 1024 * 1024;
 const ATT = { pending: [], existing: [], removed: [], loading: false, id: null };
 function attPath(id){ return "backlog/" + id; }
-function attDisplayName(name){ return String(name || "").replace(/^\d{10,}-/, ""); }
+function attDisplayName(name){ return String(name || "").replace(/^\d{10,}(?:_[a-z0-9]{4})?-/, ""); }
 function attSafeName(name){
   const base = String(name || "file").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
   return base.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(-120) || "file";
@@ -4349,7 +4359,9 @@ async function attCommit(id){
   }
   for (let i = 0; i < ATT.pending.length; i++) {
     const f = ATT.pending[i];
-    const path = attPath(id) + "/" + (Date.now() + i) + "-" + attSafeName(f.name);
+    /* hậu tố ngẫu nhiên: hai người cùng tải lên một lúc cũng không bao giờ trùng đường dẫn */
+    const rand = Math.random().toString(36).slice(2, 6).padEnd(4, "0");
+    const path = attPath(id) + "/" + (Date.now() + i) + "_" + rand + "-" + attSafeName(f.name);
     const r = await bucket.upload(path, f, { contentType: f.type || "application/octet-stream", upsert: false });
     if (r.error) fail.push(f.name + ": " + r.error.message); else ok++;
   }
@@ -4389,57 +4401,158 @@ function validatePayload(kind, payload){
   if (kind === "backlog" && payload.progress != null) payload.progress = Math.min(100, Math.max(0, payload.progress));
   return "";
 }
+/* ---------- Lưu an toàn khi nhiều người cùng sửa ----------
+   1) Chỉ gửi các trường người dùng THỰC SỰ đã sửa (so với bản lúc mở form), không ghi đè cả bản ghi.
+   2) Khoá lạc quan theo updated_at: nếu bản ghi đã bị người khác sửa, tải bản mới nhất và gộp.
+   3) Chỉ khi chính trường đó cũng bị người khác đổi sang giá trị khác mới hỏi người dùng có ghi đè không. */
+function nvOf(v){ return v === undefined || v === null || v === "" ? null : (typeof v === "number" ? String(v) : String(v).trim()); }
+function sameVal(a, b){ return nvOf(a) === nvOf(b); }
+const FIELD_LABELS = { title: "Tên", description: "Mô tả", owner_id: "Người phụ trách", assignee_id: "Người thực hiện", backlog_id: "Backlog", status: "Trạng thái", priority: "Ưu tiên",
+  start_date: "Ngày bắt đầu", target_date: "Deadline", due_date: "Deadline", actual_start_date: "Bắt đầu thực tế", completed_date: "Ngày hoàn thành", actual_effort: "Effort thực tế",
+  estimated_hours: "Giờ ước tính", actual_hours: "Giờ thực tế", progress: "Tiến độ (%)", blocked_reason: "Lý do bị chặn", jira_key: "Jira key", region: "Region", progress_note: "Progress" };
+function fieldLabel(k){ return FIELD_LABELS[k] || k; }
+function changedFields(payload, base){
+  const out = {};
+  Object.keys(payload).forEach(function(k){ if (!sameVal(payload[k], base[k])) out[k] = payload[k]; });
+  return out;
+}
+function upsertLocal(kind, row){
+  if (!row || !row.id) return;
+  const list = kind === "backlog" ? state.backlogs : state.tasks;
+  const i = list.findIndex(function(x){ return x.id === row.id; });
+  if (i >= 0) Object.assign(list[i], row); else list.unshift(row);
+}
+async function updateWithMerge(table, id, base, mine){
+  const skipped = [];
+  const patch = Object.assign({}, mine);
+  let baseRow = Object.assign({}, base);
+  let stamp = true;
+  for (let round = 0; round < 4; round++) {
+    if (!Object.keys(patch).length) return { ok: true, row: null, noop: true, skipped: skipped };
+    let r;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      let q = state.client.from(table).update(stamp ? Object.assign({}, patch, { updated_at: new Date().toISOString() }) : patch).eq("id", id);
+      if (stamp && baseRow.updated_at) q = q.eq("updated_at", baseRow.updated_at);
+      r = await q.select("*");
+      const m = r.error && /Could not find the '([^']+)' column/i.exec(r.error.message || "");
+      if (m && m[1] === "updated_at") { stamp = false; continue; }
+      if (m && Object.prototype.hasOwnProperty.call(patch, m[1])) {
+        if (patch[m[1]] !== null && patch[m[1]] !== undefined) skipped.push(m[1]);
+        delete patch[m[1]];
+        if (!Object.keys(patch).length) return { ok: true, row: null, noop: true, skipped: skipped };
+        continue;
+      }
+      break;
+    }
+    if (r.error) throw r.error;
+    if (r.data && r.data.length) return { ok: true, row: r.data[0], skipped: skipped };
+    /* Không có dòng nào được cập nhật: bản ghi đã bị người khác sửa hoặc xoá */
+    const cur = await state.client.from(table).select("*").eq("id", id).maybeSingle();
+    if (cur.error) throw cur.error;
+    if (!cur.data) return { ok: false, gone: true, skipped: skipped };
+    const latest = cur.data;
+    upsertLocal(table === BACKLOG_TABLE ? "backlog" : "task", latest);
+    const conflicts = Object.keys(patch).filter(function(k){
+      return k !== "updated_at" && !sameVal(latest[k], baseRow[k]) && !sameVal(latest[k], patch[k]);
+    });
+    if (conflicts.length) return { ok: false, conflicts: conflicts, latest: latest, patch: patch, skipped: skipped };
+    baseRow = latest;
+    Object.keys(patch).forEach(function(k){ if (sameVal(latest[k], patch[k])) delete patch[k]; });
+  }
+  throw new Error("Bản ghi liên tục bị người khác cập nhật, hãy thử lại sau giây lát");
+}
+function closeRecordDialog(){
+  try { $("#recordDialog").close(); } catch (e) {}
+  state.editing = null;
+  const box = $("#recordStale");
+  if (box) box.hidden = true;
+}
 async function saveRecord(event){
-  state.ownWriteAt = Date.now();
   event.preventDefault();
-  if (!state.editing) return;
+  if (!state.editing || state.saving) return;
+  state.ownWriteAt = Date.now();
   const kind = state.editing.kind;
+  const editId = state.editing.id;
+  const base = state.editing.base;
   const form = new FormData(event.currentTarget);
   const data = Object.fromEntries(form.entries());
   data.region = form.getAll("region").join(",");
   const payload = buildPayload(kind, data);
   const invalid = validatePayload(kind, payload);
   if (invalid) { toast(invalid, "error"); return; }
-  if (kind === "task" && !state.editing.id) {
+  if (kind === "task" && !editId) {
     const dup = state.tasks.find(function(t){ return norm(t.title) === norm(payload.title); });
     if (dup && payload.title.charAt(0) !== "(" && !(await jdConfirm("Đã có task cùng tên: “" + dup.title + "”. Vẫn tạo mới?"))) return;
   }
   const table = kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE;
   const btn = $("#recordSubmit");
+  state.saving = true;
   btn.disabled = true;
   btn.textContent = "Đang lưu…";
   try {
-    /* Nếu database thiếu cột (vd. jira_key), bỏ cột đó khỏi payload rồi lưu lại thay vì báo lỗi. */
     const skipped = [];
-    let r;
-    for (let attempt = 0; attempt < 6; attempt++) {
-      r = state.editing.id
-        ? await state.client.from(table).update(payload).eq("id", state.editing.id)
-        : await state.client.from(table).insert(payload).select("id").single();
-      const m = r.error && /Could not find the '([^']+)' column/i.exec(r.error.message || "");
-      if (m && Object.prototype.hasOwnProperty.call(payload, m[1])) {
-        if (payload[m[1]] !== null && payload[m[1]] !== undefined) skipped.push(m[1]);
-        delete payload[m[1]];
-        continue;
+    const attachChanged = kind === "backlog" && (ATT.pending.length > 0 || ATT.removed.length > 0);
+    let saved = null, id = editId, attRes = null;
+    if (editId) {
+      const mine = base ? changedFields(payload, base) : payload;
+      let res = await updateWithMerge(table, editId, base || {}, mine);
+      if (!res.ok && res.conflicts) {
+        const names = res.conflicts.map(fieldLabel).filter(function(v, i, a){ return a.indexOf(v) === i; }).join(", ");
+        const go = await jdConfirm("Ghi đè thay đổi của người khác?\nNgười khác vừa sửa cùng trường: " + names + ". Chọn Đồng ý để ghi đè bằng giá trị của bạn, hoặc Huỷ để giữ form và đối chiếu lại.");
+        if (!go) { toast("Chưa lưu. Đóng form và mở lại để xem bản mới nhất của người khác.", "info"); return; }
+        res = await updateWithMerge(table, editId, res.latest, res.patch);
       }
-      break;
+      if (res.gone) {
+        closeRecordDialog();
+        const list = kind === "backlog" ? state.backlogs : state.tasks;
+        const i = list.findIndex(function(x){ return x.id === editId; });
+        if (i >= 0) list.splice(i, 1);
+        renderShell();
+        toast("Bản ghi đã bị người khác xoá nên không thể lưu.", "error");
+        return;
+      }
+      if (!res.ok) throw new Error("Bản ghi vừa được người khác thay đổi tiếp, hãy bấm Lưu lại");
+      (res.skipped || []).forEach(function(c){ skipped.push(c); });
+      saved = res.row;
+    } else {
+      const patch = Object.assign({}, payload);
+      let r;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        r = await state.client.from(table).insert(patch).select("*").single();
+        const m = r.error && /Could not find the '([^']+)' column/i.exec(r.error.message || "");
+        if (m && Object.prototype.hasOwnProperty.call(patch, m[1])) {
+          if (patch[m[1]] !== null && patch[m[1]] !== undefined) skipped.push(m[1]);
+          delete patch[m[1]];
+          continue;
+        }
+        break;
+      }
+      if (r.error) throw r.error;
+      saved = r.data;
+      id = saved && saved.id;
     }
-    if (r.error) throw r.error;
-    let attRes = null;
-    if (kind === "backlog" && (ATT.pending.length || ATT.removed.length)) {
-      const savedId = state.editing.id || (r.data && r.data.id);
-      if (savedId) { btn.textContent = "Đang tải tệp…"; attRes = await attCommit(savedId); }
-      else attRes = { ok: 0, fail: ["không xác định được ID backlog vừa tạo"] };
+    if (attachChanged) {
+      if (id) {
+        btn.textContent = "Đang tải tệp…";
+        attRes = await attCommit(id);
+        /* Chỉ đổi tệp, không đổi trường nào: chạm updated_at để người khác thấy bản ghi vừa thay đổi */
+        if (!saved && editId) {
+          const t = await state.client.from(table).update({ updated_at: new Date().toISOString() }).eq("id", id).select("*");
+          if (!t.error && t.data && t.data[0]) saved = t.data[0];
+        }
+      } else attRes = { ok: 0, fail: ["không xác định được ID backlog vừa tạo"] };
     }
-    $("#recordDialog").close();
-    state.editing = null;
+    closeRecordDialog();
+    if (saved) upsertLocal(kind, saved);
+    renderShell();
+    refreshOpenDrawer();
     if (attRes && attRes.fail.length) toast("Đã lưu backlog, nhưng có lỗi tệp đính kèm: " + attRes.fail.join("; "), "error");
     if (skipped.length) toast("Đã lưu, nhưng cột " + skipped.join(", ") + " chưa có trong database nên chưa được lưu. Hãy chạy file SQL bổ sung cột.", "error");
     else if (!(attRes && attRes.fail.length)) toast((kind === "backlog" ? "Đã lưu backlog" : "Đã lưu task") + (attRes && attRes.ok ? " · đã tải lên " + attRes.ok + " tệp" : ""), "good");
-    await loadAll({ only: ["backlogs", "tasks"] });
   } catch (e) {
-    toast("Không thể lưu: " + e.message, "error");
+    toast("Không thể lưu: " + ((e && e.message) || e), "error");
   } finally {
+    state.saving = false;
     btn.disabled = false;
     btn.textContent = "Lưu";
   }
@@ -4447,13 +4560,13 @@ async function saveRecord(event){
 /* ============================ THÙNG RÁC (super_admin) ============================ */
 const RECYCLE_TABLE = "jtm_recycle_bin";
 /* ============================ REAL-TIME (Supabase Realtime) ============================ */
-const RT = { ch: null, pending: new Set(), timer: null, toastAt: 0, subscribedOnce: false, hiddenAt: 0, errAt: 0 };
+const RT = { ch: null, pending: new Set(), touched: new Set(), dirty: false, timer: null, toastAt: 0, subscribedOnce: false, hiddenAt: 0, errAt: 0 };
 function liveBadge(on){ const b = $("#liveBadge"); if (b) b.hidden = !on; }
 function startRealtime(){
   if (RT.ch || !state.client || !state.client.channel) return;
   const ch = state.client.channel("jtm-live");
   [[BACKLOG_TABLE, "backlogs"], [TASK_TABLE, "tasks"], [TICKET_TABLE, "tickets"], [MEMBER_TABLE, "members"], [ACTIVITY_TABLE, "activity"], [RECYCLE_TABLE, "recycle"]].forEach(function(p){
-    ch.on("postgres_changes", { event: "*", schema: "public", table: p[0] }, function(){ rtQueue(p[1]); });
+    ch.on("postgres_changes", { event: "*", schema: "public", table: p[0] }, function(payload){ rtApply(p[1], payload); });
   });
   ch.subscribe(function(status){
     if (status === "SUBSCRIBED") {
@@ -4469,23 +4582,74 @@ function startRealtime(){
 }
 function stopRealtime(){
   if (RT.ch && state.client) { try { state.client.removeChannel(RT.ch); } catch (e) {} }
-  RT.ch = null; RT.subscribedOnce = false; RT.pending.clear(); clearTimeout(RT.timer); liveBadge(false);
+  RT.ch = null; RT.subscribedOnce = false; RT.pending.clear(); RT.touched.clear(); RT.dirty = false; clearTimeout(RT.timer); liveBadge(false);
+}
+function rtSchedule(){
+  clearTimeout(RT.timer);
+  RT.timer = setTimeout(rtFlush, RT.pending.has("tickets") ? 2500 : 400);
 }
 function rtQueue(key){
   RT.pending.add(key);
-  clearTimeout(RT.timer);
-  RT.timer = setTimeout(rtFlush, RT.pending.has("tickets") ? 2500 : 500);
+  rtSchedule();
+}
+/* Áp dụng thay đổi backlog/task từ real-time thẳng vào bộ nhớ (không tải lại cả bảng).
+   Dùng Object.assign để các cột lớn không được gửi kèm (TOAST) vẫn giữ nguyên giá trị cũ. */
+function rtApply(key, payload){
+  if ((key === "backlogs" || key === "tasks") && payload && payload.eventType) {
+    const list = key === "backlogs" ? state.backlogs : state.tasks;
+    const rec = payload.new && payload.new.id ? payload.new : null;
+    const id = rec ? rec.id : (payload.old && payload.old.id);
+    if (id) {
+      const i = list.findIndex(function(x){ return x.id === id; });
+      if (payload.eventType === "DELETE") { if (i >= 0) list.splice(i, 1); }
+      else if (rec) { if (i >= 0) Object.assign(list[i], rec); else list.unshift(Object.assign({}, rec)); }
+      else { rtQueue(key); return; }
+      RT.touched.add(key);
+      RT.dirty = true;
+      rtNoteEditing(key, id, payload.eventType);
+      rtSchedule();
+      return;
+    }
+  }
+  rtQueue(key);
+}
+/* Báo cho người đang mở form sửa đúng bản ghi này rằng có người khác vừa thay đổi nó */
+function rtNoteEditing(key, id, eventType){
+  const ed = state.editing;
+  if (!ed || state.saving || ed.id !== id) return;
+  if ((key === "backlogs" ? "backlog" : "task") !== ed.kind) return;
+  const box = $("#recordStale");
+  if (!box || !$("#recordDialog").open) return;
+  box.hidden = false;
+  box.textContent = eventType === "DELETE"
+    ? "Bản ghi này vừa bị người khác xoá. Lưu lúc này sẽ không thành công."
+    : "Bản ghi này vừa được người khác cập nhật. Khi bạn lưu, hệ thống chỉ ghi các trường bạn đã sửa và gộp với thay đổi mới; nếu trùng trường sẽ hỏi lại bạn trước khi ghi đè.";
+}
+/* Làm mới popup chi tiết đang mở (giữ vị trí cuộn) khi dữ liệu thay đổi */
+function refreshOpenDrawer(){
+  const d = $("#drawer");
+  const cur = state.drawerItem;
+  if (!d || !d.classList.contains("open") || !cur) return;
+  const list = cur.kind === "backlog" ? state.backlogs : cur.kind === "task" ? state.tasks : null;
+  if (list && !list.some(function(x){ return x.id === cur.id; })) { closeDrawer(); toast("Mục này vừa bị người khác xoá", "info"); return; }
+  const body = $("#drawerBody"), top = body ? body.scrollTop : 0;
+  openItemDrawer(cur.kind, cur.id);
+  if (body) body.scrollTop = top;
 }
 async function rtFlush(){
   if (!approvedNow()) return;
   if (userIsBusy()) { RT.timer = setTimeout(rtFlush, 1500); return; }   /* đang gõ hoặc mở form: chờ xong rồi mới cập nhật */
   const keys = Array.from(RT.pending); RT.pending.clear();
+  const touched = Array.from(RT.touched); RT.touched.clear();
+  const dirty = RT.dirty; RT.dirty = false;
   const only = keys.filter(function(k){ return ["tickets", "backlogs", "tasks", "members"].indexOf(k) >= 0; });
   try {
     if (only.length) await loadAll({ only: only });
-    else if (keys.indexOf("activity") >= 0 && state.loaded.activity) { await loadActivity(true); if (state.tab === "activity") renderShell(); }
+    else if (dirty) renderShell();
+    if (!only.length && keys.indexOf("activity") >= 0 && state.loaded.activity) { await loadActivity(true); if (state.tab === "activity") renderShell(); }
     if (keys.indexOf("recycle") >= 0 && isAdmin()) await loadRecycle();
-    const byOthers = (keys.indexOf("backlogs") >= 0 || keys.indexOf("tasks") >= 0) && Date.now() - (state.ownWriteAt || 0) > 4000;
+    if (only.length || dirty) refreshOpenDrawer();
+    const byOthers = keys.concat(touched).some(function(k){ return k === "backlogs" || k === "tasks"; }) && Date.now() - (state.ownWriteAt || 0) > 4000;
     if (byOthers && Date.now() - RT.toastAt > 10000) { RT.toastAt = Date.now(); toast("Dữ liệu vừa được cập nhật bởi thành viên khác", "info"); }
   } catch (e) {}
 }
@@ -4539,27 +4703,44 @@ async function deleteRecord(kind, id){
   state.ownWriteAt = Date.now();
   const list = kind === "backlog" ? state.backlogs : state.tasks;
   const row = list.find(function(x){ return x.id === id; });
-  if (!row) return;
+  if (!row) { toast("Mục này không còn tồn tại (có thể đã bị người khác xoá)", "info"); closeDrawer(); renderShell(); return; }
   if (!(await jdConfirm("Xoá “" + row.title + "”?\nMục sẽ được chuyển vào Thùng rác (chỉ super_admin khôi phục được)."))) return;
-  const r = await state.client.from(kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE).delete().eq("id", id);
+  const r = await state.client.from(kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE).delete().eq("id", id).select("id");
   if (r.error) { toast("Không thể xoá: " + r.error.message, "error"); return; }
+  const i = list.findIndex(function(x){ return x.id === id; });
+  if (i >= 0) list.splice(i, 1);
   closeDrawer();
-  toast("Đã chuyển vào Thùng rác", "good");
-  await loadAll({ only: ["backlogs", "tasks"] });
+  renderShell();
+  const removed = !!(r.data && r.data.length);
+  toast(removed ? "Đã chuyển vào Thùng rác" : "Mục này đã được người khác xoá trước đó", removed ? "good" : "info");
 }
-async function patchItem(kind, id, patch, message){
+/* Cập nhật một vài trường. lock=true: chỉ ghi nếu bản ghi chưa bị ai sửa kể từ lúc tải (so khớp updated_at). */
+async function patchItem(kind, id, patch, message, lock){
   state.ownWriteAt = Date.now();
   const table = kind === "backlog" ? BACKLOG_TABLE : TASK_TABLE;
-  const r = await state.client.from(table).update(patch).eq("id", id);
-  if (r.error) { toast("Không cập nhật được: " + r.error.message, "error"); return false; }
   const row = (kind === "backlog" ? state.backlogs : state.tasks).find(function(x){ return x.id === id; });
-  if (row) Object.assign(row, patch);
+  if (!row) { toast("Mục này không còn tồn tại (có thể đã bị người khác xoá)", "error"); return false; }
+  let stamp = true, r;
+  for (let a = 0; a < 2; a++) {
+    let q = state.client.from(table).update(stamp ? Object.assign({}, patch, { updated_at: new Date().toISOString() }) : patch).eq("id", id);
+    if (lock && stamp && row.updated_at) q = q.eq("updated_at", row.updated_at);
+    r = await q.select("*");
+    if (r.error && stamp && /updated_at/i.test(r.error.message || "")) { stamp = false; continue; }
+    break;
+  }
+  if (r.error) { toast("Không cập nhật được: " + r.error.message, "error"); return false; }
+  if (!r.data || !r.data.length) {
+    toast(lock ? "Mục vừa được người khác cập nhật hoặc đã bị xoá. Đã tải bản mới nhất, hãy thử lại." : "Không cập nhật được: mục không còn tồn tại", "error");
+    await loadAll({ only: ["backlogs", "tasks"] });
+    return false;
+  }
+  Object.assign(row, r.data[0]);
   if (message) toast(message, "good");
   return true;
 }
 async function archiveBacklog(id){
   if (!(await jdConfirm("Lưu trữ backlog này? Dữ liệu vẫn được giữ lại và có thể xem qua bộ lọc Lưu trữ."))) return;
-  patchItem("backlog", id, { status: "archived" }, "Đã lưu trữ backlog").then(function(){ loadAll({ only: ["backlogs", "tasks"] }); });
+  patchItem("backlog", id, { status: "archived" }, "Đã lưu trữ backlog").then(function(ok){ if (ok) renderShell(); });
 }
 
 /* ---------------- BACKLOGS ---------------- */
@@ -5241,7 +5422,7 @@ async function rescheduleItem(item, days){
     if (item.due) { patch.target_date = dayKey(addDays(item.due, days)); patch.due_date = patch.target_date; }
   }
   if (!Object.keys(patch).length) { toast("Mục này chưa có ngày để dời", "error"); return false; }
-  const ok = await patchItem(item.kind, item.id, patch, "Đã dời lịch " + days + " ngày");
+  const ok = await patchItem(item.kind, item.id, patch, "Đã dời lịch " + days + " ngày", true);
   return ok;
 }
 function exportTimelineCsv(){
@@ -6318,13 +6499,13 @@ document.addEventListener("click", async function(event){
     const row = state.tasks.find(function(t){ return t.id === id; });
     if (row && !row.actual_start_date) patch.actual_start_date = todayKey();
     const ok = await patchItem("task", id, patch, "Đã đánh dấu hoàn thành");
-    if (ok) await loadAll({ only: ["backlogs", "tasks"] });
+    if (ok) { renderShell(); refreshOpenDrawer(); }
     return;
   }
   if (action === "quick-done") {
     const kind = actionEl.dataset.kind;
     const ok = await patchItem(kind, id, quickDone(kind, id), "Đã đánh dấu hoàn thành");
-    if (ok) { closeDrawer(); await loadAll({ only: ["backlogs", "tasks"] }); }
+    if (ok) { closeDrawer(); renderShell(); }
     return;
   }
   if (action === "approve-member") { await reviewMember(id, true); return; }
