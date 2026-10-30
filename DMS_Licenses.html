@@ -936,6 +936,14 @@
     .search.has-value input { padding-right: 34px; }
     .role-select { border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 8px; font-size: 11px; background: #fff; color: var(--ink-2); outline: none; }
     .role-select:disabled { background: #faf3f2; color: #a08b8d; cursor: not-allowed; }
+    .perm-chips { display: flex; flex-wrap: wrap; gap: 6px; max-width: 340px; }
+    .perm-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line-strong); border-radius: 999px; padding: 4px 11px; font-size: 11.5px; font-weight: 600; color: #7a6668; background: #fff; cursor: pointer; user-select: none; transition: .15s; }
+    .perm-chip input { display: none; }
+    .perm-chip:hover { border-color: #b91c1c; color: #b91c1c; }
+    .perm-chip.on { background: #fdeaea; border-color: #e59a9a; color: #b91c1c; }
+    .perm-chip.on::before { content: "✓"; }
+    .perm-chip.dis { opacity: .6; cursor: not-allowed; }
+    .perm-all { font-size: 12px; color: #7a6668; }
     .empty { text-align: center; padding: 44px 20px; color: var(--muted); background: radial-gradient(260px 140px at 50% 0%, rgba(229, 57, 53, .06), transparent 70%); }
     .empty strong { display: block; color: var(--ink); font-size: 14px; margin-bottom: 6px; }
     .two-col { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; }
@@ -2515,8 +2523,12 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         ["tools", "Công Cụ Hỗ Trợ", ICONS.tools, "tools"],
         ["tools_mdm", "Công Cụ Hỗ Trợ", ICONS.tools, "tools"],
         ...(canEdit() ? [["admin", "Quản lý dữ liệu", ICONS.database, "database"]] : [])
-      ];
+      ].filter(t => tabAllowed(t[0]));
     }
+    /* Phân quyền tab: profiles.allowed_tabs (text[]). NULL = chưa cấu hình → thấy tất cả như trước. Super-admin luôn thấy tất cả. Tổng quan & Quản lý dữ liệu không nằm trong danh sách này (admin vẫn theo role). */
+    const TAB_PERMS = [["dms", "DMS"], ["central", "Central"], ["product", "Product"], ["tools", "L1 Team"], ["tools_mdm", "L2 / MDM"]];
+    const tabAllowed = id => { const p = state.profile; if (!p || p.role === "super-admin" || !Array.isArray(p.allowed_tabs)) return true; return !TAB_PERMS.some(t => t[0] === id) || p.allowed_tabs.includes(id); };
+    const toolsTarget = () => { const s = loadKey(TEAM_KEY, TEAMS_OK, "tools"); return tabAllowed(s) ? s : (TEAMS_OK.find(tabAllowed) || "dashboard"); };
     const shellSig = () => JSON.stringify([appTabs().map(t => t[0]), state.profile?.display_name, state.profile?.email, state.profile?.role]);
     function patchApp() {
       const tabs = appTabs();
@@ -3018,8 +3030,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return `<div class="app-shell">
         <aside class="sidebar" id="sidebar">
           <div class="brand"><div class="brand-mark">${ICONS.database}</div><div><strong>Masterdata DMS</strong><small>CCVN data workspace</small></div></div>
-          <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.filter(t => t[0] !== "tools_mdm").map(([id, label, icon]) => id === "tools"
-            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? (toolsOpen && !rail ? " group-on" : " active") : ""}" data-tools-parent data-tip="${escapeHtml(label)}" aria-expanded="${toolsOpen && !rail}" aria-controls="nav-tools-sub">${icon}<span>${label}</span><svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="nav-sub-wrap${toolsOpen && !rail ? "" : " collapsed"}" id="nav-tools-sub"><div class="nav-sub-inner">` + [["tools", "L1 Team"], ["tools_mdm", "L2 / MDM Team"]].map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("") + `</div></div>`
+          <div class="nav-label">Workspace</div><nav class="nav"><span class="nav-indicator" aria-hidden="true"></span>${tabs.filter(t => t[0] !== "tools_mdm" || !tabs.some(x => x[0] === "tools")).map(([id, label, icon]) => id === "tools" || id === "tools_mdm"
+            ? `<button type="button" class="nav-parent${state.tab === "tools" || state.tab === "tools_mdm" ? (toolsOpen && !rail ? " group-on" : " active") : ""}" data-tools-parent data-tip="${escapeHtml(label)}" aria-expanded="${toolsOpen && !rail}" aria-controls="nav-tools-sub">${icon}<span>${label}</span><svg class="nav-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div class="nav-sub-wrap${toolsOpen && !rail ? "" : " collapsed"}" id="nav-tools-sub"><div class="nav-sub-inner">` + [["tools", "L1 Team"], ["tools_mdm", "L2 / MDM Team"]].filter(([sid]) => tabs.some(x => x[0] === sid)).map(([sid, sl]) => `<button type="button" class="nav-sub${state.tab === sid ? " active" : ""}" data-tab="${sid}"${state.tab === sid ? ' aria-current="page"' : ""}><span>${sl}</span></button>`).join("") + `</div></div>`
             : `<button class="${state.tab === id ? "active" : ""}" data-tab="${id}" data-tip="${escapeHtml(label)}"${state.tab === id ? ' aria-current="page"' : ""}>${icon}<span>${label}</span></button>`).join("")}</nav>
           <div class="sidebar-foot">
             <div class="user-card">
@@ -4649,9 +4661,21 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         <section class="panel" style="margin-top:18px"><div class="panel-head"><div><h2>Lịch sử import</h2><p>Audit log do Supabase lưu lại.</p></div></div>${renderLogsTable()}</section>`;
     }
 
+    function tabPermCell(p) {
+      if (p.role === "super-admin") return `<span class="perm-all">Tất cả các tab</span>`;
+      const cur = Array.isArray(p.allowed_tabs) ? p.allowed_tabs : null, can = isAdmin();
+      return `<div class="perm-chips">${TAB_PERMS.map(([id, l]) => { const on = !cur || cur.includes(id); return `<label class="perm-chip${on ? " on" : ""}${can ? "" : " dis"}" title="${can ? "Bấm để cho phép / ẩn tab này" : "Chỉ Super-admin được đổi"}"><input type="checkbox" class="tab-perm" data-id="${p.id}" data-ptab="${id}"${on ? " checked" : ""}${can ? "" : " disabled"}>${escapeHtml(l)}</label>`; }).join("")}</div>`;
+    }
+    async function saveTabPerm(el) {
+      const id = el.dataset.id, sel = [...document.querySelectorAll(`.tab-perm[data-id="${id}"]`)].filter(b => b.checked).map(b => b.dataset.ptab);
+      el.closest("label").classList.toggle("on", el.checked);
+      const { error } = await state.supabase.from("profiles").update({ allowed_tabs: sel.length === TAB_PERMS.length ? null : sel, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error) { el.checked = !el.checked; el.closest("label").classList.toggle("on", el.checked); return toast(`Không lưu được quyền tab: ${error.message}${/allowed_tabs/i.test(error.message) ? " — hãy chạy file profiles_allowed_tabs.sql trong Supabase." : ""}`, "error"); }
+      toast("Đã cập nhật tab được xem.", "success"); await loadData();
+    }
     function renderProfilesTable() {
       if (!state.profiles.length) return `<div class="empty"><strong>Chưa có tài khoản nào</strong>Người dùng mới sẽ xuất hiện sau khi đăng nhập Google.</div>`;
-      return `<div class="table-wrap"><table style="min-width:760px"><thead><tr><th>Tài khoản</th><th>Role</th><th>Trạng thái</th><th>Ngày đăng ký</th><th>Thao tác</th></tr></thead><tbody>${state.profiles.map(p => `<tr><td><strong>${escapeHtml(p.display_name || "—")}</strong><br><span style="font-size:11px;color:var(--muted)">${escapeHtml(p.email)}</span></td><td><select class="role-select" data-id="${p.id}"  ${p.id === state.profile.id ? "disabled" : ""}><option value="member" ${p.role === "member" ? "selected" : ""}>Member</option><option value="senior-member" ${p.role === "senior-member" ? "selected" : ""}>Senior-member</option><option value="super-admin" ${p.role === "super-admin" ? "selected" : ""}>Super-admin</option></select></td><td>${statusBadge(p.approval_status)}</td><td>${formatDate(p.created_at)}</td><td><div style="display:flex;gap:5px;align-items:center">${p.approval_status !== "approved" ? `<button class="btn btn-secondary approve-user" data-id="${p.id}">Duyệt</button>` : ""}${p.approval_status === "approved" && p.id !== state.profile.id ? `<button class="btn btn-danger reject-user" data-id="${p.id}">Thu hồi</button>` : ""}${p.id !== state.profile.id ? `<button class="btn btn-outline-danger delete-profile" data-id="${p.id}" data-name="${escapeHtml(p.display_name || p.email)}" title="Xóa tài khoản">${ICONS.trash} Xóa</button>` : ""}</div></td></tr>`).join("")}</tbody></table></div>`;
+      return `<div class="table-wrap"><table style="min-width:1040px"><thead><tr><th>Tài khoản</th><th>Role</th><th>Tab được xem</th><th>Trạng thái</th><th>Ngày đăng ký</th><th>Thao tác</th></tr></thead><tbody>${state.profiles.map(p => `<tr><td><strong>${escapeHtml(p.display_name || "—")}</strong><br><span style="font-size:11px;color:var(--muted)">${escapeHtml(p.email)}</span></td><td><select class="role-select" data-id="${p.id}"  ${p.id === state.profile.id ? "disabled" : ""}><option value="member" ${p.role === "member" ? "selected" : ""}>Member</option><option value="senior-member" ${p.role === "senior-member" ? "selected" : ""}>Senior-member</option><option value="super-admin" ${p.role === "super-admin" ? "selected" : ""}>Super-admin</option></select></td><td>${tabPermCell(p)}</td><td>${statusBadge(p.approval_status)}</td><td>${formatDate(p.created_at)}</td><td><div style="display:flex;gap:5px;align-items:center">${p.approval_status !== "approved" ? `<button class="btn btn-secondary approve-user" data-id="${p.id}">Duyệt</button>` : ""}${p.approval_status === "approved" && p.id !== state.profile.id ? `<button class="btn btn-danger reject-user" data-id="${p.id}">Thu hồi</button>` : ""}${p.id !== state.profile.id ? `<button class="btn btn-outline-danger delete-profile" data-id="${p.id}" data-name="${escapeHtml(p.display_name || p.email)}" title="Xóa tài khoản">${ICONS.trash} Xóa</button>` : ""}</div></td></tr>`).join("")}</tbody></table></div>`;
     }
 
     function renderLogsTable() {
@@ -4708,6 +4732,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       document.querySelectorAll(".approve-user").forEach(el => el.addEventListener("click", () => updateProfile(el.dataset.id, { approval_status: "approved" })));
       document.querySelectorAll(".reject-user").forEach(el => el.addEventListener("click", () => updateProfile(el.dataset.id, { approval_status: "rejected" })));
       document.querySelectorAll(".role-select").forEach(el => el.addEventListener("change", () => updateProfile(el.dataset.id, { role: el.value })));
+      document.querySelectorAll(".tab-perm").forEach(el => el.addEventListener("change", () => saveTabPerm(el)));
       document.querySelectorAll(".delete-profile").forEach(el => el.addEventListener("click", () => deleteProfile(el.dataset.id, el.dataset.name)));
       $("#save-max-license")?.addEventListener("click", () => {
         const input = $("#max-license-input");
@@ -6244,7 +6269,7 @@ function focmParse() {
     pp.push({ i, ds, f, t, dc, q, a });
   });
   if (!issues.length) P.regs.forEach(rg => pp.forEach(p => {
-    const code = `${rg.k}_${mid}_${p.i + 1}`; let n = 0;
+    const code = P.promos.length > 1 ? `${rg.k}_${mid}_${p.i + 1}` : `${rg.k}_${mid}`; let n = 0;
     [["Q", p.q], ["A", p.a]].forEach(([g, list]) => list.forEach(x => {
       const r = Array(FOCM_COLS.length).fill(null), set = (c, v) => { r[FOCM_I[c]] = v; };
       set("PromotionCode", code); set("PromotionDescription", p.ds || code); if (P.quota) set("PromotionQuotaCode", code);
@@ -6346,7 +6371,7 @@ function renderProFocM() {
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-secondary" data-pro-act="example">✨ Điền ví dụ</button><button type="button" class="btn btn-plain" data-pro-act="reset">↺ Làm mới</button></div></div>
   <div class="panel-body">${proModeSeg()}${rqLegendHtml()}<div class="pro-lay"><div class="pro-main">
   <div class="pro-card"><h3><em>1</em>Thời gian &amp; đợt</h3><div class="pro-grid" id="focm-cfg">${F("start", "StartDate", "StartDate", "dd/mm/yyyy", "must")}${F("end", "EndDate", "EndDate", "dd/mm/yyyy", "must")}${S("uom", "UnitOfMeasure", "UnitOfMeasure", [["EA", "EA – Chai / lon"], ["CS", "CS – Thùng"]])}${F("mid", "Mã đợt (giữa PromotionCode)", "", "tự động theo StartDate", "set")}</div>
-  <p class="adj-tip">PromotionCode = <b>Ký hiệu vùng</b>_<b>Mã đợt</b>_<b>số thứ tự CTKM</b>, vd <code>HN_FOC_261009_1</code>. Mã đợt tự lấy theo StartDate (yymmdd), có thể gõ đè.</p></div>
+  <p class="adj-tip">PromotionCode = <b>Ký hiệu vùng</b>_<b>Mã đợt</b>, vd <code>HN_FOC_261009</code>. Mã đợt tự lấy theo StartDate (yymmdd), có thể gõ đè. Nếu đợt có nhiều CTKM, tool tự thêm <code>_1</code>, <code>_2</code>… để các mã không bị trùng.</p></div>
   <div class="pro-card"><h3><em>2</em>Chọn vùng áp dụng${rqTag("must")}</h3><div id="fm-regs">${focmRegHtml()}</div></div>
   <div class="pro-card"><h3><em>3</em>CTKM dùng chung cho các vùng đã chọn<span class="adj-chips" id="focm-chips" style="margin-left:auto"></span><button type="button" class="btn btn-plain" data-pro-act="add">+ Thêm CTKM</button></h3><div id="fm-promos">${P.promos.map(focmPromoHtml).join("")}</div>
   <p class="adj-tip">💡 Copy cột SKU từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô SKU. SKU và mức mua/tặng được áp dụng giống nhau cho mọi vùng đã chọn.</p></div>
@@ -7335,8 +7360,8 @@ function renderProFocM() {
       if (tabBtn && state.profile && document.querySelector(".app-shell")) goTab(tabBtn.dataset.tab);
       if (e.target.closest("[data-tools-parent]") && state.profile && document.querySelector(".app-shell")) {
         const inG = state.tab === "tools" || state.tab === "tools_mdm";
-        if (isRail()) { if (!inG) goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools")); showFly(); }
-        else if (!inG) { toolsOpen = true; saveKey(TOOLS_OPEN_KEY, "1"); goTab(loadKey(TEAM_KEY, TEAMS_OK, "tools")); syncToolsNav(); }
+        if (isRail()) { if (!inG) goTab(toolsTarget()); showFly(); }
+        else if (!inG) { toolsOpen = true; saveKey(TOOLS_OPEN_KEY, "1"); goTab(toolsTarget()); syncToolsNav(); }
         else { toolsOpen = !toolsOpen; saveKey(TOOLS_OPEN_KEY, toolsOpen ? "1" : "0"); syncToolsNav(); positionNavIndicator(); setTimeout(() => positionNavIndicator(), 330); }
       }
       if (e.target.closest("#mobile-menu")) setSidebar(!document.querySelector("#sidebar")?.classList.contains("open"));
