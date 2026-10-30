@@ -4918,6 +4918,8 @@ tbody tr.detail-selected:hover{ background:
 .brd-ai-live{ display:inline-flex; align-items:center; gap:6px; flex:0 0 auto; padding:4px 8px; border-radius:999px; background:#e5f6f0; color:#16775f; font-size:10px; font-weight:800; }
 .brd-ai-live:before{ content:""; width:7px; height:7px; border-radius:50%; background:#1ca77e; }
 .brd-ai-live.done:before{ background:#6b8d85; }
+.brd-ai-live.warn{ background:#fff7e8; color:#8a5b12; }
+.brd-ai-live.warn:before{ background:#d5a232; }
 .brd-ai-live.err{ background:#fff0ee; color:#b43d32; }
 .brd-ai-live.err:before{ background:#d65d51; }
 .brd-ai-transcript{ display:flex; flex-direction:column; gap:9px; max-height:300px; overflow:auto; padding:11px; overscroll-behavior:contain; }
@@ -18321,6 +18323,7 @@ function brdAiSetLiveBadge(label, state){
   if(!badge) return;
   badge.textContent = label || "";
   badge.classList.toggle("done", state === "done");
+  badge.classList.toggle("warn", state === "warning");
   badge.classList.toggle("err", state === "error");
 }
 
@@ -18333,7 +18336,7 @@ function brdAiAppendConversation({kind="system", speaker="Hệ thống", status=
   row.dataset.status = status;
   const mark = document.createElement("span");
   mark.className = "brd-ai-message-mark";
-  mark.textContent = kind === "arbiter" ? "G" : kind === "final" ? "✓" : kind === "provider" ? "AI" : status === "error" || status === "fallback" ? "!" : "•";
+  mark.textContent = kind === "arbiter" ? "R" : kind === "final" ? "✓" : kind === "provider" ? "AI" : status === "error" || status === "fallback" ? "!" : "•";
   const content = document.createElement("div");
   content.className = "brd-ai-message-content";
   const name = document.createElement("div");
@@ -18387,7 +18390,7 @@ function brdAiHandleProgress(event){
   if(event.type === "arbiter"){
     brdAiAppendConversation({
       kind:"arbiter",
-      speaker:"Gemini · Trọng tài",
+      speaker:`${event.provider || "AI"} · Trọng tài`,
       status:event.status || "",
       message:[event.message, event.auditNote ? `Ghi chú đối chiếu: ${event.auditNote}` : ""].filter(Boolean).join("\n\n"),
       warnings:event.warnings || [],
@@ -18542,19 +18545,28 @@ async function runBrdAiAssist(){
     const meta = data._meta || {};
     const providersTxt = (meta.providers||[]).join(", ") || "AI";
     const statusMsg = meta.arbitrated
-      ? `Đã đối chiếu chéo giữa: ${providersTxt}. Vui lòng rà soát lại trước khi lưu.`
-      : `Đã điền theo: ${providersTxt} (chỉ 1 nguồn khả dụng). Vui lòng rà soát lại trước khi lưu.`;
+      ? `Đã đối chiếu ${providersTxt} bằng ${meta.reviewer || "AI trọng tài"}. Vui lòng rà soát trước khi lưu.`
+      : meta.reviewCompleted
+        ? `Đã tự rà soát bằng ${meta.reviewer || "AI"}, nhưng chưa có nguồn độc lập để đối chiếu. Vui lòng kiểm tra kỹ.`
+        : `Chưa hoàn tất đối chiếu AI. Đã điền bản nháp từ ${providersTxt}; cần kiểm tra kỹ trước khi lưu.`;
     brdAiSetStatus(statusMsg);
-    brdAiSetLiveBadge("Đã hoàn tất","done");
+    brdAiSetLiveBadge(meta.arbitrated ? "Đã đối chiếu" : "Cần rà soát", meta.arbitrated ? "done" : "warning");
     brdAiAppendConversation({
       kind:"final",
       speaker:"Kết quả cuối",
       message:meta.arbitrated
-        ? "Đã hoàn tất đối chiếu và tự động điền dữ liệu song ngữ vào biểu mẫu. Vui lòng rà soát nội dung trước khi lưu."
-        : "Đã hoàn tất tự động điền từ nguồn khả dụng. Không có đối chiếu chéo đầy đủ; vui lòng kiểm tra kỹ trước khi lưu.",
-      warnings:meta.qualityWarnings || [],
+        ? "Đã hoàn tất đối chiếu và tự động điền dữ liệu song ngữ vào biểu mẫu. Vui lòng rà soát trước khi lưu."
+        : meta.reviewCompleted
+          ? "Đã hoàn tất tự rà soát một nguồn và điền dữ liệu. Kết quả chưa được AI độc lập kiểm chứng."
+          : "Đã điền bản nháp dự phòng nhưng chưa được trọng tài kiểm chứng; không coi đây là kết quả đã xác nhận.",
+      warnings:[
+        ...(meta.qualityWarnings || []),
+        ...(!meta.reviewCompleted ? ["Chưa có bước trọng tài thành công; hãy xác minh số liệu và yêu cầu với đầu vào gốc."] : []),
+      ],
     });
-    toast("AI đã hoàn tất và điền BRD. Hãy rà soát trước khi lưu.", "ok");
+    toast(meta.arbitrated
+      ? "AI đã đối chiếu và điền BRD. Hãy rà soát trước khi lưu."
+      : "AI đã điền bản nháp chưa được đối chiếu đầy đủ. Hãy kiểm tra kỹ.", meta.arbitrated ? "ok" : "err");
   }catch(e){
     console.error(e);
     brdAiSetStatus("Lỗi: " + e.message, true);
