@@ -1282,6 +1282,29 @@ body:has(.drawer.open) .toolbar{z-index:auto}
   .progress i{animation:jdFill .8s cubic-bezier(.2,.8,.2,1) backwards}
   tr[data-alert="1"] .badge.red{animation:jdPulse 2.4s ease-out infinite}
 }
+
+/* ---------- Bảng Backlogs: cố định chiều cao, cuộn dọc, header dính ---------- */
+.bl-wrap:not(.flat){max-height:clamp(360px,calc(100vh - 300px),900px);overflow:auto;overscroll-behavior:contain}
+.bl-wrap.flat{max-height:min(60vh,560px);overflow:auto;overscroll-behavior:contain}
+.bl-table thead th.col-head{position:sticky;top:0;z-index:5}
+@media(max-width:760px){
+  .bl-wrap,.bl-wrap:not(.flat),.bl-wrap.flat{max-height:none;overflow:visible}
+  .bl-table thead th.col-head{position:static}
+}
+
+/* ---------- Tệp đính kèm backlog ---------- */
+.att-drop{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px;border:1.5px dashed #c5d3ea;border-radius:14px;background:linear-gradient(180deg,#fbfdff,#f4f8ff);cursor:pointer;text-align:center;font-size:12.5px;color:#41505f;transition:border-color .16s,background-color .16s}
+.att-drop:hover,.att-drop.over{border-color:#5b8cff;background:#eef4ff}
+.att-drop b{color:var(--blue-dark)}
+.att-drop em{font-style:normal;font-size:11px;color:var(--muted)}
+.att-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.att-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:11px;background:#fff}
+.att-ico{flex:none;display:grid;place-items:center;height:28px;width:28px;border-radius:9px;background:var(--blue-soft);color:var(--blue-dark)}
+.att-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:12.5px}
+.att-name a{color:var(--blue-dark);text-decoration:none}
+.att-name a:hover{text-decoration:underline}
+.att-size{flex:none;color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.att-note{font-size:11.5px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1815,6 +1838,16 @@ try { state.colW = JSON.parse(localStorage.getItem("jtm-colw") || "{}") || {}; }
 function saveColW(){ try { localStorage.setItem("jtm-colw", JSON.stringify(state.colW || {})); } catch (e) {} }
 /* Cột bảng Backlogs đã đổi bố cục: bỏ độ rộng cũ đã lưu một lần để không lệch cột */
 if (state.colW && !state.colW.__v2) { delete state.colW.backlogs; state.colW.__v2 = 1; saveColW(); }
+/* Nhớ lựa chọn sắp xếp của từng bảng giữa các lần tải lại trang */
+const SORT_STORE_KEY = "jtm-sort";
+try {
+  const savedSort = JSON.parse(localStorage.getItem(SORT_STORE_KEY) || "{}") || {};
+  Object.keys(savedSort).forEach(function(k){
+    const s = savedSort[k];
+    if (state.sort[k] && s && typeof s.f === "string" && s.f && (s.d === "asc" || s.d === "desc")) state.sort[k] = { f: s.f, d: s.d };
+  });
+} catch (e) {}
+function saveSort(){ try { localStorage.setItem(SORT_STORE_KEY, JSON.stringify(state.sort)); } catch (e) {} }
 /* Nhớ tab đang mở: F5 / refresh vẫn ở đúng tab (lưu ở URL hash #tab=... và localStorage) */
 const TAB_STORE_KEY = "jtm-tab";
 function readSavedTab(){
@@ -3890,6 +3923,7 @@ function openItemDrawer(kind, id){
       "</dl>" +
       '<div class="section-label">Mô tả</div>' +
       (item.description ? '<div class="desc-box">' + esc(item.description) + "</div>" : '<div class="notice">Chưa có mô tả.</div>') +
+      (kind === "backlog" ? '<div class="section-label">Tệp đính kèm</div><div id="drawerFiles">' + loadingBox(2) + "</div>" : "") +
       (ticketRelated.length ? '<div class="section-label">Jira ticket liên quan</div>' + linksBlock(ticketRelated) : "") +
       '<div class="section-label">' + (kind === "task" ? "Backlog chứa task" : "Task thuộc backlog") + "</div>" +
       (kind === "task"
@@ -3904,6 +3938,15 @@ function openItemDrawer(kind, id){
       '<div class="section-label">Lịch sử thay đổi</div><div id="drawerHistory">' + loadingBox(3) + "</div>";
   if ($("#drawerBody")) $("#drawerBody").innerHTML = body;
   if (state.tab === "workload" && state.focusMember) renderShell();
+  if (kind === "backlog") {
+    attList(id).then(function(list){
+      const host = $("#drawerFiles");
+      if (host) host.innerHTML = attReadonlyHtml(list);
+    }).catch(function(e){
+      const host = $("#drawerFiles");
+      if (host) host.innerHTML = '<div class="notice error">Không đọc được tệp đính kèm: ' + esc((e && e.message) || e) + "</div>";
+    });
+  }
   loadEntityHistory(kind, id).then(function(logs){
     const host = $("#drawerHistory");
     if (host) host.innerHTML = historyFeed(logs);
@@ -3977,6 +4020,7 @@ function openRecord(kind, id, preset){
     f += formField("jira_key", "Jira key liên kết", "jirakey", existing.jira_key, null, false, "Gõ để tìm và chọn ticket Jira");
     f += formField("blocked_reason", "Lý do bị chặn", "text", existing.blocked_reason, null, true, "Nên ghi khi trạng thái là Blocked (không bắt buộc)");
     f += formField("description", "Mô tả", "textarea", existing.description, null, true, "Mục tiêu, phạm vi, kết quả mong đợi…");
+    f += attachField();
   } else {
     f += formField("title", "Tên task", "text", existing.title, null, true, "Việc cần làm");
     f += formField("assignee_id", "Người thực hiện", "select", existing.assignee_id || "", directoryOptions(true), false, "", "");
@@ -3995,6 +4039,7 @@ function openRecord(kind, id, preset){
   }
   $("#recordFields").innerHTML = f;
   $$("#recordFields input[data-jk]").forEach(function(i){ jkHint(i); jkApply(i); });
+  if (kind === "backlog") attInit(id || null);
   $("#recordDialog").showModal();
 }
 function cleanText(v){
@@ -4170,6 +4215,128 @@ document.addEventListener("keydown", function(e){
   }
   else if (e.key === "Escape" && !list.hidden) { e.preventDefault(); e.stopPropagation(); jkClose(inp); }
 });
+/* ---------- Tệp đính kèm backlog (Supabase Storage, bucket riêng tư) ---------- */
+const ATTACH_BUCKET = "jtm-attachments";
+const ATTACH_MAX = 20 * 1024 * 1024;
+const ATT = { pending: [], existing: [], removed: [], loading: false, id: null };
+function attPath(id){ return "backlog/" + id; }
+function attDisplayName(name){ return String(name || "").replace(/^\d{10,}-/, ""); }
+function attSafeName(name){
+  const base = String(name || "file").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+  return base.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "").slice(-120) || "file";
+}
+function fmtBytes(n){
+  const v = Number(n);
+  if (!Number.isFinite(v) || v < 0) return "";
+  if (v < 1024) return v + " B";
+  if (v < 1048576) return (v / 1024).toFixed(1) + " KB";
+  return (v / 1048576).toFixed(1) + " MB";
+}
+async function attList(id){
+  const bucket = state.client.storage.from(ATTACH_BUCKET);
+  const r = await bucket.list(attPath(id), { limit: 200, sortBy: { column: "created_at", order: "desc" } });
+  if (r.error) throw r.error;
+  const rows = (r.data || []).filter(function(f){ return f && f.name && f.id; });
+  if (!rows.length) return [];
+  const paths = rows.map(function(f){ return attPath(id) + "/" + f.name; });
+  const s = await bucket.createSignedUrls(paths, 3600);
+  const urlBy = {};
+  if (!s.error) (s.data || []).forEach(function(x){ if (x && x.path) urlBy[x.path] = x.signedUrl; });
+  return rows.map(function(f){
+    const p = attPath(id) + "/" + f.name;
+    return { name: f.name, path: p, size: f.metadata && f.metadata.size, url: urlBy[p] || "" };
+  });
+}
+function attItemHtml(f, extra, action){
+  const label = esc(attDisplayName(f.name));
+  return '<div class="att-item"><span class="att-ico">' + icon("link") + '</span><span class="att-name">' +
+    (f.url ? '<a href="' + escAttr(f.url) + '" target="_blank" rel="noopener noreferrer" title="Mở / tải ' + escAttr(attDisplayName(f.name)) + '">' + label + "</a>" : "<span>" + label + "</span>") +
+    (extra ? ' <span class="badge blue">' + extra + "</span>" : "") + '</span><span class="att-size">' + esc(fmtBytes(f.size)) + "</span>" +
+    (action || "") + "</div>";
+}
+function attReadonlyHtml(list){
+  return list.length ? '<div class="att-list">' + list.map(function(f){ return attItemHtml(f); }).join("") + "</div>" : '<div class="notice">Chưa có tệp đính kèm.</div>';
+}
+function attRender(){
+  const host = $("#attachList");
+  if (!host) return;
+  let h = "";
+  if (ATT.loading) h += '<div class="att-note">Đang tải danh sách tệp…</div>';
+  ATT.existing.filter(function(f){ return ATT.removed.indexOf(f.path) < 0; }).forEach(function(f){
+    h += attItemHtml(f, "", '<button type="button" class="icon-act danger" data-att-rm-existing="' + escAttr(f.path) + '" title="Gỡ tệp (xoá khi lưu)" aria-label="Gỡ tệp">' + icon("trash") + "</button>");
+  });
+  ATT.pending.forEach(function(f, i){
+    h += attItemHtml({ name: f.name, size: f.size }, "Mới", '<button type="button" class="icon-act danger" data-att-rm-pending="' + i + '" title="Bỏ tệp" aria-label="Bỏ tệp">' + icon("close") + "</button>");
+  });
+  if (ATT.removed.length) h += '<div class="att-note">' + ATT.removed.length + " tệp sẽ bị xoá khi bạn bấm Lưu.</div>";
+  if (!h) h = '<div class="att-note">Chưa có tệp đính kèm.</div>';
+  host.innerHTML = h;
+}
+function attAdd(files){
+  Array.prototype.slice.call(files || []).forEach(function(f){
+    if (f.size > ATTACH_MAX) { toast("“" + f.name + "” vượt quá 20 MB nên không được thêm", "error"); return; }
+    if (ATT.pending.some(function(p){ return p.name === f.name && p.size === f.size; })) return;
+    ATT.pending.push(f);
+  });
+  attRender();
+}
+function attachField(){
+  return '<div class="field full att-field"><span>Tệp đính kèm</span>' +
+    '<label class="att-drop" id="attachDrop"><input type="file" id="attachInput" multiple hidden>' +
+    '<span><b>Chọn tệp</b> hoặc kéo thả vào đây</span><em>Tối đa 20 MB mỗi tệp · lưu trên Supabase Storage</em></label>' +
+    '<div class="att-list" id="attachList"></div></div>';
+}
+function attInit(id){
+  ATT.pending = []; ATT.existing = []; ATT.removed = []; ATT.id = id || null; ATT.loading = !!id;
+  attRender();
+  if (!id) return;
+  attList(id).then(function(list){
+    if (ATT.id !== id) return;
+    ATT.existing = list; ATT.loading = false; attRender();
+  }).catch(function(e){
+    if (ATT.id !== id) return;
+    ATT.loading = false; attRender();
+    toast("Không đọc được tệp đính kèm: " + ((e && e.message) || e) + " (đã chạy backlog-attachments.sql chưa?)", "error");
+  });
+}
+async function attCommit(id){
+  const bucket = state.client.storage.from(ATTACH_BUCKET);
+  let ok = 0;
+  const fail = [];
+  if (ATT.removed.length) {
+    const r = await bucket.remove(ATT.removed);
+    if (r.error) fail.push("gỡ tệp: " + r.error.message);
+  }
+  for (let i = 0; i < ATT.pending.length; i++) {
+    const f = ATT.pending[i];
+    const path = attPath(id) + "/" + (Date.now() + i) + "-" + attSafeName(f.name);
+    const r = await bucket.upload(path, f, { contentType: f.type || "application/octet-stream", upsert: false });
+    if (r.error) fail.push(f.name + ": " + r.error.message); else ok++;
+  }
+  return { ok: ok, fail: fail };
+}
+document.addEventListener("change", function(e){
+  const i = e.target;
+  if (i && i.id === "attachInput") { attAdd(i.files); i.value = ""; }
+});
+document.addEventListener("click", function(e){
+  const p = e.target.closest && e.target.closest("[data-att-rm-pending]");
+  if (p) { ATT.pending.splice(Number(p.dataset.attRmPending), 1); attRender(); return; }
+  const x = e.target.closest && e.target.closest("[data-att-rm-existing]");
+  if (x) { ATT.removed.push(x.dataset.attRmExisting); attRender(); }
+});
+document.addEventListener("dragover", function(e){
+  const d = e.target.closest && e.target.closest("#attachDrop");
+  if (d) { e.preventDefault(); d.classList.add("over"); }
+});
+document.addEventListener("dragleave", function(e){
+  const d = e.target.closest && e.target.closest("#attachDrop");
+  if (d) d.classList.remove("over");
+});
+document.addEventListener("drop", function(e){
+  const d = e.target.closest && e.target.closest("#attachDrop");
+  if (d) { e.preventDefault(); d.classList.remove("over"); attAdd(e.dataTransfer && e.dataTransfer.files); }
+});
 function validatePayload(kind, payload){
   /* Không có trường bắt buộc: chỉ chuẩn hoá dữ liệu, không chặn lưu. */
   if (payload.jira_key && jkTickets().length) {
@@ -4207,7 +4374,7 @@ async function saveRecord(event){
     for (let attempt = 0; attempt < 6; attempt++) {
       r = state.editing.id
         ? await state.client.from(table).update(payload).eq("id", state.editing.id)
-        : await state.client.from(table).insert(payload);
+        : await state.client.from(table).insert(payload).select("id").single();
       const m = r.error && /Could not find the '([^']+)' column/i.exec(r.error.message || "");
       if (m && Object.prototype.hasOwnProperty.call(payload, m[1])) {
         if (payload[m[1]] !== null && payload[m[1]] !== undefined) skipped.push(m[1]);
@@ -4217,10 +4384,17 @@ async function saveRecord(event){
       break;
     }
     if (r.error) throw r.error;
+    let attRes = null;
+    if (kind === "backlog" && (ATT.pending.length || ATT.removed.length)) {
+      const savedId = state.editing.id || (r.data && r.data.id);
+      if (savedId) { btn.textContent = "Đang tải tệp…"; attRes = await attCommit(savedId); }
+      else attRes = { ok: 0, fail: ["không xác định được ID backlog vừa tạo"] };
+    }
     $("#recordDialog").close();
     state.editing = null;
+    if (attRes && attRes.fail.length) toast("Đã lưu backlog, nhưng có lỗi tệp đính kèm: " + attRes.fail.join("; "), "error");
     if (skipped.length) toast("Đã lưu, nhưng cột " + skipped.join(", ") + " chưa có trong database nên chưa được lưu. Hãy chạy file SQL bổ sung cột.", "error");
-    else toast(kind === "backlog" ? "Đã lưu backlog" : "Đã lưu task", "good");
+    else if (!(attRes && attRes.fail.length)) toast((kind === "backlog" ? "Đã lưu backlog" : "Đã lưu task") + (attRes && attRes.ok ? " · đã tải lên " + attRes.ok + " tệp" : ""), "good");
     await loadAll({ only: ["backlogs", "tasks"] });
   } catch (e) {
     toast("Không thể lưu: " + e.message, "error");
@@ -5988,7 +6162,7 @@ document.addEventListener("click", async function(event){
   const kindEl = event.target.closest("[data-kinds]");
   if (kindEl) { state.filters.timeline.kinds = kindEl.dataset.kinds.split(","); renderShell(); return; }
   const wsEl = event.target.closest("[data-workload-sort]");
-  if (wsEl) { state.sort.workload = { f: wsEl.dataset.workloadSort, d: "desc" }; renderShell(); return; }
+  if (wsEl) { state.sort.workload = { f: wsEl.dataset.workloadSort, d: "desc" }; saveSort(); renderShell(); return; }
   const drillEl = event.target.closest("[data-drill]");
   if (drillEl) { const parts = drillEl.dataset.drill.split("|"); drillTo(parts[0], parsePatch(parts[1])); return; }
   const riskChip = event.target.closest("[data-risk-chip]");
@@ -6024,6 +6198,7 @@ document.addEventListener("click", async function(event){
     const scope = parts[0], field = parts.slice(1).join(":");
     const current = state.sort[scope] || { f: field, d: "desc" };
     state.sort[scope] = { f: field, d: current.f === field && current.d === "desc" ? "asc" : "desc" };
+    saveSort();
     state.page[scope] = 1;
     paintList();
     return;
