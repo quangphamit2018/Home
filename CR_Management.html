@@ -7189,6 +7189,13 @@ body.sb-no-anim .modal-overlay.full{ transition:none !important; }
                 <div class="cr-filter-menu" id="menuFilterCategory"></div>
                 <select id="filterCategory" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
               </div>
+              <div class="cr-filter-group" data-filter-key="app">
+                <button class="cr-filter-trigger" id="filterAppTrigger" type="button" aria-haspopup="true" aria-expanded="false">
+                  <span class="cr-filter-glyph">A</span><span class="cr-filter-copy"><span class="cr-filter-label">App</span><strong class="cr-filter-value" id="filterAppSummary">Tất cả</strong></span><span class="cr-filter-count" id="filterAppCount"></span><span class="cr-filter-chevron"><mi-icon name="chevron-down" size="14" stroke-width="2.2"></mi-icon></span>
+                </button>
+                <div class="cr-filter-menu" id="menuFilterApp"></div>
+                <select id="filterApp" class="cr-filter-legacy" tabindex="-1" aria-hidden="true"><option value="">Tất cả</option></select>
+              </div>
 
               <div class="tb-dropdown" data-dd-root="moreFilters">
                 <button class="btn btn-ghost btn-sm tb-btn" data-dd="moreFilters" type="button">Lọc thêm<span class="tb-badge hidden" id="moreFiltersBadge">0</span></button>
@@ -7943,7 +7950,7 @@ function normalizeCrFilterValue(value){
   return value ? [String(value)] : [];
 }
 function loadCrFilterPrefs(){
-  const defaults = { status:[], priority:[], category:[], sub_status:[], requester:"", overdueOnly:false, search:"" };
+  const defaults = { status:[], priority:[], category:[], sub_status:[], app:[], requester:"", overdueOnly:false, search:"" };
   try{
     const saved = JSON.parse(localStorage.getItem(CR_FILTER_STORAGE_KEY) || "null");
     if(!saved || typeof saved !== "object") return defaults;
@@ -7952,6 +7959,7 @@ function loadCrFilterPrefs(){
       priority: normalizeCrFilterValue(saved.priority),
       category: normalizeCrFilterValue(saved.category),
       sub_status: normalizeCrFilterValue(saved.sub_status),
+      app: normalizeCrFilterValue(saved.app),
       requester: String(saved.requester || ""),
       overdueOnly: saved.overdueOnly === true,
       search: String(saved.search || "")
@@ -8123,6 +8131,7 @@ const STATE = {
 /* Togglable CR Log columns (CR ID + Status + Actions are structural, not toggled) */
 const CR_COLUMNS = [
   { key:"title",     label:"Tiêu đề / App" },
+  { key:"app",       label:"App" },
   { key:"requester", label:"Requester" },
   { key:"category",  label:"Category" },
   { key:"priority",  label:"Priority" },
@@ -8200,7 +8209,7 @@ STATE.relColumns = loadRelColumnPrefs();
 --------------------------------------------------------------------------- */
 const COL_WIDTH_DEFAULTS = {
   cr: {
-    __check:44, cr_id:106, jira_tickets:150, title:220, requester:130, category:140,
+    __check:44, cr_id:106, jira_tickets:150, title:220, app:130, requester:130, category:140,
     priority:110, status:140, sub_status:170, brd:92, fsd:92, deadline:130, note:260, __actions:112,
   },
   tc: {
@@ -8272,8 +8281,9 @@ function renderColgroup(kind, keys){
    untouched; double-clicking its resize handle returns it to auto-fit mode. */
 function autoFitCrColumns(){
   const dropdownKeys = ["category","priority","status","sub_status"];
-  const plainKeys = ["requester"];
+  const plainKeys = ["app", "requester"];
   const values = {
+    app: STATE.crList.map(c=>c.app),
     requester: STATE.crList.map(c=>c.requester),
     category: [...(CR_LISTS.category || []), ...STATE.crList.map(c=>c.category)],
     priority: [...(CR_LISTS.priority || []), ...STATE.crList.map(c=>c.priority)],
@@ -8289,6 +8299,7 @@ function autoFitCrColumns(){
   // Nới rộng hơn mức cũ (48px) vì trước đây bị chặn quá thấp khiến chữ dài
   // như "Infrastructure"/"New Feature" bị cắt (đúng lỗi người dùng báo).
   const limits = {
+    app:        { min:90,  max:180, overhead:28,  bold:false },
     requester:  { min:100, max:200, overhead:28,  bold:false },
     category:   { min:130, max:230, overhead:60,  bold:true  },
     priority:   { min:110, max:180, overhead:60,  bold:true  },
@@ -9860,7 +9871,7 @@ function initShell(){
   $("#filterRequester").addEventListener("change", e=>{ STATE.filters.requester = e.target.value; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrMultiFilterOptions(); renderCrTable(); });
   $("#filterOverdueOnly").addEventListener("change", e=>{ STATE.filters.overdueOnly = e.target.checked; saveCrFilterPrefs(); updateMoreFiltersBadge(); renderCrMultiFilterOptions(); renderCrTable(); });
   $("#clearFilters").addEventListener("click", ()=>{
-    STATE.filters = { status:[], priority:[], category:[], sub_status:[], requester:"", overdueOnly:false, search: STATE.filters.search };
+    STATE.filters = { status:[], priority:[], category:[], sub_status:[], app:[], requester:"", overdueOnly:false, search: STATE.filters.search };
     syncCrFilterControls();
     $("#filterRequester").value=""; $("#filterOverdueOnly").checked = false;
     saveCrFilterPrefs();
@@ -10059,6 +10070,8 @@ const CR_MULTI_FILTERS = [
   { key:"sub_status", label:"Sub-status", glyph:"SS", listKey:"subStatus", menuId:"menuFilterSubStatus", summaryId:"filterSubStatusSummary", countId:"filterSubStatusCount" },
   { key:"priority", label:"Priority", glyph:"P", listKey:"priority", menuId:"menuFilterPriority", summaryId:"filterPrioritySummary", countId:"filterPriorityCount" },
   { key:"category", label:"Category", glyph:"C", listKey:"category", menuId:"menuFilterCategory", summaryId:"filterCategorySummary", countId:"filterCategoryCount" },
+  // APP không có danh mục cố định (CR_LISTS) -> lấy giá trị trực tiếp từ dữ liệu CR (dynamic)
+  { key:"app", label:"App", glyph:"A", dynamic:true, menuId:"menuFilterApp", summaryId:"filterAppSummary", countId:"filterAppCount" },
 ];
 function closeAllCrFilterMenus(){
   $all(".cr-filter-group.is-open").forEach(group=>{
@@ -10076,6 +10089,7 @@ function crRowsForFacet(excludeKey){
     if(excludeKey !== "priority" && !filterHasValue(f.priority, c.priority)) return false;
     if(excludeKey !== "category" && !filterHasValue(f.category, c.category)) return false;
     if(excludeKey !== "sub_status" && !filterHasValue(f.sub_status, c.sub_status)) return false;
+    if(excludeKey !== "app" && !filterHasValue(f.app, c.app)) return false;
     if(f.requester && c.requester !== f.requester) return false;
     if(f.overdueOnly && !isOverdue(c)) return false;
     if(f.search){
@@ -10089,7 +10103,9 @@ function renderCrMultiFilterOptions(){
   CR_MULTI_FILTERS.forEach(config=>{
     const menu = document.getElementById(config.menuId);
     if(!menu) return;
-    const catalogValues = Array.isArray(CR_LISTS[config.listKey]) ? CR_LISTS[config.listKey].filter(Boolean) : [];
+    const catalogValues = config.dynamic
+      ? [...new Set((STATE.crList || []).map(c=>String(c[config.key] || "").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b, "vi", {sensitivity:"base"}))
+      : (Array.isArray(CR_LISTS[config.listKey]) ? CR_LISTS[config.listKey].filter(Boolean) : []);
     // Đếm số CR theo từng giá trị, tính trên tập dữ liệu ĐÃ áp các filter khác
     // (cross-filter) — không tính trên toàn bộ danh sách gốc.
     const facetRows = crRowsForFacet(config.key);
@@ -10104,7 +10120,7 @@ function renderCrMultiFilterOptions(){
     // Sub-Status được tải bất đồng bộ từ Supabase. Khi initShell() chạy trước
     // lần fetch đầu tiên, danh sách có thể đang rỗng; không được xóa lựa chọn
     // đã lưu chỉ vì options chưa về.
-    const selectedValues = (Array.isArray(CR_LISTS[config.listKey]) && CR_LISTS[config.listKey].length)
+    const selectedValues = (config.dynamic ? (STATE.crList || []).length > 0 : (Array.isArray(CR_LISTS[config.listKey]) && CR_LISTS[config.listKey].length))
       ? savedValues.filter(value=>validValues.has(String(value)))
       : savedValues;
     STATE.filters[config.key] = selectedValues;
@@ -12121,7 +12137,7 @@ function goToCrLogFiltered(type, value){
   setView("crlog");
 
   // Reset toàn bộ state filter CR Log về mặc định
-  STATE.filters = { status:[], priority:[], category:[], sub_status:[], requester:"", overdueOnly:false, search:"" };
+  STATE.filters = { status:[], priority:[], category:[], sub_status:[], app:[], requester:"", overdueOnly:false, search:"" };
 
   // Đồng bộ lại mọi control UI của bộ lọc CR Log về trạng thái mặc định
   syncCrFilterControls();
@@ -12288,6 +12304,7 @@ function filteredCrList(){
     if(!filterHasValue(f.priority, c.priority)) return false;
     if(!filterHasValue(f.category, c.category)) return false;
     if(!filterHasValue(f.sub_status, c.sub_status)) return false;
+    if(!filterHasValue(f.app, c.app)) return false;
     if(f.requester && c.requester !== f.requester) return false;
     if(f.overdueOnly && !isOverdue(c)) return false;
     if(f.search){
@@ -12562,6 +12579,7 @@ async function updateCrInlineField(crId, field, value, select){
 function crRowCellHtml(colKey, c, overdue){
   switch(colKey){
     case "title": return `<td class="cell-title" title="${esc(c.rename_folder || c.old_name || '')}">${esc(crCellTitle(c))}</td>`;
+    case "app": return `<td class="cell-dim" title="${esc(c.app || '')}">${esc(c.app || '—')}</td>`;
     case "requester": return `<td class="cell-dim">${esc(c.requester || '—')}</td>`;
     case "category": return `<td class="inline-edit-cell">${canEditData() ? inlineCrSelectHtml("category", c) : badge("category", c.category)}</td>`;
     case "priority": return `<td class="inline-edit-cell">${canEditData() ? inlineCrSelectHtml("priority", c) : badge("priority", c.priority)}</td>`;
