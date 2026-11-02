@@ -18223,6 +18223,11 @@ function brdModalTemplate(v){
               <textarea id="b_success_bullets" rows="3">${esc(v?.success_bullets||'')}</textarea>
               <div class="brd-hint">Mỗi dòng = 1 gạch đầu dòng.</div>
             </div>
+            <div class="field span-2">
+              <label>2.3. Use case/Scenario</label>
+              <textarea id="b_use_cases" rows="6" placeholder="VD: Kịch bản 1 - Luồng chính: Điều kiện đầu vào: ...; Các bước: ...; Kết quả mong đợi: ...">${esc(v?.use_cases||'')}</textarea>
+              <div class="brd-hint">Mỗi dòng = 1 use case/kịch bản (tên kịch bản, điều kiện đầu vào, các bước, kết quả mong đợi). Sẽ xuất vào mục "2.3. Use case/Scenario" trong file Word.</div>
+            </div>
           </div>
         </section>
 
@@ -18537,6 +18542,7 @@ function applyBrdAiLang(lang){
   setVal("#b_tobe_bullets", brdLinesFromArray(pickArr("tobe_bullets")));
   setVal("#b_success_intro", pick("success_intro"));
   setVal("#b_success_bullets", brdLinesFromArray(pickArr("success_bullets")));
+  setVal("#b_use_cases", brdLinesFromArray(pickArr("use_cases")));
   setVal("#b_assumptions", brdLinesFromArray(pickArr("assumptions")));
   setVal("#b_reviewer_feedback", brdLinesFromArray(pickArr("reviewer_feedback")));
 
@@ -18818,6 +18824,7 @@ function syncActiveLangIntoBilingual(){
   setArr("tobe_bullets", $("#b_tobe_bullets").value);
   setStr("success_intro", $("#b_success_intro").value.trim());
   setArr("success_bullets", $("#b_success_bullets").value);
+  setArr("use_cases", $("#b_use_cases").value);
   setArr("assumptions", $("#b_assumptions").value);
   setArr("reviewer_feedback", $("#b_reviewer_feedback").value);
 }
@@ -18840,6 +18847,7 @@ function buildBrdPayloadFromForm(){
     tobe_bullets: $("#b_tobe_bullets").value,
     success_intro: $("#b_success_intro").value.trim(),
     success_bullets: $("#b_success_bullets").value,
+    use_cases: $("#b_use_cases").value,
     assumptions: $("#b_assumptions").value,
     reviewer_feedback: $("#b_reviewer_feedback").value,
     bilingual_content: STATE.brdAiBilingual || null,
@@ -18910,7 +18918,14 @@ async function saveBrd(overlay, isEdit){
       payload.created_by = STATE.userEmail || null;
       ({ error } = await STATE.sb.from(table).insert(payload).select().single());
     }
-    if(error){ toast("Lưu BRD thất bại: " + error.message, "err"); return; }
+    if(error){
+      if(/use_cases/i.test(String(error.message||"")) || error.code === "PGRST204"){
+        toast("Bảng " + table + " chưa có cột use_cases. Hãy chạy file SQL brd_use_cases_migration.sql trong Supabase (SQL Editor) rồi lưu lại.", "err");
+      } else {
+        toast("Lưu BRD thất bại: " + error.message, "err");
+      }
+      return;
+    }
     toast(isEdit? "Đã cập nhật BRD" : "Đã tạo BRD mới", "ok");
     overlay.classList.remove("show");
     window.__brdFromEb2b = false;
@@ -19213,7 +19228,7 @@ async function purgeRecycleItem(item, opts){
 
 /* ===== e-B2B BRD bridge: dùng CHUNG form + template Word của DMS nhưng lưu vào eb2b_brd_records ===== */
 const EB2B_BRD_PACK_PREFIX = "__DMS_BRD_JSON_V1__";
-const EB2B_BRD_DMS_FIELDS = ["overview","asis","tobe_intro","tobe_bullets","success_intro","success_bullets","assumptions","reviewer_feedback","bilingual_content","bilingual_lang","version_rows","signoff_heading","signoff_name","signoff_position","signoff_date","signoff_signature"];
+const EB2B_BRD_DMS_FIELDS = ["overview","asis","tobe_intro","tobe_bullets","success_intro","success_bullets","use_cases","assumptions","reviewer_feedback","bilingual_content","bilingual_lang","version_rows","signoff_heading","signoff_name","signoff_position","signoff_date","signoff_signature"];
 function eb2bBrdIsMissingColumn(error){
   if(!error) return false;
   const m = String(error.message || "");
@@ -19310,6 +19325,7 @@ function brdRecordForLang(rec, lang){
     tobe_bullets: pickLines("tobe_bullets", rec.tobe_bullets),
     success_intro: pick("success_intro", rec.success_intro),
     success_bullets: pickLines("success_bullets", rec.success_bullets),
+    use_cases: pickLines("use_cases", rec.use_cases),
     assumptions: pickLines("assumptions", rec.assumptions),
     reviewer_feedback: pick("reviewer_feedback", rec.reviewer_feedback),
   };
