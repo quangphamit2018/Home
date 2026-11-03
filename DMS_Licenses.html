@@ -1562,6 +1562,24 @@
     .adj-foot .meta b { color: var(--ink-2); }
     @container main (max-width: 638px) { .adj-cfg { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
     @container main (max-width: 600px) { .adj-dir, .adj-cfg { grid-template-columns: minmax(0, 1fr); } }
+
+    /* ---- Cài Đặt Target NPP ---- */
+    #tgt-cfg .adj-cfg { margin-bottom: 10px; }
+    #tgt-cfg .adj-cfg:last-child { margin-bottom: 18px; }
+    #tgt-cfg .field.bad input { border-color: var(--danger); background: var(--danger-soft); }
+    #tgt-cfg .field .hint { font-size: 11px; color: var(--muted); font-weight: 500; margin-left: 6px; }
+    .tg-inner { min-width: 1000px; }
+    .tg-top { position: sticky; top: 0; z-index: 2; }
+    .tg-top .adj-head { position: static; }
+    .tg-head, .tg-row, .tg-band { grid-template-columns: 52px minmax(130px, 1.3fr) repeat(6, minmax(104px, 1fr)) 44px; }
+    .tg-band { display: grid; background: #fff; border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 700; letter-spacing: .05em; }
+    .tg-band span { padding: 6px 12px; text-align: center; }
+    .tg-band .ship { background: #fdeceb; color: var(--brand-dark); }
+    .tg-band .so { background: #eaf0fe; color: #2a4aa0; border-left: 2px solid var(--line-strong); }
+    .tg-head span.g { text-transform: none; text-align: right; font-size: 11.5px; white-space: nowrap; }
+    .tg-head span.sep, .tg-row input.sep { border-left: 2px solid var(--line-strong); }
+    .tg-row input.num::placeholder { color: #cbbcbc; }
+    .tg-row input[data-c="loc"].warn { background: var(--warning-soft); }
   
     /* ---------- Lịch Coke (445) ở Tổng quan ---------- */
     .cal-wrap { max-width: 1000px; margin-bottom: 22px; }
@@ -4973,7 +4991,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     // ---------- Công Cụ Hỗ Trợ › MDM Team ----------
     const MDM_KEY = "masterdata_mdm_mode";
-    const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"], ["promo", "Cài Đặt CTKM", "plus"]];
+    const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"], ["promo", "Cài Đặt CTKM", "plus"], ["target-npp", "Cài Đặt Target NPP", "building"]];
     let mdmMode = loadKey(MDM_KEY, MDM_MODES.map(m => m[0]), "stock-init");
     /* ---- Tăng tồn / Giảm tồn: lưới nhập ItemCode + UOM0, xuất CSV UTF-16 LE BOM, không có dòng trống cuối ---- */
     const ADJ_COLS = ["DocumentDate", "AdjustmentDescription", "WareHouseCode", "StorageLocationCode", "ItemCode", "ItemTypeCode", "SubCode", "UOM0", "UOM1", "ProductionDate", "ExpireDate", "Notes", "Reason"];
@@ -5145,6 +5163,149 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         <div class="adj-grid"><div class="adj-head"><span style="text-align:center">#</span><span>ItemCode</span><span style="text-align:right">StockQuantity <em>(để trống = 0)</em></span><span></span></div><div id="ini-rows">${mdmIni.rows.map(iniRowHtml).join("")}</div></div>
         <p class="adj-tip">💡 Copy cột ItemCode (hoặc 2 cột ItemCode + số lượng) từ Excel rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>ItemCode</b> đầu tiên. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu, ô vàng = ItemCode bị trùng.</p>
         <div class="adj-foot"><div class="meta" id="ini-meta"></div><button type="button" id="ini-export" class="btn btn-primary btn-lg">⬇ Xuất CSV</button></div></div></section>`;
+    }
+
+    /* ---- Cài đặt Target NPP: ma trận LocationCode × GroupCode, xuất CSV đúng mẫu CCVN_Target_Upload_template.csv (51 cột) ---- */
+    const TGT_COLS = ["PrincipleCode", "TerritoryHierarchy_Code1", "LocationCode", "OutletCode", "OutletCategoryCode1", "OutletCategoryCode2", "OutletCategoryCode3", "OutletCategoryCode4", "OutletCategoryCode5", "OutletCategoryCode6", "OutletCategoryCode7", "OutletCategoryCode8", "OutletCategoryCode9", "OutletCategoryCode10", "ProductCode", "ProductCategoryCode1", "ProductCategoryCode2", "ProductCategoryCode3", "ProductCategoryCode4", "ProductCategoryCode5", "ProductCategoryCode6", "ProductCategoryCode7", "ProductCategoryCode8", "ProductCategoryCode9", "ProductCategoryCode10", "TargetQty", "MOC", "GroupCode", "TargetType", "TargetOn", "TerritoryHierarchy_Code2", "TerritoryHierarchy_Code3", "TerritoryHierarchy_Code4", "TerritoryHierarchy_Code5", "OutletHierarchyCode1", "OutletHierarchyCode2", "OutletHierarchyCode3", "OutletHierarchyCode4", "OutletHierarchyCode5", "ProductCategoryCode11", "ProductCategoryCode12", "RouteCode", "RouteType", "ProductHierarchyCode1", "ProductHierarchyCode2", "ProductHierarchyCode3", "ProductHierarchyCode4", "ProductHierarchyCode5", "ReferenceGroupCode", "RuleID", "Data"];
+    const TGT_IX = Object.fromEntries(TGT_COLS.map((c, i) => [c, i]));
+    const TGT_GROUPS = ["NSR SHIPMENT", "Vol EC SHIPMENT", "Vol UC SHIPMENT", "NSR SALES OUT", "Vol EC SALES OUT", "Vol UC SALES OUT"];
+    const TGT_CELLS = ["loc", ...TGT_GROUPS.map((_, k) => "g" + k)];
+    const tgtPad = n => String(n).padStart(2, "0");
+    const tgtIso = d => `${d.getFullYear()}-${tgtPad(d.getMonth() + 1)}-${tgtPad(d.getDate())}`;
+    const tgtMocDate = iso => iso.split("-").reverse().join("-"); // yyyy-mm-dd -> dd-mm-yyyy
+    const tgtBlank = () => ({ loc: "", q: TGT_GROUPS.map(() => "") });
+    const tgtNow = new Date();
+    const mdmTgt = {
+      principle: "VN10", type: "3", on: "1", data: "SI",
+      month: `${tgtNow.getFullYear()}-${tgtPad(tgtNow.getMonth() + 1)}`,
+      from: tgtIso(new Date(tgtNow.getFullYear(), tgtNow.getMonth(), 1)),
+      to: tgtIso(new Date(tgtNow.getFullYear(), tgtNow.getMonth() + 1, 0)),
+      rows: [tgtBlank()]
+    };
+    const tgtOkCode = v => !!v && !/[,"\s]/.test(v);
+    const tgtMocText = () => (mdmTgt.from && mdmTgt.to) ? `${tgtMocDate(mdmTgt.from)} to ${tgtMocDate(mdmTgt.to)}` : "";
+    function tgtParse() {
+      const out = [], bad = {}, cfgBad = {}, seen = {}, dup = {}, empty = {};
+      let npp = 0;
+      ["principle", "type", "on", "data"].forEach(k => { if (!tgtOkCode(mdmTgt[k].trim())) cfgBad[k] = 1; });
+      if (!mdmTgt.from) cfgBad.from = 1;
+      if (!mdmTgt.to) cfgBad.to = 1;
+      if (mdmTgt.from && mdmTgt.to && mdmTgt.from > mdmTgt.to) { cfgBad.from = 1; cfgBad.to = 1; }
+      const moc = tgtMocText();
+      mdmTgt.rows.forEach((r, i) => {
+        const loc = r.loc.trim(), qs = r.q.map(x => x.trim());
+        if (!loc && !qs.some(Boolean)) return;
+        const b = { loc: !tgtOkCode(loc), q: {} };
+        qs.forEach((q, g) => { if (q !== "" && !/^\d+(\.\d+)?$/.test(q)) b.q[g] = 1; });
+        if (b.loc || Object.keys(b.q).length) { bad[i] = b; return; }
+        if (!qs.some(Boolean)) { empty[i] = 1; return; }
+        if (seen[loc] != null) dup[i] = dup[seen[loc]] = 1; else seen[loc] = i;
+        npp++;
+        qs.forEach((q, g) => {
+          if (q === "") return;
+          const row = TGT_COLS.map(() => "");
+          row[TGT_IX.PrincipleCode] = mdmTgt.principle.trim();
+          row[TGT_IX.LocationCode] = loc;
+          row[TGT_IX.TargetQty] = q;
+          row[TGT_IX.MOC] = moc;
+          row[TGT_IX.GroupCode] = TGT_GROUPS[g];
+          row[TGT_IX.TargetType] = mdmTgt.type.trim();
+          row[TGT_IX.TargetOn] = mdmTgt.on.trim();
+          row[TGT_IX.Data] = mdmTgt.data.trim();
+          out.push(row);
+        });
+      });
+      return { out, bad, cfgBad, dup, empty, npp, nbad: Object.keys(bad).length, ndup: Object.keys(dup).length, nempty: Object.keys(empty).length, ncfg: Object.keys(cfgBad).length };
+    }
+    const tgtCsvText = out => [TGT_COLS, ...out].map(r => r.join(",")).join("\r\n") + "\r\n"; // giống file mẫu: CRLF, có xuống dòng cuối
+    function tgtRowHtml(r, i) {
+      const cells = TGT_GROUPS.map((g, k) => `<input data-c="g${k}" class="num${k === 3 ? " sep" : ""}" value="${escapeHtml(r.q[k])}" placeholder="—" autocomplete="off" inputmode="decimal" title="${escapeHtml(g)}">`).join("");
+      return `<div class="adj-row tg-row" data-r="${i}"><span class="adj-n">${i + 1}</span><input data-c="loc" value="${escapeHtml(r.loc)}" placeholder="vd: 70257560" autocomplete="off" inputmode="numeric">${cells}<button type="button" class="adj-del" data-tgt-del title="Xóa dòng">×</button></div>`;
+    }
+    function tgtEnsureTail() { const l = mdmTgt.rows[mdmTgt.rows.length - 1]; if (!l || l.loc.trim() || l.q.some(x => x.trim())) mdmTgt.rows.push(tgtBlank()); }
+    function tgtDrawRows(focus) {
+      tgtEnsureTail();
+      $("#tgt-rows").innerHTML = mdmTgt.rows.map(tgtRowHtml).join("");
+      tgtMeta();
+      if (focus) { const el = document.querySelector(`#tgt-rows .adj-row[data-r="${focus[0]}"] input[data-c="${focus[1]}"]`); if (el) { el.focus(); el.select(); } }
+    }
+    function tgtMeta() {
+      const v = tgtParse();
+      document.querySelectorAll("#tgt-rows .adj-row").forEach(row => {
+        const i = Number(row.dataset.r), bd = v.bad[i], loc = row.querySelector('[data-c="loc"]');
+        loc.classList.toggle("bad", !!(bd && bd.loc));
+        loc.classList.toggle("warn", !!(v.dup[i] || v.empty[i]));
+        loc.title = v.dup[i] ? "LocationCode bị trùng" : v.empty[i] ? "NPP này chưa có target nào — sẽ không xuất dòng" : "";
+        TGT_GROUPS.forEach((g, k) => row.querySelector(`[data-c="g${k}"]`).classList.toggle("bad", !!(bd && bd.q[k])));
+      });
+      document.querySelectorAll("#tgt-cfg .field").forEach(f => f.classList.toggle("bad", !!v.cfgBad[f.dataset.k]));
+      const chips = [`<span class="adj-chip ${v.npp ? "ok" : ""}">${nf(v.npp)} NPP hợp lệ</span>`, `<span class="adj-chip ${v.out.length ? "ok" : ""}">${nf(v.out.length)} dòng CSV</span>`];
+      if (v.nbad) chips.push(`<span class="adj-chip err">${v.nbad} dòng lỗi</span>`);
+      if (v.ndup) chips.push(`<span class="adj-chip warn">${v.ndup} dòng trùng LocationCode</span>`);
+      if (v.nempty) chips.push(`<span class="adj-chip warn">${v.nempty} NPP chưa có target</span>`);
+      $("#tgt-chips").innerHTML = chips.join("");
+      $("#tgt-export").disabled = !v.out.length || !!v.nbad || !!v.ncfg;
+      $("#tgt-meta").innerHTML = `PrincipleCode <b>${escapeHtml(mdmTgt.principle.trim())}</b> · MOC <b>${escapeHtml(tgtMocText() || "—")}</b> · TargetType <b>${escapeHtml(mdmTgt.type.trim())}</b> · TargetOn <b>${escapeHtml(mdmTgt.on.trim())}</b> · Data <b>${escapeHtml(mdmTgt.data.trim())}</b> · các cột còn lại để trống đúng mẫu`;
+    }
+    function tgtMonth(val) {
+      const m = /^(\d{4})-(\d{2})$/.exec(val || ""); mdmTgt.month = val;
+      if (m) {
+        mdmTgt.from = `${m[1]}-${m[2]}-01`; mdmTgt.to = tgtIso(new Date(Number(m[1]), Number(m[2]), 0));
+        const f = $("#tgt-from"), t = $("#tgt-to"); if (f) f.value = mdmTgt.from; if (t) t.value = mdmTgt.to;
+      }
+      tgtMeta();
+    }
+    function tgtInput(t) {
+      if (t.dataset.tgt) { if (t.dataset.tgt === "month") { tgtMonth(t.value); return true; } mdmTgt[t.dataset.tgt] = t.value; tgtMeta(); return true; }
+      const row = t.closest("#tgt-rows .adj-row"); if (!row || !t.dataset.c) return false;
+      const r = mdmTgt.rows[Number(row.dataset.r)];
+      if (t.dataset.c === "loc") r.loc = t.value; else r.q[Number(t.dataset.c.slice(1))] = t.value;
+      const last = mdmTgt.rows.length - 1;
+      if (Number(row.dataset.r) === last) { mdmTgt.rows.push(tgtBlank()); $("#tgt-rows").insertAdjacentHTML("beforeend", tgtRowHtml(tgtBlank(), last + 1)); }
+      tgtMeta(); return true;
+    }
+    function tgtPaste(e) {
+      const inp = e.target.closest("#tgt-rows input"); if (!inp) return;
+      const txt = (e.clipboardData || window.clipboardData).getData("text").replace(/\r/g, "").replace(/\n+$/, "");
+      const col = inp.dataset.c;
+      if (!/[\t\n]/.test(txt) && !(col === "loc" && /\s/.test(txt.trim()))) return;
+      e.preventDefault();
+      const r0 = Number(inp.closest(".adj-row").dataset.r), c0 = TGT_CELLS.indexOf(col), lines = txt.split("\n");
+      lines.forEach((ln, k) => {
+        const row = mdmTgt.rows[r0 + k] || (mdmTgt.rows[r0 + k] = tgtBlank());
+        const cells = ln.includes("\t") ? ln.split("\t") : (col === "loc" ? ln.trim().split(/[\s,;]+/) : [ln]);
+        cells.forEach((cv, j) => {
+          const ci = c0 + j; if (ci >= TGT_CELLS.length) return;
+          let val = cv.trim();
+          if (ci === 0) row.loc = val;
+          else { if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(val)) val = val.replace(/,/g, ""); row.q[ci - 1] = val; } // 15,000 -> 15000
+        });
+      });
+      tgtDrawRows([r0 + lines.length, col]);
+      toast(`Đã dán ${nf(lines.length)} dòng.`, "success");
+    }
+    function tgtExport() {
+      const v = tgtParse(); if (!v.out.length || v.nbad || v.ncfg) return;
+      const text = tgtCsvText(v.out);
+      const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-"), fileName = `CCVN_Target_Upload_${stamp}.csv`;
+      const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" })), download: fileName });
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      toast(`Đã xuất "${fileName}" (${nf(v.out.length)} dòng cho ${nf(v.npp)} NPP).`, "success");
+    }
+    function renderTgt() {
+      const F = (k, l, ph) => `<div class="field" data-k="${k}"><label>${l}</label><input data-tgt="${k}" value="${escapeHtml(mdmTgt[k])}" placeholder="${ph || ""}" autocomplete="off"></div>`;
+      const D = (k, l) => `<div class="field" data-k="${k}"><label>${l}</label><input type="date" id="tgt-${k}" data-tgt="${k}" value="${escapeHtml(mdmTgt[k])}"></div>`;
+      const band = `<div class="adj-head tg-band"><span></span><span></span><span class="ship" style="grid-column:span 3">TargetQty · SHIPMENT</span><span class="so" style="grid-column:span 3">TargetQty · SALES OUT</span><span></span></div>`;
+      const head = `<div class="adj-head tg-head"><span style="text-align:center">#</span><span>LocationCode</span>${TGT_GROUPS.map((g, k) => `<span class="g${k === 3 ? " sep" : ""}">${escapeHtml(g)}</span>`).join("")}<span></span></div>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Cài Đặt Target NPP</h2><p>Điền thông số chung một lần, rồi dán danh sách NPP (LocationCode) cùng target theo từng GroupCode vào bảng. Mỗi ô có số = 1 dòng CSV. Xuất CSV đúng mẫu CCVN_Target_Upload, sẵn sàng upload.</p></div></div><div class="panel-body">
+        <div id="tgt-cfg">
+          <div class="adj-cfg">${F("principle", "PrincipleCode")}${F("type", "TargetType")}${F("on", "TargetOn")}${F("data", "Data")}</div>
+          <div class="adj-cfg" style="grid-template-columns:repeat(3,minmax(0,1fr))">${D("from", "MOC <span class=\"hint\">từ ngày</span>")}${D("to", "MOC <span class=\"hint\">đến ngày</span>")}<div class="field"><label>Chọn nhanh cả tháng <span class="hint">tự điền MOC</span></label><input type="month" data-tgt="month" value="${escapeHtml(mdmTgt.month)}"></div></div>
+        </div>
+        <div class="adj-bar"><h3>Danh sách NPP<small>LocationCode &amp; TargetQty theo GroupCode</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="tgt-chips"></div><button type="button" class="btn btn-plain" data-tgt-act="add">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-tgt-act="clear">Xóa tất cả</button></div></div>
+        <div class="adj-grid"><div class="tg-inner"><div class="tg-top">${band}${head}</div><div id="tgt-rows">${mdmTgt.rows.map(tgtRowHtml).join("")}</div></div></div>
+        <p class="adj-tip">💡 Copy khối <b>LocationCode + 6 cột target</b> từ Excel (hoặc chỉ cột LocationCode) rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>LocationCode</b> đầu tiên — cả bảng tự điền. Ô trống = không xuất dòng cho GroupCode đó. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu, ô vàng = LocationCode trùng / chưa có target.</p>
+        <div class="adj-foot"><div class="meta" id="tgt-meta"></div><button type="button" id="tgt-export" class="btn btn-primary btn-lg">⬇ Xuất CSV</button></div></div></section>`;
     }
 
     /* ---- Cài đặt giá cho SKU: lưới ItemCode + giá, xuất XLSX đúng mẫu 4_pricingcontrol.xlsx (sheet "in") ---- */
@@ -6417,11 +6578,12 @@ function renderProFocM() {
       if (mdmMode === "sku-price") return renderPrc();
       if (mdmMode === "promo") return renderPro();
       if (mdmMode === "stock-adj") return renderAdj();
+      if (mdmMode === "target-npp") return renderTgt();
       const m = MDM_MODES.find(x => x[0] === mdmMode) || MDM_MODES[0];
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>${escapeHtml(m[1])}</h2><p>Chức năng của L2 / MDM Team.</p></div></div><div class="panel-body"><div class="empty"><strong>Chức năng đang được xây dựng</strong>Đang chờ mẫu phiếu Excel và quy tắc xử lý cho “${escapeHtml(m[1])}”.</div></div></section>`;
     }
     function renderMdm() {
-      return `<div id="mdm-page"><div class="header-row"><div><div class="eyebrow">Support tools · L2 / MDM Team</div><h2 class="page-title">L2 / MDM Team</h2><p class="page-subtitle">Tạo tồn kho ban đầu, tăng/giảm tồn, cài đặt giá cho SKU và cài đặt CTKM.</p></div></div>
+      return `<div id="mdm-page"><div class="header-row"><div><div class="eyebrow">Support tools · L2 / MDM Team</div><h2 class="page-title">L2 / MDM Team</h2><p class="page-subtitle">Tạo tồn kho ban đầu, tăng/giảm tồn, cài đặt giá cho SKU, cài đặt CTKM và cài đặt Target NPP.</p></div></div>
         <div class="tl-seg">${MDM_MODES.map(([k, l, ic]) => `<button type="button" data-mdm-mode="${k}" class="${mdmMode === k ? "on" : ""}">${ICONS[ic]} ${l}</button>`).join("")}</div>
         <div id="mdm-root">${renderMdmBody()}</div></div>`;
     }
@@ -6444,6 +6606,7 @@ function renderProFocM() {
         if (t.dataset.fp) { mdmFocM.promos[Number(t.closest(".pro-slab").dataset.pi)][t.dataset.fp] = t.value; return focmMeta(); }
         if (t.dataset.fs) { mdmFoc.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.fs] = t.value; return focMeta(); }
         if (t.dataset.adj) { mdmAdj[t.dataset.adj] = t.value; return adjMeta(); }
+        if (tgtInput(t)) return;
         if (t.dataset.ini) { mdmIni[t.dataset.ini] = t.value; return iniMeta(); }
         if (t.dataset.prc) { mdmPrc[t.dataset.prc] = t.value; return prcMeta(); }
         const prow = t.closest("#prc-rows .adj-row");
@@ -6466,7 +6629,7 @@ function renderProFocM() {
         if (Number(row.dataset.r) === last) { mdmAdj.rows.push(adjBlank()); $("#adj-rows").insertAdjacentHTML("beforeend", adjRowHtml(adjBlank(), last + 1)); }
         adjMeta();
       });
-      pg.addEventListener("paste", e => { prcPaste(e); iniPaste(e); adjPaste(e); tmxPaste(e); });
+      pg.addEventListener("paste", e => { prcPaste(e); iniPaste(e); adjPaste(e); tmxPaste(e); tgtPaste(e); });
       pg.addEventListener("keydown", e => {
         const t = e.target;
         if (t.dataset && t.dataset.mx === "cell" && ["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) { e.preventDefault(); const nr = Number(t.dataset.r) + (e.key === "ArrowUp" ? -1 : 1), nx = document.querySelector(`#tmx input[data-mx="cell"][data-r="${nr}"][data-c="${t.dataset.c}"]`); if (nx) { nx.focus(); nx.select(); } return; }
@@ -6474,6 +6637,12 @@ function renderProFocM() {
           e.preventDefault();
           const r = Number(t.closest(".adj-row").dataset.r) + (e.key === "ArrowUp" ? -1 : 1);
           const el = document.querySelector(`#prc-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
+          return;
+        }
+        if (t.closest && t.closest("#tgt-rows") && ["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) {
+          e.preventDefault();
+          const r = Number(t.closest(".adj-row").dataset.r) + (e.key === "ArrowUp" ? -1 : 1);
+          const el = document.querySelector(`#tgt-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
           return;
         }
         if (t.closest && t.closest("#ini-rows") && ["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) {
@@ -6505,6 +6674,14 @@ function renderProFocM() {
         const proDel = e.target.closest("[data-pro-del]");
         if (proDel) { mdmPro.slabs.splice(Number(proDel.closest(".pro-slab").dataset.si), 1); return proDraw(); }
         if (e.target.closest("#adj-export")) return adjExport();
+        if (e.target.closest("#tgt-export")) return tgtExport();
+        if (e.target.closest("[data-tgt-del]")) { const dr = e.target.closest(".adj-row"); mdmTgt.rows.splice(Number(dr.dataset.r), 1); return tgtDrawRows(); }
+        const tga = e.target.closest("[data-tgt-act]");
+        if (tga) {
+          if (tga.dataset.tgtAct === "add") { mdmTgt.rows.push(tgtBlank()); return tgtDrawRows([mdmTgt.rows.length - 1, "loc"]); }
+          if (mdmTgt.rows.some(r => r.loc || r.q.some(Boolean)) && !(await confirmDialog({ title: "Xóa toàn bộ danh sách?", message: "Tất cả dòng LocationCode / TargetQty đang nhập sẽ bị xóa.", confirmText: "Xóa tất cả", danger: true }))) return;
+          mdmTgt.rows = [tgtBlank()]; return tgtDrawRows([0, "loc"]);
+        }
         if (e.target.closest("#ini-export")) return iniExport();
         if (prcClick(e)) return;
         if (e.target.closest("#prc-export")) return prcExport();
@@ -6538,12 +6715,13 @@ function renderProFocM() {
         const b = e.target.closest("[data-mdm-mode]"); if (!b) return;
         mdmMode = b.dataset.mdmMode; saveKey(MDM_KEY, mdmMode);
         pg.querySelectorAll("[data-mdm-mode]").forEach(x => x.classList.toggle("on", x === b));
-        $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "stock-adj") adjDrawRows(); if (mdmMode === "stock-init") iniDrawRows(); if (mdmMode === "sku-price") prcDrawRows(); if (mdmMode === "promo") proDraw();
+        $("#mdm-root").innerHTML = renderMdmBody(); if (mdmMode === "stock-adj") adjDrawRows(); if (mdmMode === "stock-init") iniDrawRows(); if (mdmMode === "sku-price") prcDrawRows(); if (mdmMode === "promo") proDraw(); if (mdmMode === "target-npp") tgtDrawRows();
       });
       if (mdmMode === "stock-adj") adjDrawRows();
       if (mdmMode === "stock-init") iniDrawRows();
       if (mdmMode === "sku-price") prcDrawRows();
       if (mdmMode === "promo") proDraw();
+      if (mdmMode === "target-npp") tgtDrawRows();
     }
     function renderTools() {
       return `<div id="tool-page"><div class="header-row"><div><div class="eyebrow">Support tools · L1 Team</div><h2 class="page-title">L1 Team</h2><p class="page-subtitle">Soạn phiếu tạo mới, thay thế, remove hoặc cập nhật account cho cả DMS và Central, xuất Excel đúng mẫu.</p></div></div><div id="tool-root">${renderToolBody()}</div></div>`;
