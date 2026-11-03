@@ -4900,6 +4900,7 @@ tbody tr.detail-selected:hover{ background:
 .brd-ai-sub{ font-size:11.5px; color:#4f7a79; margin:0 0 12px 27px; line-height:1.45; }
 .brd-ai-body{ display:flex; flex-direction:column; gap:10px; }
 .brd-ai-body textarea{ min-height:74px; border-color:#c7e6e3; background:#fff; }
+.brd-ai-body textarea#brdAiExtra{ min-height:44px; font-size:12px; }
 .brd-ai-drop{ position:relative; border:1.5px dashed #a9d8d4; border-radius:10px; background:rgba(255,255,255,.6); padding:12px; display:flex; flex-wrap:wrap; align-items:center; gap:10px; cursor:text; min-height:56px; }
 .brd-ai-drop.drag{ border-color:#0c8f92; background:#e6f8f6; }
 .brd-ai-drop-hint{ font-size:11.5px; color:#5c8583; display:flex; align-items:center; gap:6px; }
@@ -18148,9 +18149,10 @@ function brdModalTemplate(v){
           <mi-icon name="sparkles" stroke-width="2"></mi-icon>
           <div class="brd-ai-title">AI hỗ trợ điền BRD</div>
         </div>
-        <p class="brd-ai-sub">Mô tả yêu cầu bằng lời + dán (paste)/kéo-thả ảnh liên quan (mockup, email yêu cầu, chụp màn hình...). Hệ thống sẽ gửi song song tới nhiều AI (Gemini, Mistral, OpenRouter) và dùng 1 AI trọng tài đối chiếu chéo để chọn thông tin chính xác nhất trước khi điền.</p>
+        <p class="brd-ai-sub">Mô tả yêu cầu bằng lời + dán (paste)/kéo-thả ảnh liên quan (mockup, email yêu cầu, chụp màn hình...). Hệ thống gửi song song tới nhiều AI (Gemini, Mistral, OpenRouter), chấm điểm từng bản nháp, dùng AI trọng tài đối chiếu chéo với mô tả/ảnh gốc rồi biên tập viên độc lập kiểm chứng dữ kiện, số liệu và khớp VIE/ENG trước khi điền. Mô tả càng cụ thể (mã, tên trường, giá trị, giờ, ngày, ví dụ) thì BRD càng sát yêu cầu.</p>
         <div class="brd-ai-body">
           <textarea id="brdAiDesc" placeholder="Mô tả yêu cầu nghiệp vụ ở đây... VD: Cần đổi tên cột A thành B, thêm cột C hiển thị giá sau thuế trên phiếu xuất kho DMS..."></textarea>
+          <textarea id="brdAiExtra" rows="2" placeholder="Ghi chú thêm cho AI (không bắt buộc). VD: viết cho khách hàng không rành kỹ thuật; nhấn mạnh phần phân quyền; dùng thuật ngữ Phiếu giao nhận thay cho Delivery Note..."></textarea>
           <div class="brd-ai-drop" id="brdAiDrop" tabindex="0">
             <div class="brd-ai-thumbs" id="brdAiThumbs"></div>
             <div class="brd-ai-drop-hint">
@@ -18585,6 +18587,7 @@ async function runBrdAiAssist(){
     const data = await brdAiRequestWithProgress({
       description: desc,
       images: STATE.brdAiImages.map(i=> ({ mimeType: i.mimeType, base64: i.base64 })),
+      extra_instructions: ($("#brdAiExtra")?.value || "").trim(),
       current: {
         brd_title: $("#b_title").value.trim(),
         system_name: $("#b_system").value.trim()
@@ -18622,6 +18625,8 @@ async function runBrdAiAssist(){
           : "Đã điền bản nháp dự phòng nhưng chưa được trọng tài kiểm chứng; không coi đây là kết quả đã xác nhận.",
       warnings:[
         ...(meta.qualityWarnings || []),
+        ...((meta.openQuestions || []).length ? ["Điểm AI thấy chưa rõ trong mô tả, đã ghi ở mục Giả định/Cần xác nhận: " + meta.openQuestions.slice(0,5).join(" | ")] : []),
+        ...((meta.droppedImages || []).length ? ["Ảnh bị bỏ qua: " + meta.droppedImages.join("; ")] : []),
         ...(!meta.reviewCompleted ? ["Chưa có bước trọng tài thành công; hãy xác minh số liệu và yêu cầu với đầu vào gốc."] : []),
       ],
     });
