@@ -5284,6 +5284,14 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       tgtDrawRows([r0 + lines.length, col]);
       toast(`Đã dán ${nf(lines.length)} dòng.`, "success");
     }
+    function tgtSample() {
+      Object.assign(mdmTgt, { principle: "VN10", type: "3", on: "1", data: "SI" });
+      tgtMonth(`${tgtNow.getFullYear()}-${tgtPad(tgtNow.getMonth() + 1)}`);
+      mdmTgt.rows = [{ loc: "70257560", q: ["15000", "30000", "15000", "30000", "15000", "30000"] }];
+      document.querySelectorAll("#tgt-cfg input[data-tgt]").forEach(inp => { const k = inp.dataset.tgt; if (mdmTgt[k] !== undefined) inp.value = mdmTgt[k]; });
+      tgtDrawRows();
+      toast("Đã điền ví dụ mẫu — thay LocationCode và target bằng dữ liệu thật của bạn.", "success");
+    }
     function tgtExport() {
       const v = tgtParse(); if (!v.out.length || v.nbad || v.ncfg) return;
       const text = tgtCsvText(v.out);
@@ -5302,7 +5310,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           <div class="adj-cfg">${F("principle", "PrincipleCode")}${F("type", "TargetType")}${F("on", "TargetOn")}${F("data", "Data")}</div>
           <div class="adj-cfg" style="grid-template-columns:repeat(3,minmax(0,1fr))">${D("from", "MOC <span class=\"hint\">từ ngày</span>")}${D("to", "MOC <span class=\"hint\">đến ngày</span>")}<div class="field"><label>Chọn nhanh cả tháng <span class="hint">tự điền MOC</span></label><input type="month" data-tgt="month" value="${escapeHtml(mdmTgt.month)}"></div></div>
         </div>
-        <div class="adj-bar"><h3>Danh sách NPP<small>LocationCode &amp; TargetQty theo GroupCode</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="tgt-chips"></div><button type="button" class="btn btn-plain" data-tgt-act="add">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-tgt-act="clear">Xóa tất cả</button></div></div>
+        <div class="adj-bar"><h3>Danh sách NPP<small>LocationCode &amp; TargetQty theo GroupCode</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="tgt-chips"></div><button type="button" class="btn btn-plain" data-tgt-act="sample" title="Điền sẵn 1 NPP mẫu theo template để xem đúng định dạng">✨ Điền ví dụ mẫu</button><button type="button" class="btn btn-plain" data-tgt-act="add">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-tgt-act="clear">Xóa tất cả</button></div></div>
         <div class="adj-grid"><div class="tg-inner"><div class="tg-top">${band}${head}</div><div id="tgt-rows">${mdmTgt.rows.map(tgtRowHtml).join("")}</div></div></div>
         <p class="adj-tip">💡 Copy khối <b>LocationCode + 6 cột target</b> từ Excel (hoặc chỉ cột LocationCode) rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>LocationCode</b> đầu tiên — cả bảng tự điền. Ô trống = không xuất dòng cho GroupCode đó. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu, ô vàng = LocationCode trùng / chưa có target.</p>
         <div class="adj-foot"><div class="meta" id="tgt-meta"></div><button type="button" id="tgt-export" class="btn btn-primary btn-lg">⬇ Xuất CSV</button></div></div></section>`;
@@ -6678,6 +6686,10 @@ function renderProFocM() {
         if (e.target.closest("[data-tgt-del]")) { const dr = e.target.closest(".adj-row"); mdmTgt.rows.splice(Number(dr.dataset.r), 1); return tgtDrawRows(); }
         const tga = e.target.closest("[data-tgt-act]");
         if (tga) {
+          if (tga.dataset.tgtAct === "sample") {
+            if (mdmTgt.rows.some(r => r.loc.trim() || r.q.some(x => x.trim())) && !(await confirmDialog({ title: "Điền ví dụ mẫu?", message: "Danh sách hiện tại sẽ được thay bằng dữ liệu ví dụ mẫu (và các thông số chung trả về mặc định).", confirmText: "Điền ví dụ", danger: false }))) return;
+            tgtSample(); return;
+          }
           if (tga.dataset.tgtAct === "add") { mdmTgt.rows.push(tgtBlank()); return tgtDrawRows([mdmTgt.rows.length - 1, "loc"]); }
           if (mdmTgt.rows.some(r => r.loc || r.q.some(Boolean)) && !(await confirmDialog({ title: "Xóa toàn bộ danh sách?", message: "Tất cả dòng LocationCode / TargetQty đang nhập sẽ bị xóa.", confirmText: "Xóa tất cả", danger: true }))) return;
           mdmTgt.rows = [tgtBlank()]; return tgtDrawRows([0, "loc"]);
