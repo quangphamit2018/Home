@@ -18798,7 +18798,7 @@ function openBrdModal(v){
   STATE.editingBrdId = v ? v.id : null;
   STATE.brdVersionRows = (v && Array.isArray(v.version_rows) && v.version_rows.length)
     ? JSON.parse(JSON.stringify(v.version_rows))
-    : [{ vno:"0.1", change_description:"Document Created", sections:"All", date:"", author: STATE.userEmail || "", reviewer:"" }];
+    : [{ vno:"0.1", change_description:"Document Created", sections:"All", date: brdFmtDate(), author: STATE.userEmail || "", reviewer:"" }];
   const overlay = $("#brdModalOverlay");
   overlay.innerHTML = brdModalTemplate(v);
   initAutoGrow(overlay);
@@ -19300,6 +19300,38 @@ function brdLinesToArray(text){
   return String(text||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
 }
 
+/* Ngày dd/mm/yyyy cho bảng phiên bản (từ ISO/Date; rỗng nếu không hợp lệ). */
+function brdFmtDate(v){
+  const d = v ? new Date(v) : new Date();
+  if(isNaN(d.getTime())) return "";
+  const p2 = n=> String(n).padStart(2,"0");
+  return `${p2(d.getDate())}/${p2(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+const BRD_VI_CHARS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+
+/* In đậm nhãn đầu dòng (Bối cảnh:, Bước 1:, Kết quả mong đợi:...) và tiêu đề kịch bản.
+   Template dùng {.} nên mọi dòng cùng một kiểu chữ; hàm này chẻ run đầu dòng thành 2 run
+   (nhãn đậm + nội dung thường) trực tiếp trên XML sau khi Docxtemplater render xong. */
+const BRD_LABELS = ["Bối cảnh","Vấn đề","Mục tiêu","Phạm vi","Hiện trạng","Ví dụ minh họa","Hậu quả",
+  "Ai/hệ thống tham gia","Điều kiện ban đầu","Kết quả mong đợi","Giả định","Cần xác nhận",
+  "Background","Problem","Goal","Scope","Current state","Example","Impact",
+  "Who/system involved","Starting condition","Expected result","Assumption","To confirm"];
+function brdBoldLabels(xml){
+  const esc = t=> t.replace(/[.*+?^${}()|[\]\\\/]/g,"\\$&");
+  const lab = BRD_LABELS.map(esc).join("|");
+  const boldRpr = r=> r.replace(/(<w:rFonts [^>]*\/>)/, "$1<w:b/><w:bCs/>");
+  // 1) Tiêu đề kịch bản: in đậm cả dòng, cách đoạn phía trên, không tách khỏi dòng sau
+  xml = xml.replace(/<w:p>(<w:pPr>(?:(?!<\/w:pPr>).)*<\/w:pPr>)<w:r>(<w:rPr>(?:(?!<\/w:rPr>).)*<\/w:rPr>)(<w:t xml:space="preserve">(?:Kịch bản|Scenario) \d+ - [^<]*<\/w:t>)<\/w:r><\/w:p>/g,
+    (_, ppr, rpr, t)=>{
+      const ppr2 = ppr.replace("<w:pPr>","<w:pPr><w:keepNext/>").replace('w:before="0"','w:before="240"');
+      return `<w:p>${ppr2}<w:r>${boldRpr(rpr)}${t}</w:r></w:p>`;
+    });
+  // 2) Nhãn đầu dòng
+  const re = new RegExp(`<w:r>(<w:rPr>(?:(?!</w:rPr>).)*</w:rPr>)<w:t xml:space="preserve">((?:${lab}|(?:Bước|Step) \\d+): )([^<]*)</w:t></w:r>`,"g");
+  return xml.replace(re,(_, rpr, l, rest)=>
+    `<w:r>${boldRpr(rpr)}<w:t xml:space="preserve">${l}</w:t></w:r><w:r>${rpr}<w:t xml:space="preserve">${rest}</w:t></w:r>`);
+}
+
 function brdB64ToUint8Array(b64){
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
@@ -19308,7 +19340,7 @@ function brdB64ToUint8Array(b64){
 }
 
 function brdSafeFilenamePart(s){
-  return String(s||"BRD").normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
+  return String(s||"BRD").replace(/đ/g,"d").replace(/Đ/g,"D").normalize("NFKD").replace(/[\u0300-\u036f]/g,"")
     .replace(/[^a-zA-Z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,80) || "BRD";
 }
 
@@ -19320,6 +19352,7 @@ function brdNormalizeDocxLayout(zip){
   if(!file) return;
   let xml = file.asText();
   xml = xml.replace(/<w:p>(?:<w:pPr>(?:(?!<\/w:pPr>).)*<\/w:pPr>)?<\/w:p>(?=<w:p[ >])/g, "");
+  try{ xml = brdBoldLabels(xml); }catch(e){ console.warn("brdBoldLabels lỗi, bỏ qua in đậm nhãn:", e); }
   zip.file("word/document.xml", xml);
 }
 
@@ -19350,7 +19383,7 @@ function brdRecordForLang(rec, lang){
     success_bullets: pickLines("success_bullets", rec.success_bullets),
     use_cases: pickLines("use_cases", rec.use_cases),
     assumptions: pickLines("assumptions", rec.assumptions),
-    reviewer_feedback: pick("reviewer_feedback", rec.reviewer_feedback),
+    reviewer_feedback: pickLines("reviewer_feedback", rec.reviewer_feedback),
   };
 }
 
@@ -19427,7 +19460,14 @@ async function generateBrdDocx(record){
 
   const rows = (record.version_rows && record.version_rows.length)
     ? record.version_rows
-    : [{ vno:"0.1", change_description:"Document Created", sections:"All", date:"", author:"", reviewer:"" }];
+    : [{ vno:"0.1", change_description:"Document Created", sections:"All", date: brdFmtDate(), author:"", reviewer:"" }];
+
+  /* Hàng phiên bản đầu tiên còn trống ngày: điền ngày tạo (hoặc hôm nay) để cột Date không bị bỏ trống. */
+  const rowsOut = rows.map((r,i)=> (i===0 && r && String(r.vno||"").trim() && !String(r.date||"").trim())
+    ? { ...r, date: brdFmtDate(record.created_at || record.updated_at) } : r);
+  const isViDoc = BRD_VI_CHARS.test(`${record.brd_title||""} ${record.overview||""}`);
+  const reviewerLines = brdLinesToArray(record.reviewer_feedback);
+  if(!reviewerLines.length) reviewerLines.push(isViDoc ? "Chưa có phản hồi từ reviewer." : "No reviewer feedback yet.");
 
   doc.render({
     brd_title: record.brd_title || "",
@@ -19443,8 +19483,8 @@ async function generateBrdDocx(record){
     success_intro: record.success_intro || "",
     success_bullets: brdLinesToArray(record.success_bullets),
     assumptions: brdLinesToArray(record.assumptions),
-    reviewer_feedback: brdLinesToArray(record.reviewer_feedback),
-    version_rows: rows,
+    reviewer_feedback: reviewerLines,
+    version_rows: rowsOut,
     signoff_name: record.signoff_name || "",
     signoff_position: record.signoff_position || "",
     signoff_date: record.signoff_date || "",
