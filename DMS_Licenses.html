@@ -5055,7 +5055,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const b = jtBuild(), p = $("#jt-prev"), tt = $("#jt-title"); if (tt) tt.value = b.summary;
       const er = $("#jt-errs"); if (er) { const es = jtErrors(); er.innerHTML = es.length ? es.map(x => `<li>${escapeHtml(x)}</li>`).join("") : ""; er.style.display = es.length ? "block" : "none"; }
       if (p) p.innerHTML = `<div class="jt-prev-t">${escapeHtml(b.summary || "(chưa có tiêu đề)")}</div><pre class="jt-prev-d">${escapeHtml(b.description)}</pre>`;
-      const s = $("#jt-send"); if (s) s.disabled = jt.busy || !!jtErrors().length || !jtReady() || !canEdit();
+      const s = $("#jt-send"); if (s) s.disabled = jt.busy || !!jtErrors().length || !jtReady();
     }
     function jtAddFiles(list) {
       for (const f of [...list].filter(Boolean)) {
@@ -5078,7 +5078,6 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     async function jtSend() {
       if (jt.busy) return;
-      if (!canEdit()) return toast("Chỉ Super-admin và Senior-member được tạo Jira ticket.", "error");
       const cfg = jtCfg();
       if (!jtReady()) return toast("Chưa cấu hình Jira — Tài khoản 2 (Quản lý dữ liệu).", "error");
       const errs = jtErrors(); if (errs.length) return toast(errs[0], "error");
@@ -5128,7 +5127,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     function renderJiraToolsBody() {
       const c = jtCfg(), ready = jtReady(), b = jtBuild(), errs = jtErrors();
       const who = ready ? `<span class="badge badge-success">Gửi bằng Tài khoản 2${c.email ? " · " + escapeHtml(c.email) : ""} · ${escapeHtml(c.project_key)}</span>` : `<span class="badge badge-danger">Chưa cấu hình Tài khoản 2</span>`;
-      const warn = !ready ? `<div class="jt-warn">Chưa cấu hình Jira — Tài khoản 2. Vào Quản lý dữ liệu → Cấu hình Jira — Tài khoản 2 để nhập token.${canEdit() ? "" : " (Cấu hình chỉ tải được với Super-admin / Senior-member.)"}</div>` : (!canEdit() ? `<div class="jt-warn">Chỉ Super-admin và Senior-member được tạo ticket.</div>` : "");
+      const warn = !ready ? `<div class="jt-warn">${isAdmin() ? "Chưa cấu hình Jira — Tài khoản 2. Vào Quản lý dữ liệu → Cấu hình Jira — Tài khoản 2 để nhập token." : "Chưa có cấu hình Jira — Tài khoản 2 cho tài khoản của bạn. Hãy liên hệ Super-admin."}</div>` : "";
       const F = (k, label, ph, extra = "") => `<div class="field"><label>${label}</label><input data-jt="${k}" value="${escapeHtml(jt[k])}" placeholder="${escapeHtml(ph)}" autocomplete="off" ${extra}></div>`;
       const tplBar = `<div class="tl-seg" style="margin-bottom:14px">${JT_TPLS.map(([k, l]) => `<button type="button" data-jt-tpl="${k}" class="${jt.tpl === k ? "on" : ""}">${ICONS.swap} ${l}</button>`).join("")}</div>`;
       return tplBar + `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Revert Picklist — thông tin ticket gửi Vxceed Support</h2><p>Chỉ cần nhập Mã tham chiếu, Mã Nhà Phân Phối và ảnh đính kèm. Tiêu đề và Description tự động điền theo template, viết bằng tiếng Anh cho Vxceed. Ticket được tạo bằng Cấu hình Jira — Tài khoản 2.</p></div>${who}</div>
@@ -5147,7 +5146,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
             <div class="jt-drop"><label class="btn btn-plain" for="jt-file" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer">${ICONS.upload} Chọn ảnh</label><input id="jt-file" type="file" accept="image/*" multiple class="hidden"><small>hoặc bấm Ctrl+V để dán ảnh chụp màn hình · tối đa 5 ảnh, mỗi ảnh ≤ 4MB</small></div>
             <div id="jt-files" class="jt-files">${jtFilesHtml()}</div></div>
           <ul id="jt-errs" class="jt-errs" style="display:${errs.length ? "block" : "none"};margin-top:14px">${errs.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px"><button type="button" class="btn btn-plain" data-jt-act="reset" style="display:inline-flex;gap:6px;align-items:center">${ICONS.refresh} Làm mới form</button><button type="button" class="btn btn-primary" id="jt-send" data-jt-act="send" ${jt.busy || errs.length || !ready || !canEdit() ? "disabled" : ""} style="display:inline-flex;gap:6px;align-items:center">${ICONS.send} Tạo ticket Jira</button></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px"><button type="button" class="btn btn-plain" data-jt-act="reset" style="display:inline-flex;gap:6px;align-items:center">${ICONS.refresh} Làm mới form</button><button type="button" class="btn btn-primary" id="jt-send" data-jt-act="send" ${jt.busy || errs.length || !ready ? "disabled" : ""} style="display:inline-flex;gap:6px;align-items:center">${ICONS.send} Tạo ticket Jira</button></div>
         </div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>Ticket đã tạo gần đây</h2></div></div><div class="panel-body" id="jt-log">${jtLogHtml()}</div></section>`;
     }
@@ -7613,7 +7612,7 @@ function renderProFocM() {
           state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", IMPORTANT_DAYS_KEY).maybeSingle(),   // ngày quan trọng trên lịch Coke
           state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", GRN_OVERRIDE_KEY).maybeSingle(),
           canEdit() ? state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", JIRA_CONFIG_KEY).maybeSingle() : Promise.resolve({ data: null }),
-          canEdit() ? state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", JIRA_CONFIG2_KEY).maybeSingle() : Promise.resolve({ data: null })
+          state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", JIRA_CONFIG2_KEY).maybeSingle()   // Revert Picklist: member cũng dùng được Tài khoản 2 (cần policy đọc ở Supabase)
         ]);
         if (!importantSetting?.error) state.importantDays = parseImportantDays(importantSetting?.data?.value);
         state.grnOverrides = grnSetting?.error ? {} : parseSettingJson(grnSetting?.data?.value);
@@ -7839,4 +7838,3 @@ function renderProFocM() {
   </script>
 </body>
 </html>
-
