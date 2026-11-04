@@ -1365,6 +1365,23 @@
     .tl-seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; margin-bottom: 18px; background: #fff; border: 1px solid var(--line-strong); border-radius: 14px; box-shadow: var(--shadow-card); }
     .tl-seg button { border: 0; background: transparent; color: var(--ink-2); font-weight: 600; font-size: 13px; padding: 9px 16px; border-radius: 10px; display: flex; align-items: center; gap: 8px; }
     .tl-seg button svg { width: 16px; height: 16px; }
+    .jt-title { display: flex; gap: 8px; } .jt-title input:first-child { flex: 0 0 96px; width: 96px; font-weight: 700; text-align: center; }
+    .jt-docrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 34px; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .jt-doc-h { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+    .jt-n { font-weight: 600; color: var(--muted); margin-left: 6px; }
+    .jt-drop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 12px; background: #fffafa; }
+    .jt-drop small { color: var(--muted); font-size: 11.5px; }
+    .jt-files { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+    .jt-file { display: flex; align-items: center; gap: 8px; max-width: 260px; padding: 6px 6px 6px 6px; border: 1px solid var(--line-strong); border-radius: 12px; background: #fff; }
+    .jt-file img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; flex: 0 0 auto; }
+    .jt-file span { font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .jt-warn { margin-bottom: 12px; padding: 9px 12px; border-radius: 12px; font-size: 12px; color: #b45309; background: #fff7ed; border: 1px solid #fed7aa; }
+    .jt-prev { border: 1px solid var(--line-strong); border-radius: 14px; background: #fff; overflow: hidden; }
+    .jt-prev-t { padding: 12px 16px; font-weight: 800; font-size: 14px; border-bottom: 1px solid var(--line); background: #fffafa; }
+    .jt-prev-d { margin: 0; padding: 14px 16px; white-space: pre-wrap; word-break: break-word; font: 13px/1.6 inherit; color: var(--ink); }
+    .jt-log { display: grid; gap: 8px; }
+    .jt-log-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    .jt-log-row > div { display: grid; gap: 2px; min-width: 0; } .jt-log-row b { font-size: 13px; } .jt-log-row span { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .jt-log-row small { color: var(--muted); white-space: nowrap; }
     .tl-bigbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
     .tl-big { flex: 1 1 260px; max-width: 360px; display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px 18px; border-radius: 16px; border: 1px solid var(--line-strong); background: #fff; color: var(--ink-2); box-shadow: var(--shadow-card); cursor: pointer; position: relative; overflow: hidden; transition: background .28s, color .25s, box-shadow .28s, transform .25s var(--ease); }
     .tl-big:hover { transform: translateY(-1px); }
@@ -5000,12 +5017,143 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const b = (k, ic, label, sub) => `<button type="button" data-tl-area="${k}" class="tl-big${tool.area === k ? " on" : ""}"><span class="tl-big-ic">${ic}</span><span class="tl-big-tx"><b>${label}</b><small>${sub}</small></span></button>`;
       return `<div class="tl-bigbar">${b("dms", ICONS.users, "DMS Licenses", "Central User list · DMS Userlist")}${b("jira", ICONS.send, "Tool Tickets Jira", "Tạo & quản lý ticket Jira")}</div>`;
     }
+    /* =====================================================================
+       Tool Tickets Jira — soạn ticket gửi Vxceed Support (theo template Request),
+       tạo tự động qua Cấu hình Jira — Tài khoản 2.
+       ===================================================================== */
+    const JT_LOG_KEY = "masterdata_jira_tickets";
+    const jt = { prefix: "[DMS]", title: "", module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", phone: "", request: "", docs: [{ a: "", b: "" }], reason: "", files: [], busy: false,
+      log: (() => { try { const v = JSON.parse(localStorage.getItem(JT_LOG_KEY) || "[]"); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (_) { return []; } })() };
+    const jtCfg = () => state.jiraConfig2 || {};
+    const jtReady = () => { const c = jtCfg(); return !!(c.project_key && (c.proxy_url || (c.base_url && c.email && c.token))); };
+    function jtBuild() {
+      const docs = jt.docs.map(d => [d.a.trim(), d.b.trim()].filter(Boolean).join(" - ")).filter(Boolean);
+      const parts = [jt.request.trim()];
+      if (docs.length) parts.push(docs.map(x => "- " + x).join("\n"));
+      if (jt.reason.trim()) parts.push(jt.reason.trim());
+      parts.push("Thank you for your support.");
+      return { summary: (jt.prefix.trim() + " " + jt.title.trim()).trim(), description: parts.join("\n\n").trim(), docs };
+    }
+    function jtErrors() {
+      const e = [];
+      if (!jt.title.trim()) e.push("Hãy nhập Tiêu đề ticket.");
+      if (!jt.request.trim()) e.push("Hãy nhập nội dung yêu cầu (Mô tả).");
+      return e;
+    }
+    const jtDocsHtml = () => jt.docs.map((d, i) => `<div class="jt-docrow"><input data-jt-doc="a" data-i="${i}" value="${escapeHtml(d.a)}" placeholder="vd: PL-1763" autocomplete="off"><input data-jt-doc="b" data-i="${i}" value="${escapeHtml(d.b)}" placeholder="vd: DT0071387591" autocomplete="off"><button type="button" class="btn btn-plain" data-jt-act="deldoc" data-i="${i}" title="Xóa dòng">${ICONS.close}</button></div>`).join("");
+    const jtFilesHtml = () => jt.files.map((f, i) => `<div class="jt-file"><img src="${f.url}" alt=""><span title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span><button type="button" class="btn btn-plain" data-jt-act="delfile" data-i="${i}" title="Bỏ ảnh">${ICONS.close}</button></div>`).join("");
+    function jtLogHtml() {
+      if (!jt.log.length) return `<div class="empty"><strong>Chưa có ticket nào</strong>Các ticket tạo từ công cụ này sẽ hiện ở đây (10 ticket gần nhất, lưu trên trình duyệt này).</div>`;
+      return `<div class="jt-log">${jt.log.map(x => `<div class="jt-log-row"><div><b>${x.url ? `<a href="${escapeHtml(x.url)}" target="_blank" rel="noopener">${escapeHtml(x.key || "—")}</a>` : escapeHtml(x.key || "—")}</b><span>${escapeHtml(x.summary || "")}</span></div><small>${escapeHtml(x.at || "")}</small></div>`).join("")}</div>`;
+    }
+    function jtDrawLog() { const el = $("#jt-log"); if (el) el.innerHTML = jtLogHtml(); }
+    function jtDrawDocs() { const el = $("#jt-docs"); if (el) el.innerHTML = jtDocsHtml(); jtRefresh(); }
+    function jtDrawFiles() { const el = $("#jt-files"); if (el) el.innerHTML = jtFilesHtml(); const c = $("#jt-file-n"); if (c) c.textContent = jt.files.length ? `${jt.files.length}/5 ảnh` : "Chưa có ảnh"; jtRefresh(); }
+    function jtRefresh() {
+      const b = jtBuild(), p = $("#jt-prev");
+      if (p) p.innerHTML = `<div class="jt-prev-t">${escapeHtml(b.summary || "(chưa có tiêu đề)")}</div><pre class="jt-prev-d">${escapeHtml(b.description)}</pre>`;
+      const s = $("#jt-send"); if (s) s.disabled = jt.busy || !!jtErrors().length || !jtReady() || !canEdit();
+    }
+    function jtAddFiles(list) {
+      for (const f of [...list].filter(Boolean)) {
+        if (!/^image\//.test(f.type)) { toast(`Bỏ qua "${f.name}": chỉ nhận file ảnh.`, "error"); continue; }
+        if (f.size > 4 * 1024 * 1024) { toast(`"${f.name}" lớn hơn 4MB.`, "error"); continue; }
+        if (jt.files.length >= 5) { toast("Tối đa 5 ảnh cho mỗi ticket.", "error"); break; }
+        const r = new FileReader();
+        r.onload = () => {
+          if (jt.files.length >= 5) return;
+          const name = !f.name || /^image\.\w+$/i.test(f.name) ? `screenshot-${Date.now()}-${jt.files.length + 1}.${(f.type.split("/")[1] || "png").replace("jpeg", "jpg")}` : f.name;
+          jt.files.push({ name, type: f.type, url: String(r.result), data: String(r.result).split(",")[1] || "" });
+          jtDrawFiles();
+        };
+        r.readAsDataURL(f);
+      }
+    }
+    function jtReset(keepLog = true) {
+      Object.assign(jt, { prefix: "[DMS]", title: "", module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", phone: "", request: "", docs: [{ a: "", b: "" }], reason: "", files: [] });
+      $("#tool-root").innerHTML = renderToolBody();
+    }
+    async function jtCopy() {
+      const b = jtBuild(), text = `${b.summary}\n\n${b.description}`;
+      try { await navigator.clipboard.writeText(text); toast("Đã copy nội dung ticket.", "success"); } catch (_) { toast("Không copy được — hãy bôi đen nội dung ở phần xem trước.", "error"); }
+    }
+    async function jtSend() {
+      if (jt.busy) return;
+      if (!canEdit()) return toast("Chỉ Super-admin và Senior-member được tạo Jira ticket.", "error");
+      const cfg = jtCfg();
+      if (!jtReady()) return toast("Chưa cấu hình Jira — Tài khoản 2 (Quản lý dữ liệu).", "error");
+      const errs = jtErrors(); if (errs.length) return toast(errs[0], "error");
+      const b = jtBuild(), base = String(cfg.base_url || "").replace(/\/+$/, ""), proxy = String(cfg.proxy_url || "").trim().replace(/\/+$/, "");
+      const btn = $("#jt-send"), restore = btn ? btn.innerHTML : null;
+      jt.busy = true; if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-icon spin">${ICONS.refresh}</span> Đang tạo…`; }
+      try {
+        let ticketKey = "", browseUrl = "", warns = [], attOk = true;
+        if (proxy) {
+          const payload = { action: "create_ticket", account: 2, summary: b.summary, description: b.description, issue_type: cfg.issue_type || "Task", project_key: cfg.project_key,
+            base_url: base, email: cfg.email || "", token: cfg.token || "",
+            fields: { dms_distributor: jt.module.trim(), ticket_category: jt.category.trim(), request_type: jt.reqType.trim(), phone: jt.phone.trim() },
+            attachments: jt.files.map(f => ({ name: f.name, type: f.type, data: f.data })) };
+          let res;
+          try { res = await fetch(proxy, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(payload) }); }
+          catch (e) { throw new Error("Không kết nối được tới Proxy URL. Kiểm tra lại địa chỉ proxy (phải là https và cho phép CORS)."); }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || data.error || `HTTP ${res.status}`);
+          ticketKey = data.key || data.issue_key || "";
+          warns = Array.isArray(data.warnings) ? data.warnings : [];
+          browseUrl = data.browse_url || (ticketKey && base ? `${base}/browse/${ticketKey}` : "");
+          if (jt.files.length) attOk = data.attachments_uploaded !== undefined || Array.isArray(data.attachments);
+        } else {
+          const content = b.description.split(/\n\n+/).map(par => ({ type: "paragraph", content: par.split("\n").flatMap((ln, i) => i ? [{ type: "hardBreak" }, { type: "text", text: ln }] : [{ type: "text", text: ln }]).filter(n => n.type !== "text" || n.text) }));
+          const body = { fields: { project: { key: cfg.project_key }, summary: b.summary, description: { type: "doc", version: 1, content }, issuetype: { name: cfg.issue_type || "Task" } } };
+          let res;
+          try { res = await fetch(`${base}/rest/api/3/issue`, { method: "POST", headers: { "Authorization": `Basic ${btoa(`${cfg.email}:${cfg.token}`)}`, "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(body) }); }
+          catch (e) { throw new Error("Trình duyệt bị chặn CORS khi gọi trực tiếp Jira. Hãy cấu hình Proxy URL (Tài khoản 2) để tạo ticket qua máy chủ."); }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || `HTTP ${res.status}`);
+          ticketKey = data.key || ""; browseUrl = ticketKey && base ? `${base}/browse/${ticketKey}` : "";
+          if (jt.files.length) attOk = false;
+        }
+        jt.log.unshift({ key: ticketKey, url: browseUrl, summary: b.summary, at: new Date().toLocaleString("vi-VN") });
+        jt.log = jt.log.slice(0, 10); try { localStorage.setItem(JT_LOG_KEY, JSON.stringify(jt.log)); } catch (_) {}
+        toast(ticketKey ? `Đã tạo ticket ${ticketKey} thành công` : "Đã tạo ticket Jira thành công", "success");
+        if (warns.length) toast("Cảnh báo: " + warns.join(" | "), "error");
+        if (!attOk) toast("Proxy chưa xác nhận đã nhận ảnh đính kèm — hãy mở ticket kiểm tra và đính kèm thủ công nếu thiếu.", "error");
+        jt.busy = false; jtReset();
+        if (browseUrl) window.open(browseUrl, "_blank", "noopener");
+        return;
+      } catch (err) {
+        toast(err && err.message ? err.message : "Tạo ticket Jira thất bại.", "error");
+      }
+      jt.busy = false; if (btn) { btn.innerHTML = restore; } jtRefresh();
+    }
     function renderJiraToolsBody() {
-      const ok = c => !!(c && c.project_key && (c.proxy_url || (c.base_url && c.email && c.token)));
-      const chip = (label, c) => `<span class="badge ${ok(c) ? "badge-success" : "badge-danger"}">${label}: ${ok(c) ? "Đã cấu hình" : "Chưa cấu hình"}</span>`;
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>Tool Tickets Jira</h2><p>Khu vực công cụ tạo ticket Jira cho L1 Team. Token được cấu hình ở Quản lý dữ liệu → Cấu hình Jira (Tài khoản 1 và Tài khoản 2).</p></div></div>
-        <div class="panel-body"><div class="tl-sum">${chip("Tài khoản 1", state.jiraConfig)}${chip("Tài khoản 2", state.jiraConfig2)}</div>
-        <div class="empty"><strong>Chưa có công cụ nào</strong>Nút đã sẵn sàng — gửi mình yêu cầu chức năng để gắn vào đây.</div></div></section>`;
+      const c = jtCfg(), ready = jtReady(), b = jtBuild();
+      const who = ready ? `<span class="badge badge-success">Gửi bằng Tài khoản 2${c.email ? " · " + escapeHtml(c.email) : ""} · ${escapeHtml(c.project_key)}</span>` : `<span class="badge badge-danger">Chưa cấu hình Tài khoản 2</span>`;
+      const warn = !ready ? `<div class="jt-warn">Chưa cấu hình Jira — Tài khoản 2. Vào Quản lý dữ liệu → Cấu hình Jira — Tài khoản 2 để nhập token.${canEdit() ? "" : " (Cấu hình chỉ tải được với Super-admin / Senior-member.)"}</div>` : (!canEdit() ? `<div class="jt-warn">Chỉ Super-admin và Senior-member được tạo ticket.</div>` : "");
+      const F = (k, label, ph, extra = "") => `<div class="field"><label>${label}</label><input data-jt="${k}" value="${escapeHtml(jt[k])}" placeholder="${escapeHtml(ph)}" autocomplete="off" ${extra}></div>`;
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Thông tin ticket gửi Vxceed Support</h2><p>Điền theo template Request. Nội dung viết bằng tiếng Anh để Vxceed đọc được; các nhãn bên dưới là tiếng Việt để L1 dễ điền.</p></div>${who}</div>
+        <div class="panel-body">${warn}
+          <div class="field" style="margin-bottom:12px"><label>Tiêu đề (Summary) *</label><div class="jt-title"><input data-jt="prefix" value="${escapeHtml(jt.prefix)}" aria-label="Tiền tố" autocomplete="off"><input data-jt="title" value="${escapeHtml(jt.title)}" placeholder="vd: Request Revert PL-3871 & PL-1763 & PL-509 to Split Documents" autocomplete="off"></div></div>
+          <div class="tl-grid" style="margin-bottom:12px">
+            ${F("module", "DMS Distributor (module)", "vd: Sale Order")}
+            ${F("category", "Ticket Category/Type", "Request")}
+            ${F("reqType", "Request Type", "DMS DISTRIBUTOR")}
+            ${F("phone", "Số điện thoại (Mobile)", "Không bắt buộc", 'inputmode="tel"')}
+          </div>
+          <div class="field" style="margin-bottom:12px"><label>Mô tả — nội dung yêu cầu *</label><textarea data-jt="request" placeholder="vd: Please support reverting PL-3871 &amp; PL-1763 &amp; PL-509 so the customer can split the current Documents" >${escapeHtml(jt.request)}</textarea></div>
+          <div class="field" style="margin-bottom:12px"><label>Danh sách chứng từ liên quan (không bắt buộc)</label>
+            <div class="jt-docrow jt-doc-h"><span>Mã tham chiếu</span><span>Số chứng từ</span><span></span></div>
+            <div id="jt-docs">${jtDocsHtml()}</div>
+            <div><button type="button" class="btn btn-plain" data-jt-act="adddoc" style="padding:6px 10px;gap:6px;display:inline-flex;align-items:center">${ICONS.plus} Thêm dòng</button></div></div>
+          <div class="field" style="margin-bottom:12px"><label>Lý do / bối cảnh (không bắt buộc)</label><textarea data-jt="reason" placeholder="vd: The Revert option had been enabled for this PL previously. However, the distributor may have settled it again...">${escapeHtml(jt.reason)}</textarea></div>
+          <div class="field"><label>Ảnh chụp màn hình đính kèm <span id="jt-file-n" class="jt-n">${jt.files.length ? jt.files.length + "/5 ảnh" : "Chưa có ảnh"}</span></label>
+            <div class="jt-drop"><label class="btn btn-plain" for="jt-file" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer">${ICONS.upload} Chọn ảnh</label><input id="jt-file" type="file" accept="image/*" multiple class="hidden"><small>hoặc bấm Ctrl+V để dán ảnh chụp màn hình · tối đa 5 ảnh, mỗi ảnh ≤ 4MB</small></div>
+            <div id="jt-files" class="jt-files">${jtFilesHtml()}</div></div>
+        </div></section>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Xem trước &amp; tạo ticket</h2><p>Ticket sẽ được tạo tự động trên Jira bằng Cấu hình Jira — Tài khoản 2.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-plain" data-jt-act="copy" style="display:inline-flex;gap:6px;align-items:center">${ICONS.copy} Copy nội dung</button><button type="button" class="btn btn-plain" data-jt-act="reset" style="display:inline-flex;gap:6px;align-items:center">${ICONS.refresh} Làm mới form</button><button type="button" class="btn btn-primary" id="jt-send" data-jt-act="send" ${jt.busy || jtErrors().length || !ready || !canEdit() ? "disabled" : ""} style="display:inline-flex;gap:6px;align-items:center">${ICONS.send} Tạo ticket Jira</button></div></div>
+        <div class="panel-body"><div id="jt-prev" class="jt-prev"><div class="jt-prev-t">${escapeHtml(b.summary || "(chưa có tiêu đề)")}</div><pre class="jt-prev-d">${escapeHtml(b.description)}</pre></div></div></section>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>Ticket đã tạo gần đây</h2></div></div><div class="panel-body" id="jt-log">${jtLogHtml()}</div></section>`;
     }
     function renderToolBody() {
       if (tool.area === "jira") return renderToolAreaBar() + renderJiraToolsBody();
@@ -6948,6 +7096,29 @@ function renderProFocM() {
             toolDrawPersons();
           }
         }
+      });
+      pg.addEventListener("click", e => {
+        if (tool.area !== "jira") return;
+        const a = e.target.closest("[data-jt-act]"); if (!a || a.disabled) return;
+        const act = a.dataset.jtAct, i = Number(a.dataset.i);
+        if (act === "adddoc") { jt.docs.push({ a: "", b: "" }); jtDrawDocs(); }
+        else if (act === "deldoc") { jt.docs.splice(i, 1); if (!jt.docs.length) jt.docs.push({ a: "", b: "" }); jtDrawDocs(); }
+        else if (act === "delfile") { jt.files.splice(i, 1); jtDrawFiles(); }
+        else if (act === "copy") jtCopy();
+        else if (act === "reset") { if (!jt.title && !jt.request && !jt.reason && !jt.files.length && !jt.docs.some(d => d.a || d.b) || confirm("Xóa toàn bộ nội dung đang soạn?")) jtReset(); }
+        else if (act === "send") jtSend();
+      });
+      pg.addEventListener("input", e => {
+        if (tool.area !== "jira") return;
+        const t = e.target;
+        if (t.dataset.jt) { jt[t.dataset.jt] = t.value; jtRefresh(); }
+        else if (t.dataset.jtDoc) { const r = jt.docs[Number(t.dataset.i)]; if (r) { r[t.dataset.jtDoc] = t.value; jtRefresh(); } }
+      });
+      pg.addEventListener("change", e => { if (tool.area === "jira" && e.target.id === "jt-file") { jtAddFiles(e.target.files); e.target.value = ""; } });
+      pg.addEventListener("paste", e => {
+        if (tool.area !== "jira") return;
+        const imgs = [...(e.clipboardData?.items || [])].filter(x => x.kind === "file" && x.type.startsWith("image/")).map(x => x.getAsFile());
+        if (imgs.length) { e.preventDefault(); jtAddFiles(imgs); }
       });
       pg.addEventListener("input", e => {
         if (tool.mode === "update") return;
