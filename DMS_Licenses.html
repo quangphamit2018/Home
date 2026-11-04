@@ -5024,7 +5024,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
        ===================================================================== */
     const JT_LOG_KEY = "masterdata_jira_tickets";
     const JT_TPLS = [["revert", "Revert Picklist"]];   // thêm loại ticket mới ở đây
-    const jt = { tpl: "revert", module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", phone: "", docs: [{ a: "", b: "" }], files: [], busy: false,
+    const jt = { tpl: "revert", module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", docs: [{ a: "", b: "" }], files: [], busy: false,
       log: (() => { try { const v = JSON.parse(localStorage.getItem(JT_LOG_KEY) || "[]"); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (_) { return []; } })() };
     const jtCfg = () => state.jiraConfig2 || {};
     const jtReady = () => { const c = jtCfg(); return !!(c.project_key && (c.proxy_url || (c.base_url && c.email && c.token))); };
@@ -5073,12 +5073,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       }
     }
     function jtReset(keepLog = true) {
-      Object.assign(jt, { module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", phone: "", docs: [{ a: "", b: "" }], files: [] });
+      Object.assign(jt, { module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", docs: [{ a: "", b: "" }], files: [] });
       $("#tool-root").innerHTML = renderToolBody();
-    }
-    async function jtCopy() {
-      const b = jtBuild(), text = `${b.summary}\n\n${b.description}`;
-      try { await navigator.clipboard.writeText(text); toast("Đã copy nội dung ticket.", "success"); } catch (_) { toast("Không copy được — hãy bôi đen nội dung ở phần xem trước.", "error"); }
     }
     async function jtSend() {
       if (jt.busy) return;
@@ -5094,7 +5090,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (proxy) {
           const payload = { action: "create_ticket", account: 2, template: "revert_picklist", summary: b.summary, description: b.description, issue_type: cfg.issue_type || "Task", project_key: cfg.project_key,
             base_url: base, email: cfg.email || "", token: cfg.token || "",
-            fields: { dms_distributor: jt.module.trim(), ticket_category: jt.category.trim(), request_type: jt.reqType.trim(), phone: jt.phone.trim() },
+            fields: { dms_distributor: jt.module.trim(), ticket_category: jt.category.trim(), request_type: jt.reqType.trim() },
             attachments: jt.files.map(f => ({ name: f.name, type: f.type, data: f.data })) };
           let res;
           try { res = await fetch(proxy, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(payload) }); }
@@ -5135,14 +5131,13 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const warn = !ready ? `<div class="jt-warn">Chưa cấu hình Jira — Tài khoản 2. Vào Quản lý dữ liệu → Cấu hình Jira — Tài khoản 2 để nhập token.${canEdit() ? "" : " (Cấu hình chỉ tải được với Super-admin / Senior-member.)"}</div>` : (!canEdit() ? `<div class="jt-warn">Chỉ Super-admin và Senior-member được tạo ticket.</div>` : "");
       const F = (k, label, ph, extra = "") => `<div class="field"><label>${label}</label><input data-jt="${k}" value="${escapeHtml(jt[k])}" placeholder="${escapeHtml(ph)}" autocomplete="off" ${extra}></div>`;
       const tplBar = `<div class="tl-seg" style="margin-bottom:14px">${JT_TPLS.map(([k, l]) => `<button type="button" data-jt-tpl="${k}" class="${jt.tpl === k ? "on" : ""}">${ICONS.swap} ${l}</button>`).join("")}</div>`;
-      return tplBar + `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Revert Picklist — thông tin ticket gửi Vxceed Support</h2><p>Chỉ cần nhập Mã tham chiếu, Mã Nhà Phân Phối và ảnh đính kèm. Tiêu đề và Description tự động điền theo template, viết bằng tiếng Anh cho Vxceed.</p></div>${who}</div>
+      return tplBar + `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Revert Picklist — thông tin ticket gửi Vxceed Support</h2><p>Chỉ cần nhập Mã tham chiếu, Mã Nhà Phân Phối và ảnh đính kèm. Tiêu đề và Description tự động điền theo template, viết bằng tiếng Anh cho Vxceed. Ticket được tạo bằng Cấu hình Jira — Tài khoản 2.</p></div>${who}</div>
         <div class="panel-body">${warn}
-          <div class="field" style="margin-bottom:12px"><label>Tiêu đề (Summary) — tự động</label><input id="jt-title" value="${escapeHtml(b.summary)}" readonly></div>
+          <div class="field" style="margin-bottom:12px"><label>Tiêu đề (Summary) — tự động</label><input id="jt-title" value="${escapeHtml(b.summary)}" disabled style="background:#f6f1f1;color:var(--ink-2);cursor:not-allowed"></div>
           <div class="tl-grid" style="margin-bottom:12px">
             ${F("module", "DMS Distributor (module)", "vd: Sale Order")}
             ${F("category", "Ticket Category/Type", "Request")}
             ${F("reqType", "Request Type", "DMS DISTRIBUTOR")}
-            ${F("phone", "Số điện thoại (Mobile)", "Không bắt buộc", 'inputmode="tel"')}
           </div>
           <div class="field" style="margin-bottom:12px"><label>Danh sách cần Revert *</label>
             <div class="jt-docrow jt-doc-h"><span>Mã tham chiếu</span><span>Mã Nhà Phân Phối</span><span></span></div>
@@ -5151,11 +5146,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           <div class="field"><label>Ảnh chụp màn hình đính kèm * <span id="jt-file-n" class="jt-n">${jt.files.length ? jt.files.length + "/5 ảnh" : "Chưa có ảnh"}</span></label>
             <div class="jt-drop"><label class="btn btn-plain" for="jt-file" style="display:inline-flex;gap:6px;align-items:center;cursor:pointer">${ICONS.upload} Chọn ảnh</label><input id="jt-file" type="file" accept="image/*" multiple class="hidden"><small>hoặc bấm Ctrl+V để dán ảnh chụp màn hình · tối đa 5 ảnh, mỗi ảnh ≤ 4MB</small></div>
             <div id="jt-files" class="jt-files">${jtFilesHtml()}</div></div>
+          <ul id="jt-errs" class="jt-errs" style="display:${errs.length ? "block" : "none"};margin-top:14px">${errs.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px"><button type="button" class="btn btn-plain" data-jt-act="reset" style="display:inline-flex;gap:6px;align-items:center">${ICONS.refresh} Làm mới form</button><button type="button" class="btn btn-primary" id="jt-send" data-jt-act="send" ${jt.busy || errs.length || !ready || !canEdit() ? "disabled" : ""} style="display:inline-flex;gap:6px;align-items:center">${ICONS.send} Tạo ticket Jira</button></div>
         </div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Xem trước &amp; tạo ticket</h2><p>Ticket được tạo tự động trên Jira bằng Cấu hình Jira — Tài khoản 2.</p></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-plain" data-jt-act="copy" style="display:inline-flex;gap:6px;align-items:center">${ICONS.copy} Copy nội dung</button><button type="button" class="btn btn-plain" data-jt-act="reset" style="display:inline-flex;gap:6px;align-items:center">${ICONS.refresh} Làm mới form</button><button type="button" class="btn btn-primary" id="jt-send" data-jt-act="send" ${jt.busy || errs.length || !ready || !canEdit() ? "disabled" : ""} style="display:inline-flex;gap:6px;align-items:center">${ICONS.send} Tạo ticket Jira</button></div></div>
-        <div class="panel-body"><ul id="jt-errs" class="jt-errs" style="display:${errs.length ? "block" : "none"}">${errs.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
-          <div id="jt-prev" class="jt-prev"><div class="jt-prev-t">${escapeHtml(b.summary)}</div><pre class="jt-prev-d">${escapeHtml(b.description)}</pre></div></div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>Ticket đã tạo gần đây</h2></div></div><div class="panel-body" id="jt-log">${jtLogHtml()}</div></section>`;
     }
     function renderToolBody() {
@@ -7108,7 +7101,6 @@ function renderProFocM() {
         if (act === "adddoc") { jt.docs.push({ a: "", b: "" }); jtDrawDocs(); }
         else if (act === "deldoc") { jt.docs.splice(i, 1); if (!jt.docs.length) jt.docs.push({ a: "", b: "" }); jtDrawDocs(); }
         else if (act === "delfile") { jt.files.splice(i, 1); jtDrawFiles(); }
-        else if (act === "copy") jtCopy();
         else if (act === "reset") { if (!jt.files.length && !jt.docs.some(d => d.a || d.b) || confirm("Xóa toàn bộ nội dung đang soạn?")) jtReset(); }
         else if (act === "send") jtSend();
       });
