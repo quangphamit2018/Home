@@ -1384,6 +1384,13 @@
     @media (max-width: 900px) { .jt-vgrid { grid-template-columns: 1fr 1fr; } }
     .jt-adj .adj-head, .jt-adj .adj-row { grid-template-columns: 52px minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, .9fr) minmax(0, 1fr) 44px; }
     .jt-adj .adj-head, .jt-adj #jt-ords { min-width: 1180px; }
+    /* Update Null Route: bảng 9 cột (thêm Invoice number + Need update RouteID) */
+    .jt-adj.jt-null .adj-head, .jt-adj.jt-null .adj-row { grid-template-columns: 52px minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(0, .85fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, .8fr) minmax(0, 1.6fr) minmax(0, 1.3fr) 44px; }
+    .jt-adj.jt-null .adj-head, .jt-adj.jt-null #jt-ords { min-width: 1460px; }
+    .jt-wk { display: flex; gap: 6px; align-items: center; }
+    .jt-wk input { flex: 1 1 auto; min-width: 0; background: #f6f1f1; color: var(--ink-2); cursor: not-allowed; }
+    .jt-wk .btn { padding: 8px 12px; line-height: 1; font-size: 16px; font-weight: 700; }
+    .jt-wk-hint { margin-top: 4px; font-size: 11.5px; color: var(--muted); }
     .jt-adj .adj-grid { max-height: 520px; }
     .jt-log { display: grid; gap: 8px; }
     .jt-log-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
@@ -5028,16 +5035,21 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
        tạo tự động qua Cấu hình Jira — Tài khoản 2.
        ===================================================================== */
     const JT_LOG_KEY = "masterdata_jira_tickets";
-    const JT_TPLS = [["revert", "Revert Picklist"], ["void", "Request Void Đơn"]];   // thêm loại ticket mới ở đây
+    const JT_TPLS = [["revert", "Revert Picklist"], ["void", "Request Void Đơn"], ["nullroute", "Update Null Route"]];   // thêm loại ticket mới ở đây
     const JT_TPL_KEY = "masterdata_jira_tpl";   // nhớ loại ticket đang chọn → F5 / tải lại trang vẫn giữ nguyên
-    function jtOrdBlank() { return { region: "", dist: "", route: "", cust: "", order: "", date: "", status: "", note: "" }; }
-    const jt = { tpl: loadKey(JT_TPL_KEY, JT_TPLS.map(t => t[0]), "revert"), module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", reason: "13", docs: [{ a: "", b: "" }], orders: [jtOrdBlank()], files: [], busy: false,
+    function jtOrdBlank() { return { region: "", dist: "", route: "", cust: "", order: "", date: "", status: "", note: "", invoice: "", newRoute: "" }; }
+    const jt = { tpl: loadKey(JT_TPL_KEY, JT_TPLS.map(t => t[0]), "revert"), module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", reason: "13", nReqType: "DMS CENTRAL", nCentral: "Reports", weekShift: 0, docs: [{ a: "", b: "" }],
+      lists: { void: [jtOrdBlank()], nullroute: [jtOrdBlank()] },   // mỗi template có danh sách đơn riêng; jt.orders luôn trỏ tới danh sách của template đang chọn
+      get orders() { return this.lists[this.tpl === "nullroute" ? "nullroute" : "void"]; }, set orders(v) { this.lists[this.tpl === "nullroute" ? "nullroute" : "void"] = v; },
+      files: [], busy: false,
       log: (() => { try { const v = JSON.parse(localStorage.getItem(JT_LOG_KEY) || "[]"); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (_) { return []; } })() };
+    const jtIsList = () => jt.tpl === "void" || jt.tpl === "nullroute";   // template có bảng danh sách đơn + file Excel đính kèm
+    const JT_TPL_IDS = { revert: "revert_picklist", void: "manual_void_orders", nullroute: "update_null_route" };   // khớp TEMPLATES trong Proxy (Cloudflare Worker)
     const jtCfg = () => state.jiraConfig2 || {};
     const jtReady = () => { const c = jtCfg(); return !!(c.project_key && (c.proxy_url || (c.base_url && c.email && c.token))); };
     const jtRows = () => jt.docs.map(d => ({ a: d.a.trim(), b: d.b.trim() })).filter(d => d.a || d.b);
-    function jtBuild() { return jt.tpl === "void" ? jtVoidBuild() : jtBuildRevert(); }
-    function jtErrors() { return jt.tpl === "void" ? jtVoidErrors() : jtErrorsRevert(); }
+    function jtBuild() { return jt.tpl === "void" ? jtVoidBuild() : jt.tpl === "nullroute" ? jtNullBuild() : jtBuildRevert(); }
+    function jtErrors() { return jtIsList() ? jtVoidErrors() : jtErrorsRevert(); }
     function jtBuildRevert() {
       const rows = jtRows(), joined = rows.map(d => d.a || "…").join(" & ") || "…";
       const lines = rows.map(d => `* ${d.a || "…"} - ${d.b || "…"}`);
@@ -5062,9 +5074,10 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     function jtDrawFiles() { const el = $("#jt-files"); if (el) el.innerHTML = jtFilesHtml(); const c = $("#jt-file-n"); if (c) c.textContent = jt.files.length ? `${jt.files.length}/5 ảnh` : "Chưa có ảnh"; jtRefresh(); }
     function jtRefresh() {
       const b = jtBuild(), p = $("#jt-prev"), tt = $("#jt-title"); if (tt) tt.value = b.summary;
+      if (jt.tpl === "nullroute") { const w = jtCokeWeek(), wk = $("#jt-wk"), wh = $("#jt-wk-hint"); if (wk) wk.value = w.label; if (wh) wh.textContent = w.hint; }
       const er = $("#jt-errs"); if (er) { const es = jtErrors(); er.innerHTML = es.length ? es.map(x => `<li>${escapeHtml(x)}</li>`).join("") : ""; er.style.display = es.length ? "block" : "none"; }
       if (p) p.innerHTML = `<div class="jt-prev-t">${escapeHtml(b.summary || "(chưa có tiêu đề)")}</div><pre class="jt-prev-d">${escapeHtml(b.description)}</pre>`;
-      if (jt.tpl === "void") jtMarkOrders();
+      if (jtIsList()) jtMarkOrders();
       const s = $("#jt-send"); if (s) s.disabled = jt.busy || !!jtErrors().length || !jtReady();
     }
     function jtAddFiles(list) {
@@ -5083,7 +5096,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       }
     }
     function jtReset(keepLog = true) {
-      Object.assign(jt, { module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", reason: "13", docs: [{ a: "", b: "" }], orders: [jtOrdBlank()], files: [] });
+      Object.assign(jt, { module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", reason: "13", nReqType: "DMS CENTRAL", nCentral: "Reports", weekShift: 0, docs: [{ a: "", b: "" }], orders: [jtOrdBlank()], files: [] });
       $("#tool-root").innerHTML = renderToolBody();
     }
     async function jtSend() {
@@ -5098,9 +5111,11 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       try {
         let ticketKey = "", browseUrl = "", warns = [], attOk = true;
         if (proxy) {
-          const payload = { action: "create_ticket", account: 2, template: jt.tpl === "void" ? "manual_void_orders" : "revert_picklist", summary: b.summary, description: b.description, issue_type: cfg.issue_type || "Task", project_key: cfg.project_key,
+          const payload = { action: "create_ticket", account: 2, template: JT_TPL_IDS[jt.tpl] || "revert_picklist", summary: b.summary, description: b.description, issue_type: cfg.issue_type || "Task", project_key: cfg.project_key,
             base_url: base, email: cfg.email || "", token: cfg.token || "",
-            fields: { dms_distributor: jt.module.trim(), ticket_category: jt.category.trim(), request_type: jt.reqType.trim() },
+            fields: jt.tpl === "nullroute"
+              ? { dms_central: jt.nCentral.trim(), ticket_category: jt.category.trim(), request_type: jt.nReqType.trim() }
+              : { dms_distributor: jt.module.trim(), ticket_category: jt.category.trim(), request_type: jt.reqType.trim() },
             attachments: atts };
           let res;
           try { res = await fetch(proxy, { method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(payload) }); }
@@ -5146,12 +5161,46 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       { k: "status", h: "Order status", x: "order status", ph: "Posted" },
       { k: "note", h: "Note", x: "Note", ph: "Please Void" }];
     const JT_OREQ = ["region", "dist", "route", "cust", "order", "date"];
+    /* Update Null Route — 9 cột theo file mẫu Vxceed (Route code để TRỐNG vì đơn đang null; Need update RouteID là route đúng cần cập nhật) */
+    const JT_NCOLS = [
+      { k: "region", h: "Region", x: "region", ph: "vd: North East Region" },
+      { k: "dist", h: "Distributor code", x: "distributor code", ph: "vd: 0071460968" },
+      { k: "route", h: "Route code", x: "route code", ph: "(null)" },
+      { k: "cust", h: "Customer code", x: "customer code", ph: "vd: 70526958" },
+      { k: "order", h: "Order no", x: "order no", ph: "vd: SOV-401" },
+      { k: "date", h: "Order date", x: "order date", ph: "dd-mm-yyyy" },
+      { k: "status", h: "Order status", x: "order status", ph: "Closed" },
+      { k: "invoice", h: "Invoice number", x: "invoice number", ph: "vd: 71460968R1IN-22692" },
+      { k: "newRoute", h: "Need update RouteID", x: "Need update RouteID", al: ["Final Need Update RouteID", "New RouteID", "Correct RouteID"], ph: "vd: VN160352" }];
+    const JT_NREQ = ["region", "dist", "cust", "order", "date", "newRoute"];
+    const jtCols = () => jt.tpl === "nullroute" ? JT_NCOLS : JT_OCOLS;
+    const jtReq = () => jt.tpl === "nullroute" ? JT_NREQ : JT_OREQ;
     const JT_XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     const jtNorm = x => String(x == null ? "" : x).toLowerCase().replace(/[^a-z0-9]/g, "");
     const jtNormDate = x => { const m = String(x || "").trim().match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/); return m ? `${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}-${m[3]}` : String(x || "").trim(); };
-    const jtOrdFilled = o => JT_OREQ.some(k => String(o[k] || "").trim());
+    const jtOrdFilled = o => jtReq().some(k => String(o[k] || "").trim());
     function jtOrders() {
-      return jt.orders.filter(jtOrdFilled).map(o => ({ region: o.region.trim(), dist: o.dist.trim(), route: o.route.trim(), cust: o.cust.trim(), order: o.order.trim(), date: jtNormDate(o.date), status: o.status.trim() || "Posted", note: o.note.trim() || "Please Void" }));
+      const cols = jtCols(), nul = jt.tpl === "nullroute";
+      return jt.orders.filter(jtOrdFilled).map(o => {
+        const r = {}; cols.forEach(c => { r[c.k] = String(o[c.k] == null ? "" : o[c.k]).trim(); });
+        r.date = jtNormDate(r.date);
+        if (!nul) { r.status = r.status || "Posted"; r.note = r.note || "Please Void"; }   // Void: mặc định Posted / Please Void; Null Route: giữ nguyên dữ liệu đã dán
+        return r;
+      });
+    }
+    // Tuần Coke (Thứ 7 → Thứ 6): tuần vừa KẾT THÚC gần nhất. Vd hôm nay Thứ 7 31/10/2026 (hoặc bất kỳ ngày nào trong 31/10–06/11) → 24/10 - 30/10/2026.
+    // weekShift (≤ 0) cho phép lùi thêm các tuần trước nếu cần tạo bù.
+    function jtCokeWeek() {
+      const today = cokeToday(), ws = today - ((cokeDow(today) + 1) % 7) * COKE_DAY + (jt.weekShift - 1) * 7 * COKE_DAY, we = ws + 6 * COKE_DAY;
+      const crossYear = new Date(ws).getUTCFullYear() !== new Date(we).getUTCFullYear();
+      const p = cokePeriodOf(we), wk = p ? Math.floor((we - cokeGridStart(p)) / COKE_DAY / 7) + 1 : 0;
+      return { start: ws, end: we, label: `${cokeFmt(ws, crossYear)} - ${cokeFmt(we, true)}`, hint: p ? `Tuần ${wk} · Kỳ T${p.m}/${p.y} theo Lịch Coke (Thứ 7 → Thứ 6)${jt.weekShift ? " · đã lùi " + (-jt.weekShift) + " tuần" : ""}` : "" };
+    }
+    function jtNullBuild() {
+      const rows = jtOrders();
+      const summary = `[XnappReports] Update Route for orders with Null RouteID (${jtCokeWeek().label})`;
+      const description = "Please help update the correct Route ID for the sales orders with a null Route ID in the DMS Enterprise Reports (Sales Order & Sales Register), as listed in the attached file.";
+      return { summary, description, rows };
     }
     function jtVoidBuild() {
       const rows = jtOrders(), n = rows.length, reason = String(jt.reason || "").trim() || "13";
@@ -5159,24 +5208,28 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const description = `Hi Vxceed Team,\n\nThese orders are currently experiencing synchronization delays in DMS; therefore, manual voiding is supported for them. Please select the same "Reason" option used for the weekly auto-void jobs (Reason No. ${reason}).\n\nCould you please assist with performing a manual void for the orders listed in the attached file?\n\nKindly let us know once the manual void process has been completed.\n\nThank you for your support.`;
       return { summary, description, rows };
     }
-    function jtVoidErrors() {
-      const e = [], seen = {}; let n = 0;
+    function jtVoidErrors() {   // dùng chung cho Request Void Đơn và Update Null Route
+      const nul = jt.tpl === "nullroute", cols = jtCols(), req = jtReq(), e = [], seen = {}; let n = 0;
       jt.orders.forEach((o, i) => {
         if (!jtOrdFilled(o)) return; n++;
-        const miss = JT_OCOLS.filter(c => JT_OREQ.includes(c.k) && !String(o[c.k] || "").trim()).map(c => c.h);
+        const miss = cols.filter(c => req.includes(c.k) && !String(o[c.k] || "").trim()).map(c => c.h);
         if (miss.length) e.push(`Dòng ${i + 1}: thiếu ${miss.join(", ")}.`);
         const d = String(o.date || "").trim(); if (d && !/^\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}$/.test(d)) e.push(`Dòng ${i + 1}: Order date phải theo dạng dd-mm-yyyy.`);
         const no = String(o.order || "").trim(); if (no) { if (seen[no] != null) e.push(`Dòng ${i + 1}: Order no ${no} bị trùng với dòng ${seen[no] + 1}.`); else seen[no] = i; }
       });
-      if (!n) e.unshift("Hãy nhập ít nhất 1 đơn cần void.");
-      if (!String(jt.reason || "").trim()) e.push("Hãy nhập Void Reason No. (mặc định 13).");
+      if (!n) e.unshift(nul ? "Hãy nhập ít nhất 1 đơn cần Update Route." : "Hãy nhập ít nhất 1 đơn cần void.");
+      if (!nul && !String(jt.reason || "").trim()) e.push("Hãy nhập Void Reason No. (mặc định 13).");
+      if (nul) {
+        if (!String(jt.nReqType || "").trim()) e.push("Hãy nhập Request Type (mặc định DMS CENTRAL).");
+        if (!String(jt.nCentral || "").trim()) e.push("Hãy nhập DMS Central (mặc định Reports).");
+      }
       return e.length > 8 ? e.slice(0, 8).concat(`… và ${e.length - 8} lỗi khác.`) : e;
     }
     function jtOrdMarks() {   // bad: ô thiếu/sai, dup: Order no trùng, n: số dòng hợp lệ
       const bad = {}, dup = {}, seen = {}; let n = 0, nbad = 0;
       jt.orders.forEach((o, i) => {
         if (!jtOrdFilled(o)) return;
-        const b = {}; JT_OREQ.forEach(k => { if (!String(o[k] || "").trim()) b[k] = 1; });
+        const b = {}; jtReq().forEach(k => { if (!String(o[k] || "").trim()) b[k] = 1; });
         const d = String(o.date || "").trim(); if (d && !/^\d{1,2}[-\/.]\d{1,2}[-\/.]\d{4}$/.test(d)) b.date = 1;
         if (Object.keys(b).length) { bad[i] = b; nbad++; } else n++;
         const no = String(o.order || "").trim(); if (no) { if (seen[no] != null) { dup[i] = 1; dup[seen[no]] = 1; } else seen[no] = i; }
@@ -5184,7 +5237,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return { bad, dup, n, nbad, ndup: Object.keys(dup).length };
     }
     const jtChipsHtml = m => `<span class="adj-chip ${m.n ? "ok" : ""}">${nf(m.n)} dòng hợp lệ</span>` + (m.nbad ? `<span class="adj-chip err">${m.nbad} dòng lỗi</span>` : "") + (m.ndup ? `<span class="adj-chip warn">${m.ndup} dòng trùng Order no</span>` : "");
-    const jtMetaHtml = m => `File đính kèm <b>Void_Orders_yyyymmdd_hhmm.xlsx</b> · <b>${nf(m.n)}</b> đơn · tự tạo khi bấm gửi`;
+    const jtMetaHtml = m => `File đính kèm <b>${jt.tpl === "nullroute" ? "Orders_Null_Route_yyyymmdd_hhmm.xlsx" : "Void_Orders_yyyymmdd_hhmm.xlsx"}</b> · <b>${nf(m.n)}</b> đơn · tự tạo khi bấm gửi`;
     function jtMarkOrders() {
       const m = jtOrdMarks();
       document.querySelectorAll("#jt-ords .adj-row[data-r]").forEach(row => {
@@ -5194,18 +5247,18 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const ch = $("#jt-chips"); if (ch) ch.innerHTML = jtChipsHtml(m);
       const mt = $("#jt-meta"); if (mt) mt.innerHTML = jtMetaHtml(m);
     }
-    const jtVoidFileName = () => { const d = new Date(), q = n => String(n).padStart(2, "0"); return `Void_Orders_${d.getFullYear()}${q(d.getMonth() + 1)}${q(d.getDate())}_${q(d.getHours())}${q(d.getMinutes())}.xlsx`; };
-    function jtVoidWb() {
-      const rows = jtOrders(), aoa = [JT_OCOLS.map(c => c.x), ...rows.map(o => JT_OCOLS.map(c => o[c.k]))];   // toàn bộ là text → giữ số 0 đầu của Order no / Distributor code
-      const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = JT_OCOLS.map(c => ({ wch: Math.max(c.x.length, ...rows.map(o => String(o[c.k]).length)) + 2 }));
-      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Void Orders"); return wb;
+    const jtOrdFileName = () => { const d = new Date(), q = n => String(n).padStart(2, "0"); return `${jt.tpl === "nullroute" ? "Orders_Null_Route" : "Void_Orders"}_${d.getFullYear()}${q(d.getMonth() + 1)}${q(d.getDate())}_${q(d.getHours())}${q(d.getMinutes())}.xlsx`; };
+    function jtOrdWb() {
+      const cols = jtCols(), rows = jtOrders(), aoa = [cols.map(c => c.x), ...rows.map(o => cols.map(c => o[c.k]))];   // toàn bộ là text → giữ số 0 đầu của Order no / Distributor code
+      const ws = XLSX.utils.aoa_to_sheet(aoa); ws["!cols"] = cols.map(c => ({ wch: Math.max(c.x.length, ...rows.map(o => String(o[c.k]).length)) + 2 }));
+      const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, jt.tpl === "nullroute" ? "Final" : "Void Orders"); return wb;   // Null Route: sheet "Final", cột I = Need update RouteID (giống ticket mẫu của Vxceed)
     }
     function jtAttachments() {
       const list = [];
-      if (jt.tpl === "void") list.push({ name: jtVoidFileName(), type: JT_XLSX_TYPE, data: XLSX.write(jtVoidWb(), { type: "base64", bookType: "xlsx" }) });
-      return jt.tpl === "void" ? list : list.concat(jt.files.map(f => ({ name: f.name, type: f.type, data: f.data })));
+      if (jtIsList()) list.push({ name: jtOrdFileName(), type: JT_XLSX_TYPE, data: XLSX.write(jtOrdWb(), { type: "base64", bookType: "xlsx" }) });
+      return jtIsList() ? list : list.concat(jt.files.map(f => ({ name: f.name, type: f.type, data: f.data })));
     }
-    const jtOrdRowHtml = (o, i, m) => { const bd = (m && m.bad[i]) || {}; return `<div class="adj-row" data-r="${i}"><span class="adj-n">${i + 1}</span>${JT_OCOLS.map(c => `<input data-jt-ord="${c.k}" data-i="${i}" class="${bd[c.k] ? "bad" : (m && m.dup[i] && c.k === "order" ? "dup" : "")}" value="${escapeHtml(o[c.k])}" placeholder="${escapeHtml(c.ph)}" autocomplete="off">`).join("")}<button type="button" class="adj-del" data-jt-act="delord" data-i="${i}" title="Xóa dòng">×</button></div>`; };
+    const jtOrdRowHtml = (o, i, m) => { const bd = (m && m.bad[i]) || {}; return `<div class="adj-row" data-r="${i}"><span class="adj-n">${i + 1}</span>${jtCols().map(c => `<input data-jt-ord="${c.k}" data-i="${i}" class="${bd[c.k] ? "bad" : (m && m.dup[i] && c.k === "order" ? "dup" : "")}" value="${escapeHtml(o[c.k])}" placeholder="${escapeHtml(c.ph)}" autocomplete="off">`).join("")}<button type="button" class="adj-del" data-jt-act="delord" data-i="${i}" title="Xóa dòng">×</button></div>`; };
     function jtVoidOrdHtml() { const m = jtOrdMarks(); return jt.orders.map((o, i) => jtOrdRowHtml(o, i, m)).join(""); }
     function jtEnsureTail() { const l = jt.orders[jt.orders.length - 1]; if (!l || jtOrdFilled(l)) jt.orders.push(jtOrdBlank()); }   // luôn còn 1 dòng trống cuối
     function jtDrawOrders(focus) {
@@ -5216,12 +5269,13 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     function jtPasteOrders(txt, i0, colKey) {
       const lines = String(txt).replace(/\r/g, "").split("\n"); while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
-      const grid = lines.map(l => l.split("\t").map(x => x.trim())), keys = JT_OCOLS.map(c => jtNorm(c.x));
-      const c0 = Math.max(0, JT_OCOLS.findIndex(c => c.k === colKey));
-      const hdr = grid.length && grid[0].filter(x => keys.includes(jtNorm(x))).length >= 3 ? grid.shift().map(x => keys.indexOf(jtNorm(x))) : null;
+      const grid = lines.map(l => l.split("\t").map(x => x.trim())), cols = jtCols(), hmap = new Map();
+      cols.forEach((c, ci) => [c.x, ...(c.al || [])].forEach(nm => hmap.set(jtNorm(nm), ci)));   // tên cột (và tên gọi khác) → vị trí cột
+      const c0 = Math.max(0, cols.findIndex(c => c.k === colKey));
+      const hdr = grid.length && grid[0].filter(x => hmap.has(jtNorm(x))).length >= 3 ? grid.shift().map(x => hmap.has(jtNorm(x)) ? hmap.get(jtNorm(x)) : -1) : null;
       grid.forEach((cells, r) => {
         const ri = i0 + r; while (jt.orders.length <= ri) jt.orders.push(jtOrdBlank());
-        cells.forEach((v, k) => { const ci = hdr ? (hdr[k] ?? -1) : c0 + k; if (ci < 0 || ci >= JT_OCOLS.length || (v === "" && ci >= 6)) return; jt.orders[ri][JT_OCOLS[ci].k] = ci === 5 ? jtNormDate(v) : v; });
+        cells.forEach((v, k) => { const ci = hdr ? (hdr[k] ?? -1) : c0 + k; if (ci < 0 || ci >= cols.length || (v === "" && ci >= 6)) return; jt.orders[ri][cols[ci].k] = cols[ci].k === "date" ? jtNormDate(v) : v; });
       });
       jtDrawOrders([i0 + grid.length, hdr ? "region" : colKey]); toast(`Đã dán ${grid.length} dòng.`, "success");
     }
@@ -5230,10 +5284,10 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       let last = -1; jt.orders.forEach((o, i) => { if (jtOrdFilled(o)) last = i; });
       jtPasteOrders(txt, last + 1, "region");
     }
-    if (!window.__jtDocPaste) {   // Ctrl+V ở bất kỳ đâu trong tab Request Void Đơn (khi chưa focus vào ô nhập)
+    if (!window.__jtDocPaste) {   // Ctrl+V ở bất kỳ đâu trong tab Request Void Đơn / Update Null Route (khi chưa focus vào ô nhập)
       window.__jtDocPaste = true;
       document.addEventListener("paste", e => {
-        if (tool.area !== "jira" || jt.tpl !== "void" || !document.getElementById("tool-page")) return;
+        if (tool.area !== "jira" || !jtIsList() || !document.getElementById("tool-page")) return;
         const t = e.target; if (t && t.closest && t.closest("input,textarea,select,[contenteditable='true']")) return;
         const txt = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
         if (!/[\t\n]/.test(txt.replace(/[\r\n]+$/, ""))) return;
@@ -5269,6 +5323,27 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         </div></section>
       <section class="panel tl-panel"><div class="panel-head"><div><h2>Ticket đã tạo gần đây</h2></div></div><div class="panel-body" id="jt-log">${jtLogHtml()}</div></section>`;
     }
+    function jtNullPanels({ who, warn, F, ready, errs }) {
+      const b = jtBuild(), m = jtOrdMarks(), w = jtCokeWeek();
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Update Null Route — thông tin ticket gửi Vxceed Support</h2><p>Mỗi Thứ 7 L1 Team tạo ticket này. Tiêu đề tự điền theo tuần Lịch Coke vừa kết thúc (Thứ 7 → Thứ 6) và Description tự điền theo template (tiếng Anh); bạn chỉ cần dán danh sách đơn bị null RouteID. Hệ thống tự tạo file Excel đính kèm vào ticket rồi gửi cho Vxceed Support bằng Cấu hình Jira — Tài khoản 2.</p></div>${who}</div>
+        <div class="panel-body">${warn}
+          <div class="field" style="margin-bottom:12px"><label>Tiêu đề (Summary) — tự động</label><input id="jt-title" value="${escapeHtml(b.summary)}" disabled style="background:#f6f1f1;color:var(--ink-2);cursor:not-allowed"></div>
+          <div class="jt-vgrid">
+            <div class="field"><label>Tuần Lịch Coke — tự động</label><div class="jt-wk"><button type="button" class="btn btn-plain" data-jt-act="wkprev" title="Lùi 1 tuần">‹</button><input id="jt-wk" value="${escapeHtml(w.label)}" disabled><button type="button" class="btn btn-plain" data-jt-act="wknext" title="Tiến 1 tuần (tối đa về tuần mặc định)">›</button></div><div class="jt-wk-hint" id="jt-wk-hint">${escapeHtml(w.hint)}</div></div>
+            ${F("category", "Ticket Category/Type", "Request")}${F("nReqType", "Request Type", "DMS CENTRAL")}${F("nCentral", "DMS Central", "Reports")}
+          </div>
+          <div class="field" style="margin-bottom:4px"><label>Description — tự động</label><textarea disabled rows="2" style="background:#f6f1f1;color:var(--ink-2);cursor:not-allowed;resize:none;width:100%">${escapeHtml(b.description)}</textarea></div>
+        </div></section>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Danh sách đơn cần Update Route</h2><p>Dán danh sách đơn từ Excel vào bảng bên dưới (mẫu 9 cột của Vxceed). Hệ thống tự tạo file Excel đính kèm ticket rồi gửi cho Vxceed Support.</p></div></div>
+        <div class="panel-body jt-adj jt-null">
+          <div class="adj-bar"><h3>Danh sách đơn<small>9 cột theo file mẫu Vxceed</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips" id="jt-chips">${jtChipsHtml(m)}</div><button type="button" class="btn btn-plain" data-jt-act="import">Nhập từ Excel</button><input id="jt-xl" type="file" accept=".xlsx,.xls,.csv" class="hidden"><button type="button" class="btn btn-plain" data-jt-act="addord">+ Thêm dòng</button><button type="button" class="btn btn-plain" data-jt-act="clearord">Xóa tất cả</button></div></div>
+          <div class="adj-grid"><div class="adj-head"><span style="text-align:center">#</span>${JT_NCOLS.map(c => `<span>${c.h}${JT_NREQ.includes(c.k) ? " *" : ""}</span>`).join("")}<span></span></div><div id="jt-ords">${jtVoidOrdHtml()}</div></div>
+          <p class="adj-tip">💡 Copy bảng từ Excel (9 cột: region … Need update RouteID, có hoặc không có dòng tiêu đề) rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>Region</b> đầu tiên — toàn bộ dòng sẽ tự điền. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = thiếu hoặc sai dữ liệu, ô vàng = Order no bị trùng. <b>Route code</b> để trống (đơn đang null); <b>Need update RouteID</b> là Route đúng cần cập nhật.</p>
+          <ul id="jt-errs" class="jt-errs" style="display:${errs.length ? "block" : "none"};margin-top:14px">${errs.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+          <div class="adj-foot"><div class="meta" id="jt-meta">${jtMetaHtml(m)}</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-plain" data-jt-act="reset" style="display:inline-flex;gap:6px;align-items:center">${ICONS.refresh} Làm mới form</button><button type="button" class="btn btn-excel" data-jt-act="dlxlsx" style="display:inline-flex;gap:6px;align-items:center">${ICONS.xlsx} Tải file Excel xem thử</button><button type="button" class="btn btn-primary" id="jt-send" data-jt-act="send" ${jt.busy || errs.length || !ready ? "disabled" : ""} style="display:inline-flex;gap:6px;align-items:center">${ICONS.send} Tạo ticket gửi Vxceed</button></div></div>
+        </div></section>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>Ticket đã tạo gần đây</h2></div></div><div class="panel-body" id="jt-log">${jtLogHtml()}</div></section>`;
+    }
     function renderJiraToolsBody() {
       const c = jtCfg(), ready = jtReady(), b = jtBuild(), errs = jtErrors();
       const who = ready ? `<span class="badge badge-success">Gửi bằng Tài khoản 2${c.email ? " · " + escapeHtml(c.email) : ""} · ${escapeHtml(c.project_key)}</span>` : `<span class="badge badge-danger">Chưa cấu hình Tài khoản 2</span>`;
@@ -5276,6 +5351,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const F = (k, label, ph, extra = "") => `<div class="field"><label>${label}</label><input data-jt="${k}" value="${escapeHtml(jt[k])}" placeholder="${escapeHtml(ph)}" autocomplete="off" ${extra}></div>`;
       const tplBar = `<div class="tl-seg" style="margin-bottom:14px">${JT_TPLS.map(([k, l]) => `<button type="button" data-jt-tpl="${k}" class="${jt.tpl === k ? "on" : ""}">${ICONS.swap} ${l}</button>`).join("")}</div>`;
       if (jt.tpl === "void") return tplBar + jtVoidPanels({ who, warn, F, ready, errs });
+      if (jt.tpl === "nullroute") return tplBar + jtNullPanels({ who, warn, F, ready, errs });
       return tplBar + `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Revert Picklist — thông tin ticket gửi Vxceed Support</h2><p>Chỉ cần nhập Mã tham chiếu, Mã Nhà Phân Phối và ảnh đính kèm. Tiêu đề và Description tự động điền theo template, viết bằng tiếng Anh cho Vxceed. Ticket được tạo bằng Cấu hình Jira — Tài khoản 2.</p></div>${who}</div>
         <div class="panel-body">${warn}
           <div class="field" style="margin-bottom:12px"><label>Tiêu đề (Summary) — tự động</label><input id="jt-title" value="${escapeHtml(b.summary)}" disabled style="background:#f6f1f1;color:var(--ink-2);cursor:not-allowed"></div>
@@ -7251,7 +7327,8 @@ function renderProFocM() {
         else if (act === "clearord") { const go = () => { jt.orders = [jtOrdBlank()]; jtDrawOrders([0, "region"]); }; if (!jt.orders.some(jtOrdFilled)) return go(); confirmDialog({ title: "Xóa toàn bộ danh sách?", message: "Tất cả đơn đang nhập sẽ bị xóa.", confirmText: "Xóa tất cả", danger: true }).then(ok => { if (ok) go(); }); }
         else if (act === "delord") { jt.orders.splice(i, 1); if (!jt.orders.length) jt.orders.push(jtOrdBlank()); jtDrawOrders(); }
         else if (act === "import") { const f = $("#jt-xl"); if (f) f.click(); }
-        else if (act === "dlxlsx") { if (!jtOrders().length) return toast("Chưa có đơn nào để xuất file.", "error"); XLSX.writeFile(jtVoidWb(), jtVoidFileName()); }
+        else if (act === "dlxlsx") { if (!jtOrders().length) return toast("Chưa có đơn nào để xuất file.", "error"); XLSX.writeFile(jtOrdWb(), jtOrdFileName()); }
+        else if (act === "wkprev" || act === "wknext") { jt.weekShift = Math.max(-12, Math.min(0, jt.weekShift + (act === "wknext" ? 1 : -1))); jtRefresh(); }
         else if (act === "send") jtSend();
       });
       pg.addEventListener("input", e => {
@@ -7263,7 +7340,7 @@ function renderProFocM() {
       });
       pg.addEventListener("change", e => { if (tool.area !== "jira") return; if (e.target.id === "jt-file") { jtAddFiles(e.target.files); e.target.value = ""; } else if (e.target.id === "jt-xl") { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) jtImportOrders(f); } });
       pg.addEventListener("keydown", e => {   // Enter / ↓ / ↑ di chuyển giữa các dòng, Tab sang cột bên cạnh (giống bảng Tăng tồn)
-        if (tool.area !== "jira" || jt.tpl !== "void") return;
+        if (tool.area !== "jira" || !jtIsList()) return;
         const t = e.target; if (!t.closest || !t.closest("#jt-ords") || !["Enter", "ArrowDown", "ArrowUp"].includes(e.key)) return;
         e.preventDefault();
         const r = Number(t.closest(".adj-row").dataset.r) + (e.key === "ArrowUp" ? -1 : 1);
@@ -7271,8 +7348,8 @@ function renderProFocM() {
       });
       pg.addEventListener("paste", e => {
         if (tool.area !== "jira") return;
-        const ot = e.target; if (jt.tpl === "void" && ot && ot.dataset && ot.dataset.jtOrd) { const txt = e.clipboardData ? e.clipboardData.getData("text/plain") : ""; if (/[\t\n]/.test(txt.replace(/[\r\n]+$/, ""))) { e.preventDefault(); jtPasteOrders(txt, Number(ot.dataset.i), ot.dataset.jtOrd); return; } }
-        if (jt.tpl === "void") return;
+        const ot = e.target; if (jtIsList() && ot && ot.dataset && ot.dataset.jtOrd) { const txt = e.clipboardData ? e.clipboardData.getData("text/plain") : ""; if (/[\t\n]/.test(txt.replace(/[\r\n]+$/, ""))) { e.preventDefault(); jtPasteOrders(txt, Number(ot.dataset.i), ot.dataset.jtOrd); return; } }
+        if (jtIsList()) return;
         const imgs = [...(e.clipboardData?.items || [])].filter(x => x.kind === "file" && x.type.startsWith("image/")).map(x => x.getAsFile());
         if (imgs.length) { e.preventDefault(); jtAddFiles(imgs); }
       });
