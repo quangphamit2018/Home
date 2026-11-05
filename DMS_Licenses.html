@@ -5029,8 +5029,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
        ===================================================================== */
     const JT_LOG_KEY = "masterdata_jira_tickets";
     const JT_TPLS = [["revert", "Revert Picklist"], ["void", "Request Void Đơn"]];   // thêm loại ticket mới ở đây
+    const JT_TPL_KEY = "masterdata_jira_tpl";   // nhớ loại ticket đang chọn → F5 / tải lại trang vẫn giữ nguyên
     function jtOrdBlank() { return { region: "", dist: "", route: "", cust: "", order: "", date: "", status: "", note: "" }; }
-    const jt = { tpl: "revert", module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", reason: "13", docs: [{ a: "", b: "" }], orders: [jtOrdBlank()], files: [], busy: false,
+    const jt = { tpl: loadKey(JT_TPL_KEY, JT_TPLS.map(t => t[0]), "revert"), module: "Sale Order", category: "Request", reqType: "DMS DISTRIBUTOR", reason: "13", docs: [{ a: "", b: "" }], orders: [jtOrdBlank()], files: [], busy: false,
       log: (() => { try { const v = JSON.parse(localStorage.getItem(JT_LOG_KEY) || "[]"); return Array.isArray(v) ? v.slice(0, 10) : []; } catch (_) { return []; } })() };
     const jtCfg = () => state.jiraConfig2 || {};
     const jtReady = () => { const c = jtCfg(); return !!(c.project_key && (c.proxy_url || (c.base_url && c.email && c.token))); };
@@ -7239,7 +7240,7 @@ function renderProFocM() {
       });
       pg.addEventListener("click", e => {
         if (tool.area !== "jira") return;
-        const tp = e.target.closest("[data-jt-tpl]"); if (tp) { jt.tpl = tp.dataset.jtTpl; $("#tool-root").innerHTML = renderToolBody(); return; }
+        const tp = e.target.closest("[data-jt-tpl]"); if (tp) { jt.tpl = tp.dataset.jtTpl; saveKey(JT_TPL_KEY, jt.tpl); $("#tool-root").innerHTML = renderToolBody(); return; }
         const a = e.target.closest("[data-jt-act]"); if (!a || a.disabled) return;
         const act = a.dataset.jtAct, i = Number(a.dataset.i);
         if (act === "adddoc") { jt.docs.push({ a: "", b: "" }); jtDrawDocs(); }
