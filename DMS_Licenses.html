@@ -2871,7 +2871,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       page: 1, pageSize: loadPageSize(), progress: {},
       supabase: null, session: null, profile: null, tab: loadKey(TAB_KEY, TABS_OK, "dashboard"), dataset: "dms",
       dms: [], central: [], profiles: [], logs: [], counts: { dms: 0, central: 0, pending: 0 },
-      settings: { maxLicenses: DEFAULT_MAX_LICENSES }, importantDays: [], grnOverrides: {}, jiraConfig: {}, jiraConfig2: {}, savingLicense: false,
+      settings: { maxLicenses: DEFAULT_MAX_LICENSES }, importantDays: [], grnOverrides: {}, jiraConfig: {}, jiraConfig2: {}, jiraConfig3: {}, savingLicense: false,
       licenseFilter: loadKey(LICENSE_FILTER_KEY, LICENSE_FILTERS_OK, "used"),
       dmsLicenseFilter: loadKey(DMS_LICENSE_FILTER_KEY, DMS_LICENSE_FILTERS_OK, "dt"),
       sort: loadJson(SORT_KEY), selected: { dms: new Set(savedSel.dms || []), central: new Set(savedSel.central || []) }, search: "", loading: false, requestSent: false
@@ -3429,6 +3429,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const COKE_MARKED_FIXED = [];   // (đã chuyển Ngày Văn hóa Việt Nam sang nhóm Ngày lễ không nghỉ bên dưới)
     const IMPORTANT_DAYS_KEY = "important_days";   // lưu ở bảng app_settings (key/value), value = JSON mảng [{id, date:"YYYY-MM-DD", name, repeat:"none"|"weekly"|"yearly", yearly, time:"HH:MM"|""}]
     const GRN_OVERRIDE_KEY = "grn_overrides";      // value = JSON map {"YYYY-MM": "YYYY-MM-DD"(ghi đè) | "skip"(bỏ)} — Close GRN Module theo kỳ
+    const JIRA_CONFIG3_KEY = "jira_config_3";      // Tài khoản Jira thứ 3 — cùng cấu trúc như TK 2, chỉ khác token (dùng cho Update Null Route)
     const JIRA_CONFIG2_KEY = "jira_config_2";      // Tài khoản Jira thứ 2 — cùng cấu trúc, chỉ khác token
     const JIRA_CONFIG_KEY = "jira_config";         // value = JSON {base_url, email, token, project_key, issue_type} — chỉ super-admin ghi, super-admin + senior-member đọc
     const parseImportantDays = v => {
@@ -3962,35 +3963,37 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
 
     // ---------- Cấu hình Jira (chỉ Super-admin) ----------
     function jiraPanelHtml(n) {
-      const two = n === 2, c = (two ? state.jiraConfig2 : state.jiraConfig) || {}, p = two ? "jira2" : "jira";
+      const two = n >= 2, c = (n === 3 ? state.jiraConfig3 : n === 2 ? state.jiraConfig2 : state.jiraConfig) || {}, p = n === 3 ? "jira3" : two ? "jira2" : "jira";
       // Tài khoản 2: nếu chưa lưu thì gợi ý sẵn các trường giống tài khoản 1 (chỉ cần dán token riêng)
-      const d = two && !Object.keys(c).length ? (state.jiraConfig || {}) : c;
-      const v = k => escapeHtml(c[k] || (two ? (d[k] && k !== "token" ? d[k] : "") : ""));
-      const head = two
+      const d = two && !Object.keys(c).length ? (n === 3 ? (Object.keys(state.jiraConfig2 || {}).length ? state.jiraConfig2 : state.jiraConfig) : state.jiraConfig) || {} : c;
+      const v = k => escapeHtml(c[k] || (n === 3 && k === "email" ? "huy.lam.c@coca-cola.com.vn" : two ? (d[k] && k !== "token" ? d[k] : "") : ""));
+      const head = n === 3
+        ? `<h2>Cấu hình Jira — Tài khoản 3</h2><p>Dùng cho Tool Tickets Jira — Update Null Route. Giống Tài khoản 2, chỉ khác API Token. Chỉ Super-admin nhìn thấy và chỉnh được.</p>`
+        : two
         ? `<h2>Cấu hình Jira — Tài khoản 2</h2><p>Dùng cho Tool Tickets Jira. Giống Tài khoản 1, chỉ khác API Token. Chỉ Super-admin nhìn thấy và chỉnh được.</p>`
         : `<h2>Cấu hình Jira</h2><p>Token Jira dùng để tạo ticket tự động Close GRN Module. Chỉ Super-admin nhìn thấy và chỉnh được.</p>`;
-      return `<section class="panel" style="margin-bottom:18px"><div class="panel-head"><div>${head}</div><span class="badge badge-blue">${two ? "Super-admin · TK 2" : "Super-admin"}</span></div>
+      return `<section class="panel" style="margin-bottom:18px"><div class="panel-head"><div>${head}</div><span class="badge badge-blue">${n === 3 ? "Super-admin · TK 3" : two ? "Super-admin · TK 2" : "Super-admin"}</span></div>
         <div class="panel-body"><div class="jira-config">
           <div class="field"><label>Jira base URL</label><input id="${p}-base" value="${v("base_url")}" placeholder="https://your-domain.atlassian.net" autocomplete="off"></div>
           <div class="field"><label>Email API</label><input id="${p}-email" type="email" value="${v("email")}" placeholder="you@company.com" autocomplete="off"></div>
-          <div class="field"><label>API Token${two ? " (tài khoản 2)" : ""}</label><input id="${p}-token" type="password" value="${escapeHtml(c.token || "")}" placeholder="ATATT3xF..." autocomplete="new-password"></div>
+          <div class="field"><label>API Token${two ? ` (tài khoản ${n})` : ""}</label><input id="${p}-token" type="password" value="${escapeHtml(c.token || "")}" placeholder="ATATT3xF..." autocomplete="new-password"></div>
           <div class="field"><label>Project key</label><input id="${p}-project" value="${v("project_key")}" placeholder="PADM2" autocomplete="off"></div>
           <div class="field"><label>Issue type</label><input id="${p}-issuetype" value="${escapeHtml(c.issue_type || (two ? (d.issue_type || "Task") : "Task"))}" placeholder="Task" autocomplete="off"></div>
           <div class="field"><label>Proxy URL (khuyên dùng)</label><input id="${p}-proxy" value="${v("proxy_url")}" placeholder="https://jira-proxy.ten-ban.workers.dev" autocomplete="off"></div>
-          <button type="button" class="btn btn-primary" id="save-${p}">Lưu cấu hình Jira${two ? " — Tài khoản 2" : ""}</button>
+          <button type="button" class="btn btn-primary" id="save-${p}">Lưu cấu hình Jira${two ? ` — Tài khoản ${n}` : ""}</button>
         </div></div></section>`;
     }
-    function renderJiraAdminPanel() { return jiraPanelHtml(1) + jiraPanelHtml(2); }
+    function renderJiraAdminPanel() { return jiraPanelHtml(1) + jiraPanelHtml(2) + jiraPanelHtml(3); }
     async function saveJiraConfig(n = 1) {
       if (!isAdmin()) return toast("Chỉ Super-admin mới được cấu hình Jira.", "error");
-      const two = n === 2, p = two ? "jira2" : "jira", key = two ? JIRA_CONFIG2_KEY : JIRA_CONFIG_KEY;
+      const two = n >= 2, p = n === 3 ? "jira3" : two ? "jira2" : "jira", key = n === 3 ? JIRA_CONFIG3_KEY : two ? JIRA_CONFIG2_KEY : JIRA_CONFIG_KEY;
       const cfg = { base_url: ($(`#${p}-base`)?.value || "").trim(), email: ($(`#${p}-email`)?.value || "").trim(), token: ($(`#${p}-token`)?.value || "").trim(), project_key: ($(`#${p}-project`)?.value || "").trim(), issue_type: ($(`#${p}-issuetype`)?.value || "Task").trim(), proxy_url: ($(`#${p}-proxy`)?.value || "").trim() };
       if (!cfg.project_key) return toast("Hãy nhập Project key.", "error");
       if (!cfg.proxy_url && (!cfg.base_url || !cfg.email || !cfg.token)) return toast("Hãy nhập đủ base URL, email, token — hoặc điền Proxy URL để tạo ticket qua máy chủ.", "error");
       const { error } = await state.supabase.from(LICENSE_SETTINGS_TABLE).upsert({ key, value: JSON.stringify(cfg), updated_at: new Date().toISOString(), updated_by: state.session?.user?.id }, { onConflict: "key" });
       if (error) return toast(`Không lưu được: ${error.message}`, "error");
-      if (two) state.jiraConfig2 = cfg; else state.jiraConfig = cfg;
-      toast(two ? "Đã lưu cấu hình Jira — Tài khoản 2." : "Đã lưu cấu hình Jira.", "success");
+      if (n === 3) state.jiraConfig3 = cfg; else if (two) state.jiraConfig2 = cfg; else state.jiraConfig = cfg;
+      toast(two ? `Đã lưu cấu hình Jira — Tài khoản ${n}.` : "Đã lưu cấu hình Jira.", "success");
       render();
     }
     const parseSettingJson = v => { if (!v) return {}; if (typeof v === "object") return v; try { return JSON.parse(v) || {}; } catch (_) { return {}; } };
@@ -4870,6 +4873,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       });
       $("#save-jira")?.addEventListener("click", () => saveJiraConfig(1));
       $("#save-jira2")?.addEventListener("click", () => saveJiraConfig(2));
+      $("#save-jira3")?.addEventListener("click", () => saveJiraConfig(3));
     }
 
     /* =====================================================================
@@ -5110,7 +5114,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const jtIsList = () => jt.tpl === "void" || jt.tpl === "nullroute";   // template có bảng danh sách đơn + file Excel đính kèm
     const jtHasTable = () => jtIsList() || jt.tpl === "reset";             // template có bảng dán từ Excel (Reset Password & MFA: bảng nằm trong Description, kèm ảnh)
     const JT_TPL_IDS = { revert: "revert_picklist", void: "manual_void_orders", nullroute: "update_null_route", reset: "reset_password_mfa" };   // khớp TEMPLATES trong Proxy (Cloudflare Worker)
-    const jtCfg = () => state.jiraConfig2 || {};
+    const jtAcct = () => jt.tpl === "nullroute" ? 3 : 2;   // Update Null Route gửi bằng Tài khoản 3; các template khác dùng Tài khoản 2
+    const jtCfg = () => (jtAcct() === 3 ? state.jiraConfig3 : state.jiraConfig2) || {};
     const jtReady = () => { const c = jtCfg(); return !!(c.project_key && (c.proxy_url || (c.base_url && c.email && c.token))); };
     const jtRows = () => jt.docs.map(d => ({ a: d.a.trim(), b: d.b.trim() })).filter(d => d.a || d.b);
     function jtBuild() { return jt.tpl === "void" ? jtVoidBuild() : jt.tpl === "nullroute" ? jtNullBuild() : jt.tpl === "reset" ? jtResetBuild() : jtBuildRevert(); }
@@ -5173,7 +5178,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     async function jtSend() {
       if (jt.busy) return;
       const cfg = jtCfg();
-      if (!jtReady()) return toast("Chưa cấu hình Jira — Tài khoản 2 (Quản lý dữ liệu).", "error");
+      if (!jtReady()) return toast(`Chưa cấu hình Jira — Tài khoản ${jtAcct()} (Quản lý dữ liệu).`, "error");
       const errs = jtErrors(); if (errs.length) return toast(errs[0], "error");
       if (jt.tpl === "nullroute" && !jtNullGate().ok) return toast("Tuần Lịch Coke này chưa kết thúc (giờ UTC+7) — chưa thể tạo ticket.", "error");
       const b = jtBuild(), base = String(cfg.base_url || "").replace(/\/+$/, ""), proxy = String(cfg.proxy_url || "").trim().replace(/\/+$/, "");
@@ -5183,7 +5188,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       try {
         let ticketKey = "", browseUrl = "", warns = [], attOk = true;
         if (proxy) {
-          const payload = { action: "create_ticket", account: 2, template: JT_TPL_IDS[jt.tpl] || "revert_picklist", summary: b.summary, description: b.description, issue_type: cfg.issue_type || "Task", project_key: cfg.project_key,
+          const payload = { action: "create_ticket", account: jtAcct(), template: JT_TPL_IDS[jt.tpl] || "revert_picklist", summary: b.summary, description: b.description, issue_type: cfg.issue_type || "Task", project_key: cfg.project_key,
             base_url: base, email: cfg.email || "", token: cfg.token || "",
             fields: jt.tpl === "nullroute"
               ? { dms_central: jt.nCentral.trim(), ticket_category: jt.category.trim(), request_type: jt.nReqType.trim() }
@@ -5204,7 +5209,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           const body = { fields: { project: { key: cfg.project_key }, summary: b.summary, description: { type: "doc", version: 1, content }, issuetype: { name: cfg.issue_type || "Task" } } };
           let res;
           try { res = await fetch(`${base}/rest/api/3/issue`, { method: "POST", headers: { "Authorization": `Basic ${btoa(`${cfg.email}:${cfg.token}`)}`, "Content-Type": "application/json", "Accept": "application/json" }, body: JSON.stringify(body) }); }
-          catch (e) { throw new Error("Trình duyệt bị chặn CORS khi gọi trực tiếp Jira. Hãy cấu hình Proxy URL (Tài khoản 2) để tạo ticket qua máy chủ."); }
+          catch (e) { throw new Error("Trình duyệt bị chặn CORS khi gọi trực tiếp Jira. Hãy cấu hình Proxy URL (Tài khoản ${jtAcct()}) để tạo ticket qua máy chủ."); }
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error((data.errorMessages || []).join("; ") || data.message || `HTTP ${res.status}`);
           ticketKey = data.key || ""; browseUrl = ticketKey && base ? `${base}/browse/${ticketKey}` : "";
@@ -5494,7 +5499,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     function jtNullPanels({ who, warn, F, ready, errs }) {
       const b = jtBuild(), m = jtOrdMarks(), g = jtNullGate(), w = g.w;
-      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Update Null Route — thông tin ticket gửi Vxceed Support</h2><p>Mỗi Thứ 7, L1 Team dùng form này để nhờ Vxceed cập nhật Route cho các đơn đang bị null RouteID của <b>tuần Lịch Coke vừa kết thúc</b> (Thứ 7 → Thứ 6). Cách làm: <b>①</b> xem tuần ở ô "Tuần Lịch Coke"; <b>②</b> dán danh sách đơn vào mục ② bên dưới; <b>③</b> bấm "Tạo ticket gửi Vxceed". Tiêu đề, Description và file Excel đính kèm do hệ thống tự tạo, ticket được gửi cho Vxceed Support bằng Cấu hình Jira — Tài khoản 2. Nút tạo ticket chỉ hiện khi tuần đã kết thúc (tính theo giờ Việt Nam, UTC+7).</p></div>${who}</div>
+      return `<section class="panel tl-panel"><div class="panel-head"><div><h2>① Update Null Route — thông tin ticket gửi Vxceed Support</h2><p>Mỗi Thứ 7, L1 Team dùng form này để nhờ Vxceed cập nhật Route cho các đơn đang bị null RouteID của <b>tuần Lịch Coke vừa kết thúc</b> (Thứ 7 → Thứ 6). Cách làm: <b>①</b> xem tuần ở ô "Tuần Lịch Coke"; <b>②</b> dán danh sách đơn vào mục ② bên dưới; <b>③</b> bấm "Tạo ticket gửi Vxceed". Tiêu đề, Description và file Excel đính kèm do hệ thống tự tạo, ticket được gửi cho Vxceed Support bằng Cấu hình Jira — Tài khoản 3. Nút tạo ticket chỉ hiện khi tuần đã kết thúc (tính theo giờ Việt Nam, UTC+7).</p></div>${who}</div>
         <div class="panel-body">${warn}
           <div class="field" style="margin-bottom:12px"><label>Tiêu đề (Summary) — tự động</label><input id="jt-title" value="${escapeHtml(b.summary)}" disabled style="background:#f6f1f1;color:var(--ink-2);cursor:not-allowed"></div>
           <div class="jt-vgrid">
@@ -5537,8 +5542,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     function renderJiraToolsBody() {
       const c = jtCfg(), ready = jtReady(), b = jtBuild(), errs = jtErrors();
-      const who = ready ? `<span class="badge badge-success">Gửi bằng Tài khoản 2${c.email ? " · " + escapeHtml(c.email) : ""} · ${escapeHtml(c.project_key)}</span>` : `<span class="badge badge-danger">Chưa cấu hình Tài khoản 2</span>`;
-      const warn = !ready ? `<div class="jt-warn">${isAdmin() ? "Chưa cấu hình Jira — Tài khoản 2. Vào Quản lý dữ liệu → Cấu hình Jira — Tài khoản 2 để nhập token." : "Chưa có cấu hình Jira — Tài khoản 2 cho tài khoản của bạn. Hãy liên hệ Super-admin."}</div>` : "";
+      const who = ready ? `<span class="badge badge-success">Gửi bằng Tài khoản ${jtAcct()}${c.email ? " · " + escapeHtml(c.email) : ""} · ${escapeHtml(c.project_key)}</span>` : `<span class="badge badge-danger">Chưa cấu hình Tài khoản ${jtAcct()}</span>`;
+      const warn = !ready ? `<div class="jt-warn">${isAdmin() ? `Chưa cấu hình Jira — Tài khoản ${jtAcct()}. Vào Quản lý dữ liệu → Cấu hình Jira — Tài khoản ${jtAcct()} để nhập token.` : `Chưa có cấu hình Jira — Tài khoản ${jtAcct()} cho tài khoản của bạn. Hãy liên hệ Super-admin.`}</div>` : "";
       const F = (k, label, ph, extra = "") => `<div class="field"><label>${label}</label><input data-jt="${k}" value="${escapeHtml(jt[k])}" placeholder="${escapeHtml(ph)}" autocomplete="off" ${extra}></div>`;
       const tplBar = `<div class="tl-seg" style="margin-bottom:14px">${JT_TPLS.map(([k, l]) => `<button type="button" data-jt-tpl="${k}" class="${jt.tpl === k ? "on" : ""}">${ICONS.swap} ${l}</button>`).join("")}</div>`;
       if (jt.tpl === "void") return tplBar + jtVoidPanels({ who, warn, F, ready, errs });
@@ -7953,6 +7958,9 @@ function renderProFocM() {
         .on("postgres_changes", { event: "*", schema: "public", table: LICENSE_SETTINGS_TABLE, filter: `key=eq.${JIRA_CONFIG2_KEY}` }, (payload) => {
           state.jiraConfig2 = payload.eventType === "DELETE" ? {} : parseSettingJson(payload.new?.value);
         })
+        .on("postgres_changes", { event: "*", schema: "public", table: LICENSE_SETTINGS_TABLE, filter: `key=eq.${JIRA_CONFIG3_KEY}` }, (payload) => {
+          state.jiraConfig3 = payload.eventType === "DELETE" ? {} : parseSettingJson(payload.new?.value);
+        })
         .subscribe();
     }
 
@@ -8033,7 +8041,7 @@ function renderProFocM() {
       if (state.loading) { reloadQueued = true; return; }      // đang tải: xếp hàng tải lại sau để không mất thay đổi vừa lưu
       setLoading(true);
       try {
-        const [dms, central, profiles, logs, licenseSetting, importantSetting, grnSetting, jiraSetting, jiraSetting2] = await Promise.all([
+        const [dms, central, profiles, logs, licenseSetting, importantSetting, grnSetting, jiraSetting, jiraSetting2, jiraSetting3] = await Promise.all([
           fetchAllRows("dms_users"),
           fetchAllRows("central_users"),
           isAdmin() ? state.supabase.from("profiles").select("*").order("created_at", { ascending: false }) : Promise.resolve({ data: [], count: 0 }),
@@ -8044,11 +8052,13 @@ function renderProFocM() {
           state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", GRN_OVERRIDE_KEY).maybeSingle(),
           canEdit() ? state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", JIRA_CONFIG_KEY).maybeSingle() : Promise.resolve({ data: null }),
           state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", JIRA_CONFIG2_KEY).maybeSingle()   // Revert Picklist: member cũng dùng được Tài khoản 2 (cần policy đọc ở Supabase)
+          ,state.supabase.from(LICENSE_SETTINGS_TABLE).select("value").eq("key", JIRA_CONFIG3_KEY).maybeSingle()   // Update Null Route dùng Tài khoản 3 (cần policy đọc ở Supabase giống jira_config_2)
         ]);
         if (!importantSetting?.error) state.importantDays = parseImportantDays(importantSetting?.data?.value);
         state.grnOverrides = grnSetting?.error ? {} : parseSettingJson(grnSetting?.data?.value);
         state.jiraConfig = jiraSetting?.error ? {} : parseSettingJson(jiraSetting?.data?.value);
         state.jiraConfig2 = jiraSetting2?.error ? {} : parseSettingJson(jiraSetting2?.data?.value);
+        state.jiraConfig3 = jiraSetting3?.error ? {} : parseSettingJson(jiraSetting3?.data?.value);
         if (dms.error || central.error) toast(`Không tải được đầy đủ dữ liệu: ${(dms.error || central.error).message}`, "error");
         state.dms = dms.data || []; state.central = central.data || []; state.profiles = profiles.data || []; state.logs = logs.data || [];
         state.counts.dms = dms.count ?? state.dms.length; state.counts.central = central.count ?? state.central.length;
