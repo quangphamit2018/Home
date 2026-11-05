@@ -5206,6 +5206,21 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       });
       jtDrawOrders(); toast(`Đã dán ${grid.length} dòng.`, "success");
     }
+    function jtPasteAuto(txt) {   // dán nối tiếp sau dòng có dữ liệu cuối cùng
+      if (!String(txt || "").trim()) return toast("Clipboard đang trống.", "error");
+      let last = -1; jt.orders.forEach((o, i) => { if (jtOrdFilled(o)) last = i; });
+      jtPasteOrders(txt, last + 1, "region");
+    }
+    if (!window.__jtDocPaste) {   // Ctrl+V ở bất kỳ đâu trong tab Request Void Đơn (khi chưa focus vào ô nhập)
+      window.__jtDocPaste = true;
+      document.addEventListener("paste", e => {
+        if (tool.area !== "jira" || jt.tpl !== "void" || !document.getElementById("tool-page")) return;
+        const t = e.target; if (t && t.closest && t.closest("input,textarea,select,[contenteditable='true']")) return;
+        const txt = e.clipboardData ? e.clipboardData.getData("text/plain") : "";
+        if (!/[\t\n]/.test(txt.replace(/[\r\n]+$/, ""))) return;
+        e.preventDefault(); jtPasteAuto(txt);
+      });
+    }
     async function jtImportOrders(file) {
       try {
         const wb = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
@@ -5225,8 +5240,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           <div class="field" style="margin-bottom:12px"><label>Tiêu đề (Summary) — tự động</label><input id="jt-title" value="${escapeHtml(b.summary)}" disabled style="background:#f6f1f1;color:var(--ink-2);cursor:not-allowed"></div>
           <div class="jt-vgrid">${F("module", "DMS Distributor (module)", "vd: Sale Order")}${F("category", "Ticket Category/Type", "Request")}${F("reqType", "Request Type", "DMS DISTRIBUTOR")}${F("reason", "Void Reason No. *", "13", 'inputmode="numeric"')}</div>
         </div></section>
-      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Danh sách đơn cần Void</h2><p>Dán thẳng bảng từ Excel (Ctrl+V vào ô bất kỳ, đúng thứ tự cột, có hoặc không có dòng tiêu đề) hoặc bấm “Nhập từ Excel”. Order status và Note tự điền <b>Posted</b> / <b>Please Void</b>. Cột Order no, Distributor code nên để dạng Text trong Excel để giữ số 0 ở đầu.</p></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-plain" data-jt-act="import" style="display:inline-flex;gap:6px;align-items:center">${ICONS.upload} Nhập từ Excel</button><input id="jt-xl" type="file" accept=".xlsx,.xls,.csv" class="hidden"><button type="button" class="btn btn-secondary" data-jt-act="addord" style="display:inline-flex;gap:6px;align-items:center">${ICONS.plus} Thêm dòng</button></div></div>
+      <section class="panel tl-panel"><div class="panel-head"><div><h2>② Danh sách đơn cần Void</h2><p>Copy bảng từ Excel rồi bấm <b>Ctrl+V</b> ngay tại tab này (không cần bấm vào ô; đúng thứ tự cột, có hoặc không có dòng tiêu đề), hoặc dùng nút “Dán từ clipboard” / “Nhập từ Excel”. Order status và Note tự điền <b>Posted</b> / <b>Please Void</b>. Cột Order no, Distributor code nên để dạng Text trong Excel để giữ số 0 ở đầu.</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-plain" data-jt-act="pasteclip" style="display:inline-flex;gap:6px;align-items:center">${ICONS.copy} Dán từ clipboard</button><button type="button" class="btn btn-plain" data-jt-act="import" style="display:inline-flex;gap:6px;align-items:center">${ICONS.upload} Nhập từ Excel</button><input id="jt-xl" type="file" accept=".xlsx,.xls,.csv" class="hidden"><button type="button" class="btn btn-secondary" data-jt-act="addord" style="display:inline-flex;gap:6px;align-items:center">${ICONS.plus} Thêm dòng</button></div></div>
         <div class="panel-body"><datalist id="jt-regions">${JT_REGIONS.map(r => `<option value="${r}">`).join("")}</datalist><div class="jt-ordwrap"><div id="jt-ords">${jtVoidOrdHtml()}</div></div>
           <ul id="jt-errs" class="jt-errs" style="display:${errs.length ? "block" : "none"};margin-top:14px">${errs.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
           <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-top:16px"><button type="button" class="btn btn-plain" data-jt-act="reset" style="display:inline-flex;gap:6px;align-items:center">${ICONS.refresh} Làm mới form</button><button type="button" class="btn btn-excel" data-jt-act="dlxlsx" style="display:inline-flex;gap:6px;align-items:center">${ICONS.xlsx} Tải file Excel xem thử</button><button type="button" class="btn btn-primary" id="jt-send" data-jt-act="send" ${jt.busy || errs.length || !ready ? "disabled" : ""} style="display:inline-flex;gap:6px;align-items:center">${ICONS.send} Tạo ticket gửi Vxceed</button></div></div></section>
@@ -7212,6 +7227,7 @@ function renderProFocM() {
         else if (act === "reset") { if ((!jt.files.length && !jt.docs.some(d => d.a || d.b) && !jt.orders.some(jtOrdFilled)) || confirm("Xóa toàn bộ nội dung đang soạn?")) jtReset(); }
         else if (act === "addord") { jt.orders.push(jtOrdBlank()); jtDrawOrders(); const last = document.querySelector("#jt-ords .jt-ord:last-child input"); if (last) last.focus(); }
         else if (act === "delord") { jt.orders.splice(i, 1); if (!jt.orders.length) jt.orders.push(jtOrdBlank()); jtDrawOrders(); }
+        else if (act === "pasteclip") { (navigator.clipboard && navigator.clipboard.readText ? navigator.clipboard.readText() : Promise.reject()).then(t => jtPasteAuto(t)).catch(() => toast("Trình duyệt không cho đọc clipboard — hãy bấm Ctrl+V.", "error")); }
         else if (act === "import") { const f = $("#jt-xl"); if (f) f.click(); }
         else if (act === "dlxlsx") { if (!jtOrders().length) return toast("Chưa có đơn nào để xuất file.", "error"); XLSX.writeFile(jtVoidWb(), jtVoidFileName()); }
         else if (act === "send") jtSend();
