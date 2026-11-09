@@ -5895,6 +5895,29 @@ html{
 .import-modal .table-wrap.weekly-mom-import-preview table{ width:max-content; min-width:100%; }
 .import-modal .table-wrap.weekly-mom-import-preview table{ min-width:max(100%,1900px); }
 
+/* ==== e-B2B ↔ DMS parity & polish ==== */
+.search-box input{ padding-right:62px; text-overflow:ellipsis; }
+/* Ô dữ liệu bảng UAT / Release của e-B2B không xuống dòng (tên người, ngày) — giống DMS */
+#eb2bViewRoot .uat-shell tbody td.cell-dim,
+#eb2bViewRoot .release-shell tbody td.cell-dim{ white-space:nowrap; }
+/* Thanh cuộn ngang UAT của e-B2B: cùng màu/kích thước với DMS */
+#eb2bViewRoot .eb2b-uat-hscroll{ padding:4px 10px; height:18px; background:transparent; border-top:0; }
+#eb2bViewRoot .eb2b-uat-hscroll .hscroll-track{ height:10px; background:#e4edf1; border:1px solid #d3e0e6; border-radius:6px; box-sizing:border-box; }
+#eb2bViewRoot .eb2b-uat-hscroll .hscroll-thumb{ top:-1px; height:10px; background:#9aafbc; border-radius:6px; transition:background .12s ease; }
+#eb2bViewRoot .eb2b-uat-hscroll .hscroll-thumb:hover{ background:#718b9b; }
+#eb2bViewRoot .tb-dropdown .eb2b-cr-tool-popover{ top:calc(100% + 6px); left:0; right:auto; }
+#eb2bViewRoot .tb-dropdown .eb2b-cr-tool-popover.align-right{ left:auto; right:0; }
+/* Tiêu đề cột sắp xếp được: focus bàn phím rõ ràng */
+.sortable-th:focus-visible{ outline:2px solid #0e9a94; outline-offset:-2px; border-radius:6px; }
+.icon-btn:focus-visible,.tb-btn:focus-visible,.row-check:focus-visible{ outline:2px solid #0e9a94; outline-offset:2px; }
+/* Vùng bấm tối thiểu 40px cho nút biểu tượng trên màn hình cảm ứng */
+@media (pointer:coarse){
+  #eb2bViewRoot .icon-btn,#view-crlog .icon-btn,#view-uat .icon-btn,#view-release .icon-btn{ min-width:40px; min-height:40px; }
+}
+@media (prefers-reduced-motion:reduce){
+  #eb2bViewRoot *,#eb2bViewRoot *::before,#eb2bViewRoot *::after{ scroll-behavior:auto !important; }
+}
+
 /* Foot */
 .modal-overlay.full .modal.modal-lg.import-modal > .modal-foot{ background:rgba(255,255,255,.86); backdrop-filter:blur(14px); border-top:1px solid #dbe8ec; align-items:center; }
 .imp-foot-note{ margin-right:auto; display:flex; align-items:center; gap:8px; font-size:12px; color:#7890a2; }
@@ -21000,6 +21023,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      releaseFilters: {cr:"", status:"", environment:"", owner:"", search:""},
      releaseColumns: {release_id:true, release_name:true, environment:true, planned_date:true, actual_date:true, status:true, checklist_golive:true, release_owner:true, signoff_by:true, signoff_date:true},
      releaseDensity: localStorage.getItem("eb2bReleaseDensity") || "comfortable",
+     releaseSort: {key:"",dir:"asc"},
      releaseSelection: new Set(),
      weeklyMomExpanded: {},
      weeklyMomSort: {},
@@ -21037,11 +21061,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
   }catch(_){}
   const EB2B_META = {
     dashboard: ["Dashboard e-B2B", "Tổng quan riêng workspace e-B2B"],
-    cr: ["EB2B · CR Log", "Sổ đăng ký Change Request riêng cho EB2B"],
-    uat: ["EB2B · UAT Test Case", "Test case UAT riêng cho EB2B"],
-    release: ["EB2B · Release / PRD", "Theo dõi kế hoạch phát hành EB2B"],
-    brd: ["EB2B · Tạo BRD", "Quản lý yêu cầu nghiệp vụ EB2B"],
-    weekly_mom: ["EB2B · Weekly MoM", "Biên bản họp và action item EB2B"]
+    cr: ["CR Log", "Sổ đăng ký toàn bộ Change Request của e-B2B"],
+    uat: ["UAT Test Case", "Test case UAT cho từng Change Request của e-B2B"],
+    release: ["Release / PRD", "Thông tin phát hành cho từng Change Request của e-B2B"],
+    brd: ["Tạo BRD", "Nhập thông tin và xuất file BRD của e-B2B theo template chuẩn"],
+    weekly_mom: ["Weekly MoM", "Biên bản họp Weekly e-B2B với Vendor và DE"]
   };
   const EB2B_TABS = [
     ["dashboard", "Dashboard"], ["cr", "CR Log"], ["uat", "UAT Test Case"],
@@ -21069,6 +21093,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const d = new Date(s);
     return isNaN(d.getTime()) ? s.slice(0,10) : new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Ho_Chi_Minh",year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
   };
+  const eDateVN = value => { const iso = eDate(value); if(!iso) return ""; return typeof fmtDate === "function" ? fmtDate(iso) : iso; };
   const eNow = () => new Date().toISOString();
   const eUser = () => (typeof STATE !== "undefined" && (STATE.userEmail || STATE.session?.user?.email)) || null;
   const eToast = (message, type="info") => {
@@ -21512,7 +21537,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
          <div class="eb2b-context-actions eb2b-uat-top-actions" id="eb2bUatTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatTemplateTop" type="button" title="Tải file Excel mẫu"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>Tải template</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bUatImportTop" type="button" title="Nhập nhiều Test Case từ Excel"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Nhập Excel</button><button class="btn btn-primary" id="eb2bAddTcTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Test Case</button></div>
          <div class="eb2b-context-actions eb2b-dashboard-top-actions" id="eb2bDashTopActions"><button class="btn btn-ghost btn-sm tb-btn" id="eb2bProgressReportTop" type="button" title="Tải báo cáo tiến độ CR và UAT"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon><span class="report-label">Tải báo cáo</span></button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bEvidenceZipTop" type="button" title="Tải toàn bộ ảnh evidence theo cấu trúc thư mục"><mi-icon name="folder-down" size="14" stroke-width="2.5"></mi-icon><span class="evidence-zip-label">Tải ảnh</span></button></div>
          <div class="eb2b-context-actions eb2b-release-top-actions" id="eb2bReleaseTopActions"><button class="btn btn-primary" id="eb2bAddRelTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Thêm Release</button></div>
-         <div class="eb2b-context-actions eb2b-brd-top-actions" id="eb2bBrdTopActions"><button class="btn btn-primary" id="eb2bAddBrdTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo BRD</button></div>
+         <div class="eb2b-context-actions eb2b-brd-top-actions" id="eb2bBrdTopActions"><button class="btn btn-primary" id="eb2bAddBrdTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo BRD mới</button></div>
          <div class="eb2b-context-actions eb2b-weekly-top-actions" id="eb2bWeeklyTopActions"><button class="btn btn-primary" id="eb2bAddWeeklyTop" type="button"><mi-icon name="plus" size="14" stroke-width="2.5"></mi-icon> Tạo biên bản Weekly</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bWeeklyImportTop" type="button" title="Nhập biên bản Weekly từ Excel"><mi-icon name="upload" size="14" stroke-width="2.5"></mi-icon>Nhập Excel</button><button class="btn btn-ghost btn-sm tb-btn" id="eb2bWeeklyDownloadTop" type="button" title="Tải Excel biên bản mới nhất"><mi-icon name="download" size="14" stroke-width="2.5"></mi-icon>Tải Excel</button></div>`);
      }
      const sidebar = $e("#sidebar");
@@ -21736,7 +21761,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     const pairs = {cr:"cr",uat:"uat",release:"release",brd:"brd",weekly_mom:"weekly_mom"};
     Object.entries(pairs).forEach(([key,rowKey])=>{
       const n = $e("#eb2bNavCount" + key);
-      if(n) n.textContent = EB2B.rows[rowKey].length || "";
+      if(n) n.textContent = String(EB2B.rows[rowKey].length);
     });
   }
 
@@ -22041,7 +22066,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(key==="requester") return `<td class="cell-dim">${eEsc(row.requester||"—")}</td>`;
     if(["category","priority","status","sub_status"].includes(key)) return `<td class="inline-edit-cell">${canEdit?eb2bCrInlineHtml(key,row):eb2bCrBadge(key,row[key])}</td>`;
     if(key==="brd"||key==="fsd") return eb2bCrDocumentHtml(row,key.toUpperCase());
-    if(key==="deadline") return `<td class="cell-dim">${row.deadline?(overdue?`<span class="deadline-overdue"><span class="dl-warn">!</span>${eEsc(eDate(row.deadline))}</span>`:eEsc(eDate(row.deadline))):"—"}</td>`;
+    if(key==="deadline") return `<td class="cell-dim">${row.deadline?(overdue?`<span class="deadline-overdue"><span class="dl-warn">!</span>${eEsc(eDateVN(row.deadline))}</span>`:eEsc(eDateVN(row.deadline))):"—"}</td>`;
     if(key==="note") return `<td class="cell-note" title="${eEsc(row.note||"")}"><span class="note-clamp">${eEsc(row.note||"—")}</span></td>`;
     return `<td class="cell-dim">${eEsc(row[key]||"—")}</td>`;
   }
@@ -22127,7 +22152,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
       return `<tr class="eb2b-cr-row ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-row="${eEsc(r.id)}"><td class="col-check"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""} aria-label="Chọn ${eEsc(r.cr_id)}"></td><td class="cell-id sticky-cr-id"><span class="id-chip">${eEsc(r.cr_id)}</span></td>${visible.map(col=>eb2bCrCellHtml(col.key,r,overdueRow,canEdit)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-cr-view="${eEsc(r.id)}" title="Xem chi tiết"><mi-icon name="eye" stroke-width="2"></mi-icon></button><button class="icon-btn" data-eb2b-cr-edit="${eEsc(r.id)}" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-cr-delete="${eEsc(r.id)}" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></td></tr>`;
     };
     const mobileHtml=r=>`<article class="cr-card eb2b-cr-card ${EB2B.crSelection.has(String(r.id))?"is-selected":""}" data-eb2b-cr-view="${eEsc(r.id)}"><div class="cr-card-top"><label class="cr-card-select" onclick="event.stopPropagation()"><input type="checkbox" data-eb2b-cr-select="${eEsc(r.id)}" ${EB2B.crSelection.has(String(r.id))?"checked":""}></label><span class="id-chip cell-id">${eEsc(r.cr_id)}</span>${eb2bCrBadge("status",r.status)}</div><div class="cr-card-title">${eEsc(eb2bCrTitle(r))}</div><div class="cr-card-badges">${eb2bCrBadge("category",r.category)}${eb2bCrBadge("priority",r.priority)}${eb2bCrOverdue(r)?`<span class="badge badge-danger">Trễ hạn</span>`:""}</div><div class="cr-card-meta"><span>${eEsc(r.requester||"—")}</span><span>${eEsc(r.deadline?eDate(r.deadline):"—")}</span></div><div class="cr-card-inline">${eb2bCrInlineHtml("status",r)}${eb2bCrInlineHtml("priority",r)}</div><div class="cr-card-actions"><button class="btn btn-secondary btn-sm" data-eb2b-cr-edit="${eEsc(r.id)}">Sửa</button><button class="btn btn-secondary btn-sm danger" data-eb2b-cr-delete="${eEsc(r.id)}">Xóa</button></div></article>`;
-    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","●",eb2bCrFilterCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","↳",eb2bCrFilterCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","◆",eb2bCrFilterCatalog("priority"))}${eb2bCrFilterMenu("category","Category","▦",eb2bCrFilterCatalog("category"))}<div class="tb-dropdown" data-eb2b-cr-more-root><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-cr-more>Lọc thêm<span class="tb-badge ${EB2B.crFilters.requester||EB2B.crFilters.overdue?"":"hidden"}">${[EB2B.crFilters.requester,EB2B.crFilters.overdue].filter(Boolean).length}</span></button><div class="tb-menu" data-eb2b-cr-more-menu><div class="tb-menu-item-label">Requester</div><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select><div class="tb-menu-divider"></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Chỉ hiển thị quá hạn</label></div></div><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="eb2b-cr-view-tools"><button type="button" class="table-tool-btn" data-eb2b-cr-columns>Columns</button><button type="button" class="table-tool-btn" data-eb2b-cr-density>Density: ${EB2B.crDensity}</button><button type="button" class="table-tool-btn" data-eb2b-cr-focus>Focus</button></div></div></div><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div><div class="crlog-table-outer" id="eb2bCrTableOuter"><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?'<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>':'<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>'):'<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>'}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
+    c.innerHTML=`<div class="crlog-shell eb2b-cr-shell"><div class="crlog-kpis">${eb2bCrKpi("Tổng số CR",all.length,"","")}${eb2bCrKpi("Quá hạn",overdue,"Deadline đã qua, chưa Released/Closed","danger")}${eb2bCrKpi("Đang xử lý",inProgress,"In Progress / In Review / UAT","accent")}${eb2bCrKpi("Critical",critical,"Mức ưu tiên cao nhất","warn")}</div><div class="list-panel crlog-panel"><div class="list-panel-head"><div class="list-panel-count"><b>${rows.length}</b> Change Request</div><div class="table-toolbar"><div class="tb-search"><mi-icon name="search" stroke-width="2"></mi-icon><input id="eb2bCrSearch" type="text" placeholder="Tìm CR ID, tiêu đề, requester..." value="${eEsc(EB2B.search)}"></div>${eb2bCrFilterMenu("status","Status","S",eb2bCrFilterCatalog("status"))}${eb2bCrFilterMenu("sub_status","Sub-status","SS",eb2bCrFilterCatalog("sub_status"))}${eb2bCrFilterMenu("priority","Priority","P",eb2bCrFilterCatalog("priority"))}${eb2bCrFilterMenu("category","Category","C",eb2bCrFilterCatalog("category"))}<div class="tb-dropdown" data-eb2b-cr-more-root><button class="btn btn-ghost btn-sm tb-btn" type="button" data-eb2b-cr-more>Lọc thêm<span class="tb-badge ${EB2B.crFilters.requester||EB2B.crFilters.overdue?"":"hidden"}">${[EB2B.crFilters.requester,EB2B.crFilters.overdue].filter(Boolean).length}</span></button><div class="tb-menu" data-eb2b-cr-more-menu><div class="tb-menu-item-label">Requester</div><select data-eb2b-cr-requester><option value="">Tất cả</option>${requesters.map(v=>`<option value="${eEsc(v)}" ${EB2B.crFilters.requester===v?"selected":""}>${eEsc(v)}</option>`).join("")}</select><div class="tb-menu-divider"></div><label class="tb-checkbox-row"><input type="checkbox" data-eb2b-cr-overdue ${EB2B.crFilters.overdue?"checked":""}> Chỉ hiển thị quá hạn</label></div></div><div class="chip-clear" data-eb2b-cr-clear>Xóa lọc</div><div class="tb-dropdown"><button type="button" class="btn btn-ghost btn-sm tb-btn" data-eb2b-cr-columns aria-haspopup="true">Columns</button><div class="eb2b-cr-tool-popover" data-eb2b-cr-columns-menu><b>Hiển thị cột</b>${EB2B_CR_COLUMNS.map(col=>`<label><input type="checkbox" data-eb2b-cr-column="${col.key}" ${EB2B.crColumns[col.key]?"checked":""}> ${eEsc(col.label)}</label>`).join("")}</div></div><div class="tb-dropdown"><button type="button" class="btn btn-ghost btn-sm tb-btn" data-eb2b-cr-density-btn aria-haspopup="true">Density</button><div class="tb-menu" data-eb2b-cr-density-panel>${["compact","comfortable","spacious"].map(v=>`<label class="tb-radio-row"><input type="radio" name="eb2bCrDensity" value="${v}" ${EB2B.crDensity===v?"checked":""}> ${v.charAt(0).toUpperCase()+v.slice(1)}</label>`).join("")}</div></div><button type="button" class="btn btn-ghost btn-sm tb-btn" data-eb2b-cr-focus title="Chế độ toàn màn hình"><mi-icon name="maximize" size="14" stroke-width="2.2"></mi-icon> Focus</button></div></div><div class="crlog-table-outer" id="eb2bCrTableOuter"><div class="table-wrap crlog-table-wrap eb2b-cr-table-wrap" id="eb2bCrTableWrap"><div class="hscroll-fade hscroll-fade-left" id="eb2bCrHscrollFadeL"></div><div class="hscroll-fade hscroll-fade-right" id="eb2bCrHscrollFadeR"></div><table id="eb2bCrTable" class="density-${EB2B.crDensity}"><colgroup><col data-col-key="__check" style="width:44px"><col data-col-key="cr_id" style="width:116px">${visible.map(col=>`<col data-col-key="${col.key}">`).join("")}<col data-col-key="__actions" style="width:112px"></colgroup><thead><tr><th class="col-check"><input type="checkbox" data-eb2b-cr-select-all ${rows.length&&rows.every(r=>EB2B.crSelection.has(String(r.id)))?"checked":""}></th><th class="sticky-cr-id" data-eb2b-cr-sort="cr_id">CR ID<span class="sort-marker">${EB2B.crSort.key==="cr_id"?(EB2B.crSort.dir==="asc"?'<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>':'<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>'):'<mi-icon name="arrow-up-down" size="12" stroke-width="2.4"></mi-icon>'}</span></th>${visible.map(col=>sortTh(col.key,col.label)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length?rows.map(rowHtml).join(""):`<tr><td colspan="${visible.length+3}"><div class="empty-state"><h4>Chưa có Change Request</h4><p>Bấm “Tạo CR mới” để bắt đầu ghi nhận Change Request đầu tiên.</p></div></td></tr>`}</tbody></table></div><div class="hscroll-bar" id="eb2bCrHscrollBar"><div class="hscroll-track" id="eb2bCrHscrollTrack"><div class="hscroll-thumb" id="eb2bCrHscrollThumb"></div></div></div></div><div class="cr-mobile-list eb2b-cr-mobile">${rows.map(mobileHtml).join("")}</div><div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Change Request</span><span>${EB2B.crSelection.size?`${EB2B.crSelection.size} đã chọn`:""}</span></div></div></div>`;
     const bulk=document.createElement("div");bulk.className=`bulk-bar ${EB2B.crSelection.size?"":"hidden"}`;bulk.innerHTML=`<span><b>${EB2B.crSelection.size}</b> đã chọn</span><div class="bulk-actions"><button class="btn btn-ghost btn-sm" type="button" data-eb2b-cr-selection-clear>Bỏ chọn</button><button class="btn btn-danger btn-sm bulk-delete-btn" type="button" data-eb2b-cr-bulk-delete><mi-icon name="trash" size="14" stroke-width="2.2"></mi-icon> Xóa đã chọn</button></div>`;const crWrap=$e("#eb2bCrTableWrap");crWrap?.parentElement?.insertBefore(bulk,crWrap);
     bulk.querySelector("[data-eb2b-cr-selection-clear]")?.addEventListener("click",()=>{EB2B.crSelection.clear();eb2bRenderCrLog();});
     bulk.querySelector("[data-eb2b-cr-bulk-delete]")?.addEventListener("click",()=>eb2bBulkDelete("cr",EB2B.crSelection));
@@ -22141,8 +22166,8 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $all("[data-eb2b-cr-select]",c).forEach(box=>box.addEventListener("click",ev=>{ev.stopPropagation();const id=String(box.dataset.eb2bCrSelect);box.checked?EB2B.crSelection.add(id):EB2B.crSelection.delete(id);eb2bRenderCrLog();}));
     $e("[data-eb2b-cr-select-all]",c)?.addEventListener("click",ev=>{ev.stopPropagation();rows.forEach(r=>ev.target.checked?EB2B.crSelection.add(String(r.id)):EB2B.crSelection.delete(String(r.id)));eb2bRenderCrLog();});
     $all("[data-eb2b-cr-inline]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();eb2bOpenCrInline(btn);}));
-    $e("[data-eb2b-cr-columns]",c)?.addEventListener("click",()=>{$e("[data-eb2b-cr-columns-menu]",c)?.classList.toggle("is-open");});$all("[data-eb2b-cr-column]",c).forEach(box=>box.addEventListener("change",()=>{EB2B.crColumns[box.dataset.eb2bCrColumn]=box.checked;localStorage.setItem("eb2bCrColumns",JSON.stringify(EB2B.crColumns));eb2bRenderCrLog();}));
-    $e("[data-eb2b-cr-density]",c)?.addEventListener("click",()=>{EB2B.crDensity=EB2B.crDensity==="comfortable"?"compact":EB2B.crDensity==="compact"?"spacious":"comfortable";localStorage.setItem("eb2bCrDensity",EB2B.crDensity);eb2bRenderCrLog();});$e("[data-eb2b-cr-focus]",c)?.addEventListener("click",()=>{$e("#eb2bViewRoot")?.classList.toggle("eb2b-cr-focus");});
+    $e("[data-eb2b-cr-columns]",c)?.addEventListener("click",ev=>{ev.stopPropagation();const m=$e("[data-eb2b-cr-columns-menu]",c);if(!m)return;const open=!m.classList.contains("is-open");$all(".tb-menu.show",c).forEach(x=>x.classList.remove("show"));m.classList.remove("align-right");m.classList.toggle("is-open",open);if(open){const host=$e(".list-panel",c)||c;if(m.getBoundingClientRect().right>host.getBoundingClientRect().right-8)m.classList.add("align-right");const close=e2=>{if(!m.contains(e2.target)){m.classList.remove("is-open");document.removeEventListener("click",close);}};setTimeout(()=>document.addEventListener("click",close),0);}});$e("[data-eb2b-cr-columns-menu]",c)?.addEventListener("click",ev=>ev.stopPropagation());$all("[data-eb2b-cr-column]",c).forEach(box=>box.addEventListener("change",()=>{EB2B.crColumns[box.dataset.eb2bCrColumn]=box.checked;localStorage.setItem("eb2bCrColumns",JSON.stringify(EB2B.crColumns));eb2bRenderCrLog();}));
+    $e("[data-eb2b-cr-density-btn]",c)?.addEventListener("click",ev=>{ev.stopPropagation();const panel=$e("[data-eb2b-cr-density-panel]",c);const was=panel?.classList.contains("show");$all(".tb-menu.show",c).forEach(x=>x.classList.remove("show"));if(panel&&!was){panel.classList.remove("right");panel.classList.add("show");const host=$e(".list-panel",c)||c;const pr=panel.getBoundingClientRect(),hr=host.getBoundingClientRect();if(pr.right>hr.right-8)panel.classList.add("right");}});$e("[data-eb2b-cr-density-panel]",c)?.addEventListener("click",ev=>ev.stopPropagation());$all('input[name="eb2bCrDensity"]',c).forEach(r=>r.addEventListener("change",()=>{EB2B.crDensity=r.value;localStorage.setItem("eb2bCrDensity",EB2B.crDensity);eb2bRenderCrLog();}));$e("[data-eb2b-cr-focus]",c)?.addEventListener("click",()=>{$e("#eb2bViewRoot")?.classList.toggle("eb2b-cr-focus");});
   }
 
   function eb2bCloseCrDrawer(){
@@ -22588,11 +22613,12 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
      });
    }
 
-   function eb2bUatSortHeader(key,label){
-     const active = EB2B.uatSort.key === key;
-     const arrow = active ? ('<span class="eb2b-uat-sort-arrow">'+(EB2B.uatSort.dir === "asc" ? '<mi-icon name="arrow-up" size="12" stroke-width="2.6"></mi-icon>' : '<mi-icon name="arrow-down" size="12" stroke-width="2.6"></mi-icon>')+'</span>') : "";
-     return `<th data-eb2b-uat-sort="${key}" style="cursor:pointer" aria-sort="${active ? (EB2B.uatSort.dir === "asc" ? "ascending" : "descending") : "none"}">${label}${arrow}</th>`;
-   }
+    function eb2bSortTh(attr,key,label,sort){
+      const active = sort && sort.key === key;
+      const icon = active ? (sort.dir === "asc" ? "arrow-up" : "arrow-down") : "arrow-up-down";
+      return `<th class="sortable-th ${active?"is-sorted":""}" data-${attr}="${key}" tabindex="0" aria-sort="${active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}">${label}<span class="sort-marker"><mi-icon name="${icon}" size="12" stroke-width="${active?"2.6":"2.4"}"></mi-icon></span></th>`;
+    }
+    function eb2bUatSortHeader(key,label){ return eb2bSortTh("eb2b-uat-sort",key,label,EB2B.uatSort); }
 
    function eb2bUatKpis(){
      const rows = EB2B.rows.uat;
@@ -22906,11 +22932,11 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
                  if(column.key==="test_case_id") return `<td class="cell-id"><span class="id-chip">${eEsc(value || "—")}</span></td>`;
                  if(column.key==="scenario") return `<td class="cell-title" title="${eEsc(value || "")}">${eEsc(value || "—")}</td>`;
                  if(column.key==="pass_fail") return `<td class="cell-result">${eb2bUatResultBadge(value || "Not Started")}</td>`;
-                 if(column.key==="testing_date" || column.key==="confirmed_date") return `<td class="cell-dim">${eEsc(eDate(value) || "—")}</td>`;
+                 if(column.key==="testing_date" || column.key==="confirmed_date") return `<td class="cell-dim">${eEsc(eDateVN(value) || "—")}</td>`;
                  return `<td class="cell-dim">${eEsc(value || "—")}</td>`;
                }).join("")}<td class="cell-actions"><div class="row-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit" title="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete" title="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button>`:""}</div></td></tr>`).join(""):`<tr><td colspan="${colspan}"><div class="empty-state"><h4>Chưa có Test Case</h4><p>Bấm “Thêm Test Case” để tạo test case UAT đầu tiên.</p></div></td></tr>`}
              </tbody></table>
-             <div class="cr-mobile-list eb2b-uat-mobile" id="eb2bUatMobile">${rows.map(row=>`<div class="cr-card" data-eb2b-uat-row="${eEsc(row.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(row.cr_id || "—")}</span>${eb2bUatResultBadge(row.pass_fail || "Not Started")}</div><div class="cr-card-title">${eEsc(row.test_case_id || row.scenario || "—")}</div><div class="cr-card-meta"><span>${eEsc(row.scenario || "Chưa có scenario")}</span><span>${eEsc(row.testor || "Chưa có testor")}</span><span>${eEsc(eDate(row.testing_date) || "Chưa test")}</span></div><div class="cr-card-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete"><mi-icon name="trash" stroke-width="2"></mi-icon></button>`:""}</div></div>`).join("")}</div>
+             <div class="cr-mobile-list eb2b-uat-mobile" id="eb2bUatMobile">${rows.map(row=>`<div class="cr-card" data-eb2b-uat-row="${eEsc(row.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(row.cr_id || "—")}</span>${eb2bUatResultBadge(row.pass_fail || "Not Started")}</div><div class="cr-card-title">${eEsc(row.test_case_id || row.scenario || "—")}</div><div class="cr-card-meta"><span>${eEsc(row.scenario || "Chưa có scenario")}</span><span>${eEsc(row.testor || "Chưa có testor")}</span><span>${eEsc(eDateVN(row.testing_date) || "Chưa test")}</span></div><div class="cr-card-actions">${canEdit?`<button class="icon-btn" data-eb2b-uat-action="edit"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button>`:""}${canDelete?`<button class="icon-btn danger" data-eb2b-uat-action="delete"><mi-icon name="trash" stroke-width="2"></mi-icon></button>`:""}</div></div>`).join("")}</div>
            </div>
          </div>
          <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${EB2B.rows.uat.length} Test Case</span></div>
@@ -23026,6 +23052,14 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
         if(!hay.includes(f.search)) return false;
       }
       return true;
+    }).sort((a,b)=>{
+      const sort = EB2B.releaseSort;
+      if(!sort || !sort.key) return 0;
+      const av = String(a[sort.key] ?? "").toLowerCase(), bv = String(b[sort.key] ?? "").toLowerCase();
+      if(!av && bv) return 1;
+      if(av && !bv) return -1;
+      const cmp = av.localeCompare(bv, "vi", {numeric:true});
+      return sort.dir === "asc" ? cmp : -cmp;
     });
   }
 
@@ -23033,13 +23067,13 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     if(key==="release_id") return `<td class="cell-id"><span class="id-chip">${eEsc(r.release_id || "—")}</span></td>`;
     if(key==="release_name") return `<td class="cell-title" title="${eEsc(r.release_name || "")}">${eEsc(r.release_name || "—")}</td>`;
     if(key==="environment") return `<td class="cell-dim">${eEsc(r.environment || "—")}</td>`;
-    if(key==="planned_date") return `<td class="cell-dim">${eEsc(r.planned_date || "—")}</td>`;
-    if(key==="actual_date") return `<td class="cell-dim">${eEsc(r.actual_date || "—")}</td>`;
+    if(key==="planned_date") return `<td class="cell-dim">${eEsc(eDateVN(r.planned_date) || "—")}</td>`;
+    if(key==="actual_date") return `<td class="cell-dim">${eEsc(eDateVN(r.actual_date) || "—")}</td>`;
     if(key==="status") return `<td>${eb2bReleaseBadge(r.status)}</td>`;
     if(key==="checklist_golive") return `<td>${eb2bReleaseBadge(r.checklist_golive || "—")}</td>`;
     if(key==="release_owner") return `<td class="cell-dim">${eEsc(r.release_owner || "—")}</td>`;
     if(key==="signoff_by") return `<td class="cell-dim">${eEsc(r.signoff_by || "—")}</td>`;
-    if(key==="signoff_date") return `<td class="cell-dim">${eEsc(r.signoff_date || "—")}</td>`;
+    if(key==="signoff_date") return `<td class="cell-dim">${eEsc(eDateVN(r.signoff_date) || "—")}</td>`;
     return "";
   }
 
@@ -23079,7 +23113,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
           </div>
         </div>
         <div class="bulk-bar hidden"><span><b>0</b> đã chọn</span></div>
-        <div class="crlog-table-outer"><div class="table-wrap crlog-table-wrap" id="eb2bRelTableWrap"><table id="eb2bRelTable" class="density-${EB2B.releaseDensity}"><thead><tr><th class="col-check"> </th><th>CR ID</th>${visible.map(k=>`<th>${eEsc({release_id:"Release ID",release_name:"Tên Release / Version",environment:"Môi trường",planned_date:"Ngày dự kiến",actual_date:"Ngày thực tế",status:"Trạng thái",checklist_golive:"Go-live Checklist",release_owner:"Release Owner",signoff_by:"Sign-off by",signoff_date:"Ngày sign-off"}[k])}</th>`).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length ? rows.map(r=>`<tr data-eb2b-rel="${eEsc(r.id)}"><td class="cell-check"> </td><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id||"—")}</span></td>${visible.map(k=>eb2bReleaseCell(k,r)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-rel-act="edit" title="Sửa"><mi-icon name="pen-line" size="14" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-rel-act="del" title="Xóa">⌫</button></div></td></tr>`).join("") : `<tr><td colspan="${visible.length+3}"><div class="empty-state" style="padding:24px 10px;"><p>Chưa có Release</p><span>Bấm “Thêm Release” để tạo release package đầu tiên.</span></div></td></tr>`}</tbody></table><div class="cr-mobile-list rel-mobile-list">${rows.map(r=>`<div class="cr-card" data-eb2b-rel="${eEsc(r.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id||"—")}</span>${eb2bReleaseBadge(r.status)}</div><div class="cr-card-title">${eEsc(r.release_id||r.release_name||"—")}</div><div class="cr-card-meta"><span>${eEsc(r.release_name||"Chưa có version")}</span><span>${eEsc(r.environment||"Chưa chọn môi trường")}</span><span>${eEsc(r.planned_date||"Chưa có ngày dự kiến")}</span></div><div class="cr-card-actions"><button class="icon-btn" data-eb2b-rel-act="edit"><mi-icon name="pen-line" size="14" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-rel-act="del">⌫</button></div></div>`).join("")}</div></div></div>
+        <div class="crlog-table-outer"><div class="table-wrap crlog-table-wrap" id="eb2bRelTableWrap"><table id="eb2bRelTable" class="density-${EB2B.releaseDensity}"><thead><tr><th class="col-check"> </th>${eb2bSortTh("eb2b-rel-sort","cr_id","CR ID",EB2B.releaseSort)}${visible.map(k=>eb2bSortTh("eb2b-rel-sort",k,eEsc({release_id:"Release ID",release_name:"Tên Release / Version",environment:"Môi trường",planned_date:"Ngày dự kiến",actual_date:"Ngày thực tế",status:"Trạng thái",checklist_golive:"Go-live Checklist",release_owner:"Release Owner",signoff_by:"Sign-off by",signoff_date:"Ngày sign-off"}[k]),EB2B.releaseSort)).join("")}<th class="th-actions">Thao tác</th></tr></thead><tbody>${rows.length ? rows.map(r=>`<tr data-eb2b-rel="${eEsc(r.id)}"><td class="cell-check"> </td><td class="cell-id"><span class="id-chip">${eEsc(r.cr_id||"—")}</span></td>${visible.map(k=>eb2bReleaseCell(k,r)).join("")}<td class="cell-actions"><div class="row-actions"><button class="icon-btn" data-eb2b-rel-act="edit" title="Sửa" aria-label="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-rel-act="del" title="Xóa" aria-label="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></td></tr>`).join("") : `<tr><td colspan="${visible.length+3}"><div class="empty-state" style="padding:24px 10px;"><p>Chưa có Release</p><span>Bấm “Thêm Release” để tạo release package đầu tiên.</span></div></td></tr>`}</tbody></table><div class="cr-mobile-list rel-mobile-list">${rows.map(r=>`<div class="cr-card" data-eb2b-rel="${eEsc(r.id)}"><div class="cr-card-top"><span class="id-chip cell-id">${eEsc(r.cr_id||"—")}</span>${eb2bReleaseBadge(r.status)}</div><div class="cr-card-title">${eEsc(r.release_id||r.release_name||"—")}</div><div class="cr-card-meta"><span>${eEsc(r.release_name||"Chưa có version")}</span><span>${eEsc(r.environment||"Chưa chọn môi trường")}</span><span>${eEsc(eDateVN(r.planned_date)||"Chưa có ngày dự kiến")}</span></div><div class="cr-card-actions"><button class="icon-btn" data-eb2b-rel-act="edit" aria-label="Sửa"><mi-icon name="square-pen" stroke-width="2"></mi-icon></button><button class="icon-btn danger" data-eb2b-rel-act="del" aria-label="Xóa"><mi-icon name="trash" stroke-width="2"></mi-icon></button></div></div>`).join("")}</div></div></div>
         <div class="list-panel-foot"><span>Hiển thị ${rows.length} / ${all.length} Release</span></div>
       </div>
     </div>`;
@@ -23098,6 +23132,7 @@ document.addEventListener("DOMContentLoaded", initOfflineDetection);
     $e("#eb2bRelSearch")?.addEventListener("input", ev=>{EB2B.releaseFilters.search=ev.target.value.trim().toLowerCase();rerender();});
     [["eb2bRelFilterCr","cr"],["eb2bRelFilterStatus","status"],["eb2bRelFilterEnvironment","environment"],["eb2bRelFilterOwner","owner"]].forEach(([id,key])=>$e("#"+id)?.addEventListener("change",ev=>{EB2B.releaseFilters[key]=ev.target.value;rerender();}));
     $e("#eb2bRelClear")?.addEventListener("click",()=>{EB2B.releaseFilters={cr:"",status:"",environment:"",owner:"",search:""};rerender();});
+    $all("[data-eb2b-rel-sort]",c).forEach(th=>th.addEventListener("click",()=>{const key=th.dataset.eb2bRelSort;EB2B.releaseSort={key,dir:EB2B.releaseSort.key===key&&EB2B.releaseSort.dir==="asc"?"desc":"asc"};rerender();}));
     $all("[data-eb2b-rel-col]",c).forEach(cb=>cb.addEventListener("change",()=>{if(!cb.checked && Object.values(EB2B.releaseColumns).filter(Boolean).length<=1){cb.checked=true;return;}EB2B.releaseColumns[cb.dataset.eb2bRelCol]=cb.checked;localStorage.setItem("eb2bReleaseColumns",JSON.stringify(EB2B.releaseColumns));rerender();}));
     $all('input[name="eb2bReleaseDensity"]',c).forEach(r=>r.addEventListener("change",()=>{EB2B.releaseDensity=r.value;localStorage.setItem("eb2bReleaseDensity",r.value);rerender();}));
     $all("[data-eb2b-rel-menu]",c).forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();const menu=$e("#eb2bRel"+({more:"MoreMenu",columns:"Columns",density:"Density"}[btn.dataset.eb2bRelMenu]));if(menu)menu.classList.toggle("show");}));
@@ -24222,5 +24257,36 @@ a.jira-chip:hover{ background:rgba(91,141,239,.24); border-color:#5b8def; }
 })();
 </script>
 
+
+<script>
+/* Accessibility pass: gán aria-label cho nút biểu tượng / checkbox / tiêu đề sort (DMS + e-B2B),
+   và cho phép sắp xếp bằng bàn phím (Enter / Space). */
+(function(){
+  const ACT = {edit:"Sửa", del:"Xóa", delete:"Xóa", view:"Xem chi tiết", word:"Xuất Word", dup:"Nhân bản", download:"Tải xuống"};
+  let queued = false;
+  function label(el, text){ if(text && !el.getAttribute("aria-label")) el.setAttribute("aria-label", text); }
+  function pass(){
+    queued = false;
+    document.querySelectorAll("button.icon-btn, button[data-act], button[data-eb2b-uat-action], button[data-eb2b-rel-act]").forEach(btn=>{
+      if(btn.getAttribute("aria-label") || (btn.textContent||"").trim()) return;
+      const key = btn.dataset.act || btn.dataset.eb2bUatAction || btn.dataset.eb2bRelAct;
+      label(btn, btn.getAttribute("title") || ACT[key] || "");
+    });
+    document.querySelectorAll('input[type="checkbox"]').forEach(box=>{
+      if(box.getAttribute("aria-label") || box.closest("label") || box.id && document.querySelector('label[for="'+box.id+'"]')) return;
+      const isAll = box.classList.contains("select-all-check") || box.hasAttribute("data-eb2b-cr-select-all") || /SelectAll/.test(box.id||"");
+      label(box, isAll ? "Chọn tất cả các dòng" : "Chọn dòng này");
+    });
+  }
+  function schedule(){ if(queued) return; queued = true; requestAnimationFrame(pass); }
+  new MutationObserver(schedule).observe(document.documentElement, {childList:true, subtree:true});
+  document.addEventListener("keydown", ev=>{
+    if(ev.key !== "Enter" && ev.key !== " ") return;
+    const th = ev.target.closest && ev.target.closest("th.sortable-th[data-eb2b-uat-sort], th.sortable-th[data-eb2b-rel-sort], th.sortable-th[data-eb2b-cr-sort]");
+    if(th){ ev.preventDefault(); th.click(); }
+  });
+  schedule();
+})();
+</script>
 </body>
 </html>
