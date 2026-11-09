@@ -5879,6 +5879,22 @@ html{
 .import-modal .badge{ transition:transform .2s; }
 .import-modal tr:hover .badge{ transform:scale(1.05); }
 
+/* Weekly MoM import: modal rộng hơn + bảng preview cuộn ngang thấy rõ thanh cuộn */
+.modal-overlay.full .modal.modal-lg.import-modal.weekly-mom-import-modal > .modal-body{
+  max-width:min(1840px, 100%); padding-inline:clamp(16px,3vw,44px);
+}
+.import-modal .table-wrap.weekly-mom-import-preview{
+  max-width:100%; max-height:min(62vh,680px);
+  overflow-x:scroll; overflow-y:auto; overscroll-behavior-x:contain;
+  scrollbar-width:auto; scrollbar-color:#5f9ea6 #dfecef;
+}
+.import-modal .table-wrap.weekly-mom-import-preview::-webkit-scrollbar{ width:14px; height:14px; }
+.import-modal .table-wrap.weekly-mom-import-preview::-webkit-scrollbar-track{ background:#dfecef; border-radius:8px; }
+.import-modal .table-wrap.weekly-mom-import-preview::-webkit-scrollbar-thumb{ background:#5f9ea6; border:3px solid #dfecef; border-radius:8px; }
+.import-modal .table-wrap.weekly-mom-import-preview::-webkit-scrollbar-thumb:hover{ background:#3f858e; }
+.import-modal .table-wrap.weekly-mom-import-preview table{ width:max-content; min-width:100%; }
+.import-modal .table-wrap.weekly-mom-import-preview table{ min-width:max(100%,1900px); }
+
 /* Foot */
 .modal-overlay.full .modal.modal-lg.import-modal > .modal-foot{ background:rgba(255,255,255,.86); backdrop-filter:blur(14px); border-top:1px solid #dbe8ec; align-items:center; }
 .imp-foot-note{ margin-right:auto; display:flex; align-items:center; gap:8px; font-size:12px; color:#7890a2; }
@@ -17541,6 +17557,7 @@ function openWeeklyMomExcelImportModal(){
   const overlay = $("#importModalOverlay");
   overlay.innerHTML = weeklyMomExcelImportModalTemplate();
   overlay.classList.add("show", "full");
+  overlay.querySelector(".import-modal")?.classList.add("weekly-mom-import-modal");
   overlay.dataset.weeklyMomExcelFileName = "";
   impBindModal(overlay, "weeklyMomImport", f=> handleWeeklyMomExcelFile(overlay, f));
   const clearForceDe = ()=>{ window.__weeklyMomImportForceDe = false; };
