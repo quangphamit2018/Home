@@ -693,64 +693,285 @@ $('btnExport').addEventListener('click', () => {
     dmsHideProgress();
   });
 
-  dms('dms-export').addEventListener('click', () => {
+  /* ============================================================
+     STREAMING XLSX WRITER
+     - Không dùng SheetJS để dựng worksheet (aoa_to_sheet tạo 1 object có
+       hàng chục triệu key "A1","B1",… => "Too many properties to enumerate"
+       / hết RAM khi 273.820 dòng × 233 cột).
+     - Sinh XML theo từng khối ~2MB, nén deflate bằng CompressionStream,
+       ghép thành file .xlsx (zip) -> RAM chỉ tăng theo dung lượng đã nén.
+     - Chỉ ghi các ô có dữ liệu; mọi giá trị chuỗi được ghi dạng inline string
+       (giữ nguyên 100% ký tự, không bị Excel tự đổi "00123" -> 123).
+     ============================================================ */
+  const XLSX_MAX_ROWS  = 1048575;   // số dòng dữ liệu tối đa / sheet (còn 1 dòng header)
+  const XLSX_MAX_COLS  = 16384;
+  const XLSX_MAX_CHARS = 32767;     // giới hạn ký tự / ô của Excel
+  const XLSX_CHUNK     = 1 << 21;   // ~2M ký tự / khối XML
+
+  const _xEnc = new TextEncoder();
+  const _crcTable = (function(){
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function _crc32(u8, crc){
+    for (let i = 0; i < u8.length; i++) crc = _crcTable[(crc ^ u8[i]) & 255] ^ (crc >>> 8);
+    return crc;
+  }
+  function _colLetter(i){
+    let s = '';
+    for (i++; i > 0; i = Math.floor((i - 1) / 26)) s = String.fromCharCode(65 + (i - 1) % 26) + s;
+    return s;
+  }
+
+  const _X_QUICK = /[&<>\r_\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/;
+  const _X_BAD   = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+  const _X_PRES  = /^\s|\s$|[\t\n\r]|\s\s/;
+  function _xText(s){
+    if (!_X_QUICK.test(s)) return s;
+    // chuỗi vốn có dạng _xHHHH_ phải được escape để Excel không giải mã nhầm
+    s = s.replace(/_x([0-9A-Fa-f]{4})_/g, '_x005F_x$1_');
+    s = s.replace(/[&<>\r]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&#13;');
+    return s.replace(_X_BAD, c => '_x' + c.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0') + '_');
+  }
+  function _xT(s){
+    return (_X_PRES.test(s) ? '<t xml:space="preserve">' : '<t>') + _xText(s) + '</t>';
+  }
+
+  function* _oneChunk(str){ yield str; }
+
+  function* _sheetChunks(cols, colKeys, cl, widths, rows, from, to, st){
+    const nc = cols.length;
+    const nRows = to - from;
+    let h = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<dimension ref="A1:' + cl[nc - 1] + (nRows + 1) + '"/>' +
+      '<sheetViews><sheetView workbookViewId="0"><pane xSplit="1" ySplit="1" topLeftCell="B2" activePane="bottomRight" state="frozen"/></sheetView></sheetViews>' +
+      '<sheetFormatPr defaultRowHeight="15"/><cols>';
+    for (let c = 0; c < nc; c++) h += '<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + widths[c] + '" customWidth="1"/>';
+    h += '</cols><sheetData><row r="1">';
+    for (let c = 0; c < nc; c++) h += '<c r="' + cl[c] + '1" s="1" t="inlineStr"><is>' + _xT(String(cols[c])) + '</is></c>';
+    h += '</row>';
+    let buf = [h], len = h.length;
+
+    for (let i = from; i < to; i++) {
+      const r = rows[i];
+      const rn = i - from + 2;
+      let x = '<row r="' + rn + '">';
+      for (let c = 0; c < nc; c++) {
+        const v = r[colKeys[c]];
+        if (v === undefined || v === null || v === '') continue;
+        const t = typeof v;
+        if (t === 'number' && isFinite(v)) {
+          x += '<c r="' + cl[c] + rn + '"><v>' + v + '</v></c>';
+        } else if (t === 'boolean') {
+          x += '<c r="' + cl[c] + rn + '" t="b"><v>' + (v ? 1 : 0) + '</v></c>';
+        } else {
+          let s = String(v);
+          if (s.length > XLSX_MAX_CHARS) { s = s.slice(0, XLSX_MAX_CHARS); st.truncated++; }
+          x += '<c r="' + cl[c] + rn + '" t="inlineStr"><is>' + _xT(s) + '</is></c>';
+        }
+      }
+      x += '</row>';
+      buf.push(x); len += x.length;
+      if (len >= XLSX_CHUNK) { st.row = i + 1; yield buf.join(''); buf = []; len = 0; }
+    }
+    buf.push('</sheetData></worksheet>');
+    st.row = to;
+    yield buf.join('');
+  }
+
+  async function _zipBuild(entries, onTick){
+    const hasCS = typeof CompressionStream !== 'undefined';
+    const parts = [], central = [];
+    let offset = 0;
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+
+    for (const e of entries) {
+      const out = [];
+      let csize = 0, usize = 0, crc = 0xFFFFFFFF, writer = null, readP = null;
+      if (hasCS) {
+        const cs = new CompressionStream('deflate-raw');
+        writer = cs.writable.getWriter();
+        const reader = cs.readable.getReader();
+        readP = (async () => {
+          for (;;) {
+            const r = await reader.read();
+            if (r.done) break;
+            out.push(r.value); csize += r.value.length;
+          }
+        })();
+      }
+      for (const chunk of e.gen) {
+        const u8 = _xEnc.encode(chunk);
+        crc = _crc32(u8, crc); usize += u8.length;
+        if (writer) await writer.write(u8); else { out.push(u8); csize += u8.length; }
+        if (onTick) await onTick();
+      }
+      if (writer) { await writer.close(); await readP; }
+      crc = (crc ^ 0xFFFFFFFF) >>> 0;
+      if (usize > 0xFFFFFFFF || csize > 0xFFFFFFFF) throw new Error('Sheet quá lớn (>4GB) để đóng gói .xlsx');
+      const method = hasCS ? 8 : 0;
+      const nameU8 = _xEnc.encode(e.name);
+      const lh = new Uint8Array(30 + nameU8.length), dv = new DataView(lh.buffer);
+      dv.setUint32(0, 0x04034b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 0x0800, true);
+      dv.setUint16(8, method, true); dv.setUint16(10, dosTime, true); dv.setUint16(12, dosDate, true);
+      dv.setUint32(14, crc, true); dv.setUint32(18, csize, true); dv.setUint32(22, usize, true);
+      dv.setUint16(26, nameU8.length, true); dv.setUint16(28, 0, true);
+      lh.set(nameU8, 30);
+      central.push({ nameU8, crc, csize, usize, method, off: offset, dosTime, dosDate });
+      parts.push(lh);
+      for (let i = 0; i < out.length; i++) parts.push(out[i]);
+      offset += lh.length + csize;
+    }
+    let cdSize = 0;
+    for (const c of central) {
+      const cd = new Uint8Array(46 + c.nameU8.length), dv = new DataView(cd.buffer);
+      dv.setUint32(0, 0x02014b50, true); dv.setUint16(4, 20, true); dv.setUint16(6, 20, true);
+      dv.setUint16(8, 0x0800, true); dv.setUint16(10, c.method, true);
+      dv.setUint16(12, c.dosTime, true); dv.setUint16(14, c.dosDate, true);
+      dv.setUint32(16, c.crc, true); dv.setUint32(20, c.csize, true); dv.setUint32(24, c.usize, true);
+      dv.setUint16(28, c.nameU8.length, true);
+      dv.setUint32(42, c.off, true);
+      cd.set(c.nameU8, 46);
+      parts.push(cd); cdSize += cd.length;
+    }
+    const eocd = new Uint8Array(22), ev = new DataView(eocd.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, central.length, true); ev.setUint16(10, central.length, true);
+    ev.setUint32(12, cdSize, true); ev.setUint32(16, offset, true);
+    parts.push(eocd);
+    return { blob: new Blob(parts, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), compressed: hasCS };
+  }
+
+  /* columns: mảng tên cột hiển thị; rows: mảng object; trả về { blob, sheets, truncated, compressed } */
+  async function dmsBuildXlsxBlob(columns, rows, sheetBase, onProgress){
+    const nc = columns.length;
+    if (nc === 0) throw new Error('Không có cột dữ liệu');
+    if (nc > XLSX_MAX_COLS) throw new Error('Số cột (' + nc + ') vượt giới hạn ' + XLSX_MAX_COLS + ' của Excel');
+    const colKeys = columns.map(c => c === 'SourceFile' ? '__SourceFile' : c);
+    const cl = columns.map((_, i) => _colLetter(i));
+
+    // độ rộng cột: chỉ duyệt các ô có dữ liệu của từng dòng (không quét toàn bộ lưới)
+    const keyIndex = new Map();
+    colKeys.forEach((k, i) => { if (!keyIndex.has(k)) keyIndex.set(k, i); });
+    const wmax = columns.map(c => String(c).length);
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      for (const k in r) {
+        const ci = keyIndex.get(k);
+        if (ci === undefined) continue;
+        const v = r[k];
+        if (v === undefined || v === null || v === '') continue;
+        const l = typeof v === 'string' ? v.length : String(v).length;
+        if (l > wmax[ci]) wmax[ci] = l;
+      }
+    }
+    const widths = wmax.map(m => Math.min(Math.max(m + 2, 10), 55));
+
+    const nSheets = Math.max(1, Math.ceil(rows.length / XLSX_MAX_ROWS));
+    const names = [];
+    for (let s = 0; s < nSheets; s++) names.push(s === 0 ? sheetBase : sheetBase + '_' + (s + 1));
+
+    const NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const RNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const PRNS = 'http://schemas.openxmlformats.org/package/2006/relationships';
+    const HDR = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+
+    let ct = HDR + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>';
+    for (let s = 0; s < nSheets; s++) ct += '<Override PartName="/xl/worksheets/sheet' + (s + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+    ct += '</Types>';
+
+    const rootRels = HDR + '<Relationships xmlns="' + PRNS + '"><Relationship Id="rId1" Type="' + RNS + '/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+
+    let wb = HDR + '<workbook xmlns="' + NS + '" xmlns:r="' + RNS + '"><sheets>';
+    let wbRels = HDR + '<Relationships xmlns="' + PRNS + '">';
+    for (let s = 0; s < nSheets; s++) {
+      wb += '<sheet name="' + _xText(names[s]) + '" sheetId="' + (s + 1) + '" r:id="rId' + (s + 1) + '"/>';
+      wbRels += '<Relationship Id="rId' + (s + 1) + '" Type="' + RNS + '/worksheet" Target="worksheets/sheet' + (s + 1) + '.xml"/>';
+    }
+    wb += '</sheets></workbook>';
+    wbRels += '<Relationship Id="rId' + (nSheets + 1) + '" Type="' + RNS + '/styles" Target="styles.xml"/></Relationships>';
+
+    const styles = HDR + '<styleSheet xmlns="' + NS + '">' +
+      '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>' +
+      '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+      '<fill><patternFill patternType="solid"><fgColor rgb="FF7C3AED"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+      '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf></cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+
+    const st = { row: 0, truncated: 0 };
+    const entries = [
+      { name: '[Content_Types].xml', gen: _oneChunk(ct) },
+      { name: '_rels/.rels', gen: _oneChunk(rootRels) },
+      { name: 'xl/workbook.xml', gen: _oneChunk(wb) },
+      { name: 'xl/_rels/workbook.xml.rels', gen: _oneChunk(wbRels) },
+      { name: 'xl/styles.xml', gen: _oneChunk(styles) }
+    ];
+    for (let s = 0; s < nSheets; s++) {
+      const from = s * XLSX_MAX_ROWS, to = Math.min(rows.length, from + XLSX_MAX_ROWS);
+      const sst = { row: 0, truncated: 0, base: from };
+      entries.push({ name: 'xl/worksheets/sheet' + (s + 1) + '.xml', gen: (function*(){
+        yield* _sheetChunks(columns, colKeys, cl, widths, rows, from, to, sst);
+        st.truncated += sst.truncated; sst.truncated = 0;
+      })(), sst });
+    }
+    const total = rows.length;
+    let lastTick = 0;
+    const res = await _zipBuild(entries, async () => {
+      const now = performance.now();
+      if (now - lastTick < 120) return;
+      lastTick = now;
+      let done = 0;
+      for (const e of entries) if (e.sst) done += Math.max(0, e.sst.row - e.sst.base);
+      if (onProgress) onProgress(Math.min(done / total, 1));
+      await new Promise(r => setTimeout(r, 0));
+    });
+    return { blob: res.blob, sheets: nSheets, truncated: st.truncated, compressed: res.compressed };
+  }
+
+  dms('dms-export').addEventListener('click', async () => {
     if (!dmsRows.length) return;
     const btn = dms('dms-export');
     btn.disabled = true;
     btn.innerHTML = '<span class="spin"></span> Đang tạo Excel…';
-    dmsSetProgress(30, 'Đang tạo file Excel…');
-    setTimeout(() => {
-      try {
-        const aoa = [dmsColumns];
-        for (const r of dmsRows) {
-          const row = dmsColumns.map(c => {
-            const key = c === 'SourceFile' ? '__SourceFile' : c;
-            const v = r[key];
-            return v === undefined || v === null ? '' : v;
-          });
-          aoa.push(row);
-        }
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
-        ws['!cols'] = dmsColumns.map(c => {
-          let max = c.length;
-          for (const r of dmsRows) {
-            const key = c === 'SourceFile' ? '__SourceFile' : c;
-            const len = String(r[key] == null ? '' : r[key]).length;
-            if (len > max) max = len;
-          }
-          return { wch: Math.min(Math.max(max + 2, 10), 55) };
-        });
-        for (let c = 0; c < dmsColumns.length; c++) {
-          const ref = XLSX.utils.encode_cell({ r: 0, c });
-          if (ws[ref]) ws[ref].s = {
-            font: { bold: true, color: { rgb: 'FFFFFFFF' } },
-            fill: { fgColor: { rgb: 'FF7C3AED' } },
-            alignment: { horizontal: 'center', vertical: 'center' }
-          };
-        }
-        for (let r = 1; r <= dmsRows.length; r++) {
-          for (let c = 0; c < dmsColumns.length; c++) {
-            const ref = XLSX.utils.encode_cell({ r, c });
-            if (!ws[ref]) continue;
-            ws[ref].s = { alignment: { vertical: 'top' } };
-          }
-        }
-        ws['!freeze'] = { xSplit: 1, ySplit: 1 };
-        dmsSetProgress(75, 'Đang ghi file…');
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'DMSPayload');
-        const outName = 'DMSPayload_' + dmsSourceName + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
-        XLSX.writeFile(wb, outName, { cellStyles: true });
-        dmsSetProgress(100, 'Hoàn tất');
-        setTimeout(dmsHideProgress, 400);
-        dmsShowMsg('ok', '✅ Đã export file <b>' + outName + '</b> (' + dmsRows.length + ' dòng, ' + dmsColumns.length + ' cột).');
-      } catch(e) {
-        dmsHideProgress();
-        dmsShowMsg('err', '❌ Lỗi khi tạo Excel: ' + e.message);
-      }
-      btn.disabled = false;
-      btn.innerHTML = '⬇️&nbsp; Export Excel';
-    }, 30);
+    dmsSetProgress(3, 'Đang tính độ rộng cột…');
+    await new Promise(r => setTimeout(r, 30));
+    try {
+      const res = await dmsBuildXlsxBlob(dmsColumns, dmsRows, 'DMSPayload', frac => {
+        dmsSetProgress(5 + Math.round(frac * 90), 'Đang ghi Excel… ' + Math.round(frac * 100) + '% (' + Math.round(frac * dmsRows.length).toLocaleString('en-US') + '/' + dmsRows.length.toLocaleString('en-US') + ' dòng)');
+      });
+      const outName = 'DMSPayload_' + dmsSourceName + '_' + new Date().toISOString().slice(0,10) + '.xlsx';
+      const url = URL.createObjectURL(res.blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = outName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
+      dmsSetProgress(100, 'Hoàn tất');
+      setTimeout(dmsHideProgress, 400);
+      let msg = '✅ Đã export file <b>' + outName + '</b> (' + dmsRows.length.toLocaleString('en-US') + ' dòng, ' + dmsColumns.length + ' cột, ' + (res.blob.size/1048576).toFixed(1) + ' MB' + (res.sheets > 1 ? ', ' + res.sheets + ' sheet' : '') + ').';
+      if (res.truncated) msg += '<br>⚠️ ' + res.truncated + ' ô dài hơn ' + XLSX_MAX_CHARS.toLocaleString('en-US') + ' ký tự (giới hạn của Excel) đã bị cắt bớt phần đuôi.';
+      if (!res.compressed) msg += '<br>ℹ️ Trình duyệt không hỗ trợ nén nên file lớn hơn bình thường — nên dùng Chrome/Edge bản mới.';
+      dmsShowMsg('ok', msg);
+    } catch(e) {
+      dmsHideProgress();
+      dmsShowMsg('err', '❌ Lỗi khi tạo Excel: ' + e.message);
+    }
+    btn.disabled = false;
+    btn.innerHTML = '⬇️&nbsp; Export Excel';
   });
 })();
 </script>
