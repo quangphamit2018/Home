@@ -6013,11 +6013,11 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     const difRound = (x, p = 2) => { const k = Math.pow(10, p); return Math.round((x + Number.EPSILON) * k) / k; };
     
     /* ---- Khai báo cột bắt buộc ---- */
-    const DIF_SO_COLS = { orderNo: ["orderno", "ordernumber"], orderDate: ["orderdate"], status: ["orderstatus", "status"], distCode: ["distributorcode"], distName: ["distributorname"], product: ["productcode", "itemcode"], pname: ["productname"], foc: ["isfreegood", "isfoc"] };
+    const DIF_SO_COLS = { orderNo: ["orderno", "ordernumber"], orderDate: ["orderdate"], status: ["orderstatus", "status"], distCode: ["distributorcode"], distName: ["distributorname"], product: ["productcode", "itemcode"], pname: ["productname"], foc: ["isfreegood", "isfoc"], region: ["region"] };
     const DIF_SR_COLS = { orderNo: ["orderreference", "orderno"], settle: ["settlementdate", "settlementdatetime"], product: ["productcode", "itemcode"], pname: ["productname"], foc: ["isfreegood", "isfoc"] };
-    const DIF_SYS_COLS = { name: ["distributorname"], code: ["distributorcode"], difN: ["difotorders", "otiforders"], date: ["orderdate"], total: ["totalorders"], onT: ["ontimeorders"], inF: ["infullorders"], pOn: ["ontimepercentage"], pIn: ["infullpercentage"], pDif: ["otifdifotpercentage", "difotpercentage", "otifpercentage"] };
+    const DIF_SYS_COLS = { name: ["distributorname"], code: ["distributorcode"], difN: ["difotorders", "otiforders"], date: ["orderdate"], total: ["totalorders"], onT: ["ontimeorders"], inF: ["infullorders"], pOn: ["ontimepercentage"], pIn: ["infullpercentage"], pDif: ["otifdifotpercentage", "difotpercentage", "otifpercentage"], zone: ["zone"], bu: ["businessunit"], sm: ["salesmanager"], asm: ["areasalesmanager"] };
     const DIF_LABEL = { orderNo: "Order No / Order Reference", orderDate: "Order Date", status: "Order Status", distCode: "Distributor Code", distName: "Distributor Name", product: "Product Code", pname: "Product Name", foc: "Is Free Good?", settle: "Settlement Date", qty: "Quantity (EA)", name: "Distributor Name", date: "OrderDate", total: "Total Orders", onT: "ON Time Orders", inF: "IN Full Orders", pOn: "ON-TIME Percentage", pIn: "IN-FULL Percentage", pDif: "OTIF/DIFOT Percentage" };
-    const DIF_OPTIONAL = new Set(["status", "distCode", "distName", "pname", "code", "difN"]);
+    const DIF_OPTIONAL = new Set(["status", "distCode", "distName", "pname", "code", "difN", "region", "zone", "bu", "sm", "asm"]);
     function difMap(t, spec) { const m = {}, miss = []; for (const k in spec) { m[k] = difCol(t, spec[k]); if (m[k] < 0 && !DIF_OPTIONAL.has(k)) miss.push(DIF_LABEL[k]); } return { m, miss }; }
     
     /* ---- Tính DIFOT ----
@@ -6043,7 +6043,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           const st = a.status >= 0 ? difStr(r[a.status]) : "";
           // chỉ lấy đơn có trạng thái thuộc danh sách (vd: Closed, Voided) — đơn Posted… bỏ qua hoàn toàn
           if (incSet.size && a.status >= 0 && !incSet.has(difNorm(st))) { skip.add(no); const k = st || "(trống)"; warn.skipped[k] = (warn.skipped[k] || 0) + 1; continue; }
-          o = { orderNo: no, distCode: a.distCode >= 0 ? difStr(r[a.distCode]) : "", distName: a.distName >= 0 ? difStr(r[a.distName]) : "", orderDay: difDay(r[a.orderDate]), status: st, isVoid: !!st && voidSet.has(difNorm(st)), lines: new Map(), settleDay: null, inSR: false, focSo: [], focSr: [] };
+          o = { orderNo: no, distCode: a.distCode >= 0 ? difStr(r[a.distCode]) : "", distName: a.distName >= 0 ? difStr(r[a.distName]) : "", orderDay: difDay(r[a.orderDate]), status: st, isVoid: !!st && voidSet.has(difNorm(st)), lines: new Map(), settleDay: null, inSR: false, focSo: [], focSr: [], region: a.region >= 0 ? difStr(r[a.region]) : "" };
           if (o.orderDay == null) warn.badDate++;
           orders.set(no, o);
         }
@@ -6101,7 +6101,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       for (const o of list) {
         if (o.excluded) continue;
         const k = o.distCode + "|" + o.orderDay;
-        let x = g.get(k); if (!x) { x = { distCode: o.distCode, distName: o.distName, day: o.orderDay, total: 0, onT: 0, inF: 0, dif: 0 }; g.set(k, x); }
+        let x = g.get(k); if (!x) { x = { distCode: o.distCode, distName: o.distName, region: o.region, day: o.orderDay, total: 0, onT: 0, inF: 0, dif: 0 }; g.set(k, x); }
         x.total++; if (o.onTime) x.onT++; if (o.inFull) x.inF++; if (o.difot) x.dif++;
       }
       const pct = (n, t) => (t ? n / t * 100 : 0);
@@ -6119,7 +6119,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       for (const r of t.rows) {
         const name = difStr(r[m.name]), day = difDay(r[m.date]); if (!name && day == null) continue;
         const total = difNum(r[m.total]), pOn = difNum(r[m.pOn]), pIn = difNum(r[m.pIn]), pDif = difNum(r[m.pDif]);
-        rows.push({ name, code: m.code >= 0 ? difStr(r[m.code]) : "", day, total, onT: difNum(r[m.onT]), inF: difNum(r[m.inF]), dif: m.difN >= 0 ? difNum(r[m.difN]) : difRound(pDif * total / 100, 4), pOn, pIn, pDif });
+        rows.push({ name, code: m.code >= 0 ? difStr(r[m.code]) : "", day, total, zone: m.zone >= 0 ? difStr(r[m.zone]) : "", bu: m.bu >= 0 ? difStr(r[m.bu]) : "", sm: m.sm >= 0 ? difStr(r[m.sm]) : "", asm: m.asm >= 0 ? difStr(r[m.asm]) : "", onT: difNum(r[m.onT]), inF: difNum(r[m.inF]), dif: m.difN >= 0 ? difNum(r[m.difN]) : difRound(pDif * total / 100, 4), pOn, pIn, pDif });
       }
       return { rows, err: "" };
     }
@@ -6403,8 +6403,12 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     
     function difSheets() {
       const D = mdmDif, R = D.res, cfg = D.cfg, S = [];
-      S.push({ name: "DIFOT Details", head: ["Distributor Name", "OrderDate", "Total Orders", "ON Time Orders", "IN Full Orders", "ON-TIME Percentage", "IN-FULL Percentage", "OTIF/DIFOT Percentage", "DIFOT Orders", "Distributor Code"], pct: [6, 7, 8],
-        rows: R.rows.map(r => [r.distName, difFmt(r.day, false), r.total, r.onT, r.inF, difRound(r.pOn), difRound(r.pIn), difRound(r.pDif), r.dif, r.distCode]) });
+      // Cột ZONE / Business Unit / Sales Manager / Area Sales Manager: lấy từ file DIFOT Details của hệ thống (nếu đã tải, ghép theo mã NPP hoặc tên × ngày đặt);
+      // Business Unit nếu không có thì lấy cột Region của Sales Order. Không có nguồn thì để trống — tool không tự suy ra.
+      const sysBy = new Map(); (D.sys ? D.sys.rows : []).forEach(x => { [difStr(x.code) + "|" + x.day, difNameKey(x.name) + "|" + x.day].forEach(k => { if (!sysBy.has(k)) sysBy.set(k, x); }); });
+      const dmy = day => day == null ? "" : difFmt(day, true).replace(/\//g, "-");
+      S.push({ name: "DIFOT Details", head: ["ZONE", "Business Unit", "Sales Manager", "Area Sales Manager", "Distributor Code", "Distributor Name", "Order Date", "Total Orders", "ON Time Orders", "IN Full Orders", "DIFOT Orders", "ON-TIME Percentage", "IN-FULL Percentage", "DIFOT Percentage"], pct: [12, 13, 14],
+        rows: R.rows.map(r => { const y = sysBy.get(difStr(r.distCode) + "|" + r.day) || sysBy.get(difNameKey(r.distName) + "|" + r.day) || {}; return [y.zone || "", y.bu || r.region || "", y.sm || "", y.asm || "", r.distCode, r.distName, dmy(r.day), r.total, r.onT, r.inF, r.dif, difRound(r.pOn), difRound(r.pIn), difRound(r.pDif)]; }) });
       S.push({ name: "Chi tiết đơn", head: ["Order No", "Distributor Code", "Distributor Name", "Order Date", "Order Status", "Settled Date", "Ngày làm việc", "On-time", "In-full", "DIFOT", "Ghi chú"], cap: { 10: 70 },
         rows: R.orders.map(o => { const x = o.excluded; return [o.orderNo, o.distCode, o.distName, difFmt(o.orderDay, true), o.status, difFmt(o.settleDay, true), o.workDays == null ? "" : o.workDays, x ? "—" : o.onTime ? "Đạt" : "Không", x ? "—" : o.inFull ? "Đạt" : "Không", x ? "—" : o.difot ? "Đạt" : "Không", x ? "Void — loại khỏi Total Orders" : o.difot ? "" : [o.reason, ...o.issues.map(i => `${i.pc}: ${difLow(i.type)} (đặt ${i.ord} · giao ${i.del})`)].join(" | ")]; }), tone: r => r[9] === "Không" ? "bad" : null });
       S.push({ name: "Dòng lệch In-full", head: ["Order No", "Distributor Name", "Order Date", "Product Code", "Product Name", `Đặt (${R.basis})`, `Giao (${R.basis})`, "Chênh lệch", "Loại lỗi"],
