@@ -6155,7 +6155,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return { rows: out, cnt };
     }
     /* DIF-ENGINE-END */
-    const mdmDif = { so: null, sr: null, sys: null, busy: "", cfg: { maxDays: "2", noSunday: true, voidMode: "count", voidStatuses: "Void, Voided", incStatuses: "", tol: "0.01", hol: "" }, view: "sum", flt: "bad", q: "", lim: 200, res: null, cmp: null, holBad: [], maxOk: true };
+    const mdmDif = { so: null, sr: null, sys: null, busy: "", cfg: { maxDays: "2", noSunday: true, voidMode: "count", voidStatuses: "Void, Voided", incStatuses: "", tol: "0.01", hol: "" }, view: "sum", flt: "bad", q: "", lim: 200, res: null, cmp: null, holBad: [], maxOk: true, hs: { st: "idle", saved: "", dates: [], at: "", has: false, busy: false, err: "" }, logic: false };
     const difLow = t => t.charAt(0).toLowerCase() + t.slice(1); // "Giao thiếu" → "giao thiếu" (giữ nguyên chữ SKU)
     const difPctTxt = x => difRound(x).toLocaleString("vi-VN", { maximumFractionDigits: 2 }) + "%";
     function difCfg() {
@@ -6221,6 +6221,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     function difCfgMeta() {
       const D = mdmDif, f = $("#dif-cfg [data-k='maxDays']"); if (f) f.classList.toggle("bad", !D.maxOk);
       const h = $("#dif-holbad"); if (h) h.innerHTML = D.holBad.length ? `⚠ Không đọc được ngày: <b>${D.holBad.map(escapeHtml).join(", ")}</b> — nhập dạng dd/mm/yyyy.` : "";
+      difHolMeta(); if (D.logic) difLogicDraw();
     }
     
     function difOutHtml() {
@@ -6298,6 +6299,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return false;
     }
     function difClick(e) {
+      const ac = e.target.closest("[data-dif-act]");
+      if (ac) { const k = ac.dataset.difAct; if (k === "holsave") difHolSave(); else if (k === "holreload") difHolLoad(true); else if (k === "logic") { mdmDif.logic = !mdmDif.logic; difLogicDraw(); } return true; }
       const c = e.target.closest("[data-dif-clear]"); if (c) { mdmDif[c.dataset.difClear] = null; difRun(); difDraw(); return true; }
       const v = e.target.closest("[data-dif-view]"); if (v) { mdmDif.view = v.dataset.difView; mdmDif.lim = 200; difDrawOut(); return true; }
       if (e.target.closest("#dif-more")) { mdmDif.lim += 200; difDrawView(); return true; }
@@ -6309,6 +6312,86 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       pg.addEventListener("dragover", e => { const z = zone(e); if (z) { e.preventDefault(); z.classList.add("drag"); } });
       pg.addEventListener("dragleave", e => { const z = zone(e); if (z && !z.contains(e.relatedTarget)) z.classList.remove("drag"); });
       pg.addEventListener("drop", e => { const z = zone(e); if (!z) return; e.preventDefault(); z.classList.remove("drag"); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) difLoad(z.dataset.difZone, f); });
+    }
+    
+    /* ---- Ngày nghỉ lễ: lưu / đọc lại từ Supabase — bảng riêng "difot_holidays" (mỗi ngày lễ 1 dòng) ---- */
+    const DIF_HOL_TABLE = "difot_holidays";   // cột: holiday_date (date, khoá chính), note, created_at/by, updated_at/by
+    const difHolItems = t => { // "02/09/2026, 20/11/2026 Ngày nhà giáo" → [{day, iso, note}] (trùng ngày: lấy dòng sau)
+      const m = new Map();
+      String(t || "").split(/[\n,;]+/).map(s => s.trim()).filter(Boolean).forEach(s => { const x = /^(\S+)\s*(.*)$/.exec(s), d = x ? difDay(x[1]) : null; if (d != null) m.set(d, { day: d, iso: new Date(d * DIF_DAY).toISOString().slice(0, 10), note: x[2].trim() }); });
+      return [...m.values()].sort((a, b) => a.day - b.day);
+    };
+    const difHolCanon = t => difHolItems(t).map(x => x.iso + "|" + x.note).join("\n");
+    const difHolText = items => items.map(x => difFmt(x.day, true) + (x.note ? " " + x.note : "")).join("\n");
+    const difHolDirty = () => difHolCanon(mdmDif.cfg.hol) !== difHolCanon(mdmDif.hs.saved);
+    async function difHolLoad(force) {
+      const D = mdmDif, H = D.hs; if (!force && H.st !== "idle") return;
+      if (!state.supabase) { H.st = "off"; difHolMeta(); return; }
+      H.st = "loading"; difHolMeta();
+      try {
+        const r = await state.supabase.from(DIF_HOL_TABLE).select("holiday_date,note,updated_at").order("holiday_date");
+        if (r.error) throw r.error;
+        const rows = r.data || [], items = rows.map(x => ({ day: difDay(x.holiday_date), iso: String(x.holiday_date).slice(0, 10), note: x.note || "" })).filter(x => x.day != null);
+        H.saved = difHolText(items); H.dates = items.map(x => x.iso); H.at = rows.reduce((a, x) => (x.updated_at && x.updated_at > a ? x.updated_at : a), ""); H.has = items.length > 0; H.st = "ok"; H.err = "";
+        if (force || !D.cfg.hol.trim()) { D.cfg.hol = H.saved; const ta = $("#dif-cfg textarea[data-dif='hol']"); if (ta) ta.value = H.saved; difRun(); difDrawOut(); }
+      } catch (err) { H.st = "err"; H.err = err.message || String(err); }
+      difHolMeta(); difCfgMeta();
+    }
+    async function difHolSave() {
+      const D = mdmDif, H = D.hs; if (H.busy) return;
+      if (!canEdit()) return toast("Chỉ Super-admin / Senior-member mới được lưu ngày nghỉ lễ.", "error");
+      if (!state.supabase) return toast("Chưa kết nối Supabase.", "error");
+      if (D.holBad.length) return toast(`Có ngày không đọc được: ${D.holBad.join(", ")} — hãy sửa (dd/mm/yyyy) rồi lưu lại.`, "error");
+      const items = difHolItems(D.cfg.hol), at = new Date().toISOString(), uid = state.session?.user?.id, keep = new Set(items.map(x => x.iso));
+      const gone = (H.dates || []).filter(d => !keep.has(d));
+      H.busy = true; difHolMeta();
+      try {
+        if (items.length) { const { error } = await state.supabase.from(DIF_HOL_TABLE).upsert(items.map(x => ({ holiday_date: x.iso, note: x.note.replace(/[,;]/g, " "), updated_at: at, updated_by: uid })), { onConflict: "holiday_date" }).select("holiday_date"); if (error) throw error; }
+        if (gone.length) { const { data, error } = await state.supabase.from(DIF_HOL_TABLE).delete().in("holiday_date", gone).select("holiday_date"); if (error) throw error; if ((data || []).length < gone.length) throw new Error("Không xoá được một số ngày (kiểm tra quyền xoá / RLS)."); }
+      } catch (err) { H.busy = false; toast(`Không lưu được: ${err.message}. Hãy kiểm tra bảng ${DIF_HOL_TABLE} và chính sách RLS.`, "error"); difHolMeta(); return; }
+      H.busy = false; H.saved = difHolText(items); H.dates = items.map(x => x.iso); H.at = at; H.has = items.length > 0; H.st = "ok"; H.err = "";
+      toast(items.length ? `Đã lưu ${items.length} ngày nghỉ lễ lên hệ thống.` : "Đã lưu: danh sách ngày nghỉ lễ đang để trống.", "success");
+      difHolMeta();
+    }
+    function difHolMetaHtml() {
+      const D = mdmDif, H = D.hs, n = difHolItems(H.saved).length;
+      if (H.st === "loading") return "Đang tải danh sách đã lưu trên hệ thống…";
+      if (H.st === "off") return "Chưa kết nối Supabase — chỉ dùng được tạm thời trên trình duyệt này.";
+      if (H.st === "err") return `<span class="dif-w">⚠ Không đọc được bảng ${DIF_HOL_TABLE}: ${escapeHtml(H.err)}</span>`;
+      const dirty = difHolDirty(), when = H.at ? new Date(H.at).toLocaleString("vi-VN") : "";
+      const base = H.has ? `✔ Đã lưu trên hệ thống: <b>${n} ngày</b>${when ? " · cập nhật " + escapeHtml(when) : ""}` : "Chưa có ngày lễ nào được lưu trên hệ thống.";
+      return base + (dirty ? ' · <span class="dif-w">● có thay đổi chưa lưu</span>' : "");
+    }
+    function difHolMeta() {
+      const D = mdmDif, H = D.hs, m = $("#dif-holmeta"); if (m) m.innerHTML = difHolMetaHtml();
+      const b = $("#dif-holsave"); if (b) { b.disabled = H.busy || !difHolDirty(); b.textContent = H.busy ? "Đang lưu…" : "Lưu lên hệ thống"; }
+      const r = $("#dif-holreload"); if (r) r.disabled = H.busy || H.st === "off";
+    }
+    
+    /* ---- Xem lại logic tính DIFOT (nội dung bám theo cấu hình đang chọn) ---- */
+    function difLogicHtml() {
+      const D = mdmDif, c = D.cfg, md = D.maxOk ? c.maxDays.trim() : "2", nh = difHolidays(c.hol).set.size;
+      const vm = { count: "Có trong Total · On-time đạt · KHÔNG tính vào In-full và DIFOT", pass: "Có trong Total · coi là đạt cả On-time, In-full, DIFOT", exclude: "Loại hẳn khỏi Total Orders" }[c.voidMode];
+      const card = (n, t, body) => `<div class="dif-lg-card"><h4><span>${n}</span>${t}</h4>${body}</div>`;
+      const chips = [`Hạn giao: <b>≤ ${escapeHtml(md)} ngày làm việc</b>`, `Chủ nhật: <b>${c.noSunday ? "không tính" : "có tính"}</b>`, `Ngày nghỉ lễ: <b>${nh} ngày</b>`, `Đơn Void (${escapeHtml(c.voidStatuses.trim() || "—")}): <b>${escapeHtml(vm)}</b>`, `Trạng thái SO được lấy: <b>${escapeHtml(c.incStatuses.trim() || "tất cả")}</b>`];
+      return `<div class="dif-lg"><div class="dif-lg-top"><div><b>Logic tính DIFOT của tool này</b><span>Theo slide 3.2 CÔNG THỨC. Các con số in đậm bên dưới là cấu hình đang áp dụng ở trang này.</span></div></div>
+      <div class="dif-lg-chips">${chips.map(x => `<span>${x}</span>`).join("")}</div>
+      <div class="dif-lg-grid">
+      ${card("1", "Dữ liệu và cách ghép", `<ul><li><b>Sales Order (SO)</b> là danh sách đơn cần giao. <b>Sales Register (SR)</b> là thực tế đã giao / settle.</li><li>Ghép theo <b>SO.Order No = SR.Order Reference</b>.</li><li>Kết quả gom theo <b>NPP (Distributor Code) × ngày đặt hàng (Order Date)</b>.</li><li>Đơn nào nằm trong tính toán là do <b>SO</b> quyết định. Đơn chỉ có trong SR mà không có trong SO bị bỏ qua.</li><li>Đơn có trong SO nhưng <b>không có trong SR</b> = chưa giao / chưa settle → <b>không đạt On-time và In-full</b>.</li></ul>`)}
+      ${card("2", "Total Orders", `<ul><li>Số đơn <b>khác nhau</b> trong SO (mỗi Order No tính 1 lần, dù đơn có nhiều dòng).</li><li>Tính <b>mọi trạng thái</b>: Posted, Closed, Void… Chỉ bỏ đơn khi anh/chị điền ô "Trạng thái Sales Order được lấy" hoặc chọn "Loại khỏi Total Orders" cho đơn Void.</li></ul>`)}
+      ${card("3", "On-time (giao đúng hạn)", `<ul><li><b>Ngày settle</b> của đơn = ngày settle <b>muộn nhất</b> trong các dòng SR của đơn đó.</li><li><b>Số ngày làm việc</b> = số ngày trong khoảng <b>(ngày đặt, ngày settle]</b>: không tính ngày đặt, có tính ngày settle; bỏ <b>Chủ nhật</b> (nếu bật) và <b>ngày nghỉ lễ</b> đã nhập. Settle cùng ngày hoặc trước ngày đặt = 0.</li><li><b>On-time nếu số ngày làm việc ≤ ${escapeHtml(md)}</b>. Với hạn 2 ngày thì tương đương công thức slide: Settled − Ordered &lt; 3 ngày.</li><li>Không On-time nếu đơn không có trong SR hoặc thiếu ngày đặt / ngày settle.</li><li><b>Thứ Bảy được tính là ngày làm việc.</b> Tool <b>không có sẵn</b> danh sách ngày lễ — phải nhập vào ô "Ngày nghỉ lễ".</li></ul>
+        <table class="dif-lg-tbl"><caption>Ví dụ (hạn 2 ngày, không tính Chủ nhật, không có ngày lễ). Đặt hàng Thứ Sáu:</caption><tr><th>Settle vào</th><th>Các ngày được đếm</th><th>Số ngày</th><th>Kết quả</th></tr><tr><td>Thứ Sáu (cùng ngày)</td><td>—</td><td>0</td><td class="ok">Đạt</td></tr><tr><td>Thứ Bảy</td><td>Thứ Bảy</td><td>1</td><td class="ok">Đạt</td></tr><tr><td>Thứ Hai</td><td>Thứ Bảy, Thứ Hai (bỏ Chủ nhật)</td><td>2</td><td class="ok">Đạt</td></tr><tr><td>Thứ Ba</td><td>Thứ Bảy, Thứ Hai, Thứ Ba</td><td>3</td><td class="no">Không đạt</td></tr></table>`)}
+      ${card("4", "In-full (giao đủ hàng)", `<ul><li>So <b>từng SKU (Product Code)</b> trong đơn: <b>số lượng giao (SR) phải bằng đúng số lượng đặt (SO)</b>. Các dòng cùng SKU được cộng lại. Đơn vị: <b>Quantity (EA)</b> (nếu file không có cột này thì dùng Quantity (PC)).</li><li><b>Bỏ qua hàng tặng FOC</b> (Is Free Good? = 1) ở cả SO và SR.</li><li>Không In-full nếu có <b>bất kỳ</b> SKU nào: giao thiếu, giao thừa, không giao, hoặc giao SKU không có trong đơn.</li><li>Đơn không có trong SR → không In-full.</li></ul>
+        <table class="dif-lg-tbl"><caption>Ví dụ: đơn đặt SKU A = 24, SKU B = 6, SKU C (FOC) = 1</caption><tr><th>SR giao</th><th>Kết quả</th><th>Lý do</th></tr><tr><td>A = 24, B = 6 (không có C)</td><td class="ok">Đạt</td><td>FOC không được so sánh</td></tr><tr><td>A = 23, B = 6</td><td class="no">Không đạt</td><td>A giao thiếu</td></tr><tr><td>A = 24, B = 6, D = 2</td><td class="no">Không đạt</td><td>D không có trong đơn</td></tr></table>`)}
+      ${card("5", "Đơn Void", `<ul><li>Đơn có trạng thái nằm trong ô "Trạng thái đơn bị loại" (hiện: <b>${escapeHtml(c.voidStatuses.trim() || "chưa nhập")}</b>) được coi là Void. Tên trạng thái so khớp không phân biệt hoa / thường và dấu cách.</li><li>Cách tính hiện tại: <b>${escapeHtml(vm)}</b>.</li><li>Mặc định ("Có trong Total · không tính In-full/DIFOT"): đơn Void nằm trong Total Orders và được tính On-time đạt, nhưng <b>không tính vào In-full và DIFOT</b>. Đơn Void không bị kiểm tra số lượng SKU.</li></ul>`)}
+      ${card("6", "DIFOT và tỉ lệ %", `<ul><li><b>DIFOT</b> = đơn <b>vừa On-time vừa In-full</b>.</li><li><b>Tỉ lệ %</b> = số đơn đạt ÷ Total Orders × 100 (hiển thị 2 số lẻ). Áp dụng cho On-time %, In-full %, DIFOT %.</li><li>Ví dụ: Total 147 đơn, DIFOT 146 đơn → 146 ÷ 147 × 100 = <b>99,32%</b>.</li></ul>`)}
+      ${card("7", "Đối chiếu với báo cáo hệ thống", `<ul><li>Ghép từng dòng của file DIFOT Details với kết quả của tool theo <b>Distributor Code</b> (nếu file hệ thống có cột này, ngược lại ghép theo tên NPP) <b>× ngày đặt</b>.</li><li><b>Khớp</b> khi Total, On-time, In-full, DIFOT trùng <b>đúng số đơn</b> và các % chênh không quá 0,01 điểm. Nếu không: <b>Lệch</b>. Chỉ có một phía: "Chỉ có ở tool" / "Chỉ có ở hệ thống".</li><li>Tool chỉ tính lại từ file SO / SR đã tải lên. Tool <b>không biết</b> công thức nội bộ của hệ thống.</li></ul>`)}
+      ${card("8", "File Excel xuất ra", `<ul><li><b>DIFOT Details</b>: kết quả theo NPP × ngày đặt, cùng cột với báo cáo hệ thống.</li><li><b>Chi tiết đơn</b>: từng đơn đạt / không đạt và lý do.</li><li><b>Dòng lệch In-full</b>: từng SKU bị giao thiếu / thừa / không giao.</li><li><b>Đối chiếu hệ thống</b> và <b>Báo lỗi Vxceed</b>: chỉ có khi đã tải file ③ và kết quả hệ thống lệch.</li><li><b>Quy tắc áp dụng</b>: cấu hình tại thời điểm xuất.</li></ul>`)}
+      </div></div>`;
+    }
+    function difLogicDraw() {
+      const D = mdmDif, p = $("#dif-logic"); if (p) p.innerHTML = D.logic ? difLogicHtml() : "";
+      const b = $("#dif-logicbtn"); if (b) { b.setAttribute("aria-expanded", D.logic ? "true" : "false"); b.querySelector("span").textContent = D.logic ? "Ẩn logic tính DIFOT" : "Xem logic tính DIFOT"; }
     }
     
     /* ---- xuất Excel ---- */
@@ -6517,6 +6600,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     
     function renderDifot() {
       const D = mdmDif, c = D.cfg, md = c.maxDays.trim() === "" ? NaN : Number(c.maxDays);
+      if (D.hs.st === "idle") setTimeout(() => difHolLoad(), 0);   // lần đầu mở tab: lấy danh sách ngày lễ đã lưu
       return `<section class="panel tl-panel"><style>
         .dif-drops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
         .dif-zone{position:relative;display:flex;flex-direction:column;gap:7px;min-height:150px;padding:14px 16px;border:1.5px dashed var(--line-strong);border-radius:14px;background:#fff;transition:border-color .2s,background .25s,box-shadow .25s}
@@ -6540,6 +6624,20 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         #dif-cfg .hint{font-weight:500;color:var(--muted)}
         #dif-cfg textarea{min-height:56px}
         .dif-hol{font-size:11.5px;color:var(--warning);min-height:0;margin-top:4px}
+        .dif-holbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.dif-holbar .btn{padding:7px 14px;font-size:12.5px}
+        .dif-holmeta{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5}.dif-w{color:var(--warning);font-weight:650}
+        .dif-logicbar{display:flex;justify-content:flex-end;margin-bottom:10px}.dif-logicbar .btn{display:inline-flex;align-items:center;gap:7px;font-size:13px}
+        .dif-lg{margin-bottom:16px;padding:16px 18px;border:1px solid var(--line-strong);border-radius:14px;background:linear-gradient(180deg,#fff,var(--brand-soft))}
+        .dif-lg-top{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}.dif-lg-top b{font-size:15px}.dif-lg-top span{font-size:12px;color:var(--muted)}
+        .dif-lg-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}.dif-lg-chips span{padding:4px 10px;border-radius:99px;background:#fff;border:1px solid var(--line-strong);font-size:11.5px}
+        .dif-lg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+        .dif-lg-card{padding:13px 15px;border:1px solid var(--line-strong);border-radius:12px;background:#fff}
+        .dif-lg-card h4{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:13.5px}.dif-lg-card h4 span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--g-brand);color:#fff;font-size:11.5px;font-weight:700;flex:none}
+        .dif-lg-card ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.6}.dif-lg-card li+li{margin-top:3px}
+        .dif-lg-tbl{width:100%;min-width:0;margin-top:10px;border-collapse:collapse;font-size:12px;table-layout:auto}.dif-lg-tbl caption{text-align:left;font-size:11.5px;color:var(--muted);margin-bottom:4px;caption-side:top}
+        .dif-lg-tbl th,.dif-lg-tbl td{padding:5px 8px;border:1px solid var(--line-strong);text-align:left;white-space:normal;font-size:12px;vertical-align:top}.dif-lg-tbl th{position:static;background:var(--brand-soft);color:var(--ink-2)}.dif-lg-tbl tr:hover td{background:none}
+        .dif-lg-tbl td.ok{color:var(--success);font-weight:650}.dif-lg-tbl td.no{color:var(--danger);font-weight:650}
+        @media (max-width:900px){.dif-lg-grid{grid-template-columns:1fr}}
         .dif-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:4px 0 16px}
         .dif-kpi{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:2px;padding:14px 16px 16px;border:1px solid var(--line-strong);border-radius:14px;background:#fff}
         .dif-kpi span{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
@@ -6565,6 +6663,8 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         .dif-more{text-align:center;margin-top:12px}
         @media (max-width:900px){.dif-drops,.dif-kpis{grid-template-columns:1fr}}
       </style><div class="panel-head"><div><h2>Kiểm Tra DIFOT</h2><p>Tải file Sales Order và Sales Register xuất từ DMS — tool tự tính On-time, In-full và DIFOT theo từng NPP × ngày đặt, chỉ ra từng đơn trễ hạn / thiếu hàng, và (nếu có) đối chiếu với báo cáo DIFOT Details của hệ thống. Dữ liệu chỉ xử lý trên trình duyệt, không gửi đi đâu.</p></div></div><div class="panel-body">
+        <div class="dif-logicbar"><button type="button" class="btn btn-plain" id="dif-logicbtn" data-dif-act="logic" aria-expanded="${D.logic ? "true" : "false"}">${ICONS.file}<span>${D.logic ? "Ẩn logic tính DIFOT" : "Xem logic tính DIFOT"}</span></button></div>
+        <div id="dif-logic">${D.logic ? difLogicHtml() : ""}</div>
         <div class="dif-drops" id="dif-drops">${difDropsHtml()}</div>
         <div id="dif-cfg">
           <div class="adj-cfg">
@@ -6572,7 +6672,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
             <div class="field" data-k="voidStatuses"><label>Trạng thái đơn bị loại <span class="hint">cách nhau dấu phẩy</span></label><input data-dif="voidStatuses" value="${escapeHtml(c.voidStatuses)}" placeholder="vd: Void" autocomplete="off"></div>
             <div class="field"><label>Quy tắc ngày</label><label class="tl-check"><input type="checkbox" data-dif="noSunday"${c.noSunday ? " checked" : ""}> Không tính Chủ nhật</label></div>
           </div>
-          <div class="adj-cfg" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.4fr);margin-top:-6px"><div class="field" data-k="voidMode"><label title="Đơn Void luôn nằm trong Total Orders (trừ khi chọn loại hẳn)">Đơn Void <span class="hint">cách tính</span></label><select data-dif="voidMode">${[["count", "Có trong Total · không tính In-full/DIFOT"], ["pass", "Có trong Total · coi là đạt cả 3 chỉ tiêu"], ["exclude", "Loại khỏi Total Orders"]].map(([v, l]) => `<option value="${v}"${c.voidMode === v ? " selected" : ""}>${l}</option>`).join("")}</select></div><div class="field" data-k="incStatuses"><label title="Đơn có trạng thái khác (vd Posted) bị bỏ qua hoàn toàn, không tính vào Total Orders">Trạng thái Sales Order được lấy <span class="hint">cách nhau dấu phẩy · để trống = lấy hết</span></label><input data-dif="incStatuses" value="${escapeHtml(c.incStatuses)}" placeholder="để trống = lấy tất cả (Posted, Closed, Void…)" autocomplete="off"></div><div class="field"><label>Ngày nghỉ lễ <span class="hint">không tính vào hạn giao · dd/mm/yyyy, cách nhau dấu phẩy hoặc xuống dòng</span></label><textarea data-dif="hol" placeholder="vd: 01/01/2026, 02/09/2026" autocomplete="off">${escapeHtml(c.hol)}</textarea><div class="dif-hol" id="dif-holbad"></div></div></div>
+          <div class="adj-cfg" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.4fr);margin-top:-6px"><div class="field" data-k="voidMode"><label title="Đơn Void luôn nằm trong Total Orders (trừ khi chọn loại hẳn)">Đơn Void <span class="hint">cách tính</span></label><select data-dif="voidMode">${[["count", "Có trong Total · không tính In-full/DIFOT"], ["pass", "Có trong Total · coi là đạt cả 3 chỉ tiêu"], ["exclude", "Loại khỏi Total Orders"]].map(([v, l]) => `<option value="${v}"${c.voidMode === v ? " selected" : ""}>${l}</option>`).join("")}</select></div><div class="field" data-k="incStatuses"><label title="Đơn có trạng thái khác (vd Posted) bị bỏ qua hoàn toàn, không tính vào Total Orders">Trạng thái Sales Order được lấy <span class="hint">cách nhau dấu phẩy · để trống = lấy hết</span></label><input data-dif="incStatuses" value="${escapeHtml(c.incStatuses)}" placeholder="để trống = lấy tất cả (Posted, Closed, Void…)" autocomplete="off"></div><div class="field"><label>Ngày nghỉ lễ <span class="hint">không tính vào hạn giao · dd/mm/yyyy, cách nhau dấu phẩy hoặc xuống dòng</span></label><textarea data-dif="hol" placeholder="vd: 01/01/2026, 02/09/2026" autocomplete="off">${escapeHtml(c.hol)}</textarea><div class="dif-hol" id="dif-holbad"></div><div class="dif-holbar"><button type="button" class="btn btn-primary" id="dif-holsave" data-dif-act="holsave"${D.hs.busy || !difHolDirty() ? " disabled" : ""}>Lưu lên hệ thống</button><button type="button" class="btn btn-plain" id="dif-holreload" data-dif-act="holreload" title="Bỏ phần đang sửa, lấy lại danh sách đã lưu trên hệ thống">Hoàn tác về bản đã lưu</button></div><div class="dif-holmeta" id="dif-holmeta">${difHolMetaHtml()}</div></div></div>
         </div>
         <div id="dif-out">${difOutHtml()}</div></div></section>`;
     }
