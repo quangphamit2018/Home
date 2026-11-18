@@ -5589,7 +5589,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     // ---------- Công Cụ Hỗ Trợ › MDM Team ----------
     const MDM_KEY = "masterdata_mdm_mode";
-    const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"], ["promo", "Cài Đặt CTKM", "plus"], ["target-npp", "Cài Đặt Target NPP", "building"]];
+    const MDM_MODES = [["stock-init", "Tạo Tồn Kho Ban Đầu", "plus"], ["stock-adj", "Tăng Tồn / Giảm Tồn", "swap"], ["sku-price", "Cài Đặt Giá Cho SKU", "edit"], ["promo", "Cài Đặt CTKM", "plus"], ["target-npp", "Cài Đặt Target NPP", "building"], ["difot", "Kiểm Tra DIFOT", "check"]];
     let mdmMode = loadKey(MDM_KEY, MDM_MODES.map(m => m[0]), "stock-init");
     /* ---- Tăng tồn / Giảm tồn: lưới nhập ItemCode + UOM0, xuất CSV UTF-16 LE BOM, không có dòng trống cuối ---- */
     const ADJ_COLS = ["DocumentDate", "AdjustmentDescription", "WareHouseCode", "StorageLocationCode", "ItemCode", "ItemTypeCode", "SubCode", "UOM0", "UOM1", "ProductionDate", "ExpireDate", "Notes", "Reason"];
@@ -5912,6 +5912,512 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         <div class="adj-grid"><div class="tg-inner"><div class="tg-top">${band}${head}</div><div id="tgt-rows">${mdmTgt.rows.map(tgtRowHtml).join("")}</div></div></div>
         <p class="adj-tip">💡 Copy khối <b>LocationCode + 6 cột target</b> từ Excel (hoặc chỉ cột LocationCode) rồi <kbd>Ctrl</kbd>+<kbd>V</kbd> vào ô <b>LocationCode</b> đầu tiên — cả bảng tự điền. Ô trống = không xuất dòng cho GroupCode đó. <kbd>Enter</kbd> / <kbd>↓</kbd> xuống dòng, <kbd>Tab</kbd> sang cột bên cạnh. Ô đỏ = sai dữ liệu, ô vàng = LocationCode trùng / chưa có target.</p>
         <div class="adj-foot"><div class="meta" id="tgt-meta"></div><button type="button" id="tgt-export" class="btn btn-primary btn-lg">⬇ Xuất CSV</button></div></div></section>`;
+    }
+
+    /* ---- Kiểm Tra DIFOT: tải Sales Order + Sales Register (CSV/Excel) → tự tính On-time / In-full / DIFOT theo công thức chuẩn,
+            chỉ ra từng đơn lỗi, đối chiếu (tùy chọn) với file DIFOTDetails của hệ thống. Toàn bộ chạy trên trình duyệt, không gửi dữ liệu đi đâu. ---- */
+    /* DIF-ENGINE-START — Kiểm Tra DIFOT: engine thuần (không đụng DOM) */
+    const DIF_DAY = 86400000;
+    const difNorm = s => String(s ?? "").replace(/^﻿/, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const difStr = v => (v == null ? "" : typeof v === "number" ? String(v) : String(v).trim());
+    // "CÔNG TY  TNHH" → "CONG TY TNHH": dùng để ghép tên NPP giữa các file (bỏ dấu, hoa/thường, khoảng trắng thừa)
+    const difNameKey = s => difStr(s).normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").replace(/\s+/g, " ").toUpperCase();
+    
+    /* ---- CSV: tự nhận BOM (UTF-8 / UTF-16 LE/BE), dấu phân cách , ; TAB, ô có ngoặc kép, xuống dòng trong ô ---- */
+    function difDecode(buf) {
+      const u = new Uint8Array(buf);
+      if (u[0] === 0xFF && u[1] === 0xFE) return new TextDecoder("utf-16le").decode(u.subarray(2));
+      if (u[0] === 0xFE && u[1] === 0xFF) return new TextDecoder("utf-16be").decode(u.subarray(2));
+      if (u[0] === 0xEF && u[1] === 0xBB && u[2] === 0xBF) return new TextDecoder("utf-8").decode(u.subarray(3));
+      try { return new TextDecoder("utf-8", { fatal: true }).decode(u); } catch (_) { return new TextDecoder("utf-8").decode(u); }
+    }
+    function difParseCsv(text) {
+      text = text.replace(/^\uFEFF/, "");
+      const nl = text.indexOf("\n"), first = text.slice(0, nl < 0 ? text.length : nl);
+      let delim = ",", best = -1;
+      for (const d of [",", ";", "\t"]) { let q = false, n = 0; for (const ch of first) { if (ch === '"') q = !q; else if (ch === d && !q) n++; } if (n > best) { best = n; delim = d; } }
+      const rows = [], L = text.length; let pos = 0;
+      while (pos < L) {
+        let e = text.indexOf("\n", pos); if (e < 0) e = L;
+        let line = text.slice(pos, e);
+        if (line.indexOf('"') < 0) { // đường nhanh: dòng không có ngoặc kép
+          if (line.charCodeAt(line.length - 1) === 13) line = line.slice(0, -1);
+          const f = line.split(delim); if (f.some(x => x !== "")) rows.push(f);
+          pos = e + 1; continue;
+        }
+        // đường chậm: bản ghi có ngoặc kép (có thể chứa dấu phân cách / xuống dòng trong ô)
+        const row = []; let cur = "", i = pos;
+        while (i < L) {
+          const c = text.charCodeAt(i);
+          if (c === 34) { // ô trong ngoặc kép: nhảy thẳng tới ngoặc đóng ("" = ngoặc kép nằm trong ô)
+            let j = i + 1;
+            for (;;) {
+              const k = text.indexOf('"', j);
+              if (k < 0) { cur += text.slice(j); i = L; break; }
+              if (text.charCodeAt(k + 1) === 34) { cur += text.slice(j, k + 1); j = k + 2; continue; }
+              cur += text.slice(j, k); i = k + 1; break;
+            }
+            continue;
+          }
+          if (text[i] === delim) { row.push(cur); cur = ""; i++; continue; }
+          if (c === 13) { i++; continue; }
+          if (c === 10) { i++; break; }
+          cur += text[i]; i++;
+        }
+        row.push(cur); if (row.some(x => x !== "")) rows.push(row);
+        pos = i;
+      }
+      return rows;
+    }
+    /* mảng-các-mảng → { cols: {tênChuẩnHóa: chỉSố}, rows } */
+    function difTable(arr) {
+      if (!arr.length) return { cols: {}, rows: [], headers: [] };
+      const headers = arr[0].map(difStr), cols = {};
+      headers.forEach((h, i) => { const k = difNorm(h); if (k && !(k in cols)) cols[k] = i; });
+      return { cols, rows: arr.slice(1), headers };
+    }
+    const difCol = (t, names) => { for (const n of names) if (n in t.cols) return t.cols[n]; return -1; };
+    
+    /* ---- Ngày: dd-mm-yyyy · dd/mm/yyyy · yyyy-mm-dd · có/không giờ · serial Excel → số ngày (UTC) ---- */
+    function difDay(v) {
+      if (v == null || v === "") return null;
+      if (typeof v === "number") return v > 20000 && v < 80000 ? Math.floor(v) - 25569 : null;
+      const s = String(v).trim(); let m;
+      if ((m = /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/.exec(s))) return Date.UTC(+m[1], +m[2] - 1, +m[3]) / DIF_DAY;
+      if ((m = /^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})/.exec(s))) return Date.UTC(+m[3], +m[2] - 1, +m[1]) / DIF_DAY;
+      if (/^\d{5}(\.\d+)?$/.test(s)) return Math.floor(+s) - 25569;
+      return null;
+    }
+    const difFmt = (day, pad) => { if (day == null) return ""; const d = new Date(day * DIF_DAY), a = d.getUTCDate(), b = d.getUTCMonth() + 1; return pad ? `${String(a).padStart(2, "0")}/${String(b).padStart(2, "0")}/${d.getUTCFullYear()}` : `${a}/${b}/${d.getUTCFullYear()}`; };
+    const difIsSun = day => new Date(day * DIF_DAY).getUTCDay() === 0;
+    /* Danh sách ngày lễ: "02/09/2026, 2026-09-01 …" → Set số ngày */
+    function difHolidays(text) {
+      const set = new Set(), bad = [];
+      String(text || "").split(/[\n,;]+/).map(s => s.trim()).filter(Boolean).forEach(s => { const d = difDay(s); if (d == null) bad.push(s); else set.add(d); });
+      return { set, bad };
+    }
+    /* Số ngày làm việc trôi qua từ ngày đặt → ngày settle: đếm các ngày trong (đặt, settle] không phải CN / ngày lễ */
+    function difWorkDays(from, to, cfg) {
+      if (to <= from) return 0;
+      let n = 0;
+      for (let d = from + 1; d <= to; d++) { if (cfg.noSunday && difIsSun(d)) continue; if (cfg.holidays && cfg.holidays.has(d)) continue; n++; }
+      return n;
+    }
+    const difNum = v => {
+      if (typeof v === "number") return v;
+      let s = difStr(v); if (!s) return 0;
+      if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, ""); else s = s.replace(",", ".");
+      const n = parseFloat(s); return Number.isFinite(n) ? n : 0;
+    };
+    const difIsFoc = v => { const s = difStr(v).toLowerCase(); return s === "true" || s === "yes" || s === "y" || difNum(v) > 0; };
+    const difRound = (x, p = 2) => { const k = Math.pow(10, p); return Math.round((x + Number.EPSILON) * k) / k; };
+    
+    /* ---- Khai báo cột bắt buộc ---- */
+    const DIF_SO_COLS = { orderNo: ["orderno", "ordernumber"], orderDate: ["orderdate"], status: ["orderstatus", "status"], distCode: ["distributorcode"], distName: ["distributorname"], product: ["productcode", "itemcode"], pname: ["productname"], foc: ["isfreegood", "isfoc"] };
+    const DIF_SR_COLS = { orderNo: ["orderreference", "orderno"], settle: ["settlementdate", "settlementdatetime"], product: ["productcode", "itemcode"], pname: ["productname"], foc: ["isfreegood", "isfoc"] };
+    const DIF_SYS_COLS = { name: ["distributorname"], date: ["orderdate"], total: ["totalorders"], onT: ["ontimeorders"], inF: ["infullorders"], pOn: ["ontimepercentage"], pIn: ["infullpercentage"], pDif: ["otifdifotpercentage", "difotpercentage", "otifpercentage"] };
+    const DIF_LABEL = { orderNo: "Order No / Order Reference", orderDate: "Order Date", status: "Order Status", distCode: "Distributor Code", distName: "Distributor Name", product: "Product Code", pname: "Product Name", foc: "Is Free Good?", settle: "Settlement Date", qty: "Quantity (EA)", name: "Distributor Name", date: "OrderDate", total: "Total Orders", onT: "ON Time Orders", inF: "IN Full Orders", pOn: "ON-TIME Percentage", pIn: "IN-FULL Percentage", pDif: "OTIF/DIFOT Percentage" };
+    const DIF_OPTIONAL = new Set(["status", "distCode", "distName", "pname"]);
+    function difMap(t, spec) { const m = {}, miss = []; for (const k in spec) { m[k] = difCol(t, spec[k]); if (m[k] < 0 && !DIF_OPTIONAL.has(k)) miss.push(DIF_LABEL[k]); } return { m, miss }; }
+    
+    /* ---- Tính DIFOT ----
+       Công thức (slide 3.2): Total Order = số đơn tạo (loại Void) · On-time: (Settled − Ordered) < 3 ngày, không tính CN/lễ ·
+       In-full: giao = đặt theo từng SKU, bỏ hàng tặng FOC · DIFOT = on-time & in-full · % = số đơn đạt / Total × 100 */
+    function difCompute(so, sr, cfg) {
+      const A = difMap(so, DIF_SO_COLS), B = difMap(sr, DIF_SR_COLS), err = [];
+      let qa = difCol(so, ["quantityea"]), qb = difCol(sr, ["quantityea"]), basis = "EA";
+      if (qa < 0 || qb < 0) { qa = difCol(so, ["quantitypc"]); qb = difCol(sr, ["quantitypc"]); basis = "PC"; }
+      if (qa < 0 || qb < 0) { A.miss.push("Quantity (EA)"); }
+      if (A.miss.length) err.push("Sales Order thiếu cột: " + A.miss.join(", "));
+      if (B.miss.length) err.push("Sales Register thiếu cột: " + B.miss.join(", "));
+      if (err.length) return { err };
+      const a = A.m, b = B.m, voidSet = new Set(String(cfg.voidStatuses || "").split(",").map(s => difNorm(s)).filter(Boolean));
+      const incSet = new Set(String(cfg.includeStatuses || "").split(",").map(s => difNorm(s)).filter(Boolean)), skip = new Set();
+      const orders = new Map(), warn = { badDate: 0, statuses: {}, skipped: {}, srOnly: 0, srNoDate: 0 };
+      // 1) Sales Order → đơn + dòng
+      for (const r of so.rows) {
+        const no = difStr(r[a.orderNo]); if (!no) continue;
+        let o = orders.get(no);
+        if (!o) {
+          if (skip.has(no)) continue;
+          const st = a.status >= 0 ? difStr(r[a.status]) : "";
+          // chỉ lấy đơn có trạng thái thuộc danh sách (vd: Closed, Voided) — đơn Posted… bỏ qua hoàn toàn
+          if (incSet.size && a.status >= 0 && !incSet.has(difNorm(st))) { skip.add(no); const k = st || "(trống)"; warn.skipped[k] = (warn.skipped[k] || 0) + 1; continue; }
+          o = { orderNo: no, distCode: a.distCode >= 0 ? difStr(r[a.distCode]) : "", distName: a.distName >= 0 ? difStr(r[a.distName]) : "", orderDay: difDay(r[a.orderDate]), status: st, isVoid: !!st && voidSet.has(difNorm(st)), lines: new Map(), settleDay: null, inSR: false };
+          if (o.orderDay == null) warn.badDate++;
+          orders.set(no, o);
+        }
+        if (difIsFoc(r[a.foc])) continue;
+        const pc = difStr(r[a.product]); if (!pc) continue;
+        const L = o.lines.get(pc) || { pc, name: a.pname >= 0 ? difStr(r[a.pname]) : "", ord: 0, del: 0 };
+        L.ord += difNum(r[qa]); o.lines.set(pc, L);
+      }
+      // đếm trạng thái theo ĐƠN (không theo dòng)
+      for (const o of orders.values()) { const k = o.status || "(trống)"; warn.statuses[k] = (warn.statuses[k] || 0) + 1; }
+      // 2) Sales Register → số lượng giao + ngày settle
+      const srOrders = new Set();
+      for (const r of sr.rows) {
+        const no = difStr(r[b.orderNo]); if (!no) continue;
+        const o = orders.get(no);
+        if (!o) { if (!skip.has(no)) srOrders.add(no); continue; }
+        o.inSR = true;
+        const d = difDay(r[b.settle]); if (d != null && (o.settleDay == null || d > o.settleDay)) o.settleDay = d;
+        if (difIsFoc(r[b.foc])) continue;
+        const pc = difStr(r[b.product]); if (!pc) continue;
+        let L = o.lines.get(pc); if (!L) { L = { pc, name: b.pname >= 0 ? difStr(r[b.pname]) : "", ord: 0, del: 0 }; o.lines.set(pc, L); }
+        if (!L.name && b.pname >= 0) L.name = difStr(r[b.pname]);
+        L.del += difNum(r[qb]);
+      }
+      warn.srOnly = srOrders.size;
+      // 3) Đánh giá từng đơn
+      const list = [], lineIssues = []; let voidN = 0;
+      for (const o of orders.values()) {
+        if (o.isVoid && cfg.excludeVoid) { voidN++; o.excluded = true; list.push(o); continue; }
+        o.issues = [];
+        for (const L of o.lines.values()) {
+          if (Math.abs(L.ord - L.del) < 1e-9) continue;
+          const type = L.ord === 0 ? "Giao SKU không có trong đơn" : L.del === 0 ? (o.inSR ? "Không giao SKU này" : "Chưa giao") : L.del < L.ord ? "Giao thiếu" : "Giao thừa";
+          o.issues.push({ pc: L.pc, name: L.name, ord: L.ord, del: L.del, type });
+          lineIssues.push({ orderNo: o.orderNo, distName: o.distName, orderDay: o.orderDay, pc: L.pc, name: L.name, ord: L.ord, del: L.del, type });
+        }
+        o.inFull = o.inSR && o.issues.length === 0;
+        if (o.settleDay == null || o.orderDay == null) { o.workDays = null; o.onTime = false; }
+        else { o.workDays = difWorkDays(o.orderDay, o.settleDay, cfg); o.onTime = o.workDays <= cfg.maxDays; o.early = o.settleDay < o.orderDay; }
+        o.difot = o.onTime && o.inFull;
+        o.reason = o.difot ? "" : [!o.inSR ? "Không có trong Sales Register (chưa settle)" : "", o.inSR && o.settleDay == null ? "Thiếu ngày settle" : "", o.inSR && o.settleDay != null && !o.onTime ? `Trễ hạn: ${o.workDays} ngày làm việc (tối đa ${cfg.maxDays})` : "", o.inSR && o.issues.length ? `Không đủ hàng (${o.issues.length} SKU)` : ""].filter(Boolean).join(" · ");
+        list.push(o);
+      }
+      // 4) Gộp theo NPP × ngày đặt
+      const g = new Map();
+      for (const o of list) {
+        if (o.excluded) continue;
+        const k = o.distCode + "|" + o.orderDay;
+        let x = g.get(k); if (!x) { x = { distCode: o.distCode, distName: o.distName, day: o.orderDay, total: 0, onT: 0, inF: 0, dif: 0 }; g.set(k, x); }
+        x.total++; if (o.onTime) x.onT++; if (o.inFull) x.inF++; if (o.difot) x.dif++;
+      }
+      const pct = (n, t) => (t ? n / t * 100 : 0);
+      const rows = [...g.values()].map(x => ({ ...x, pOn: pct(x.onT, x.total), pIn: pct(x.inF, x.total), pDif: pct(x.dif, x.total) }))
+        .sort((p, q) => difNameKey(p.distName).localeCompare(difNameKey(q.distName)) || p.distCode.localeCompare(q.distCode) || (p.day ?? 0) - (q.day ?? 0));
+      const T = rows.reduce((s, x) => (s.total += x.total, s.onT += x.onT, s.inF += x.inF, s.dif += x.dif, s), { total: 0, onT: 0, inF: 0, dif: 0 });
+      T.pOn = pct(T.onT, T.total); T.pIn = pct(T.inF, T.total); T.pDif = pct(T.dif, T.total);
+      return { err: [], rows, total: T, orders: list, lineIssues, voidN, warn, basis, cfg: { ...cfg, holidays: undefined } };
+    }
+    
+    /* ---- Đối chiếu với file DIFOTDetails của hệ thống (ghép theo tên NPP + ngày đặt) ---- */
+    function difParseSys(t) {
+      const { m, miss } = difMap(t, DIF_SYS_COLS); if (miss.length) return { err: "File DIFOT Details thiếu cột: " + miss.join(", ") };
+      const rows = [];
+      for (const r of t.rows) {
+        const name = difStr(r[m.name]), day = difDay(r[m.date]); if (!name && day == null) continue;
+        const total = difNum(r[m.total]), pOn = difNum(r[m.pOn]), pIn = difNum(r[m.pIn]), pDif = difNum(r[m.pDif]);
+        rows.push({ name, day, total, onT: difNum(r[m.onT]), inF: difNum(r[m.inF]), dif: difRound(pDif * total / 100, 4), pOn, pIn, pDif });
+      }
+      return { rows, err: "" };
+    }
+    function difCompare(res, sys, tol) {
+      const M = new Map(), key = (n, d) => difNameKey(n) + "|" + d;
+      for (const x of res.rows) { const k = key(x.distName, x.day); let r = M.get(k); if (!r) { r = { name: x.distName, day: x.day, tool: { total: 0, onT: 0, inF: 0, dif: 0 }, sys: null }; M.set(k, r); } const t = r.tool; t.total += x.total; t.onT += x.onT; t.inF += x.inF; t.dif += x.dif; }
+      for (const s of sys) {
+        const k = key(s.name, s.day); let r = M.get(k); if (!r) { r = { name: s.name, day: s.day, tool: null, sys: null }; M.set(k, r); }
+        if (!r.sys) r.sys = { total: 0, onT: 0, inF: 0, dif: 0, n: 0 };
+        const q = r.sys; q.total += s.total; q.onT += s.onT; q.inF += s.inF; q.dif += s.dif; q.n++;
+      }
+      const out = [];
+      for (const r of M.values()) {
+        const t = r.tool, s = r.sys, p = (n, d) => (d ? n / d * 100 : 0);
+        if (t) { t.pOn = p(t.onT, t.total); t.pIn = p(t.inF, t.total); t.pDif = p(t.dif, t.total); }
+        if (s) { s.pOn = p(s.onT, s.total); s.pIn = p(s.inF, s.total); s.pDif = p(s.dif, s.total); }
+        let status, diffs = [];
+        if (t && !s) status = "toolOnly"; else if (!t && s) status = "sysOnly";
+        else {
+          if (t.total !== s.total) diffs.push(`Total ${t.total} ≠ ${s.total}`);
+          if (Math.abs(t.pOn - s.pOn) > tol) diffs.push(`On-time ${difRound(t.pOn)} ≠ ${difRound(s.pOn)}`);
+          if (Math.abs(t.pIn - s.pIn) > tol) diffs.push(`In-full ${difRound(t.pIn)} ≠ ${difRound(s.pIn)}`);
+          if (Math.abs(t.pDif - s.pDif) > tol) diffs.push(`DIFOT ${difRound(t.pDif)} ≠ ${difRound(s.pDif)}`);
+          status = diffs.length ? "diff" : "ok";
+        }
+        out.push({ ...r, status, diffs });
+      }
+      out.sort((p, q) => difNameKey(p.name).localeCompare(difNameKey(q.name)) || (p.day ?? 0) - (q.day ?? 0));
+      const cnt = { ok: 0, diff: 0, toolOnly: 0, sysOnly: 0 }; out.forEach(r => cnt[r.status]++);
+      return { rows: out, cnt };
+    }
+    /* DIF-ENGINE-END */
+    const mdmDif = { so: null, sr: null, sys: null, busy: "", cfg: { maxDays: "2", noSunday: true, excludeVoid: true, voidStatuses: "Void, Voided", incStatuses: "Closed, Voided", tol: "0.01", hol: "" }, view: "sum", flt: "bad", q: "", lim: 200, res: null, cmp: null, holBad: [], maxOk: true };
+    const difLow = t => t.charAt(0).toLowerCase() + t.slice(1); // "Giao thiếu" → "giao thiếu" (giữ nguyên chữ SKU)
+    const difPctTxt = x => difRound(x).toLocaleString("vi-VN", { maximumFractionDigits: 2 }) + "%";
+    function difCfg() {
+      const c = mdmDif.cfg, md = c.maxDays.trim() === "" ? NaN : Number(c.maxDays), h = difHolidays(c.hol), ok = Number.isInteger(md) && md >= 0;
+      mdmDif.holBad = h.bad; mdmDif.maxOk = ok;
+      return { maxDays: ok ? md : 2, noSunday: !!c.noSunday, holidays: h.set, voidStatuses: c.voidStatuses, includeStatuses: c.incStatuses, excludeVoid: !!c.excludeVoid };
+    }
+    function difStats(R) {
+      const s = { nOk: 0, nBad: 0, nLate: 0, nShort: 0, nUnsettled: 0 };
+      for (const o of R.orders) { if (o.excluded) continue; if (o.difot) s.nOk++; else { s.nBad++; if (!o.inSR) s.nUnsettled++; else { if (!o.onTime) s.nLate++; if (!o.inFull) s.nShort++; } } }
+      return Object.assign(R, s);
+    }
+    function difRun() {
+      const D = mdmDif; D.res = null; D.cmp = null; D.lim = 200;
+      const cfg = difCfg();
+      if (D.so && D.sr) { const R = difCompute(D.so.table, D.sr.table, cfg); D.res = R.err && R.err.length ? R : difStats(R); }
+      if (D.res && !(D.res.err && D.res.err.length) && D.sys) D.cmp = difCompare(D.res, D.sys.rows, Number(D.cfg.tol) || 0.01);
+    }
+    let difTimer = 0;
+    function difRunSoon() { clearTimeout(difTimer); difTimer = setTimeout(() => { difRun(); difDrawOut(); difCfgMeta(); }, 250); }
+    
+    /* ---- đọc file ---- */
+    async function difLoad(kind, f, inp) {
+      if (inp) inp.value = ""; if (!f) return;
+      const D = mdmDif; D.busy = kind; difDrawDrops();
+      await new Promise(r => setTimeout(r, 30));
+      try {
+        let arr;
+        if (/\.xlsx?$/i.test(f.name)) { await loadLib("xlsx"); const wb = XLSX.read(await f.arrayBuffer(), { type: "array" }); arr = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" }); }
+        else arr = difParseCsv(difDecode(await f.arrayBuffer()));
+        const t = difTable(arr); if (!t.rows.length) throw new Error("file không có dòng dữ liệu.");
+        const rng = (col, rows) => { let lo = Infinity, hi = -Infinity; for (const r of rows) { const d = difDay(r[col]); if (d != null) { if (d < lo) lo = d; if (d > hi) hi = d; } } return lo === Infinity ? "" : lo === hi ? difFmt(lo, true) : `${difFmt(lo, true)} → ${difFmt(hi, true)}`; };
+        if (kind === "so" || kind === "sr") {
+          const spec = kind === "so" ? DIF_SO_COLS : DIF_SR_COLS, other = kind === "so" ? DIF_SR_COLS : DIF_SO_COLS, v = difMap(t, spec);
+          if (difCol(t, ["quantityea", "quantitypc"]) < 0) v.miss.push("Quantity (EA)");
+          if (v.miss.length) throw new Error((difMap(t, other).miss.length === 0 ? `có vẻ đây là file ${kind === "so" ? "Sales Register — hãy thả vào ô ②" : "Sales Order — hãy thả vào ô ①"}. ` : "") + "thiếu cột: " + v.miss.join(", "));
+          const no = v.m.orderNo, ords = new Set(); t.rows.forEach(r => { const x = difStr(r[no]); if (x) ords.add(x); });
+          const dc = kind === "so" ? v.m.orderDate : v.m.settle;
+          D[kind] = { name: f.name, table: t, info: `${nf(t.rows.length)} dòng · ${nf(ords.size)} đơn${rng(dc, t.rows) ? " · " + (kind === "so" ? "đặt " : "settle ") + rng(dc, t.rows) : ""}` };
+        } else {
+          const p = difParseSys(t); if (p.err) throw new Error(p.err); if (!p.rows.length) throw new Error("file không có dòng nào.");
+          D.sys = { name: f.name, rows: p.rows, info: `${nf(p.rows.length)} dòng (NPP × ngày đặt)` };
+        }
+        toast(`Đã đọc "${f.name}" — ${D[kind].info}.`, "success");
+      } catch (err) { toast(`"${f.name}": ${err.message}`, "error"); }
+      D.busy = ""; difRun(); difDraw();
+    }
+    
+    /* ---- giao diện ---- */
+    function difZone(k, no, title, sub) {
+      const D = mdmDif, f = D[k], head = `<div class="dz-top"><span class="dz-no">${no}</span><b>${title}</b>`;
+      const input = `<input type="file" class="dif-file" data-dif-file="${k}" accept=".csv,.txt,.xlsx,.xls">`;
+      if (D.busy === k) return `<div class="dif-zone" data-dif-zone="${k}">${head}</div><div class="dz-sub">Đang đọc file…</div></div>`;
+      if (!f) return `<div class="dif-zone" data-dif-zone="${k}"><label class="dif-pick">${input}${head}</div><div class="dz-sub">${sub}</div><div class="dz-cta">${ICONS.upload}<span>Chọn file hoặc kéo thả vào đây <small>.csv · .xlsx</small></span></div></label></div>`;
+      return `<div class="dif-zone done" data-dif-zone="${k}">${head}<span class="dz-ok">✔ Đã tải</span></div><div class="dz-file" title="${escapeHtml(f.name)}">${ICONS.file}<span>${escapeHtml(f.name)}</span></div><div class="dz-sub">${escapeHtml(f.info)}</div><div class="dz-act"><label class="btn btn-secondary">Đổi file${input}</label><button type="button" class="btn btn-plain" data-dif-clear="${k}">Xóa</button></div></div>`;
+    }
+    const difDropsHtml = () =>
+      difZone("so", "①", "Sales Order", "Bắt buộc · cần các cột Order No, Order Date, Order Status, Product Code, Is Free Good?, Quantity (EA)") +
+      difZone("sr", "②", "Sales Register", "Bắt buộc · cần các cột Order Reference, Settlement Date, Product Code, Is Free Good?, Quantity (EA)") +
+      difZone("sys", "③", "DIFOT Details của hệ thống", "Tùy chọn · để đối chiếu kết quả của tool với báo cáo DIFOT hệ thống");
+    function difDrawDrops() { const el = $("#dif-drops"); if (el) el.innerHTML = difDropsHtml(); }
+    function difDraw() { difDrawDrops(); difDrawOut(); difCfgMeta(); }
+    function difCfgMeta() {
+      const D = mdmDif, f = $("#dif-cfg [data-k='maxDays']"); if (f) f.classList.toggle("bad", !D.maxOk);
+      const h = $("#dif-holbad"); if (h) h.innerHTML = D.holBad.length ? `⚠ Không đọc được ngày: <b>${D.holBad.map(escapeHtml).join(", ")}</b> — nhập dạng dd/mm/yyyy.` : "";
+    }
+    
+    function difOutHtml() {
+      const D = mdmDif, R = D.res;
+      if (!D.so || !D.sr) return `<div class="empty"><strong>Chưa đủ dữ liệu</strong>Tải <b>Sales Order</b> và <b>Sales Register</b> (xuất từ DMS) vào hai ô ① ② ở trên — kết quả DIFOT tự tính ngay. Ô ③ là tùy chọn, dùng để đối chiếu với báo cáo DIFOT của hệ thống.</div>`;
+      if (R.err && R.err.length) return `<div class="empty"><strong>Không tính được DIFOT</strong>${R.err.map(escapeHtml).join("<br>")}</div>`;
+      const T = R.total, kpi = (label, big, sub, p) => `<div class="dif-kpi ${p == null ? "" : p >= 100 ? "ok" : "low"}"><span>${label}</span><b>${big}</b><small>${sub}</small>${p == null ? "" : `<i style="width:${Math.max(0, Math.min(100, p))}%"></i>`}</div>`;
+      const chips = [`<span class="adj-chip ok">${nf(T.total)} đơn được tính</span>`];
+      const sk = Object.entries(R.warn.skipped || {}); if (sk.length) chips.push(`<span class="adj-chip warn">Bỏ qua ${nf(sk.reduce((s, x) => s + x[1], 0))} đơn trạng thái ${escapeHtml(sk.map(x => x[0]).join(", "))}</span>`);
+      if (R.voidN) chips.push(`<span class="adj-chip warn">${nf(R.voidN)} đơn Void ${D.cfg.excludeVoid ? "đã loại" : "vẫn tính"}</span>`);
+      if (R.nUnsettled) chips.push(`<span class="adj-chip err">${nf(R.nUnsettled)} đơn chưa có trong Sales Register</span>`);
+      if (R.warn.srOnly) chips.push(`<span class="adj-chip warn">${nf(R.warn.srOnly)} đơn chỉ có trong Sales Register (thiếu ở Sales Order)</span>`);
+      if (R.warn.badDate) chips.push(`<span class="adj-chip err">${nf(R.warn.badDate)} đơn lỗi ngày đặt</span>`);
+      if (D.cmp) chips.push(D.cmp.cnt.diff + D.cmp.cnt.toolOnly + D.cmp.cnt.sysOnly ? `<span class="adj-chip err">Đối chiếu HT: ${nf(D.cmp.cnt.ok)} khớp · ${nf(D.cmp.cnt.diff + D.cmp.cnt.toolOnly + D.cmp.cnt.sysOnly)} lệch</span>` : `<span class="adj-chip ok">Đối chiếu HT: khớp ${nf(D.cmp.cnt.ok)}/${nf(D.cmp.cnt.ok)} dòng</span>`);
+      const views = [["sum", "Tổng hợp NPP × ngày", R.rows.length], ["ord", "Chi tiết đơn", R.orders.length], ["line", "Dòng lệch In-full", R.lineIssues.length]];
+      if (D.cmp) views.push(["cmp", "Đối chiếu hệ thống", D.cmp.rows.length]);
+      if (!views.some(v => v[0] === D.view)) D.view = "sum";
+      const view = difViewHtml();
+      const tool = D.view === "ord" || D.view === "line" ? `<div class="dif-tools">${D.view === "ord" ? `<label class="tl-check">Lọc <select id="dif-flt">${[["bad", `Đơn lệch DIFOT (${nf(R.nBad)})`], ["late", `Trễ hạn (${nf(R.nLate)})`], ["short", `Không đủ hàng (${nf(R.nShort)})`], ["unsettled", `Chưa settle (${nf(R.nUnsettled)})`], ["ok", `Đơn đạt DIFOT (${nf(R.nOk)})`], ["void", `Void (${nf(R.voidN)})`], ["all", "Tất cả"]].map(([k, l]) => `<option value="${k}"${D.flt === k ? " selected" : ""}>${l}</option>`).join("")}</select></label>` : ""}<input id="dif-q" value="${escapeHtml(D.q)}" placeholder="Tìm Order No, NPP, mã SKU…" autocomplete="off"><span class="adj-chip" id="dif-count">${nf(D._n || 0)} dòng</span></div>` : "";
+      return `<div class="adj-bar"><h3>Kết quả<small>On-time ≤ ${D.maxOk ? D.cfg.maxDays.trim() : "2"} ngày làm việc · In-full tính theo ${R.basis}</small></h3><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><div class="adj-chips">${chips.join("")}</div><button type="button" class="btn btn-excel" data-hover-icon="download" id="dif-export">${ICONS.xlsx} Xuất Excel</button></div></div>
+        <div class="dif-kpis">${kpi("Total Orders", nf(T.total), `${nf(R.rows.length)} dòng NPP × ngày`, null)}${kpi("On-time %", difPctTxt(T.pOn), `${nf(T.onT)} / ${nf(T.total)} đơn`, T.pOn)}${kpi("In-full %", difPctTxt(T.pIn), `${nf(T.inF)} / ${nf(T.total)} đơn`, T.pIn)}${kpi("DIFOT %", difPctTxt(T.pDif), `${nf(T.dif)} / ${nf(T.total)} đơn`, T.pDif)}</div>
+        <div class="tl-seg dif-seg">${views.map(([k, l, n]) => `<button type="button" data-dif-view="${k}" class="${D.view === k ? "on" : ""}">${l} <em>${nf(n)}</em></button>`).join("")}</div>${tool}
+        <div id="dif-view">${view}</div>
+        <p class="adj-tip">💡 <b>On-time</b>: số ngày làm việc từ ngày đặt đến ngày settle ≤ hạn (không tính Chủ nhật${D.holBad.length || D.cfg.hol.trim() ? " và ngày lễ đã nhập" : ", ngày lễ chưa nhập"}). <b>In-full</b>: mọi SKU (trừ hàng tặng FOC, đơn Void) giao đúng bằng số đặt — thiếu, thừa hay sai SKU đều tính là không đủ. <b>DIFOT</b> = vừa on-time vừa in-full. Tỉ lệ = số đơn đạt ÷ Total Orders × 100. Đơn không có trong Sales Register tính là chưa giao (không đạt cả hai).</p>`;
+    }
+    function difDrawOut() { const o = $("#dif-out"); if (o) { o.innerHTML = difOutHtml(); difViewCount(); } }
+    function difDrawView() { const v = $("#dif-view"); if (v) { v.innerHTML = difViewHtml(); difViewCount(); } }
+    function difViewCount() { const c = $("#dif-count"); if (c && mdmDif._n != null) c.textContent = `${nf(mdmDif._n)} dòng`; }
+    
+    const difB = (ok, na) => na ? `<span class="dif-b na">—</span>` : `<span class="dif-b ${ok ? "ok" : "no"}">${ok ? "✔" : "✖"}</span>`;
+    const difP = p => `<td class="num ${p >= 100 ? "okc" : "lowc"}">${difPctTxt(p)}</td>`;
+    function difMore(shown, total) { return total > shown ? `<div class="dif-more"><button type="button" class="btn btn-secondary" id="dif-more">Hiện thêm ${nf(Math.min(200, total - shown))} dòng <small>(đang hiện ${nf(shown)}/${nf(total)})</small></button></div>` : ""; }
+    function difViewHtml() {
+      const D = mdmDif, R = D.res, lim = D.lim, q = D.q.trim().toLowerCase(), wrap = (head, body) => `<div class="table-wrap dif-wrap"><table class="dif-tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+      if (!R || (R.err && R.err.length)) return "";
+      if (D.view === "sum") {
+        const cm = new Map(); if (D.cmp) D.cmp.rows.forEach(r => cm.set(difNameKey(r.name) + "|" + r.day, r));
+        const stt = r => { if (!D.cmp) return ""; const c = cm.get(difNameKey(r.distName) + "|" + r.day); return `<td>${c ? difCmpBadge(c) : ""}</td>`; };
+        const rows = R.rows.slice(0, lim).map(r => `<tr><td><strong>${escapeHtml(r.distName)}</strong> <small class="mut">${escapeHtml(r.distCode)}</small></td><td>${difFmt(r.day, true)}</td><td class="num">${nf(r.total)}</td><td class="num">${nf(r.onT)}</td><td class="num">${nf(r.inF)}</td><td class="num">${nf(r.dif)}</td>${difP(r.pOn)}${difP(r.pIn)}${difP(r.pDif)}${stt(r)}</tr>`).join("");
+        const T = R.total, tot = `<tr class="dif-sum"><td colspan="2"><strong>TỔNG</strong></td><td class="num">${nf(T.total)}</td><td class="num">${nf(T.onT)}</td><td class="num">${nf(T.inF)}</td><td class="num">${nf(T.dif)}</td>${difP(T.pOn)}${difP(T.pIn)}${difP(T.pDif)}${D.cmp ? "<td></td>" : ""}</tr>`;
+        D._n = R.rows.length;
+        return wrap(`<th>Distributor</th><th>Ngày đặt</th><th class="num">Total Orders</th><th class="num">On-time</th><th class="num">In-full</th><th class="num">DIFOT</th><th class="num">On-time %</th><th class="num">In-full %</th><th class="num">DIFOT %</th>${D.cmp ? "<th>So với hệ thống</th>" : ""}`, rows + tot) + difMore(Math.min(lim, R.rows.length), R.rows.length);
+      }
+      if (D.view === "ord") {
+        const F = { all: () => true, bad: o => !o.excluded && !o.difot, late: o => !o.excluded && o.inSR && !o.onTime, short: o => !o.excluded && o.inSR && !o.inFull, unsettled: o => !o.excluded && !o.inSR, ok: o => !o.excluded && o.difot, void: o => o.excluded }[D.flt] || (() => true);
+        const list = R.orders.filter(o => F(o) && (!q || o.orderNo.toLowerCase().includes(q) || o.distName.toLowerCase().includes(q) || [...o.lines.keys()].some(k => k.toLowerCase().includes(q))));
+        D._n = list.length;
+        if (!list.length) return `<div class="empty"><strong>${D.flt === "bad" && !q ? "Không có đơn nào lệch DIFOT" : "Không có đơn phù hợp"}</strong>${D.flt === "bad" && !q ? "Tất cả đơn được tính đều đạt cả On-time lẫn In-full." : "Thử đổi bộ lọc hoặc từ khóa."}</div>`;
+        const rows = list.slice(0, lim).map(o => {
+          const note = o.excluded ? `Void — loại khỏi Total Orders` : o.difot ? "" : escapeHtml(o.reason) + (o.issues && o.issues.length ? `<div class="mut">${o.issues.slice(0, 3).map(i => `${escapeHtml(i.pc)}: ${escapeHtml(difLow(i.type))} (đặt ${nf(i.ord)} · giao ${nf(i.del)})`).join("<br>")}${o.issues.length > 3 ? `<br>… +${o.issues.length - 3} SKU nữa` : ""}</div>` : "");
+          return `<tr><td><strong>${escapeHtml(o.orderNo)}</strong></td><td>${escapeHtml(o.distName)}</td><td>${difFmt(o.orderDay, true)}</td><td>${o.settleDay != null ? difFmt(o.settleDay, true) : '<span class="mut">—</span>'}</td><td class="num">${o.workDays != null ? o.workDays : "—"}</td><td class="c">${difB(o.onTime, o.excluded)}</td><td class="c">${difB(o.inFull, o.excluded)}</td><td class="c">${difB(o.difot, o.excluded)}</td><td class="note">${note}</td></tr>`;
+        }).join("");
+        return wrap(`<th>Order No</th><th>Distributor</th><th>Ngày đặt</th><th>Ngày settle</th><th class="num">Ngày LV</th><th class="c">On-time</th><th class="c">In-full</th><th class="c">DIFOT</th><th>Lý do / chi tiết</th>`, rows) + difMore(Math.min(lim, list.length), list.length);
+      }
+      if (D.view === "line") {
+        const list = R.lineIssues.filter(l => !q || l.orderNo.toLowerCase().includes(q) || l.pc.toLowerCase().includes(q) || l.name.toLowerCase().includes(q) || l.distName.toLowerCase().includes(q));
+        D._n = list.length;
+        if (!list.length) return `<div class="empty"><strong>Không có dòng lệch</strong>Mọi SKU (không tính hàng tặng) đều giao đúng số lượng đặt.</div>`;
+        const rows = list.slice(0, lim).map(l => `<tr><td><strong>${escapeHtml(l.orderNo)}</strong></td><td>${difFmt(l.orderDay, true)}</td><td>${escapeHtml(l.pc)}</td><td>${escapeHtml(l.name)}</td><td class="num">${nf(l.ord)}</td><td class="num">${nf(l.del)}</td><td class="num ${l.del - l.ord < 0 ? "lowc" : "warnc"}">${l.del - l.ord > 0 ? "+" : ""}${nf(difRound(l.del - l.ord, 4))}</td><td>${escapeHtml(l.type)}</td></tr>`).join("");
+        return wrap(`<th>Order No</th><th>Ngày đặt</th><th>Product Code</th><th>Product Name</th><th class="num">Đặt (${R.basis})</th><th class="num">Giao (${R.basis})</th><th class="num">Chênh</th><th>Loại lỗi</th>`, rows) + difMore(Math.min(lim, list.length), list.length);
+      }
+      const rank = { diff: 0, toolOnly: 1, sysOnly: 1, ok: 2 }, list = [...D.cmp.rows].sort((a, b) => rank[a.status] - rank[b.status]);
+      D._n = list.length;
+      const c = (x, k) => x ? `<td class="num">${nf(x.total)}</td>${difP(x.pOn)}${difP(x.pIn)}${difP(x.pDif)}` : `<td class="num mut">—</td><td class="num mut">—</td><td class="num mut">—</td><td class="num mut">—</td>`;
+      const rows = list.slice(0, lim).map(r => `<tr><td><strong>${escapeHtml(r.name)}</strong></td><td>${difFmt(r.day, true)}</td>${c(r.tool)}${c(r.sys)}<td>${difCmpBadge(r)}</td><td class="note">${escapeHtml(r.diffs.join(" · "))}</td></tr>`).join("");
+      return wrap(`<th>Distributor</th><th>Ngày đặt</th><th class="num">Tool · Total</th><th class="num">On-time %</th><th class="num">In-full %</th><th class="num">DIFOT %</th><th class="num">HT · Total</th><th class="num">On-time %</th><th class="num">In-full %</th><th class="num">DIFOT %</th><th>Kết luận</th><th>Chênh lệch</th>`, rows) + difMore(Math.min(lim, list.length), list.length);
+    }
+    const difCmpBadge = c => ({ ok: '<span class="dif-b ok">Khớp</span>', diff: '<span class="dif-b no">Lệch</span>', toolOnly: '<span class="dif-b warn">Chỉ có ở tool</span>', sysOnly: '<span class="dif-b warn">Chỉ có ở hệ thống</span>' }[c.status]);
+    
+    function difInput(t) {
+      if (t.dataset.difFile) { difLoad(t.dataset.difFile, t.files && t.files[0], t); return true; }
+      if (t.dataset.dif) { mdmDif.cfg[t.dataset.dif] = t.type === "checkbox" ? t.checked : t.value; difRunSoon(); return true; }
+      if (t.id === "dif-flt") { mdmDif.flt = t.value; mdmDif.lim = 200; difDrawView(); return true; }
+      if (t.id === "dif-q") { mdmDif.q = t.value; mdmDif.lim = 200; difDrawView(); return true; }
+      return false;
+    }
+    function difClick(e) {
+      const c = e.target.closest("[data-dif-clear]"); if (c) { mdmDif[c.dataset.difClear] = null; difRun(); difDraw(); return true; }
+      const v = e.target.closest("[data-dif-view]"); if (v) { mdmDif.view = v.dataset.difView; mdmDif.lim = 200; difDrawOut(); return true; }
+      if (e.target.closest("#dif-more")) { mdmDif.lim += 200; difDrawView(); return true; }
+      if (e.target.closest("#dif-export")) { difExport(); return true; }
+      return false;
+    }
+    function difBindDrag(pg) {
+      const zone = e => e.target.closest && e.target.closest("[data-dif-zone]");
+      pg.addEventListener("dragover", e => { const z = zone(e); if (z) { e.preventDefault(); z.classList.add("drag"); } });
+      pg.addEventListener("dragleave", e => { const z = zone(e); if (z && !z.contains(e.relatedTarget)) z.classList.remove("drag"); });
+      pg.addEventListener("drop", e => { const z = zone(e); if (!z) return; e.preventDefault(); z.classList.remove("drag"); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) difLoad(z.dataset.difZone, f); });
+    }
+    
+    /* ---- xuất Excel ---- */
+    function difSheets() {
+      const D = mdmDif, R = D.res, T = R.total, cfg = D.cfg, S = [];
+      S.push({ name: "DIFOT Details", head: ["Distributor Name", "OrderDate", "Total Orders", "ON Time Orders", "IN Full Orders", "ON-TIME Percentage", "IN-FULL Percentage", "OTIF/DIFOT Percentage", "DIFOT Orders", "Distributor Code"], widths: [34, 12, 13, 15, 14, 20, 20, 22, 13, 16], pct: [6, 7, 8],
+        rows: [...R.rows.map(r => [r.distName, difFmt(r.day, false), r.total, r.onT, r.inF, difRound(r.pOn), difRound(r.pIn), difRound(r.pDif), r.dif, r.distCode]), ["TỔNG CỘNG", "", T.total, T.onT, T.inF, difRound(T.pOn), difRound(T.pIn), difRound(T.pDif), T.dif, ""]], bold: r => r[0] === "TỔNG CỘNG" });
+      S.push({ name: "Chi tiết đơn", head: ["Order No", "Distributor Code", "Distributor Name", "Order Date", "Order Status", "Settled Date", "Ngày làm việc", "On-time", "In-full", "DIFOT", "Ghi chú"], widths: [18, 16, 32, 12, 13, 12, 14, 10, 10, 10, 70],
+        rows: R.orders.map(o => { const x = o.excluded; return [o.orderNo, o.distCode, o.distName, difFmt(o.orderDay, true), o.status, difFmt(o.settleDay, true), o.workDays == null ? "" : o.workDays, x ? "—" : o.onTime ? "Đạt" : "Không", x ? "—" : o.inFull ? "Đạt" : "Không", x ? "—" : o.difot ? "Đạt" : "Không", x ? "Void — loại khỏi Total Orders" : o.difot ? "" : [o.reason, ...o.issues.map(i => `${i.pc}: ${difLow(i.type)} (đặt ${i.ord} · giao ${i.del})`)].join(" | ")]; }), bad: r => r[9] === "Không" });
+      S.push({ name: "Dòng lệch In-full", head: ["Order No", "Distributor Name", "Order Date", "Product Code", "Product Name", `Đặt (${R.basis})`, `Giao (${R.basis})`, "Chênh lệch", "Loại lỗi"], widths: [18, 32, 12, 14, 44, 12, 12, 12, 30],
+        rows: R.lineIssues.map(l => [l.orderNo, l.distName, difFmt(l.orderDay, true), l.pc, l.name, l.ord, l.del, difRound(l.del - l.ord, 4), l.type]) });
+      if (D.cmp) S.push({ name: "Đối chiếu hệ thống", head: ["Distributor Name", "OrderDate", "Tool · Total", "Tool · On-time %", "Tool · In-full %", "Tool · DIFOT %", "HT · Total", "HT · On-time %", "HT · In-full %", "HT · DIFOT %", "Kết luận", "Chênh lệch"], widths: [34, 12, 12, 16, 16, 16, 12, 16, 16, 16, 20, 50], pct: [4, 5, 6, 8, 9, 10],
+        rows: D.cmp.rows.map(r => { const t = r.tool, s = r.sys; return [r.name, difFmt(r.day, false), t ? t.total : "", t ? difRound(t.pOn) : "", t ? difRound(t.pIn) : "", t ? difRound(t.pDif) : "", s ? s.total : "", s ? difRound(s.pOn) : "", s ? difRound(s.pIn) : "", s ? difRound(s.pDif) : "", { ok: "Khớp", diff: "Lệch", toolOnly: "Chỉ có ở tool", sysOnly: "Chỉ có ở hệ thống" }[r.status], r.diffs.join(" · ")]; }), bad: r => r[10] !== "Khớp" });
+      S.push({ name: "Quy tắc áp dụng", head: ["Mục", "Nội dung"], widths: [32, 110], rows: [
+        ["Trạng thái Sales Order được lấy", cfg.incStatuses.trim() || "(lấy tất cả)"],
+        ["Total Orders", "Số đơn trong Sales Order (loại đơn có trạng thái: " + (cfg.excludeVoid ? cfg.voidStatuses : "— không loại") + ")"],
+        ["On-time", `Số ngày làm việc từ ngày đặt đến ngày settle ≤ ${R.cfg.maxDays} (tương đương Settled − Ordered < ${R.cfg.maxDays + 1} ngày); ${cfg.noSunday ? "không tính Chủ nhật" : "tính cả Chủ nhật"}; ngày lễ: ${cfg.hol.trim() ? cfg.hol.trim().replace(/\s+/g, " ") : "chưa nhập"}`],
+        ["In-full", `Mỗi SKU (không phải hàng tặng FOC) có số lượng giao (${R.basis}) = số lượng đặt; thừa/thiếu/sai SKU đều không đạt`],
+        ["DIFOT", "Đơn vừa On-time vừa In-full"], ["Tỉ lệ %", "Số đơn đạt ÷ Total Orders × 100"],
+        ["Đơn không có trong Sales Register", "Tính là chưa giao: không đạt On-time và In-full"],
+        ["Sai số đối chiếu hệ thống", D.cmp ? `${cfg.tol} điểm %` : "(không dùng)"],
+        ["File nguồn", `SO: ${D.so.name} · SR: ${D.sr.name}${D.sys ? " · HT: " + D.sys.name : ""}`], ["Thời điểm xuất", new Date().toLocaleString("vi-VN")]] });
+      return S;
+    }
+    async function difExport() {
+      const D = mdmDif; if (!D.res || (D.res.err && D.res.err.length)) return;
+      const sheets = difSheets(), MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      const fileName = `DIFOT_Check_${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.xlsx`;
+      try { await loadLib("exceljs"); } catch (_) { /* dùng phương án dự phòng */ }
+      try {
+        let buf, styled = !!window.ExcelJS;
+        if (styled) {
+          const wb = new ExcelJS.Workbook();
+          sheets.forEach(S => {
+            const ws = wb.addWorksheet(S.name, { views: [{ state: "frozen", ySplit: 1 }] });
+            ws.addRow(S.head); S.rows.forEach(r => ws.addRow(r));
+            const h = ws.getRow(1); h.height = 22; h.font = { bold: true, color: { argb: "FFFFFFFF" } }; h.alignment = { vertical: "middle", wrapText: true };
+            h.eachCell(c => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFB71C1C" } }; });
+            S.widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+            ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: S.head.length } };
+            S.rows.forEach((r, i) => {
+              const row = ws.getRow(i + 2);
+              (S.pct || []).forEach(ci => { if (typeof r[ci - 1] === "number") row.getCell(ci).numFmt = "0.00"; });
+              if (S.bad && S.bad(r)) row.eachCell(c => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFECEB" } }; });
+              if (S.bold && S.bold(r)) row.font = { bold: true };
+            });
+          });
+          buf = await wb.xlsx.writeBuffer();
+        } else {
+          await loadLib("xlsx");
+          const wb = XLSX.utils.book_new();
+          sheets.forEach(S => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([S.head, ...S.rows]), S.name));
+          buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+        }
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: MIME })), download: fileName });
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        toast(`Đã xuất "${fileName}" (${sheets.length} sheet).${styled ? "" : " Lần này không tô màu được vì chưa tải được thư viện ExcelJS."}`, "success");
+      } catch (err) { toast("Không xuất được Excel: " + err.message, "error"); }
+    }
+    
+    function renderDifot() {
+      const D = mdmDif, c = D.cfg, md = c.maxDays.trim() === "" ? NaN : Number(c.maxDays);
+      return `<section class="panel tl-panel"><style>
+        .dif-drops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+        .dif-zone{position:relative;display:flex;flex-direction:column;gap:7px;min-height:150px;padding:14px 16px;border:1.5px dashed var(--line-strong);border-radius:14px;background:#fff;transition:border-color .2s,background .25s,box-shadow .25s}
+        .dif-zone:hover{border-color:var(--brand-light)}
+        .dif-zone.drag{border-color:var(--brand);background:var(--brand-soft);box-shadow:0 0 0 4px rgba(229,57,53,.10)}
+        .dif-zone.done{border-style:solid;border-color:#b9e4d0;background:linear-gradient(180deg,#fff,#f3fbf7)}
+        .dif-pick{display:flex;flex-direction:column;gap:7px;flex:1;cursor:pointer}
+        .dif-file{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
+        .dz-top{display:flex;align-items:center;gap:8px;font-size:13.5px}
+        .dz-no{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--g-brand);color:#fff;font-size:11.5px;font-weight:700;flex:none}
+        .dz-ok{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--success)}
+        .dz-sub{font-size:11.5px;color:var(--muted);line-height:1.5}
+        .dz-cta{margin-top:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:650;color:var(--brand)}
+        .dz-cta svg{width:18px;height:18px;flex:none}.dz-cta small{font-weight:500;color:var(--muted);margin-left:4px}
+        .dz-file{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;color:var(--ink);min-width:0}
+        .dz-file svg{width:16px;height:16px;flex:none;color:var(--success)}.dz-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .dz-act{margin-top:auto;display:flex;gap:6px;align-items:center}
+        .dz-act .btn{padding:6px 12px;font-size:12px;cursor:pointer}
+        #dif-cfg .tl-check{padding-top:4px;font-weight:500}
+        #dif-cfg .tl-check input[type=checkbox]{width:auto;flex:none;padding:0;margin:0;accent-color:var(--brand)}
+        #dif-cfg .hint{font-weight:500;color:var(--muted)}
+        #dif-cfg textarea{min-height:56px}
+        .dif-hol{font-size:11.5px;color:var(--warning);min-height:0;margin-top:4px}
+        .dif-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:4px 0 16px}
+        .dif-kpi{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:2px;padding:14px 16px 16px;border:1px solid var(--line-strong);border-radius:14px;background:#fff}
+        .dif-kpi span{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+        .dif-kpi b{font-size:26px;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums}
+        .dif-kpi small{font-size:11.5px;color:var(--muted)}
+        .dif-kpi i{position:absolute;left:0;bottom:0;height:4px;background:var(--g-brand)}
+        .dif-kpi.ok b{color:var(--success)}.dif-kpi.ok i{background:linear-gradient(90deg,#17b978,#0b8a58)}
+        .dif-kpi.low b{color:var(--danger)}
+        .dif-seg button em{font-style:normal;font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;background:rgba(0,0,0,.07)}
+        .dif-seg button.on em{background:rgba(255,255,255,.25)}
+        .dif-tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+        .dif-tools input{flex:1;min-width:220px;max-width:360px;border:1px solid var(--line-strong);border-radius:10px;padding:9px 11px;font-size:12px;outline:none;background:#fff;color:var(--ink)}
+        .dif-tools input:focus{border-color:var(--brand-light);box-shadow:0 0 0 3px rgba(229,57,53,.12)}
+        .dif-wrap{max-height:520px;border:1px solid var(--line-strong);border-radius:14px;background:#fff}
+        .dif-tbl{min-width:760px}
+        .dif-tbl th.num,.dif-tbl td.num{text-align:right}.dif-tbl th.c,.dif-tbl td.c{text-align:center}
+        .dif-tbl td.note{white-space:normal;min-width:260px;max-width:480px;font-size:11.5px;line-height:1.5}
+        .dif-wrap .mut{color:var(--muted);font-size:11px}
+        .dif-tbl td.okc{color:var(--success);font-weight:650}.dif-tbl td.lowc{color:var(--danger);font-weight:650}.dif-tbl td.warnc{color:var(--warning);font-weight:650}
+        .dif-tbl tr.dif-sum td{background:var(--brand-soft);border-top:2px solid var(--line-strong);position:sticky;bottom:0}
+        .dif-b{display:inline-block;min-width:24px;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;text-align:center}
+        .dif-b.ok{background:var(--success-soft);color:var(--success)}.dif-b.no{background:var(--danger-soft);color:var(--danger)}.dif-b.warn{background:var(--warning-soft);color:var(--warning)}.dif-b.na{color:var(--muted)}
+        .dif-more{text-align:center;margin-top:12px}
+        @media (max-width:900px){.dif-drops,.dif-kpis{grid-template-columns:1fr}}
+      </style><div class="panel-head"><div><h2>Kiểm Tra DIFOT</h2><p>Tải file Sales Order và Sales Register xuất từ DMS — tool tự tính On-time, In-full và DIFOT theo từng NPP × ngày đặt, chỉ ra từng đơn trễ hạn / thiếu hàng, và (nếu có) đối chiếu với báo cáo DIFOT Details của hệ thống. Dữ liệu chỉ xử lý trên trình duyệt, không gửi đi đâu.</p></div></div><div class="panel-body">
+        <div class="dif-drops" id="dif-drops">${difDropsHtml()}</div>
+        <div id="dif-cfg">
+          <div class="adj-cfg">
+            <div class="field${Number.isInteger(md) && md >= 0 ? "" : " bad"}" data-k="maxDays"><label title="Settled Date − Ordered Date &lt; 3 ngày (không tính Chủ nhật / ngày lễ)">Hạn giao tối đa <span class="hint">ngày làm việc</span></label><input data-dif="maxDays" value="${escapeHtml(c.maxDays)}" inputmode="numeric" autocomplete="off"></div>
+            <div class="field" data-k="voidStatuses"><label>Trạng thái đơn bị loại <span class="hint">cách nhau dấu phẩy</span></label><input data-dif="voidStatuses" value="${escapeHtml(c.voidStatuses)}" placeholder="vd: Void" autocomplete="off"></div>
+            <div class="field" data-k="tol"><label title="Chênh lệch tối đa (điểm %) giữa tool và hệ thống vẫn coi là khớp">Sai số đối chiếu <span class="hint">điểm %</span></label><select data-dif="tol">${["0.01", "0.1", "0.5", "1"].map(v => `<option value="${v}"${c.tol === v ? " selected" : ""}>± ${v}%</option>`).join("")}</select></div>
+            <div class="field"><label>Quy tắc ngày</label><label class="tl-check"><input type="checkbox" data-dif="noSunday"${c.noSunday ? " checked" : ""}> Không tính Chủ nhật</label><label class="tl-check"><input type="checkbox" data-dif="excludeVoid"${c.excludeVoid ? " checked" : ""}> Loại đơn Void khỏi Total Orders</label></div>
+          </div>
+          <div class="adj-cfg" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr);margin-top:-6px"><div class="field" data-k="incStatuses"><label title="Đơn có trạng thái khác (vd Posted) bị bỏ qua hoàn toàn, không tính vào Total Orders">Trạng thái Sales Order được lấy <span class="hint">cách nhau dấu phẩy · để trống = lấy hết</span></label><input data-dif="incStatuses" value="${escapeHtml(c.incStatuses)}" placeholder="vd: Closed, Voided" autocomplete="off"></div><div class="field"><label>Ngày nghỉ lễ <span class="hint">không tính vào hạn giao · dd/mm/yyyy, cách nhau dấu phẩy hoặc xuống dòng</span></label><textarea data-dif="hol" placeholder="vd: 01/01/2026, 02/09/2026" autocomplete="off">${escapeHtml(c.hol)}</textarea><div class="dif-hol" id="dif-holbad"></div></div></div>
+        </div>
+        <div id="dif-out">${difOutHtml()}</div></div></section>`;
     }
 
     /* ---- Cài đặt giá cho SKU: lưới ItemCode + giá, xuất XLSX đúng mẫu 4_pricingcontrol.xlsx (sheet "in") ---- */
@@ -7185,22 +7691,25 @@ function renderProFocM() {
       if (mdmMode === "promo") return renderPro();
       if (mdmMode === "stock-adj") return renderAdj();
       if (mdmMode === "target-npp") return renderTgt();
+      if (mdmMode === "difot") return renderDifot();
       const m = MDM_MODES.find(x => x[0] === mdmMode) || MDM_MODES[0];
       return `<section class="panel tl-panel"><div class="panel-head"><div><h2>${escapeHtml(m[1])}</h2><p>Chức năng của L2 / MDM Team.</p></div></div><div class="panel-body"><div class="empty"><strong>Chức năng đang được xây dựng</strong>Đang chờ mẫu phiếu Excel và quy tắc xử lý cho “${escapeHtml(m[1])}”.</div></div></section>`;
     }
     function renderMdm() {
-      return `<div id="mdm-page"><div class="header-row"><div><div class="eyebrow">Support tools · L2 / MDM Team</div><h2 class="page-title">L2 / MDM Team</h2><p class="page-subtitle">Tạo tồn kho ban đầu, tăng/giảm tồn, cài đặt giá cho SKU, cài đặt CTKM và cài đặt Target NPP.</p></div></div>
+      return `<div id="mdm-page"><div class="header-row"><div><div class="eyebrow">Support tools · L2 / MDM Team</div><h2 class="page-title">L2 / MDM Team</h2><p class="page-subtitle">Tạo tồn kho ban đầu, tăng/giảm tồn, cài đặt giá cho SKU, cài đặt CTKM, cài đặt Target NPP và kiểm tra DIFOT.</p></div></div>
         <div class="tl-seg">${MDM_MODES.map(([k, l, ic]) => `<button type="button" data-mdm-mode="${k}" class="${mdmMode === k ? "on" : ""}">${ICONS[ic]} ${l}</button>`).join("")}</div>
         <div id="mdm-root">${renderMdmBody()}</div></div>`;
     }
     function bindMdmEvents() {
       const pg = $("#mdm-page"); if (!pg) return;
+      difBindDrag(pg);
       pg.addEventListener("input", e => {
         const t = e.target;
         if (t.dataset.pro) { mdmPro[t.dataset.pro] = t.type === "checkbox" ? t.checked : t.value; if (t.dataset.pro === "type" || t.dataset.pro === "rb") { proSyncAuto(); return proDraw(); } return proMeta(); }
         if (t.dataset.proCol) { mdmPro.cols[t.dataset.proCol] = t.value; mdmPro.touched.add(t.dataset.proCol); return proMeta(); }
         if (t.dataset.ps) { mdmPro.slabs[Number(t.closest(".pro-slab").dataset.si)][t.dataset.ps] = t.value; return proMeta(); }
         if (t.id === "tac-fmt") { mdmTacFmt = t.value === "75" ? "75" : "67"; saveKey(TAC_FMT_KEY, mdmTacFmt); return; }
+        if (difInput(t)) return;
         if (t.id === "tmx-file") return tmxImport(t);
         if (t.dataset.mx) return tmxInput(t);
         if (t.dataset.tac) { mdmTac[t.dataset.tac] = t.type === "checkbox" ? t.checked : t.value; return tacMeta(); }
@@ -7263,6 +7772,7 @@ function renderProFocM() {
         const el = document.querySelector(`#adj-rows .adj-row[data-r="${r}"] input[data-c="${t.dataset.c}"]`); if (el) { el.focus(); el.select(); }
       });
       pg.addEventListener("click", async e => {
+        if (difClick(e)) return;
         if (e.target.closest("#pro-adv > summary")) { e.preventDefault(); return; }
         const hp = e.target.closest("[data-help]"); if (hp) { e.preventDefault(); return proHelp(hp.dataset.help); }
         const pa = e.target.closest("[data-pro-act]"); if (pa) return proAct(pa.dataset.proAct, pa);
