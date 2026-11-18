@@ -6015,9 +6015,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     /* ---- Khai báo cột bắt buộc ---- */
     const DIF_SO_COLS = { orderNo: ["orderno", "ordernumber"], orderDate: ["orderdate"], status: ["orderstatus", "status"], distCode: ["distributorcode"], distName: ["distributorname"], product: ["productcode", "itemcode"], pname: ["productname"], foc: ["isfreegood", "isfoc"] };
     const DIF_SR_COLS = { orderNo: ["orderreference", "orderno"], settle: ["settlementdate", "settlementdatetime"], product: ["productcode", "itemcode"], pname: ["productname"], foc: ["isfreegood", "isfoc"] };
-    const DIF_SYS_COLS = { name: ["distributorname"], date: ["orderdate"], total: ["totalorders"], onT: ["ontimeorders"], inF: ["infullorders"], pOn: ["ontimepercentage"], pIn: ["infullpercentage"], pDif: ["otifdifotpercentage", "difotpercentage", "otifpercentage"] };
+    const DIF_SYS_COLS = { name: ["distributorname"], code: ["distributorcode"], difN: ["difotorders", "otiforders"], date: ["orderdate"], total: ["totalorders"], onT: ["ontimeorders"], inF: ["infullorders"], pOn: ["ontimepercentage"], pIn: ["infullpercentage"], pDif: ["otifdifotpercentage", "difotpercentage", "otifpercentage"] };
     const DIF_LABEL = { orderNo: "Order No / Order Reference", orderDate: "Order Date", status: "Order Status", distCode: "Distributor Code", distName: "Distributor Name", product: "Product Code", pname: "Product Name", foc: "Is Free Good?", settle: "Settlement Date", qty: "Quantity (EA)", name: "Distributor Name", date: "OrderDate", total: "Total Orders", onT: "ON Time Orders", inF: "IN Full Orders", pOn: "ON-TIME Percentage", pIn: "IN-FULL Percentage", pDif: "OTIF/DIFOT Percentage" };
-    const DIF_OPTIONAL = new Set(["status", "distCode", "distName", "pname"]);
+    const DIF_OPTIONAL = new Set(["status", "distCode", "distName", "pname", "code", "difN"]);
     function difMap(t, spec) { const m = {}, miss = []; for (const k in spec) { m[k] = difCol(t, spec[k]); if (m[k] < 0 && !DIF_OPTIONAL.has(k)) miss.push(DIF_LABEL[k]); } return { m, miss }; }
     
     /* ---- Tính DIFOT ----
@@ -6072,7 +6072,16 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       // 3) Đánh giá từng đơn
       const list = [], lineIssues = []; let voidN = 0;
       for (const o of orders.values()) {
-        if (o.isVoid && cfg.excludeVoid) { voidN++; o.excluded = true; list.push(o); continue; }
+        if (o.isVoid) {
+          // Đơn Void: luôn nằm trong Total Orders (trừ chế độ "exclude"); không bị đánh giá SKU
+          //   count   → On-time đạt, KHÔNG tính vào In-full / DIFOT (đúng ghi chú slide: "không tính đơn Void")
+          //   pass    → coi là đạt cả 3 chỉ tiêu   ·   exclude → loại hẳn khỏi Total
+          voidN++; o.issues = []; o.workDays = null;
+          if (cfg.voidMode === "exclude") { o.excluded = true; list.push(o); continue; }
+          const pass = cfg.voidMode === "pass";
+          o.onTime = true; o.inFull = pass; o.difot = pass; o.reason = pass ? "" : "Void — không tính vào In-full / DIFOT";
+          list.push(o); continue;
+        }
         o.issues = [];
         for (const L of o.lines.values()) {
           if (Math.abs(L.ord - L.del) < 1e-9) continue;
@@ -6110,15 +6119,15 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       for (const r of t.rows) {
         const name = difStr(r[m.name]), day = difDay(r[m.date]); if (!name && day == null) continue;
         const total = difNum(r[m.total]), pOn = difNum(r[m.pOn]), pIn = difNum(r[m.pIn]), pDif = difNum(r[m.pDif]);
-        rows.push({ name, day, total, onT: difNum(r[m.onT]), inF: difNum(r[m.inF]), dif: difRound(pDif * total / 100, 4), pOn, pIn, pDif });
+        rows.push({ name, code: m.code >= 0 ? difStr(r[m.code]) : "", day, total, onT: difNum(r[m.onT]), inF: difNum(r[m.inF]), dif: m.difN >= 0 ? difNum(r[m.difN]) : difRound(pDif * total / 100, 4), pOn, pIn, pDif });
       }
       return { rows, err: "" };
     }
     function difCompare(res, sys, tol) {
-      const M = new Map(), key = (n, d) => difNameKey(n) + "|" + d;
-      for (const x of res.rows) { const k = key(x.distName, x.day); let r = M.get(k); if (!r) { r = { name: x.distName, day: x.day, tool: { total: 0, onT: 0, inF: 0, dif: 0 }, sys: null }; M.set(k, r); } const t = r.tool; t.total += x.total; t.onT += x.onT; t.inF += x.inF; t.dif += x.dif; }
+      const useCode = sys.length > 0 && sys.every(s => s.code), M = new Map(), key = (n, d, c) => (useCode ? difStr(c) : difNameKey(n)) + "|" + d;
+      for (const x of res.rows) { const k = key(x.distName, x.day, x.distCode); let r = M.get(k); if (!r) { r = { name: x.distName, day: x.day, tool: { total: 0, onT: 0, inF: 0, dif: 0 }, sys: null }; M.set(k, r); } const t = r.tool; t.total += x.total; t.onT += x.onT; t.inF += x.inF; t.dif += x.dif; }
       for (const s of sys) {
-        const k = key(s.name, s.day); let r = M.get(k); if (!r) { r = { name: s.name, day: s.day, tool: null, sys: null }; M.set(k, r); }
+        const k = key(s.name, s.day, s.code); let r = M.get(k); if (!r) { r = { name: s.name, day: s.day, tool: null, sys: null }; M.set(k, r); }
         if (!r.sys) r.sys = { total: 0, onT: 0, inF: 0, dif: 0, n: 0 };
         const q = r.sys; q.total += s.total; q.onT += s.onT; q.inF += s.inF; q.dif += s.dif; q.n++;
       }
@@ -6131,6 +6140,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (t && !s) status = "toolOnly"; else if (!t && s) status = "sysOnly";
         else {
           if (t.total !== s.total) diffs.push(`Total ${t.total} ≠ ${s.total}`);
+          if (t.onT !== s.onT) diffs.push(`On-time ${t.onT} đơn ≠ ${s.onT}`);
+          if (t.inF !== s.inF) diffs.push(`In-full ${t.inF} đơn ≠ ${s.inF}`);
+          if (Math.abs(t.dif - s.dif) > 0.5) diffs.push(`DIFOT ${t.dif} đơn ≠ ${difRound(s.dif, 1)}`);
           if (Math.abs(t.pOn - s.pOn) > tol) diffs.push(`On-time ${difRound(t.pOn)} ≠ ${difRound(s.pOn)}`);
           if (Math.abs(t.pIn - s.pIn) > tol) diffs.push(`In-full ${difRound(t.pIn)} ≠ ${difRound(s.pIn)}`);
           if (Math.abs(t.pDif - s.pDif) > tol) diffs.push(`DIFOT ${difRound(t.pDif)} ≠ ${difRound(s.pDif)}`);
@@ -6143,17 +6155,17 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       return { rows: out, cnt };
     }
     /* DIF-ENGINE-END */
-    const mdmDif = { so: null, sr: null, sys: null, busy: "", cfg: { maxDays: "2", noSunday: true, excludeVoid: true, voidStatuses: "Void, Voided", incStatuses: "Closed, Voided", tol: "0.01", hol: "" }, view: "sum", flt: "bad", q: "", lim: 200, res: null, cmp: null, holBad: [], maxOk: true };
+    const mdmDif = { so: null, sr: null, sys: null, busy: "", cfg: { maxDays: "2", noSunday: true, voidMode: "count", voidStatuses: "Void, Voided", incStatuses: "", tol: "0.01", hol: "" }, view: "sum", flt: "bad", q: "", lim: 200, res: null, cmp: null, holBad: [], maxOk: true };
     const difLow = t => t.charAt(0).toLowerCase() + t.slice(1); // "Giao thiếu" → "giao thiếu" (giữ nguyên chữ SKU)
     const difPctTxt = x => difRound(x).toLocaleString("vi-VN", { maximumFractionDigits: 2 }) + "%";
     function difCfg() {
       const c = mdmDif.cfg, md = c.maxDays.trim() === "" ? NaN : Number(c.maxDays), h = difHolidays(c.hol), ok = Number.isInteger(md) && md >= 0;
       mdmDif.holBad = h.bad; mdmDif.maxOk = ok;
-      return { maxDays: ok ? md : 2, noSunday: !!c.noSunday, holidays: h.set, voidStatuses: c.voidStatuses, includeStatuses: c.incStatuses, excludeVoid: !!c.excludeVoid };
+      return { maxDays: ok ? md : 2, noSunday: !!c.noSunday, holidays: h.set, voidStatuses: c.voidStatuses, includeStatuses: c.incStatuses, voidMode: c.voidMode };
     }
     function difStats(R) {
       const s = { nOk: 0, nBad: 0, nLate: 0, nShort: 0, nUnsettled: 0 };
-      for (const o of R.orders) { if (o.excluded) continue; if (o.difot) s.nOk++; else { s.nBad++; if (!o.inSR) s.nUnsettled++; else { if (!o.onTime) s.nLate++; if (!o.inFull) s.nShort++; } } }
+      for (const o of R.orders) { if (o.excluded || o.isVoid) continue; if (o.difot) s.nOk++; else { s.nBad++; if (!o.inSR) s.nUnsettled++; else { if (!o.onTime) s.nLate++; if (!o.inFull) s.nShort++; } } }
       return Object.assign(R, s);
     }
     function difRun() {
@@ -6218,7 +6230,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       const T = R.total, kpi = (label, big, sub, p) => `<div class="dif-kpi ${p == null ? "" : p >= 100 ? "ok" : "low"}"><span>${label}</span><b>${big}</b><small>${sub}</small>${p == null ? "" : `<i style="width:${Math.max(0, Math.min(100, p))}%"></i>`}</div>`;
       const chips = [`<span class="adj-chip ok">${nf(T.total)} đơn được tính</span>`];
       const sk = Object.entries(R.warn.skipped || {}); if (sk.length) chips.push(`<span class="adj-chip warn">Bỏ qua ${nf(sk.reduce((s, x) => s + x[1], 0))} đơn trạng thái ${escapeHtml(sk.map(x => x[0]).join(", "))}</span>`);
-      if (R.voidN) chips.push(`<span class="adj-chip warn">${nf(R.voidN)} đơn Void ${D.cfg.excludeVoid ? "đã loại" : "vẫn tính"}</span>`);
+      if (R.voidN) chips.push(`<span class="adj-chip warn">${nf(R.voidN)} đơn Void ${{ count: "tính vào Total, không tính In-full/DIFOT", pass: "tính là đạt", exclude: "đã loại khỏi Total" }[D.cfg.voidMode]}</span>`);
       if (R.nUnsettled) chips.push(`<span class="adj-chip err">${nf(R.nUnsettled)} đơn chưa có trong Sales Register</span>`);
       if (R.warn.srOnly) chips.push(`<span class="adj-chip warn">${nf(R.warn.srOnly)} đơn chỉ có trong Sales Register (thiếu ở Sales Order)</span>`);
       if (R.warn.badDate) chips.push(`<span class="adj-chip err">${nf(R.warn.badDate)} đơn lỗi ngày đặt</span>`);
@@ -6232,7 +6244,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         <div class="dif-kpis">${kpi("Total Orders", nf(T.total), `${nf(R.rows.length)} dòng NPP × ngày`, null)}${kpi("On-time %", difPctTxt(T.pOn), `${nf(T.onT)} / ${nf(T.total)} đơn`, T.pOn)}${kpi("In-full %", difPctTxt(T.pIn), `${nf(T.inF)} / ${nf(T.total)} đơn`, T.pIn)}${kpi("DIFOT %", difPctTxt(T.pDif), `${nf(T.dif)} / ${nf(T.total)} đơn`, T.pDif)}</div>
         <div class="tl-seg dif-seg">${views.map(([k, l, n]) => `<button type="button" data-dif-view="${k}" class="${D.view === k ? "on" : ""}">${l} <em>${nf(n)}</em></button>`).join("")}</div>${tool}
         <div id="dif-view">${view}</div>
-        <p class="adj-tip">💡 <b>On-time</b>: số ngày làm việc từ ngày đặt đến ngày settle ≤ hạn (không tính Chủ nhật${D.holBad.length || D.cfg.hol.trim() ? " và ngày lễ đã nhập" : ", ngày lễ chưa nhập"}). <b>In-full</b>: mọi SKU (trừ hàng tặng FOC, đơn Void) giao đúng bằng số đặt — thiếu, thừa hay sai SKU đều tính là không đủ. <b>DIFOT</b> = vừa on-time vừa in-full. Tỉ lệ = số đơn đạt ÷ Total Orders × 100. Đơn không có trong Sales Register tính là chưa giao (không đạt cả hai).</p>`;
+        <p class="adj-tip">💡 <b>On-time</b>: số ngày làm việc từ ngày đặt đến ngày settle ≤ hạn (không tính Chủ nhật${D.holBad.length || D.cfg.hol.trim() ? " và ngày lễ đã nhập" : ", ngày lễ chưa nhập"}). <b>In-full</b>: mọi SKU (trừ hàng tặng FOC) giao đúng bằng số đặt; đơn Void không được tính vào In-full — thiếu, thừa hay sai SKU đều tính là không đủ. <b>DIFOT</b> = vừa on-time vừa in-full. Tỉ lệ = số đơn đạt ÷ Total Orders × 100. Đơn không có trong Sales Register tính là chưa giao (không đạt cả hai).</p>`;
     }
     function difDrawOut() { const o = $("#dif-out"); if (o) { o.innerHTML = difOutHtml(); difViewCount(); } }
     function difDrawView() { const v = $("#dif-view"); if (v) { v.innerHTML = difViewHtml(); difViewCount(); } }
@@ -6253,7 +6265,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         return wrap(`<th>Distributor</th><th>Ngày đặt</th><th class="num">Total Orders</th><th class="num">On-time</th><th class="num">In-full</th><th class="num">DIFOT</th><th class="num">On-time %</th><th class="num">In-full %</th><th class="num">DIFOT %</th>${D.cmp ? "<th>So với hệ thống</th>" : ""}`, rows + tot) + difMore(Math.min(lim, R.rows.length), R.rows.length);
       }
       if (D.view === "ord") {
-        const F = { all: () => true, bad: o => !o.excluded && !o.difot, late: o => !o.excluded && o.inSR && !o.onTime, short: o => !o.excluded && o.inSR && !o.inFull, unsettled: o => !o.excluded && !o.inSR, ok: o => !o.excluded && o.difot, void: o => o.excluded }[D.flt] || (() => true);
+        const F = { all: () => true, bad: o => !o.excluded && !o.isVoid && !o.difot, late: o => !o.excluded && o.inSR && !o.onTime, short: o => !o.excluded && o.inSR && !o.inFull, unsettled: o => !o.excluded && !o.inSR, ok: o => !o.excluded && o.difot, void: o => o.isVoid }[D.flt] || (() => true);
         const list = R.orders.filter(o => F(o) && (!q || o.orderNo.toLowerCase().includes(q) || o.distName.toLowerCase().includes(q) || [...o.lines.keys()].some(k => k.toLowerCase().includes(q))));
         D._n = list.length;
         if (!list.length) return `<div class="empty"><strong>${D.flt === "bad" && !q ? "Không có đơn nào lệch DIFOT" : "Không có đơn phù hợp"}</strong>${D.flt === "bad" && !q ? "Tất cả đơn được tính đều đạt cả On-time lẫn In-full." : "Thử đổi bộ lọc hoặc từ khóa."}</div>`;
@@ -6311,13 +6323,14 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
       if (D.cmp) S.push({ name: "Đối chiếu hệ thống", head: ["Distributor Name", "OrderDate", "Tool · Total", "Tool · On-time %", "Tool · In-full %", "Tool · DIFOT %", "HT · Total", "HT · On-time %", "HT · In-full %", "HT · DIFOT %", "Kết luận", "Chênh lệch"], widths: [34, 12, 12, 16, 16, 16, 12, 16, 16, 16, 20, 50], pct: [4, 5, 6, 8, 9, 10],
         rows: D.cmp.rows.map(r => { const t = r.tool, s = r.sys; return [r.name, difFmt(r.day, false), t ? t.total : "", t ? difRound(t.pOn) : "", t ? difRound(t.pIn) : "", t ? difRound(t.pDif) : "", s ? s.total : "", s ? difRound(s.pOn) : "", s ? difRound(s.pIn) : "", s ? difRound(s.pDif) : "", { ok: "Khớp", diff: "Lệch", toolOnly: "Chỉ có ở tool", sysOnly: "Chỉ có ở hệ thống" }[r.status], r.diffs.join(" · ")]; }), bad: r => r[10] !== "Khớp" });
       S.push({ name: "Quy tắc áp dụng", head: ["Mục", "Nội dung"], widths: [32, 110], rows: [
-        ["Trạng thái Sales Order được lấy", cfg.incStatuses.trim() || "(lấy tất cả)"],
-        ["Total Orders", "Số đơn trong Sales Order (loại đơn có trạng thái: " + (cfg.excludeVoid ? cfg.voidStatuses : "— không loại") + ")"],
+        ["Trạng thái Sales Order được lấy", cfg.incStatuses.trim() || "(lấy tất cả trạng thái)"],
+        ["Total Orders", "Tổng số đơn trong Sales Order (gồm cả Posted, Closed, Void" + (cfg.voidMode === "exclude" ? "; riêng đơn Void bị loại" : "") + ")"],
+        ["Đơn Void (trạng thái: " + cfg.voidStatuses + ")", { count: "Có trong Total, On-time đạt, KHÔNG tính vào In-full và DIFOT", pass: "Có trong Total, coi là đạt cả On-time / In-full / DIFOT", exclude: "Loại khỏi Total Orders" }[cfg.voidMode]],
         ["On-time", `Số ngày làm việc từ ngày đặt đến ngày settle ≤ ${R.cfg.maxDays} (tương đương Settled − Ordered < ${R.cfg.maxDays + 1} ngày); ${cfg.noSunday ? "không tính Chủ nhật" : "tính cả Chủ nhật"}; ngày lễ: ${cfg.hol.trim() ? cfg.hol.trim().replace(/\s+/g, " ") : "chưa nhập"}`],
-        ["In-full", `Mỗi SKU (không phải hàng tặng FOC) có số lượng giao (${R.basis}) = số lượng đặt; thừa/thiếu/sai SKU đều không đạt`],
+        ["In-full", `Mỗi SKU (không phải hàng tặng FOC, cột Is Free Good? = 1) có số lượng giao (${R.basis}) = số lượng đặt; thừa/thiếu/sai SKU đều không đạt. Đơn Void không được tính`],
         ["DIFOT", "Đơn vừa On-time vừa In-full"], ["Tỉ lệ %", "Số đơn đạt ÷ Total Orders × 100"],
         ["Đơn không có trong Sales Register", "Tính là chưa giao: không đạt On-time và In-full"],
-        ["Sai số đối chiếu hệ thống", D.cmp ? `${cfg.tol} điểm %` : "(không dùng)"],
+        ["Đối chiếu hệ thống", D.cmp ? "So số đơn Total / On-time / In-full / DIFOT chính xác; % sai lệch tối đa 0,01 điểm" : "(không dùng)"],
         ["File nguồn", `SO: ${D.so.name} · SR: ${D.sr.name}${D.sys ? " · HT: " + D.sys.name : ""}`], ["Thời điểm xuất", new Date().toLocaleString("vi-VN")]] });
       return S;
     }
@@ -6412,10 +6425,9 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           <div class="adj-cfg">
             <div class="field${Number.isInteger(md) && md >= 0 ? "" : " bad"}" data-k="maxDays"><label title="Settled Date − Ordered Date &lt; 3 ngày (không tính Chủ nhật / ngày lễ)">Hạn giao tối đa <span class="hint">ngày làm việc</span></label><input data-dif="maxDays" value="${escapeHtml(c.maxDays)}" inputmode="numeric" autocomplete="off"></div>
             <div class="field" data-k="voidStatuses"><label>Trạng thái đơn bị loại <span class="hint">cách nhau dấu phẩy</span></label><input data-dif="voidStatuses" value="${escapeHtml(c.voidStatuses)}" placeholder="vd: Void" autocomplete="off"></div>
-            <div class="field" data-k="tol"><label title="Chênh lệch tối đa (điểm %) giữa tool và hệ thống vẫn coi là khớp">Sai số đối chiếu <span class="hint">điểm %</span></label><select data-dif="tol">${["0.01", "0.1", "0.5", "1"].map(v => `<option value="${v}"${c.tol === v ? " selected" : ""}>± ${v}%</option>`).join("")}</select></div>
-            <div class="field"><label>Quy tắc ngày</label><label class="tl-check"><input type="checkbox" data-dif="noSunday"${c.noSunday ? " checked" : ""}> Không tính Chủ nhật</label><label class="tl-check"><input type="checkbox" data-dif="excludeVoid"${c.excludeVoid ? " checked" : ""}> Loại đơn Void khỏi Total Orders</label></div>
+            <div class="field"><label>Quy tắc ngày</label><label class="tl-check"><input type="checkbox" data-dif="noSunday"${c.noSunday ? " checked" : ""}> Không tính Chủ nhật</label></div>
           </div>
-          <div class="adj-cfg" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr);margin-top:-6px"><div class="field" data-k="incStatuses"><label title="Đơn có trạng thái khác (vd Posted) bị bỏ qua hoàn toàn, không tính vào Total Orders">Trạng thái Sales Order được lấy <span class="hint">cách nhau dấu phẩy · để trống = lấy hết</span></label><input data-dif="incStatuses" value="${escapeHtml(c.incStatuses)}" placeholder="vd: Closed, Voided" autocomplete="off"></div><div class="field"><label>Ngày nghỉ lễ <span class="hint">không tính vào hạn giao · dd/mm/yyyy, cách nhau dấu phẩy hoặc xuống dòng</span></label><textarea data-dif="hol" placeholder="vd: 01/01/2026, 02/09/2026" autocomplete="off">${escapeHtml(c.hol)}</textarea><div class="dif-hol" id="dif-holbad"></div></div></div>
+          <div class="adj-cfg" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.4fr);margin-top:-6px"><div class="field" data-k="voidMode"><label title="Đơn Void luôn nằm trong Total Orders (trừ khi chọn loại hẳn)">Đơn Void <span class="hint">cách tính</span></label><select data-dif="voidMode">${[["count", "Có trong Total · không tính In-full/DIFOT"], ["pass", "Có trong Total · coi là đạt cả 3 chỉ tiêu"], ["exclude", "Loại khỏi Total Orders"]].map(([v, l]) => `<option value="${v}"${c.voidMode === v ? " selected" : ""}>${l}</option>`).join("")}</select></div><div class="field" data-k="incStatuses"><label title="Đơn có trạng thái khác (vd Posted) bị bỏ qua hoàn toàn, không tính vào Total Orders">Trạng thái Sales Order được lấy <span class="hint">cách nhau dấu phẩy · để trống = lấy hết</span></label><input data-dif="incStatuses" value="${escapeHtml(c.incStatuses)}" placeholder="để trống = lấy tất cả (Posted, Closed, Void…)" autocomplete="off"></div><div class="field"><label>Ngày nghỉ lễ <span class="hint">không tính vào hạn giao · dd/mm/yyyy, cách nhau dấu phẩy hoặc xuống dòng</span></label><textarea data-dif="hol" placeholder="vd: 01/01/2026, 02/09/2026" autocomplete="off">${escapeHtml(c.hol)}</textarea><div class="dif-hol" id="dif-holbad"></div></div></div>
         </div>
         <div id="dif-out">${difOutHtml()}</div></div></section>`;
     }
