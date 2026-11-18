@@ -6043,11 +6043,11 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
           const st = a.status >= 0 ? difStr(r[a.status]) : "";
           // chỉ lấy đơn có trạng thái thuộc danh sách (vd: Closed, Voided) — đơn Posted… bỏ qua hoàn toàn
           if (incSet.size && a.status >= 0 && !incSet.has(difNorm(st))) { skip.add(no); const k = st || "(trống)"; warn.skipped[k] = (warn.skipped[k] || 0) + 1; continue; }
-          o = { orderNo: no, distCode: a.distCode >= 0 ? difStr(r[a.distCode]) : "", distName: a.distName >= 0 ? difStr(r[a.distName]) : "", orderDay: difDay(r[a.orderDate]), status: st, isVoid: !!st && voidSet.has(difNorm(st)), lines: new Map(), settleDay: null, inSR: false };
+          o = { orderNo: no, distCode: a.distCode >= 0 ? difStr(r[a.distCode]) : "", distName: a.distName >= 0 ? difStr(r[a.distName]) : "", orderDay: difDay(r[a.orderDate]), status: st, isVoid: !!st && voidSet.has(difNorm(st)), lines: new Map(), settleDay: null, inSR: false, focSo: [], focSr: [] };
           if (o.orderDay == null) warn.badDate++;
           orders.set(no, o);
         }
-        if (difIsFoc(r[a.foc])) continue;
+        if (difIsFoc(r[a.foc])) { o.focSo.push({ pc: difStr(r[a.product]), name: a.pname >= 0 ? difStr(r[a.pname]) : "", q: difNum(r[qa]) }); continue; }
         const pc = difStr(r[a.product]); if (!pc) continue;
         const L = o.lines.get(pc) || { pc, name: a.pname >= 0 ? difStr(r[a.pname]) : "", ord: 0, del: 0 };
         L.ord += difNum(r[qa]); o.lines.set(pc, L);
@@ -6062,7 +6062,7 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         if (!o) { if (!skip.has(no)) srOrders.add(no); continue; }
         o.inSR = true;
         const d = difDay(r[b.settle]); if (d != null && (o.settleDay == null || d > o.settleDay)) o.settleDay = d;
-        if (difIsFoc(r[b.foc])) continue;
+        if (difIsFoc(r[b.foc])) { o.focSr.push({ pc: difStr(r[b.product]), name: b.pname >= 0 ? difStr(r[b.pname]) : "", q: difNum(r[qb]) }); continue; }
         const pc = difStr(r[b.product]); if (!pc) continue;
         let L = o.lines.get(pc); if (!L) { L = { pc, name: b.pname >= 0 ? difStr(r[b.pname]) : "", ord: 0, del: 0 }; o.lines.set(pc, L); }
         if (!L.name && b.pname >= 0) L.name = difStr(r[b.pname]);
@@ -6312,17 +6312,35 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
     }
     
     /* ---- xuất Excel ---- */
+    const DIF_TONE = { bad: "FFFFECEB", ok: "FFE8F5E9", foc: "FFFFE699", warn: "FFFFF2CC" };
+    const difVLen = v => { if (v && typeof v === "object") v = v.v; return v == null ? 0 : Math.max(...String(v).split("\n").map(x => x.length)); };
+    const difPc = v => difRound(v).toFixed(2).replace(".", ",") + "%";
+    const difLines = (len, w) => Math.max(1, Math.ceil(len / Math.max(4, w - 1)));
+    function difScope(D) { return D.cmp ? D.cmp.rows.filter(r => r.status === "diff") : []; }
+    
     function difSheets() {
-      const D = mdmDif, R = D.res, T = R.total, cfg = D.cfg, S = [];
-      S.push({ name: "DIFOT Details", head: ["Distributor Name", "OrderDate", "Total Orders", "ON Time Orders", "IN Full Orders", "ON-TIME Percentage", "IN-FULL Percentage", "OTIF/DIFOT Percentage", "DIFOT Orders", "Distributor Code"], widths: [34, 12, 13, 15, 14, 20, 20, 22, 13, 16], pct: [6, 7, 8],
-        rows: [...R.rows.map(r => [r.distName, difFmt(r.day, false), r.total, r.onT, r.inF, difRound(r.pOn), difRound(r.pIn), difRound(r.pDif), r.dif, r.distCode]), ["TỔNG CỘNG", "", T.total, T.onT, T.inF, difRound(T.pOn), difRound(T.pIn), difRound(T.pDif), T.dif, ""]], bold: r => r[0] === "TỔNG CỘNG" });
-      S.push({ name: "Chi tiết đơn", head: ["Order No", "Distributor Code", "Distributor Name", "Order Date", "Order Status", "Settled Date", "Ngày làm việc", "On-time", "In-full", "DIFOT", "Ghi chú"], widths: [18, 16, 32, 12, 13, 12, 14, 10, 10, 10, 70],
-        rows: R.orders.map(o => { const x = o.excluded; return [o.orderNo, o.distCode, o.distName, difFmt(o.orderDay, true), o.status, difFmt(o.settleDay, true), o.workDays == null ? "" : o.workDays, x ? "—" : o.onTime ? "Đạt" : "Không", x ? "—" : o.inFull ? "Đạt" : "Không", x ? "—" : o.difot ? "Đạt" : "Không", x ? "Void — loại khỏi Total Orders" : o.difot ? "" : [o.reason, ...o.issues.map(i => `${i.pc}: ${difLow(i.type)} (đặt ${i.ord} · giao ${i.del})`)].join(" | ")]; }), bad: r => r[9] === "Không" });
-      S.push({ name: "Dòng lệch In-full", head: ["Order No", "Distributor Name", "Order Date", "Product Code", "Product Name", `Đặt (${R.basis})`, `Giao (${R.basis})`, "Chênh lệch", "Loại lỗi"], widths: [18, 32, 12, 14, 44, 12, 12, 12, 30],
+      const D = mdmDif, R = D.res, cfg = D.cfg, S = [];
+      S.push({ name: "DIFOT Details", head: ["Distributor Name", "OrderDate", "Total Orders", "ON Time Orders", "IN Full Orders", "ON-TIME Percentage", "IN-FULL Percentage", "OTIF/DIFOT Percentage", "DIFOT Orders", "Distributor Code"], pct: [6, 7, 8],
+        rows: R.rows.map(r => [r.distName, difFmt(r.day, false), r.total, r.onT, r.inF, difRound(r.pOn), difRound(r.pIn), difRound(r.pDif), r.dif, r.distCode]) });
+      S.push({ name: "Chi tiết đơn", head: ["Order No", "Distributor Code", "Distributor Name", "Order Date", "Order Status", "Settled Date", "Ngày làm việc", "On-time", "In-full", "DIFOT", "Ghi chú"], cap: { 10: 70 },
+        rows: R.orders.map(o => { const x = o.excluded; return [o.orderNo, o.distCode, o.distName, difFmt(o.orderDay, true), o.status, difFmt(o.settleDay, true), o.workDays == null ? "" : o.workDays, x ? "—" : o.onTime ? "Đạt" : "Không", x ? "—" : o.inFull ? "Đạt" : "Không", x ? "—" : o.difot ? "Đạt" : "Không", x ? "Void — loại khỏi Total Orders" : o.difot ? "" : [o.reason, ...o.issues.map(i => `${i.pc}: ${difLow(i.type)} (đặt ${i.ord} · giao ${i.del})`)].join(" | ")]; }), tone: r => r[9] === "Không" ? "bad" : null });
+      S.push({ name: "Dòng lệch In-full", head: ["Order No", "Distributor Name", "Order Date", "Product Code", "Product Name", `Đặt (${R.basis})`, `Giao (${R.basis})`, "Chênh lệch", "Loại lỗi"],
         rows: R.lineIssues.map(l => [l.orderNo, l.distName, difFmt(l.orderDay, true), l.pc, l.name, l.ord, l.del, difRound(l.del - l.ord, 4), l.type]) });
-      if (D.cmp) S.push({ name: "Đối chiếu hệ thống", head: ["Distributor Name", "OrderDate", "Tool · Total", "Tool · On-time %", "Tool · In-full %", "Tool · DIFOT %", "HT · Total", "HT · On-time %", "HT · In-full %", "HT · DIFOT %", "Kết luận", "Chênh lệch"], widths: [34, 12, 12, 16, 16, 16, 12, 16, 16, 16, 20, 50], pct: [4, 5, 6, 8, 9, 10],
-        rows: D.cmp.rows.map(r => { const t = r.tool, s = r.sys; return [r.name, difFmt(r.day, false), t ? t.total : "", t ? difRound(t.pOn) : "", t ? difRound(t.pIn) : "", t ? difRound(t.pDif) : "", s ? s.total : "", s ? difRound(s.pOn) : "", s ? difRound(s.pIn) : "", s ? difRound(s.pDif) : "", { ok: "Khớp", diff: "Lệch", toolOnly: "Chỉ có ở tool", sysOnly: "Chỉ có ở hệ thống" }[r.status], r.diffs.join(" · ")]; }), bad: r => r[10] !== "Khớp" });
-      S.push({ name: "Quy tắc áp dụng", head: ["Mục", "Nội dung"], widths: [32, 110], rows: [
+      if (D.cmp) {
+        const tol = Number(cfg.tol) || 0.01, rows = [];
+        D.cmp.rows.forEach(r => {
+          const t = r.tool, s = r.sys, nm = r.name, d = difFmt(r.day, false);
+          if (!t || !s) { rows.push([nm, d, "Cả 4 chỉ tiêu", s ? s.total : "", "", t ? t.total : "", "", "", t ? "✘ Chỉ có trong dữ liệu Sales Order/Register, hệ thống không có dòng này" : "✘ Chỉ có trong báo cáo hệ thống, không có trong Sales Order đã tải"]); return; }
+          [["Total Orders", "total", null], ["On-time", "onT", "pOn"], ["In-full", "inF", "pIn"], ["DIFOT", "dif", "pDif"]].forEach(([lab, k, p]) => {
+            const dv = difRound(s[k] - t[k], 2), pBad = p && Math.abs(s[p] - t[p]) > tol;
+            rows.push([nm, d, lab, difRound(s[k], 1), p ? difRound(s[p]) : "", t[k], p ? difRound(t[p]) : "", dv,
+              Math.abs(dv) >= 0.5 ? (dv < 0 ? `✘ SAI — hệ thống thấp hơn ${-dv} đơn` : `✘ SAI — hệ thống cao hơn ${dv} đơn`) : pBad ? "✘ SAI — % lệch" : "✔ Khớp"]);
+          });
+        });
+        S.push({ name: "Đối chiếu hệ thống", head: ["Distributor Name", "Ngày đặt", "Chỉ tiêu", "Hệ thống báo (đơn)", "Hệ thống báo (%)", "Tool tính lại (đơn)", "Tool tính lại (%)", "Chênh lệch (HT − Tool, đơn)", "Kết luận"], pct: [5, 7], rows, tone: r => String(r[8]).startsWith("✔") ? "ok" : "bad", cap: { 8: 52 } });
+      }
+      const ev = difEvidence(); if (ev) S.splice(S.findIndex(x => x.name === "Đối chiếu hệ thống") + 1, 0, ev);
+      S.push({ name: "Quy tắc áp dụng", head: ["Mục", "Nội dung"], cap: { 0: 36, 1: 110 }, rows: [
         ["Trạng thái Sales Order được lấy", cfg.incStatuses.trim() || "(lấy tất cả trạng thái)"],
         ["Total Orders", "Tổng số đơn trong Sales Order (gồm cả Posted, Closed, Void" + (cfg.voidMode === "exclude" ? "; riêng đơn Void bị loại" : "") + ")"],
         ["Đơn Void (trạng thái: " + cfg.voidStatuses + ")", { count: "Có trong Total, On-time đạt, KHÔNG tính vào In-full và DIFOT", pass: "Có trong Total, coi là đạt cả On-time / In-full / DIFOT", exclude: "Loại khỏi Total Orders" }[cfg.voidMode]],
@@ -6334,6 +6352,91 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         ["File nguồn", `SO: ${D.so.name} · SR: ${D.sr.name}${D.sys ? " · HT: " + D.sys.name : ""}`], ["Thời điểm xuất", new Date().toLocaleString("vi-VN")]] });
       return S;
     }
+    
+    /* Sheet "Báo lỗi Vxceed": chỉ tạo khi báo cáo hệ thống LỆCH so với số tính lại. Mọi con số lấy trực tiếp từ kết quả tính, không nhập tay. */
+    function difEvidence() {
+      const D = mdmDif, R = D.res, C = D.cmp, cfg = D.cfg, bad = difScope(D);
+      if (!C || !bad.length) return null;
+      const inScope = o => bad.some(r => difNameKey(o.distName) === difNameKey(r.name) && o.orderDay === r.day);
+      const live = R.orders.filter(o => !o.excluded && inScope(o)), nv = live.filter(o => !o.isVoid), voids = live.filter(o => o.isVoid);
+      const full = nv.filter(o => o.inFull), notFull = nv.filter(o => !o.inFull);
+      const bothSide = bad.filter(r => r.tool && r.sys);
+      const names = [...new Set(bothSide.map(r => r.name))].join("; "), days = [...new Set(bothSide.map(r => difFmt(r.day, false)))].join(", ");
+      const it = [];
+      const gap = () => it.push({ t: "gap" });
+      it.push({ t: "title", v: "BÁO CÁO LỖI: BÁO CÁO DIFOT CỦA HỆ THỐNG KHÔNG KHỚP DỮ LIỆU SALES ORDER / SALES REGISTER" });
+      it.push({ t: "sub", v: `NPP: ${names} · Ngày đặt hàng: ${days} · Lập lúc: ${new Date().toLocaleString("vi-VN")}` });
+      gap();
+      // 1. tóm tắt
+      it.push({ t: "h", v: "1. TÓM TẮT LỖI" });
+      const M = [["Total Orders", "total", null], ["On-time Orders", "onT", "pOn"], ["In-full Orders", "inF", "pIn"], ["DIFOT Orders", "dif", "pDif"]];
+      bothSide.forEach(r => {
+        const t = r.tool, s = r.sys, wrong = [], right = [];
+        M.forEach(([lab, k, p]) => {
+          const dv = s[k] - t[k];
+          if (Math.abs(dv) >= 0.5) wrong.push(p ? `• ${lab}: hệ thống báo ${difRound(s[k], 1)}/${s.total} đơn (${difPc(s[p])}); tính lại từ chính Sales Order + Sales Register được ${t[k]}/${t.total} đơn (${difPc(t[p])}) → hệ thống ${dv < 0 ? "THIẾU" : "THỪA"} ${difRound(Math.abs(dv), 1)} đơn.` : `• ${lab}: hệ thống báo ${s.total} đơn; Sales Order có ${t.total} đơn → lệch ${difRound(dv, 1)} đơn.`);
+          else right.push(lab);
+        });
+        it.push({ t: "text", v: wrong.join("\n") + (right.length ? `\n• Khớp: ${right.join(", ")}.` : "") });
+      });
+      gap();
+      // 2. bảng
+      it.push({ t: "h", v: "2. BẢNG ĐỐI CHIẾU (đỏ = hệ thống sai)" });
+      bothSide.forEach(r => {
+        const t = r.tool, s = r.sys, tol = Number(cfg.tol) || 0.01;
+        it.push({ t: "text", v: `NPP: ${r.name} · Ngày đặt: ${difFmt(r.day, false)}`, bold: true });
+        it.push({ t: "thead", c: ["Chỉ tiêu", "Hệ thống báo (đơn)", "Hệ thống báo (%)", "Tính lại từ SO + SR (đơn)", "Tính lại (%)", "Chênh lệch HT − Tính lại (đơn)", "Kết luận"] });
+        M.forEach(([lab, k, p]) => {
+          const dv = difRound(s[k] - t[k], 2), pBad = p && Math.abs(s[p] - t[p]) > tol, isBad = Math.abs(dv) >= 0.5 || pBad;
+          it.push({ t: "row", tone: isBad ? "bad" : "ok", bold: [0, 6], center: [1, 2, 3, 4, 5], c: [lab, difRound(s[k], 1), p ? { v: difRound(s[p]), fmt: "0.00" } : "", t[k], p ? { v: difRound(t[p]), fmt: "0.00" } : "", dv, !isBad ? "✔ Khớp" : Math.abs(dv) >= 0.5 ? `✘ SAI — hệ thống ${dv < 0 ? "thấp" : "cao"} hơn ${difRound(Math.abs(dv), 1)} đơn` : "✘ SAI — % lệch"] });
+        });
+      });
+      gap();
+      // 3. công thức
+      it.push({ t: "h", v: "3. CÔNG THỨC CHUẨN DÙNG ĐỂ TÍNH LẠI (slide 3.2 CÔNG THỨC DIFOT)" });
+      it.push({ t: "text", v: [
+        "• Total Orders = tổng số đơn trong Sales Order (gồm Posted, Closed, Void).",
+        `• On-time = số ngày làm việc từ ngày đặt đến ngày settle ≤ ${R.cfg.maxDays} (${cfg.noSunday ? "không tính Chủ nhật" : "tính cả Chủ nhật"}; ngày lễ: ${cfg.hol.trim() ? cfg.hol.trim().replace(/\s+/g, " ") : "chưa nhập"}).`,
+        `• In-full = với từng SKU (loại SKU FOC, cột Is Free Good? = 1): SL giao trong Sales Register (${R.basis}) = SL đặt trong Sales Order (${R.basis}). Đơn Void không được tính vào In-full.`,
+        "• DIFOT = đơn vừa On-time vừa In-full.  % = số đơn đạt ÷ Total Orders × 100.",
+        `• Dữ liệu: Sales Order ${D.so.table.rows.length} dòng; Sales Register ${D.sr.table.rows.length} dòng (file: ${D.so.name} · ${D.sr.name} · báo cáo hệ thống: ${D.sys.name}).`].join("\n") });
+      gap();
+      // 4. bằng chứng
+      it.push({ t: "h", v: "4. BẰNG CHỨNG: ĐÃ SO SÁNH SỐ LƯỢNG TỪNG SKU CỦA TỪNG ĐƠN" });
+      it.push({ t: "text", v: `Sales Order có ${live.length} đơn = ${nv.length} đơn không Void + ${voids.length} đơn Void.\n• Trong ${nv.length} đơn không Void: ${full.length} đơn giao ĐỦ số lượng từng SKU (SL giao ở Sales Register = SL đặt ở Sales Order, không tính SKU FOC); ${notFull.length} đơn không đủ.` + voids.slice(0, 10).map(o => `\n• Đơn Void ${o.orderNo} (trạng thái ${o.status}): ${o.inSR ? "có" : "không có"} trong Sales Register; ${{ count: "không tính vào In-full / DIFOT", pass: "coi là đạt", exclude: "loại khỏi Total" }[cfg.voidMode]}.`).join("") + (voids.length > 10 ? `\n• …và ${voids.length - 10} đơn Void khác.` : "") });
+      if (notFull.length) {
+        it.push({ t: "thead", c: ["Order No", "Trạng thái", "Lý do không đạt In-full", "", "", "", ""], span: 2 });
+        notFull.slice(0, 30).forEach(o => it.push({ t: "row", tone: "bad", c: [o.orderNo, o.status, o.reason || "", "", "", "", ""], span: 2 }));
+        if (notFull.length > 30) it.push({ t: "text", v: `…và ${notFull.length - 30} đơn khác (xem sheet "Chi tiết đơn").` });
+      }
+      gap();
+      // 5. đơn FOC
+      const foc = nv.filter(o => o.focSo.length || o.focSr.length);
+      const X = bothSide.reduce((a, r) => a + (r.tool.inF - r.sys.inF), 0);
+      it.push({ t: "h", v: "5. ĐƠN CÓ HÀNG FOC (Is Free Good? = 1) — NGHI VẤN NGUYÊN NHÂN" });
+      it.push({ t: "text", v: `Chênh lệch In-full (tính lại − hệ thống) = ${X} đơn.  Số đơn không Void có chứa hàng FOC = ${foc.length} đơn.` + (X > 0 && X === foc.length ? `\n→ Hai con số TRÙNG NHAU. Nghi vấn: hệ thống đang tính SAI những đơn có hàng FOC (ví dụ đưa SKU FOC vào so sánh ở một phía mà không ở phía còn lại). Đây là nghi vấn rút ra từ đối chiếu số liệu, chưa phải kết luận về nguyên nhân kỹ thuật — đề nghị Vxceed kiểm tra và xác nhận.` : foc.length ? "" : "\n→ Không có đơn không Void nào chứa hàng FOC, nên nguyên nhân chênh lệch KHÔNG đến từ hàng FOC.") });
+      if (foc.length) {
+        it.push({ t: "thead", c: ["Order No", "Product Code", "Hàng FOC?", `SL đặt (Sales Order, ${R.basis})`, `SL giao (Sales Register, ${R.basis})`, "Kết quả dòng", "Product Name"] });
+        foc.slice(0, 20).forEach(o => {
+          const fl = new Map(); [["so", o.focSo], ["sr", o.focSr]].forEach(([k, a]) => a.forEach(x => { const e = fl.get(x.pc) || { pc: x.pc, name: x.name, so: 0, sr: 0 }; e[k] += x.q; if (!e.name) e.name = x.name; fl.set(x.pc, e); }));
+          const mk = (pc, name, a, b, isF) => it.push({ t: "row", tone: isF ? "foc" : null, bold: isF ? [0, 1, 2, 3, 4, 5, 6] : [0], center: [1, 2, 3, 4, 5], c: [o.orderNo, pc, isF ? "CÓ (FOC)" : "Không", a, b, Math.abs(a - b) < 1e-9 ? "Khớp" : "LỆCH", name] });
+          [...fl.values()].forEach(e => mk(e.pc, e.name, e.so, e.sr, true));
+          [...o.lines.values()].forEach(L => mk(L.pc, L.name, L.ord, L.del, false));
+        });
+        if (foc.length > 20) it.push({ t: "text", v: `…và ${foc.length - 20} đơn FOC khác.` });
+        const focOk = foc.slice(0, 20).every(o => o.issues.length === 0);
+        it.push({ t: "text", v: "Dòng tô vàng = hàng FOC. " + (focOk ? "Mọi dòng của các đơn này đều khớp số lượng giữa Sales Order và Sales Register, nên theo công thức chuẩn các đơn này vẫn ĐẠT In-full." : "Một số đơn trong danh sách có dòng LỆCH số lượng (xem cột Kết quả dòng) — các đơn đó không đạt In-full theo công thức chuẩn.") });
+      }
+      gap();
+      // 6. đề nghị
+      it.push({ t: "h", v: "6. ĐỀ NGHỊ VXCEED" });
+      it.push({ t: "text", v: [
+        `1) Cung cấp danh sách Order No mà báo cáo DIFOT đang tính là KHÔNG đạt In-full của ngày/NPP trên (hệ thống báo ${bothSide.map(r => difRound(r.sys.inF, 1)).join(" / ")} đơn In-full).`,
+        "2) Cho biết công thức In-full đang dùng, đặc biệt cách xử lý SKU FOC (Is Free Good? = 1) và đơn Void.",
+        "3) Điều chỉnh báo cáo DIFOT đúng công thức chuẩn ở mục 3, sau đó chạy lại báo cáo và gửi lại để đối chiếu."].join("\n") });
+      return { name: "Báo lỗi Vxceed", free: true, cols: [26, 18, 18, 24, 24, 24, 52], items: it };
+    }
+    
     async function difExport() {
       const D = mdmDif; if (!D.res || (D.res.err && D.res.err.length)) return;
       const sheets = difSheets(), MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -6343,25 +6446,67 @@ html.sb-collapsed .sb-toggle svg { transform: rotate(180deg); }
         let buf, styled = !!window.ExcelJS;
         if (styled) {
           const wb = new ExcelJS.Workbook();
+          const fill = argb => ({ type: "pattern", pattern: "solid", fgColor: { argb } });
+          const line = { style: "thin", color: { argb: "FFD0D0D0" } }, box = { top: line, left: line, bottom: line, right: line };
           sheets.forEach(S => {
+            if (S.free) { // ---- sheet trình bày tự do (merge + khối) ----
+              const ws = wb.addWorksheet(S.name, { views: [{ showGridLines: false }] }), n = S.cols.length, tot = S.cols.reduce((a, b) => a + b, 0);
+              S.cols.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+              S.items.forEach(x => {
+                if (x.t === "gap") { ws.addRow([]).height = 8; return; }
+                if (x.t === "title" || x.t === "sub" || x.t === "h" || x.t === "text") {
+                  const row = ws.addRow([x.v]), r = row.number; ws.mergeCells(r, 1, r, n);
+                  const c = ws.getCell(r, 1); c.alignment = { vertical: "middle", wrapText: true, horizontal: "left", indent: x.t === "text" ? 1 : 0 };
+                  const nl = String(x.v).split("\n").reduce((a, s) => a + Math.max(1, Math.ceil(s.length * 1.12 / (tot - 3))), 0);
+                  if (x.t === "title") { c.font = { bold: true, size: 15, color: { argb: "FFFFFFFF" } }; c.fill = fill("FFB71C1C"); row.height = 34; }
+                  else if (x.t === "sub") { c.font = { italic: true, color: { argb: "FF555555" } }; row.height = 22; }
+                  else if (x.t === "h") { c.font = { bold: true, size: 12, color: { argb: "FFB71C1C" } }; c.fill = fill("FFFDECEA"); row.height = 26; }
+                  else { c.font = { size: 11, bold: !!x.bold }; row.height = Math.max(22, 17 * nl + 6); }
+                  return;
+                }
+                const vals = x.c.map(v => (v && typeof v === "object") ? v.v : v), row = ws.addRow(vals); let lines = 1;
+                const sp = x.span ? x.span : 0; if (sp) ws.mergeCells(row.number, sp + 1, row.number, n);
+                vals.forEach((v, i) => {
+                  if (sp && i > sp) return;
+                  const c = row.getCell(i + 1), w = (sp && i === sp) ? S.cols.slice(sp).reduce((a, b) => a + b, 0) : S.cols[i];
+                  c.border = box; c.alignment = { vertical: "middle", wrapText: true, horizontal: (x.center || []).includes(i) || x.t === "thead" ? "center" : "left" };
+                  const meta = x.c[i]; if (meta && typeof meta === "object" && meta.fmt) c.numFmt = meta.fmt;
+                  if (x.t === "thead") { c.font = { bold: true, color: { argb: "FFFFFFFF" } }; c.fill = fill("FF7F1D1D"); }
+                  else { if ((x.bold || []).includes(i)) c.font = { bold: true }; if (x.tone) c.fill = fill(DIF_TONE[x.tone]); }
+                  lines = Math.max(lines, difLines(difVLen(v) * 1.1, w));
+                });
+                row.height = Math.max(x.t === "thead" ? 36 : 22, 17 * lines + 6);
+              });
+              ws.pageSetup = { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+              return;
+            }
+            // ---- sheet bảng: tự căn rộng cột + cao dòng theo nội dung ----
+            const W = S.head.map((h, i) => { let m = difVLen(h); S.rows.forEach(r => { m = Math.max(m, difVLen(r[i])); }); return Math.min((S.cap && S.cap[i]) || 46, Math.max(11, Math.ceil(m * 1.1) + 3)); });
             const ws = wb.addWorksheet(S.name, { views: [{ state: "frozen", ySplit: 1 }] });
             ws.addRow(S.head); S.rows.forEach(r => ws.addRow(r));
-            const h = ws.getRow(1); h.height = 22; h.font = { bold: true, color: { argb: "FFFFFFFF" } }; h.alignment = { vertical: "middle", wrapText: true };
-            h.eachCell(c => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFB71C1C" } }; });
-            S.widths.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+            W.forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+            const h = ws.getRow(1); h.height = Math.max(24, 18 * Math.max(...S.head.map((x, i) => difLines(x.length * 1.1, W[i]))) + 6);
+            h.eachCell(c => { c.font = { bold: true, color: { argb: "FFFFFFFF" } }; c.fill = fill("FFB71C1C"); c.alignment = { vertical: "middle", horizontal: "center", wrapText: true }; c.border = box; });
             ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: S.head.length } };
             S.rows.forEach((r, i) => {
-              const row = ws.getRow(i + 2);
-              (S.pct || []).forEach(ci => { if (typeof r[ci - 1] === "number") row.getCell(ci).numFmt = "0.00"; });
-              if (S.bad && S.bad(r)) row.eachCell(c => { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFECEB" } }; });
-              if (S.bold && S.bold(r)) row.font = { bold: true };
+              const row = ws.getRow(i + 2); let lines = 1;
+              r.forEach((v, j) => {
+                const c = row.getCell(j + 1); c.border = box; c.alignment = { vertical: "middle", wrapText: true, horizontal: typeof v === "number" ? "center" : "left" };
+                if ((S.pct || []).includes(j + 1) && typeof v === "number") c.numFmt = "0.00";
+                lines = Math.max(lines, difLines(difVLen(v) * 1.1, W[j]));
+              });
+              row.height = Math.max(22, 17 * lines + 6);
+              const tn = S.tone && S.tone(r); if (tn) row.eachCell(c => { c.fill = fill(DIF_TONE[tn]); });
             });
           });
           buf = await wb.xlsx.writeBuffer();
         } else {
           await loadLib("xlsx");
           const wb = XLSX.utils.book_new();
-          sheets.forEach(S => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([S.head, ...S.rows]), S.name));
+          sheets.forEach(S => {
+            const aoa = S.free ? S.items.filter(x => x.t !== "gap").map(x => x.c ? x.c.map(v => (v && typeof v === "object") ? v.v : v) : [x.v]) : [S.head, ...S.rows];
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), S.name);
+          });
           buf = XLSX.write(wb, { type: "array", bookType: "xlsx" });
         }
         const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([buf], { type: MIME })), download: fileName });
